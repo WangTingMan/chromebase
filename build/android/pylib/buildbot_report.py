@@ -44,11 +44,3 @@ def PrintWarning():
 
 def PrintNamedStep(step):
   print '@@@BUILD_STEP %s@@@' % step
-
-
-def PrintStepResultIfNeeded(options, result):
-  if result:
-    if options.buildbot_step_failure:
-      PrintError()
-    else:
-      PrintWarning()
