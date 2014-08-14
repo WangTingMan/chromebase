@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/services/native_viewport/native_viewport.h"
+#include "mojo/services/native_viewport/platform_viewport.h"
 
 #include "base/command_line.h"
 #include "base/message_loop/message_loop.h"
@@ -18,20 +18,19 @@
 namespace mojo {
 namespace services {
 
-class NativeViewportX11 : public NativeViewport,
-                          public ui::PlatformWindowDelegate {
+class PlatformViewportX11 : public PlatformViewport,
+                            public ui::PlatformWindowDelegate {
  public:
-  explicit NativeViewportX11(NativeViewportDelegate* delegate)
-      : delegate_(delegate) {
+  explicit PlatformViewportX11(Delegate* delegate) : delegate_(delegate) {
   }
 
-  virtual ~NativeViewportX11() {
+  virtual ~PlatformViewportX11() {
     // Destroy the platform-window while |this| is still alive.
     platform_window_.reset();
   }
 
  private:
-  // Overridden from NativeViewport:
+  // Overridden from PlatformViewport:
   virtual void Init(const gfx::Rect& bounds) OVERRIDE {
     CHECK(!event_source_);
     CHECK(!platform_window_);
@@ -106,16 +105,15 @@ class NativeViewportX11 : public NativeViewport,
 
   scoped_ptr<ui::PlatformEventSource> event_source_;
   scoped_ptr<ui::PlatformWindow> platform_window_;
-  NativeViewportDelegate* delegate_;
+  Delegate* delegate_;
   gfx::Rect bounds_;
 
-  DISALLOW_COPY_AND_ASSIGN(NativeViewportX11);
+  DISALLOW_COPY_AND_ASSIGN(PlatformViewportX11);
 };
 
 // static
-scoped_ptr<NativeViewport> NativeViewport::Create(
-    NativeViewportDelegate* delegate) {
-  return scoped_ptr<NativeViewport>(new NativeViewportX11(delegate)).Pass();
+scoped_ptr<PlatformViewport> PlatformViewport::Create(Delegate* delegate) {
+  return scoped_ptr<PlatformViewport>(new PlatformViewportX11(delegate)).Pass();
 }
 
 }  // namespace services
