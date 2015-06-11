@@ -51,8 +51,6 @@ public class MojoShellActivity extends Activity {
         // InitApplicationContext on the native side. Currently we can't, as PlatformViewportAndroid
         // relies on this being the activity context.
         ShellMain.ensureInitialized(this, parameters);
-
-        // TODO(eseidel): ShellMain can fail, but we're ignoring the return.
         ShellMain.start();
     }
 }

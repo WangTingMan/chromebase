@@ -42,7 +42,7 @@ def main():
   shell = AndroidShell(config)
   shell.InitShell(runner_args.origin, runner_args.device)
   p = shell.ShowLogs()
-  shell.StartShell(args, sys.stdout, p.terminate)
+  shell.StartActivity('MojoShellActivity', args, sys.stdout, p.terminate)
   return 0
 
 
