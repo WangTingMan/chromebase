@@ -11,8 +11,11 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(BuildTime, DateLooksValid) {
+#if !defined(DONT_EMBED_BUILD_METADATA)
   char build_date[] = BUILD_DATE;
+#else
   char build_date[] = "Sep 02 2008 05:00:00";
+#endif
 
   EXPECT_EQ(20u, strlen(build_date));
   EXPECT_EQ(' ', build_date[3]);
