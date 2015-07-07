@@ -143,6 +143,10 @@
 #ifndef BASE_BIND_HELPERS_H_
 #define BASE_BIND_HELPERS_H_
 
+#include <map>
+#include <memory>
+#include <vector>
+
 #include "base/basictypes.h"
 #include "base/callback.h"
 #include "base/memory/weak_ptr.h"
@@ -382,6 +386,67 @@ class PassedWrapper {
   mutable T scoper_;
 };
 
+// Specialize PassedWrapper for std::unique_ptr used by base::Passed().
+// Use std::move() to transfer the data from one storage to another.
+template <typename T, typename D>
+class PassedWrapper<std::unique_ptr<T, D>> {
+ public:
+  explicit PassedWrapper(std::unique_ptr<T, D> scoper)
+      : is_valid_(true), scoper_(std::move(scoper)) {}
+  PassedWrapper(const PassedWrapper& other)
+      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
+
+  std::unique_ptr<T, D> Pass() const {
+    CHECK(is_valid_);
+    is_valid_ = false;
+    return std::move(scoper_);
+  }
+
+ private:
+  mutable bool is_valid_;
+  mutable std::unique_ptr<T, D> scoper_;
+};
+
+// Specialize PassedWrapper for std::vector<std::unique_ptr<T>>.
+template <typename T, typename D, typename A>
+class PassedWrapper<std::vector<std::unique_ptr<T, D>, A>> {
+ public:
+  explicit PassedWrapper(std::vector<std::unique_ptr<T, D>, A> scoper)
+      : is_valid_(true), scoper_(std::move(scoper)) {}
+  PassedWrapper(const PassedWrapper& other)
+      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
+
+  std::vector<std::unique_ptr<T, D>, A> Pass() const {
+    CHECK(is_valid_);
+    is_valid_ = false;
+    return std::move(scoper_);
+  }
+
+ private:
+  mutable bool is_valid_;
+  mutable std::vector<std::unique_ptr<T, D>, A> scoper_;
+};
+
+// Specialize PassedWrapper for std::map<K, std::unique_ptr<T>>.
+template <typename K, typename T, typename D, typename C, typename A>
+class PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>> {
+ public:
+  explicit PassedWrapper(std::map<K, std::unique_ptr<T, D>, C, A> scoper)
+      : is_valid_(true), scoper_(std::move(scoper)) {}
+  PassedWrapper(const PassedWrapper& other)
+      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
+
+  std::map<K, std::unique_ptr<T, D>, C, A> Pass() const {
+    CHECK(is_valid_);
+    is_valid_ = false;
+    return std::move(scoper_);
+  }
+
+ private:
+  mutable bool is_valid_;
+  mutable std::map<K, std::unique_ptr<T, D>, C, A> scoper_;
+};
+
 // Unwrap the stored parameters for the wrappers above.
 template <typename T>
 struct UnwrapTraits {
@@ -577,6 +642,49 @@ static inline internal::PassedWrapper<T> Passed(T scoper) {
 template <typename T>
 static inline internal::PassedWrapper<T> Passed(T* scoper) {
   return internal::PassedWrapper<T>(scoper->Pass());
+}
+
+// Overload base::Passed() for std::unique_ptr<T>.
+template <typename T>
+static inline internal::PassedWrapper<std::unique_ptr<T>>
+Passed(std::unique_ptr<T>* scoper) {
+  return internal::PassedWrapper<std::unique_ptr<T>>(std::move(*scoper));
+}
+
+template <typename T>
+static inline internal::PassedWrapper<std::unique_ptr<T>>
+Passed(std::unique_ptr<T> scoper) {
+  return internal::PassedWrapper<std::unique_ptr<T>>(std::move(scoper));
+}
+
+// Overload base::Passed() for std::vector<std::unique_ptr<T>>.
+template <typename T, typename D, typename A>
+static inline internal::PassedWrapper<std::vector<std::unique_ptr<T, D>, A>>
+Passed(std::vector<std::unique_ptr<T, D>, A>* scoper) {
+  return internal::PassedWrapper<std::vector<std::unique_ptr<T, D>, A>>(
+      std::move(*scoper));
+}
+
+template <typename T, typename D, typename A>
+static inline internal::PassedWrapper<std::vector<std::unique_ptr<T, D>, A>>
+Passed(std::vector<std::unique_ptr<T, D>, A> scoper) {
+  return internal::PassedWrapper<std::vector<std::unique_ptr<T, D>, A>>(
+      std::move(scoper));
+}
+
+// Overload base::Passed() for std::map<K, std::unique_ptr<T>>.
+template <typename K, typename T, typename D, typename C, typename A>
+static inline internal::PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>>
+Passed(std::map<K, std::unique_ptr<T, D>, C, A>* scoper) {
+  return internal::PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>>(
+      std::move(*scoper));
+}
+
+template <typename K, typename T, typename D, typename C, typename A>
+static inline internal::PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>>
+Passed(std::map<K, std::unique_ptr<T, D>, C, A> scoper) {
+  return internal::PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>>(
+      std::move(scoper));
 }
 
 template <typename T>

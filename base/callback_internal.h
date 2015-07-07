@@ -9,6 +9,9 @@
 #define BASE_CALLBACK_INTERNAL_H_
 
 #include <stddef.h>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "base/atomic_ref_count.h"
 #include "base/base_export.h"
@@ -107,6 +110,20 @@ template <typename T> struct IsMoveOnlyType {
   static const bool value = sizeof((Test<T>(0))) == sizeof(YesType) &&
                             !is_const<T>::value;
 };
+
+// Mark std::unique_ptr<T> and common containers using unique_ptr as MoveOnly
+// type for base::Callback, so it is stored by value and not a const reference
+// inside Callback.
+template<typename T, typename D>
+struct IsMoveOnlyType<std::unique_ptr<T, D>> : public std::true_type {};
+
+template<typename T, typename D, typename A>
+struct IsMoveOnlyType<std::vector<std::unique_ptr<T, D>, A>>
+    : public std::true_type {};
+
+template<typename K, typename T, typename D, typename C, typename A>
+struct IsMoveOnlyType<std::map<K, std::unique_ptr<T, D>, C, A>>
+    : public std::true_type {};
 
 // Returns |Then| as SelectType::Type if |condition| is true. Otherwise returns
 // |Else|.
@@ -226,6 +243,26 @@ typename enable_if<!IsMoveOnlyType<T>::value, T>::type& CallbackForward(T& t) {
 template <typename T>
 typename enable_if<IsMoveOnlyType<T>::value, T>::type CallbackForward(T& t) {
   return t.Pass();
+}
+
+// Overload base::internal::CallbackForward() to forward unique_ptr and common
+// containers with unique_ptr by using std::move instead of default T::Pass()
+// used with scoped_ptr<U>.
+template <typename T, typename D>
+std::unique_ptr<T, D> CallbackForward(std::unique_ptr<T, D>& t) {
+  return std::move(t);
+}
+
+template <typename T, typename D, typename A>
+std::vector<std::unique_ptr<T, D>, A>
+CallbackForward(std::vector<std::unique_ptr<T, D>, A>& t) {
+  return std::move(t);
+}
+
+template <typename K, typename T, typename D, typename C, typename A>
+std::map<K, std::unique_ptr<T, D>, C, A>
+CallbackForward(std::map<K, std::unique_ptr<T, D>, C, A>& t) {
+  return std::move(t);
 }
 
 }  // namespace internal
