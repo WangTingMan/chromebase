@@ -16,7 +16,14 @@
 #include "base/posix/eintr_wrapper.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
+
+#if defined(__BRILLO__)
+#include <event2/event.h>
+#include <event2/event_compat.h>
+#include <event2/event_struct.h>
+#else
 #include "third_party/libevent/event.h"
+#endif
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"

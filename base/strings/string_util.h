@@ -19,6 +19,10 @@
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"  // For implicit conversions.
 
+// On Android, bionic's stdio.h defines an snprintf macro when being built with
+// clang. Undefine it here so it won't collide with base::snprintf().
+#undef snprintf
+
 namespace base {
 
 // C standard-library functions like "strncasecmp" and "snprintf" that aren't
