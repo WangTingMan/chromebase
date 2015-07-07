@@ -202,6 +202,8 @@ LOCAL_SRC_FILES := \
 	base/tracking_info.cc \
 	base/values.cc \
 	base/vlog.cc \
+	components/timers/alarm_timer.cc \
+	components/timers/rtc_alarm.cc \
 
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
