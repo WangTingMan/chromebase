@@ -27,6 +27,8 @@ class BASE_EXPORT FileTracing {
  public:
   class Provider {
    public:
+    virtual ~Provider() = default;
+
     // Whether the file tracing category is currently enabled.
     virtual bool FileTracingCategoryIsEnabled() const = 0;
 
