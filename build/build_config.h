@@ -36,6 +36,7 @@
 #define USE_OZONE 1
 
 #endif  // defined(__ANDROID__)
+
 // A set of macros to use for platform detection.
 #if defined(__native_client__)
 // __native_client__ must be first, so that other OS_ defines are not set.

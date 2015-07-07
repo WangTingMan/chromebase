@@ -189,7 +189,9 @@ int64_t File::Seek(Whence whence, int64_t offset) {
 
   SCOPED_FILE_TRACE_WITH_SIZE("Seek", offset);
 
-#if defined(OS_ANDROID)
+// Additionally check __BIONIC__ since older versions of Android don't define
+// _FILE_OFFSET_BITS.
+#if _FILE_OFFSET_BITS != 64 || defined(__BIONIC__)
   static_assert(sizeof(int64_t) == sizeof(off64_t), "off64_t must be 64 bits");
   return lseek64(file_.get(), static_cast<off64_t>(offset),
                  static_cast<int>(whence));
