@@ -24,9 +24,10 @@ libchromeCommonCFlags := -D__BRILLO__ -Wall -Werror \
 libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo
 libchromeCommonCIncludes := \
 	external/gmock/include \
-	external/gtest/include
+	external/gtest/include \
+	external/modp_b64
 libchromeCommonSharedLibraries := libevent
-libchromeCommonStaticLibraries :=
+libchromeCommonStaticLibraries := libmodpb64
 
 # libchrome shared library for target
 # ========================================================
@@ -37,6 +38,7 @@ LOCAL_SRC_FILES := \
 	base/allocator/type_profiler_control.cc \
 	base/at_exit.cc \
 	base/atomicops_internals_x86_gcc.cc \
+	base/base64.cc \
 	base/base_switches.cc \
 	base/bind_helpers.cc \
 	base/build_time.cc \
