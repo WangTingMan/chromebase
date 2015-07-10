@@ -618,8 +618,7 @@ COMPILE_ASSERT(sizeof(MessageLoop) == sizeof(MessageLoopForUI),
 //
 class BASE_EXPORT MessageLoopForIO : public MessageLoop {
  public:
-  MessageLoopForIO() : MessageLoop(TYPE_IO) {
-  }
+  MessageLoopForIO();
 
   // Returns the MessageLoopForIO of the current thread.
   static MessageLoopForIO* current() {
