@@ -695,6 +695,8 @@ bool MessageLoopForUI::WatchFileDescriptor(
 //------------------------------------------------------------------------------
 // MessageLoopForIO
 
+MessageLoopForIO::MessageLoopForIO() : MessageLoop(TYPE_IO) {}
+
 #if !defined(OS_NACL_SFI)
 void MessageLoopForIO::AddIOObserver(
     MessageLoopForIO::IOObserver* io_observer) {
