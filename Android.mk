@@ -260,3 +260,29 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
+
+# Helpers needed for unit tests.
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome_test_helpers
+LOCAL_SHARED_LIBRARIES := libchrome
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SRC_FILES := base/test/simple_test_clock.cc
+include $(BUILD_STATIC_LIBRARY)
+
+# Helpers needed for unit tests (for host).
+# ========================================================
+ifeq ($(HOST_OS),linux)
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome_test_helpers-host
+LOCAL_SHARED_LIBRARIES := libchrome-host
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SRC_FILES := base/test/simple_test_clock.cc
+include $(BUILD_HOST_STATIC_LIBRARY)
+endif
