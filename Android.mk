@@ -25,9 +25,6 @@ libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
-	external/modp_b64
-libchromeCommonSharedLibraries := libevent
-libchromeCommonStaticLibraries := libmodpb64
 
 # libchrome shared library for target
 # ========================================================
@@ -204,12 +201,45 @@ LOCAL_SRC_FILES := \
 	base/tracked_objects.cc \
 	base/tracking_info.cc \
 	base/values.cc \
-	base/vlog.cc
+	base/vlog.cc \
+
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := $(libchromeCommonSharedLibraries)
-LOCAL_STATIC_LIBRARIES := $(libchromeCommonStaticLibraries)
+LOCAL_SHARED_LIBRARIES := libevent
+LOCAL_STATIC_LIBRARIES := libmodpb64
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+include $(BUILD_SHARED_LIBRARY)
+
+# libchrome-dbus shared library for target
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome-dbus
+LOCAL_SRC_FILES := \
+	dbus/bus.cc \
+	dbus/dbus_statistics.cc \
+	dbus/exported_object.cc \
+	dbus/file_descriptor.cc \
+	dbus/message.cc \
+	dbus/object_manager.cc \
+	dbus/object_path.cc \
+	dbus/object_proxy.cc \
+	dbus/property.cc \
+	dbus/scoped_dbus_error.cc \
+	dbus/string_util.cc \
+	dbus/util.cc \
+	dbus/values_util.cc \
+
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SHARED_LIBRARIES := \
+	libchrome \
+	libdbus \
+	libprotobuf-cpp-lite \
+
+LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
