@@ -24,7 +24,9 @@
 #endif  // defined(__ANDROID__) || defined(__ANDROID_HOST__)
 
 #if defined(__ANDROID__)  // Android targets
+
 #define OS_ANDROID 1
+
 #elif !defined(__ANDROID_HOST__)  // Chrome OS
 
 #define OS_CHROMEOS 1
