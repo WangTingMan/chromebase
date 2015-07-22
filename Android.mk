@@ -26,12 +26,7 @@ libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
 
-# libchrome shared library for target
-# ========================================================
-
-include $(CLEAR_VARS)
-LOCAL_MODULE := libchrome
-LOCAL_SRC_FILES := \
+libchromeCommonSrc := \
 	base/allocator/type_profiler_control.cc \
 	base/at_exit.cc \
 	base/atomicops_internals_x86_gcc.cc \
@@ -144,7 +139,6 @@ LOCAL_SRC_FILES := \
 	base/synchronization/waitable_event_posix.cc \
 	base/sync_socket_posix.cc \
 	base/sys_info.cc \
-	base/sys_info_chromeos.cc \
 	base/sys_info_linux.cc \
 	base/sys_info_posix.cc \
 	base/task/cancelable_task_tracker.cc \
@@ -205,6 +199,11 @@ LOCAL_SRC_FILES := \
 	components/timers/alarm_timer.cc \
 	components/timers/rtc_alarm.cc \
 
+# libchrome shared library for target
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome
+LOCAL_SRC_FILES := $(libchromeCommonSrc) base/sys_info_chromeos.cc
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
@@ -213,6 +212,20 @@ LOCAL_SHARED_LIBRARIES := libevent
 LOCAL_STATIC_LIBRARIES := libmodpb64
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
+
+# libchrome shared library for host
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome-host
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+LOCAL_SHARED_LIBRARIES := libevent-host
+LOCAL_STATIC_LIBRARIES := libmodpb64-host
+LOCAL_SRC_FILES := $(libchromeCommonSrc)
+include $(BUILD_HOST_SHARED_LIBRARY)
 
 # libchrome-dbus shared library for target
 # ========================================================

@@ -18,10 +18,14 @@
 // Add Brillo-specific defines.
 #if defined(__BRILLO__)
 #define __linux__ 1
-#define __UCLIBC__ 1
-#define OS_CHROMEOS 1
 // Unset ANDROID, which is just used for building Chrome on Android.
 #undef ANDROID
+
+#if defined(__BIONIC__)
+#define __UCLIBC__ 1
+#define OS_CHROMEOS 1
+#endif // __BIONIC__
+
 #endif
 
 // A set of macros to use for platform detection.
