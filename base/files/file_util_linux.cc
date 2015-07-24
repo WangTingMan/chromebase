@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <linux/magic.h>
+#include <stdint.h>
 #include <sys/vfs.h>
 
 #include "base/files/file_path.h"
@@ -23,7 +24,7 @@ bool GetFileSystemType(const FilePath& path, FileSystemType* type) {
 
   // Not all possible |statfs_buf.f_type| values are in linux/magic.h.
   // Missing values are copied from the statfs man page.
-  switch (statfs_buf.f_type) {
+  switch (static_cast<uintmax_t>(statfs_buf.f_type)) {
     case 0:
       *type = FILE_SYSTEM_0;
       break;
