@@ -215,6 +215,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 # libchrome shared library for host
 # ========================================================
+ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
@@ -226,6 +227,7 @@ LOCAL_SHARED_LIBRARIES := libevent-host
 LOCAL_STATIC_LIBRARIES := libmodpb64-host
 LOCAL_SRC_FILES := $(libchromeCommonSrc)
 include $(BUILD_HOST_SHARED_LIBRARY)
+endif
 
 # libchrome-dbus shared library for target
 # ========================================================
