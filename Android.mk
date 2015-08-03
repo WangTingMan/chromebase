@@ -21,7 +21,8 @@ libchromeCommonCppExtension := .cc
 libchromeCommonCFlags := -D__BRILLO__ -Wall -Werror \
 	-Wno-char-subscripts -Wno-missing-field-initializers \
 	-Wno-unused-function -Wno-unused-parameter
-libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo
+libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo \
+	-Wno-non-virtual-dtor
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
@@ -170,11 +171,11 @@ libchromeCommonSrc := \
 	base/time/clock.cc \
 	base/time/default_clock.cc \
 	base/time/default_tick_clock.cc \
-	base/timer/elapsed_timer.cc \
-	base/timer/timer.cc \
 	base/time/tick_clock.cc \
 	base/time/time.cc \
 	base/time/time_posix.cc \
+	base/timer/elapsed_timer.cc \
+	base/timer/timer.cc \
 	base/trace_event/malloc_dump_provider.cc \
 	base/trace_event/memory_allocator_dump.cc \
 	base/trace_event/memory_allocator_dump_guid.cc \
@@ -198,6 +199,138 @@ libchromeCommonSrc := \
 	base/vlog.cc \
 	components/timers/alarm_timer.cc \
 	components/timers/rtc_alarm.cc \
+
+libchromeCommonUnittestSrc := \
+	base/at_exit_unittest.cc \
+	base/atomicops_unittest.cc \
+	base/base64_unittest.cc \
+	base/bind_unittest.cc \
+	base/bits_unittest.cc \
+	base/build_time_unittest.cc \
+	base/callback_helpers_unittest.cc \
+	base/callback_list_unittest.cc \
+	base/callback_unittest.cc \
+	base/cancelable_callback_unittest.cc \
+	base/command_line_unittest.cc \
+	base/cpu_unittest.cc \
+	base/debug/debugger_unittest.cc \
+	base/debug/leak_tracker_unittest.cc \
+	base/debug/task_annotator_unittest.cc \
+	base/environment_unittest.cc \
+	base/file_version_info_unittest.cc \
+	base/files/dir_reader_posix_unittest.cc \
+	base/files/file_path_watcher_unittest.cc \
+	base/files/file_path_unittest.cc \
+	base/files/file_unittest.cc \
+	base/files/important_file_writer_unittest.cc \
+	base/files/scoped_temp_dir_unittest.cc \
+	base/gmock_unittest.cc \
+	base/guid_unittest.cc \
+	base/hash_unittest.cc \
+	base/id_map_unittest.cc \
+	base/ios/crb_protocol_observers_unittest.mm \
+	base/ios/device_util_unittest.mm \
+	base/ios/weak_nsobject_unittest.mm \
+	base/json/json_parser_unittest.cc \
+	base/json/json_writer_unittest.cc \
+	base/json/string_escape_unittest.cc \
+	base/lazy_instance_unittest.cc \
+	base/logging_unittest.cc \
+	base/md5_unittest.cc \
+	base/memory/linked_ptr_unittest.cc \
+	base/memory/ref_counted_memory_unittest.cc \
+	base/memory/ref_counted_unittest.cc \
+	base/memory/scoped_ptr_unittest.cc \
+	base/memory/scoped_ptr_unittest.nc \
+	base/memory/scoped_vector_unittest.cc \
+	base/memory/singleton_unittest.cc \
+	base/memory/weak_ptr_unittest.cc \
+	base/memory/weak_ptr_unittest.nc \
+	base/message_loop/message_loop_proxy_impl_unittest.cc \
+	base/message_loop/message_loop_proxy_unittest.cc \
+	base/message_loop/message_loop_test.cc \
+	base/message_loop/message_loop_unittest.cc \
+	base/metrics/bucket_ranges_unittest.cc \
+	base/metrics/field_trial_unittest.cc \
+	base/metrics/histogram_base_unittest.cc \
+	base/metrics/histogram_macros_unittest.cc \
+	base/metrics/histogram_snapshot_manager_unittest.cc \
+	base/metrics/histogram_unittest.cc \
+	base/metrics/sample_map_unittest.cc \
+	base/metrics/sample_vector_unittest.cc \
+	base/metrics/sparse_histogram_unittest.cc \
+	base/metrics/statistics_recorder_unittest.cc \
+	base/move_unittest.cc \
+	base/numerics/safe_numerics_unittest.cc \
+	base/observer_list_unittest.cc \
+	base/pickle_unittest.cc \
+	base/posix/file_descriptor_shuffle_unittest.cc \
+	base/posix/unix_domain_socket_linux_unittest.cc \
+	base/process/process_metrics_unittest.cc \
+	base/profiler/tracked_time_unittest.cc \
+	base/rand_util_unittest.cc \
+	base/scoped_clear_errno_unittest.cc \
+	base/scoped_generic_unittest.cc \
+	base/security_unittest.cc \
+	base/sequence_checker_unittest \
+	base/sha1_unittest.cc \
+	base/stl_util_unittest.cc \
+	base/strings/string16_unittest.cc \
+	base/strings/string_number_conversions_unittest.cc \
+	base/strings/string_piece_unittest.cc \
+	base/strings/stringprintf_unittest.cc \
+	base/strings/string_split_unittest.cc \
+	base/strings/string_util_unittest.cc \
+	base/strings/sys_string_conversions_unittest.cc \
+	base/strings/utf_string_conversions_unittest.cc \
+	base/synchronization/cancellation_flag_unittest.cc \
+	base/synchronization/condition_variable_unittest.cc \
+	base/synchronization/lock_unittest.cc \
+	base/synchronization/waitable_event_unittest.cc \
+	base/sync_socket_unittest.cc \
+	base/sys_info_unittest.cc \
+	base/task/cancelable_task_tracker_unittest.cc \
+	base/task_runner_util_unittest.cc \
+	base/template_util_unittest.cc \
+	base/test/multiprocess_test_android.cc \
+	base/test/opaque_ref_counted.cc \
+	base/test/scoped_locale.cc \
+	base/test/test_file_util.cc \
+	base/test/test_file_util_posix.cc \
+	base/test/test_pending_task.cc \
+	base/test/test_simple_task_runner.cc \
+	base/test/test_timeouts.cc \
+	base/threading/non_thread_safe_unittest.cc \
+	base/threading/platform_thread_unittest.cc \
+	base/threading/simple_thread_unittest.cc \
+	base/threading/thread_checker_unittest.cc \
+	base/threading/thread_collision_warner_unittest.cc \
+	base/threading/thread_id_name_manager_unittest.cc \
+	base/threading/thread_local_storage_unittest.cc \
+	base/threading/thread_local_unittest.cc \
+	base/threading/thread_unittest.cc \
+	base/threading/worker_pool_posix_unittest.cc \
+	base/threading/worker_pool_unittest.cc \
+	base/time/pr_time_unittest.cc \
+	base/time/time_unittest.cc \
+	base/timer/hi_res_timer_manager_unittest.cc \
+	base/timer/timer_unittest.cc \
+	base/tools_sanity_unittest.cc \
+	base/trace_event/memory_allocator_dump_unittest.cc \
+	base/trace_event/memory_dump_manager_unittest.cc \
+	base/trace_event/process_memory_dump_unittest.cc \
+	base/trace_event/process_memory_maps_dump_provider_unittest.cc \
+	base/trace_event/process_memory_totals_dump_provider_unittest.cc \
+	base/trace_event/trace_config_unittest.cc \
+	base/trace_event/trace_event_argument_unittest.cc \
+	base/trace_event/trace_event_memory_unittest.cc \
+	base/trace_event/trace_event_synthetic_delay_unittest.cc \
+	base/trace_event/trace_event_unittest.cc \
+	base/tracked_objects_unittest.cc \
+	base/tuple_unittest.cc \
+	base/values_unittest.cc \
+	base/vlog_unittest.cc \
+	testing/multiprocess_func_list.cc \
 
 # libchrome shared library for target
 # ========================================================
@@ -286,3 +419,17 @@ LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := base/test/simple_test_clock.cc
 include $(BUILD_HOST_STATIC_LIBRARY)
 endif
+
+# Unit tests. Run with:
+# adb shell /data/nativetest/libchrome_test/libchrome_test
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome_test
+LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SHARED_LIBRARIES := libchrome libevent
+LOCAL_STATIC_LIBRARIES := libgmock libgtest libgtest_main
+include $(BUILD_NATIVE_TEST)

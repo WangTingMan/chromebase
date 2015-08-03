@@ -18,6 +18,7 @@
 // Add Brillo-specific defines.
 #if defined(__BRILLO__)
 #define __linux__ 1
+#define NO_TCMALLOC
 // Unset ANDROID, which is just used for building Chrome on Android.
 #undef ANDROID
 
