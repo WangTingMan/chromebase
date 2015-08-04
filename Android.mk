@@ -296,9 +296,11 @@ libchromeCommonUnittestSrc := \
 	base/test/opaque_ref_counted.cc \
 	base/test/scoped_locale.cc \
 	base/test/test_file_util.cc \
+	base/test/test_file_util_linux.cc \
 	base/test/test_file_util_posix.cc \
 	base/test/test_pending_task.cc \
 	base/test/test_simple_task_runner.cc \
+	base/test/test_switches.cc \
 	base/test/test_timeouts.cc \
 	base/threading/non_thread_safe_unittest.cc \
 	base/threading/platform_thread_unittest.cc \
@@ -420,7 +422,22 @@ LOCAL_SRC_FILES := base/test/simple_test_clock.cc
 include $(BUILD_HOST_STATIC_LIBRARY)
 endif
 
-# Unit tests. Run with:
+# Host unit tests. Run (from repo root) with:
+# ./out/host/<arch>/bin/libchrome-host_test
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome-host_test
+LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SHARED_LIBRARIES := libchrome-host libevent-host
+LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libgtest_main_host
+LOCAL_LDLIBS := -lrt
+include $(BUILD_HOST_NATIVE_TEST)
+
+# Native unit tests. Run with:
 # adb shell /data/nativetest/libchrome_test/libchrome_test
 # ========================================================
 include $(CLEAR_VARS)
