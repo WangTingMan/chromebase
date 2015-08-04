@@ -353,7 +353,7 @@ include $(BUILD_SHARED_LIBRARY)
 ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host
-LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -DHOST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)

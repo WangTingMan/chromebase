@@ -454,6 +454,8 @@ bool GetTempDir(FilePath* path) {
   } else {
 #if defined(OS_ANDROID)
     return PathService::Get(base::DIR_CACHE, path);
+#elif (defined(__BRILLO__) && !defined(HOST))
+    *path = FilePath("/data/local/tmp");
 #else
     *path = FilePath("/tmp");
 #endif
