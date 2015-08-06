@@ -405,7 +405,14 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SRC_FILES := base/test/simple_test_clock.cc
+LOCAL_SRC_FILES := \
+	base/test/simple_test_clock.cc \
+	base/test/simple_test_tick_clock.cc \
+	base/test/test_file_util.cc \
+	base/test/test_file_util_linux.cc \
+	base/test/test_switches.cc \
+	base/test/test_timeouts.cc \
+
 include $(BUILD_STATIC_LIBRARY)
 
 # Helpers needed for unit tests (for host).
