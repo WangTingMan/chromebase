@@ -427,7 +427,6 @@ LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := base/test/simple_test_clock.cc
 include $(BUILD_HOST_STATIC_LIBRARY)
-endif
 
 # Host unit tests. Run (from repo root) with:
 # ./out/host/<arch>/bin/libchrome-host_test
@@ -443,6 +442,7 @@ LOCAL_SHARED_LIBRARIES := libchrome-host libevent-host
 LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libgtest_main_host
 LOCAL_LDLIBS := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
+endif
 
 # Native unit tests. Run with:
 # adb shell /data/nativetest/libchrome_test/libchrome_test
