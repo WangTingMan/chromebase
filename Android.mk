@@ -439,7 +439,7 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome-host libevent-host
-LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libgtest_main_host
+LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libBionicGtestMain
 LOCAL_LDLIBS := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
 endif
@@ -455,5 +455,5 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
-LOCAL_STATIC_LIBRARIES := libgmock libgtest libgtest_main
+LOCAL_STATIC_LIBRARIES := libgmock libgtest libBionicGtestMain
 include $(BUILD_NATIVE_TEST)
