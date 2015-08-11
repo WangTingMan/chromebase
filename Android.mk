@@ -415,6 +415,23 @@ LOCAL_SRC_FILES := \
 
 include $(BUILD_STATIC_LIBRARY)
 
+# Helpers needed for D-Bus unit tests.
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome_dbus_test_helpers
+LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SRC_FILES := \
+	dbus/mock_bus.cc \
+	dbus/mock_exported_object.cc \
+	dbus/mock_object_manager.cc \
+	dbus/mock_object_proxy.cc \
+
+include $(BUILD_STATIC_LIBRARY)
+
 # Helpers needed for unit tests (for host).
 # ========================================================
 ifeq ($(HOST_OS),linux)
