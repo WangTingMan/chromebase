@@ -384,6 +384,8 @@ LOCAL_SRC_FILES := \
 	dbus/values_util.cc \
 
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+# webservd uses RTTI, so that this library also needs to be built with it.
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
