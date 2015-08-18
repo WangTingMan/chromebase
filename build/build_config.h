@@ -16,8 +16,17 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
+// A brief primer on #defines:
+//
+// - __ANDROID__ is automatically defined by the Android toolchain (see
+//   https://goo.gl/v61lXa). It's not defined when building host code.
+// - __ANDROID_HOST__ is defined via -D by Android.mk when building host code
+//   within an Android checkout.
+// - ANDROID is defined via -D when building code for either Android targets or
+//   hosts. Use __ANDROID__ and __ANDROID_HOST__ instead.
 // - OS_ANDROID is a define used to build Chrome for Android within the NDK and
 //   to build Android targets.
+
 // Android targets and hosts don't use tcmalloc.
 #if defined(__ANDROID__) || defined(__ANDROID_HOST__)
 #define NO_TCMALLOC

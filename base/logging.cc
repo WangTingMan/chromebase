@@ -776,6 +776,7 @@ LogMessage::~LogMessage() {
     }
 #if 0 // This is for building Chromium browser on Android.
     __android_log_write(priority, "chromium", str_newline.c_str());
+#else
     __android_log_write(
         priority,
         base::CommandLine::InitializedForCurrentProcess() ?
@@ -783,6 +784,7 @@ LogMessage::~LogMessage() {
                 GetProgram().BaseName().value().c_str() : nullptr,
         str_newline.c_str());
 #endif  // 0
+#endif  // defined(OS_ANDROID)
     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
     fflush(stderr);
   } else if (severity_ >= kAlwaysPrintErrorLevel) {
