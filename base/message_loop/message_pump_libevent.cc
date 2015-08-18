@@ -17,7 +17,7 @@
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 
-#if defined(__BRILLO__)
+#if defined(__ANDROID__) || defined(__ANDROID_HOST__)
 #include <event2/event.h>
 #include <event2/event_compat.h>
 #include <event2/event_struct.h>

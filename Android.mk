@@ -18,7 +18,7 @@ LOCAL_PATH := $(call my-dir)
 # ========================================================
 
 libchromeCommonCppExtension := .cc
-libchromeCommonCFlags := -D__BRILLO__ -Wall -Werror \
+libchromeCommonCFlags := -Wall -Werror \
 	-Wno-char-subscripts -Wno-missing-field-initializers \
 	-Wno-unused-function -Wno-unused-parameter
 libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo \
@@ -334,6 +334,8 @@ libchromeCommonUnittestSrc := \
 	base/vlog_unittest.cc \
 	testing/multiprocess_func_list.cc \
 
+libchromeHostCFlags := -D__ANDROID_HOST__
+
 # libchrome shared library for target
 # ========================================================
 include $(CLEAR_VARS)
@@ -343,7 +345,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libevent
+LOCAL_SHARED_LIBRARIES := libevent liblog
 LOCAL_STATIC_LIBRARIES := libmodpb64
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
@@ -353,7 +355,7 @@ include $(BUILD_SHARED_LIBRARY)
 ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host
-LOCAL_CFLAGS := $(libchromeCommonCFlags) -DHOST
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -454,7 +456,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host_test
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome-host libevent-host

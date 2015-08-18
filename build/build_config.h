@@ -15,19 +15,30 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
-// Add Brillo-specific defines.
-#if defined(__BRILLO__)
+// A brief primer on #defines:
+//
+// - __ANDROID__ is automatically defined by the Android toolchain (see
+//   https://goo.gl/v61lXa). It's not defined when building host code.
+// - __ANDROID_HOST__ is defined via -D by Android.mk when building host code
+//   within an Android checkout.
+// - ANDROID is defined via -D when building code for either Android targets or
+//   hosts. Use __ANDROID__ and __ANDROID_HOST__ instead.
+// - OS_ANDROID is a Chrome-specific define used to build Chrome for Android
+//   within the NDK.
+#if defined(__ANDROID__)
 #define __linux__ 1
-#define NO_TCMALLOC
-// Unset ANDROID, which is just used for building Chrome on Android.
-#undef ANDROID
+
+// The Chrome OS implementation of this library is currently built on Android.
+#define OS_CHROMEOS 1
 
 #if defined(__BIONIC__)
 #define __UCLIBC__ 1
-#define OS_CHROMEOS 1
-#endif // __BIONIC__
+#endif  // defined(__BIONIC__)
+#endif  // defined(__ANDROID__)
 
-#endif
+#if defined(__ANDROID__) || defined(__ANDROID_HOST__)
+#define NO_TCMALLOC
+#endif  // defined(__ANDROID__) || defined(__ANDROID_HOST__)
 
 // A set of macros to use for platform detection.
 #if defined(__native_client__)
@@ -41,8 +52,6 @@
 #else
 #define OS_NACL_SFI
 #endif
-#elif defined(ANDROID)
-#define OS_ANDROID 1
 #elif defined(__APPLE__)
 // only include TargetConditions after testing ANDROID as some android builds
 // on mac don't have this header available and it's not needed unless the target

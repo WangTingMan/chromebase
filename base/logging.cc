@@ -62,7 +62,7 @@ typedef pthread_mutex_t* MutexHandle;
 #include "base/posix/safe_strerror.h"
 #endif
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(__ANDROID__)
 #include <android/log.h>
 #endif
 
@@ -559,7 +559,7 @@ LogMessage::~LogMessage() {
   if ((g_logging_destination & LOG_TO_SYSTEM_DEBUG_LOG) != 0) {
 #if defined(OS_WIN)
     OutputDebugStringA(str_newline.c_str());
-#elif defined(OS_ANDROID)
+#elif defined(OS_ANDROID) || defined(__ANDROID__)
     android_LogPriority priority =
         (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
     switch (severity_) {
@@ -576,7 +576,11 @@ LogMessage::~LogMessage() {
         priority = ANDROID_LOG_FATAL;
         break;
     }
+#if defined(OS_ANDROID)
     __android_log_write(priority, "chromium", str_newline.c_str());
+#else
+    __android_log_write(priority, NULL, str_newline.c_str());
+#endif  // defined(OS_ANDROID)
 #endif
     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
     fflush(stderr);
