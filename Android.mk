@@ -341,6 +341,7 @@ libchromeHostCFlags := -D__ANDROID_HOST__
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
 LOCAL_SRC_FILES := $(libchromeCommonSrc) base/sys_info_chromeos.cc
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
@@ -355,6 +356,7 @@ include $(BUILD_SHARED_LIBRARY)
 ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
@@ -444,6 +446,7 @@ ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test_helpers-host
 LOCAL_SHARED_LIBRARIES := libchrome-host
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
@@ -457,6 +460,7 @@ include $(BUILD_HOST_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host_test
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
@@ -473,6 +477,7 @@ endif
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
