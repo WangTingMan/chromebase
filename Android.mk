@@ -405,6 +405,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test_helpers
 LOCAL_SHARED_LIBRARIES := libchrome
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
@@ -424,6 +425,7 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_dbus_test_helpers
 LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
+LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
