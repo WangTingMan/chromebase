@@ -109,8 +109,10 @@ bool IsTcMallocBypassed() {
 
 bool CallocDiesOnOOM() {
 // The sanitizers' calloc dies on OOM instead of returning NULL.
-// The wrapper function in base/process_util_linux.cc that is used when we
-// compile without TCMalloc will just die on OOM instead of returning NULL.
+// The wrapper function in base/process/memory_linux.cc that is used when we
+// compile without TCMalloc will just die on OOM instead of returning NULL,
+// but the wrapper only works with glibc, and the file is not currently
+// included in the libchrome build.
 #if defined(ADDRESS_SANITIZER) || \
     defined(MEMORY_SANITIZER) || \
     defined(THREAD_SANITIZER) || \
@@ -299,7 +301,8 @@ bool CallocReturnsNull(size_t nmemb, size_t size) {
 }
 
 // Test if calloc() can overflow.
-TEST(SecurityTest, CallocOverflow) {
+// Currently disabled, see b/23428680
+TEST(SecurityTest, DISABLED_CallocOverflow) {
   const size_t kArraySize = 4096;
   const size_t kMaxSizeT = numeric_limits<size_t>::max();
   const size_t kArraySize2 = kMaxSizeT / kArraySize + 10;
