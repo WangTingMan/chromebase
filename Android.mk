@@ -197,8 +197,7 @@ libchromeCommonSrc := \
 	base/tracking_info.cc \
 	base/values.cc \
 	base/vlog.cc \
-	components/timers/alarm_timer.cc \
-	components/timers/rtc_alarm.cc \
+	components/timers/alarm_timer_chromeos.cc \
 
 libchromeCommonUnittestSrc := \
 	base/at_exit_unittest.cc \
