@@ -18,8 +18,22 @@
 
 // - OS_ANDROID is a define used to build Chrome for Android within the NDK and
 //   to build Android targets.
+// Android targets and hosts don't use tcmalloc.
+#if defined(__ANDROID__) || defined(__ANDROID_HOST__)
+#define NO_TCMALLOC
+#endif  // defined(__ANDROID__) || defined(__ANDROID_HOST__)
+
+#if defined(__ANDROID__)  // Android targets
 #define OS_ANDROID 1
+#elif !defined(__ANDROID_HOST__)  // Chrome OS
+
 #define OS_CHROMEOS 1
+// TODO: Remove these once the GLib MessageLoopForUI isn't being used:
+// https://crbug.com/361635
+#define USE_GLIB 1
+#define USE_OZONE 1
+
+#endif  // defined(__ANDROID__)
 // A set of macros to use for platform detection.
 #if defined(__native_client__)
 // __native_client__ must be first, so that other OS_ defines are not set.
