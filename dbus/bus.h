@@ -287,7 +287,7 @@ class CHROME_DBUS_EXPORT Bus : public base::RefCountedThreadSafe<Bus> {
   // The function returns true when there is an object proxy matching the
   // |service_name| and |object_path| to remove, and calls |callback| when it
   // is removed. Otherwise, it returns false and the |callback| function is
-  // never called. The |callback| argument must not be null.
+  // never called. The |callback| argument can be null.
   //
   // Must be called in the origin thread.
   virtual bool RemoveObjectProxy(const std::string& service_name,
