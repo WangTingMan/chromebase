@@ -279,9 +279,7 @@ void Bus::RemoveObjectProxyInternal(scoped_refptr<ObjectProxy> object_proxy,
 
   object_proxy.get()->Detach();
 
-  // Only invoke callback if it is valid.
-  if (!callback.is_null())
-    GetOriginTaskRunner()->PostTask(FROM_HERE, callback);
+  GetOriginTaskRunner()->PostTask(FROM_HERE, callback);
 }
 
 ExportedObject* Bus::GetExportedObject(const ObjectPath& object_path) {
