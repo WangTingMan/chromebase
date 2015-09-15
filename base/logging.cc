@@ -39,6 +39,7 @@ typedef pthread_mutex_t* MutexHandle;
 #endif
 
 #include <algorithm>
+#include <cassert>
 #include <cstring>
 #include <ctime>
 #include <iomanip>
@@ -50,6 +51,7 @@ typedef pthread_mutex_t* MutexHandle;
 #include "base/debug/alias.h"
 #include "base/debug/debugger.h"
 #include "base/debug/stack_trace.h"
+#include "base/files/file_path.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
@@ -579,7 +581,12 @@ LogMessage::~LogMessage() {
 #if defined(OS_ANDROID)
     __android_log_write(priority, "chromium", str_newline.c_str());
 #else
-    __android_log_write(priority, NULL, str_newline.c_str());
+    assert(base::CommandLine::InitializedForCurrentProcess());
+    __android_log_write(
+        priority,
+        base::CommandLine::ForCurrentProcess()->
+            GetProgram().BaseName().value().c_str(),
+        str_newline.c_str());
 #endif  // defined(OS_ANDROID)
 #endif
     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
