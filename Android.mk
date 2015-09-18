@@ -227,9 +227,6 @@ libchromeCommonUnittestSrc := \
 	base/guid_unittest.cc \
 	base/hash_unittest.cc \
 	base/id_map_unittest.cc \
-	base/ios/crb_protocol_observers_unittest.mm \
-	base/ios/device_util_unittest.mm \
-	base/ios/weak_nsobject_unittest.mm \
 	base/json/json_parser_unittest.cc \
 	base/json/json_writer_unittest.cc \
 	base/json/string_escape_unittest.cc \
