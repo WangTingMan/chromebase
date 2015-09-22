@@ -52,11 +52,9 @@ libchromeCommonSrc := \
 	base/files/file_path.cc \
 	base/files/file_path_constants.cc \
 	base/files/file_path_watcher.cc \
-	base/files/file_path_watcher_linux.cc \
 	base/files/file_posix.cc \
 	base/files/file_tracing.cc \
 	base/files/file_util.cc \
-	base/files/file_util_linux.cc \
 	base/files/file_util_posix.cc \
 	base/files/important_file_writer.cc \
 	base/files/scoped_file.cc \
@@ -98,18 +96,13 @@ libchromeCommonSrc := \
 	base/pickle.cc \
 	base/posix/file_descriptor_shuffle.cc \
 	base/posix/safe_strerror.cc \
-	base/posix/unix_domain_socket_linux.cc \
-	base/process/internal_linux.cc \
 	base/process/kill.cc \
 	base/process/kill_posix.cc \
 	base/process/launch.cc \
 	base/process/launch_posix.cc \
-	base/process/process_handle_linux.cc \
 	base/process/process_handle_posix.cc \
 	base/process/process_iterator.cc \
-	base/process/process_iterator_linux.cc \
 	base/process/process_metrics.cc \
-	base/process/process_metrics_linux.cc \
 	base/process/process_metrics_posix.cc \
 	base/process/process_posix.cc \
 	base/profiler/alternate_timer.cc \
@@ -130,7 +123,6 @@ libchromeCommonSrc := \
 	base/strings/string_split.cc \
 	base/strings/string_util.cc \
 	base/strings/string_util_constants.cc \
-	base/strings/sys_string_conversions_posix.cc \
 	base/strings/utf_string_conversions.cc \
 	base/strings/utf_string_conversion_utils.cc \
 	base/synchronization/cancellation_flag.cc \
@@ -140,7 +132,6 @@ libchromeCommonSrc := \
 	base/synchronization/waitable_event_posix.cc \
 	base/sync_socket_posix.cc \
 	base/sys_info.cc \
-	base/sys_info_linux.cc \
 	base/sys_info_posix.cc \
 	base/task/cancelable_task_tracker.cc \
 	base/task_runner.cc \
@@ -151,8 +142,6 @@ libchromeCommonSrc := \
 	base/third_party/nspr/prtime.cc \
 	base/third_party/superfasthash/superfasthash.c \
 	base/threading/non_thread_safe_impl.cc \
-	base/threading/platform_thread_internal_posix.cc \
-	base/threading/platform_thread_linux.cc \
 	base/threading/platform_thread_posix.cc \
 	base/threading/post_task_and_reply_impl.cc \
 	base/threading/sequenced_worker_pool.cc \
@@ -176,7 +165,6 @@ libchromeCommonSrc := \
 	base/time/time_posix.cc \
 	base/timer/elapsed_timer.cc \
 	base/timer/timer.cc \
-	base/trace_event/malloc_dump_provider.cc \
 	base/trace_event/memory_allocator_dump.cc \
 	base/trace_event/memory_allocator_dump_guid.cc \
 	base/trace_event/memory_dump_manager.cc \
@@ -197,7 +185,42 @@ libchromeCommonSrc := \
 	base/tracking_info.cc \
 	base/values.cc \
 	base/vlog.cc \
+
+libchromeLinuxSrc := \
+	base/files/file_path_watcher_linux.cc \
+	base/files/file_util_linux.cc \
+	base/posix/unix_domain_socket_linux.cc \
+	base/process/internal_linux.cc \
+	base/process/process_handle_linux.cc \
+	base/process/process_iterator_linux.cc \
+	base/process/process_metrics_linux.cc \
+	base/strings/sys_string_conversions_posix.cc \
+	base/sys_info_linux.cc \
+	base/threading/platform_thread_internal_posix.cc \
+	base/threading/platform_thread_linux.cc \
+	base/trace_event/malloc_dump_provider.cc \
 	components/timers/alarm_timer_chromeos.cc \
+
+libchromeMacSrc := \
+	base/files/file_path_watcher_fsevents.cc \
+	base/files/file_path_watcher_kqueue.cc \
+	base/files/file_path_watcher_mac.cc \
+	base/files/file_util_mac.mm \
+	base/mac/bundle_locations.mm \
+	base/mac/foundation_util.mm \
+	base/mac/mach_logging.cc \
+	base/mac/libdispatch_task_runner.cc \
+	base/mac/scoped_mach_port.cc \
+	base/mac/scoped_nsautorelease_pool.mm \
+	base/message_loop/message_pump_mac.mm \
+	base/process/launch_mac.cc \
+	base/process/process_handle_mac.cc \
+	base/process/process_iterator_mac.cc \
+	base/process/process_metrics_mac.cc \
+	base/strings/sys_string_conversions_mac.mm \
+	base/sys_info_mac.cc \
+	base/time/time_mac.cc \
+	base/threading/platform_thread_mac.mm \
 
 libchromeCommonUnittestSrc := \
 	base/at_exit_unittest.cc \
@@ -332,11 +355,26 @@ libchromeCommonUnittestSrc := \
 
 libchromeHostCFlags := -D__ANDROID_HOST__
 
+ifeq ($(HOST_OS),linux)
+libchromeHostSrc := $(libchromeLinuxSrc)
+libchromeHostLdFlags :=
+endif
+
+ifeq ($(HOST_OS),darwin)
+libchromeHostSrc := $(libchromeMacSrc)
+libchromeHostCFlags += -D_FILE_OFFSET_BITS=64 -Wno-deprecated-declarations
+libchromeHostLdFlags := \
+	-framework AppKit \
+	-framework CoreFoundation \
+	-framework Foundation \
+	-framework Security
+endif
+
 # libchrome shared library for target
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
-LOCAL_SRC_FILES := $(libchromeCommonSrc) base/sys_info_chromeos.cc
+LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeLinuxSrc) base/sys_info_chromeos.cc
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
@@ -349,7 +387,6 @@ include $(BUILD_SHARED_LIBRARY)
 
 # libchrome shared library for host
 # ========================================================
-ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host
 LOCAL_RTTI_FLAG := -frtti
@@ -360,9 +397,9 @@ LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 LOCAL_SHARED_LIBRARIES := libevent-host
 LOCAL_STATIC_LIBRARIES := libmodpb64-host
-LOCAL_SRC_FILES := $(libchromeCommonSrc)
+LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
+LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
-endif
 
 # libchrome-dbus shared library for target
 # ========================================================
