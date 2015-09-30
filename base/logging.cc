@@ -359,21 +359,23 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
   // Can log only to the system debug log.
   CHECK_EQ(settings.logging_dest & ~LOG_TO_SYSTEM_DEBUG_LOG, 0);
 #endif
-  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
-  // Don't bother initializing |g_vlog_info| unless we use one of the
-  // vlog switches.
-  if (command_line->HasSwitch(switches::kV) ||
-      command_line->HasSwitch(switches::kVModule)) {
-    // NOTE: If |g_vlog_info| has already been initialized, it might be in use
-    // by another thread. Don't delete the old VLogInfo, just create a second
-    // one. We keep track of both to avoid memory leak warnings.
-    CHECK(!g_vlog_info_prev);
-    g_vlog_info_prev = g_vlog_info;
+  if (base::CommandLine::InitializedForCurrentProcess()) {
+    base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+    // Don't bother initializing |g_vlog_info| unless we use one of the
+    // vlog switches.
+    if (command_line->HasSwitch(switches::kV) ||
+        command_line->HasSwitch(switches::kVModule)) {
+      // NOTE: If |g_vlog_info| has already been initialized, it might be in use
+      // by another thread. Don't delete the old VLogInfo, just create a second
+      // one. We keep track of both to avoid memory leak warnings.
+      CHECK(!g_vlog_info_prev);
+      g_vlog_info_prev = g_vlog_info;
 
-    g_vlog_info =
-        new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
-                     command_line->GetSwitchValueASCII(switches::kVModule),
-                     &g_min_log_level);
+      g_vlog_info =
+          new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
+                       command_line->GetSwitchValueASCII(switches::kVModule),
+                       &g_min_log_level);
+    }
   }
 
   g_logging_destination = settings.logging_dest;
@@ -581,11 +583,11 @@ LogMessage::~LogMessage() {
 #if defined(OS_ANDROID)
     __android_log_write(priority, "chromium", str_newline.c_str());
 #else
-    assert(base::CommandLine::InitializedForCurrentProcess());
     __android_log_write(
         priority,
-        base::CommandLine::ForCurrentProcess()->
-            GetProgram().BaseName().value().c_str(),
+        base::CommandLine::InitializedForCurrentProcess() ?
+            base::CommandLine::ForCurrentProcess()->
+                GetProgram().BaseName().value().c_str() : nullptr,
         str_newline.c_str());
 #endif  // defined(OS_ANDROID)
 #endif
