@@ -492,6 +492,9 @@ include $(BUILD_HOST_STATIC_LIBRARY)
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-host_test
+ifdef BRILLO
+  LOCAL_MODULE_TAGS := debug
+endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
@@ -509,6 +512,9 @@ endif
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test
+ifdef BRILLO
+  LOCAL_MODULE_TAGS := debug
+endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
