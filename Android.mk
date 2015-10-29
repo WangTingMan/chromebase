@@ -380,7 +380,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libevent liblog
+LOCAL_SHARED_LIBRARIES := libevent liblog libcutils
 LOCAL_STATIC_LIBRARIES := libmodpb64
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
@@ -518,7 +518,7 @@ endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
