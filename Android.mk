@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Default values for the USE flags. Set these variables in your product .mk
+# file.
+BRILLO_USE_DBUS ?= 1
+
 LOCAL_PATH := $(call my-dir)
 
 # Common variables
@@ -401,6 +405,8 @@ LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
 
+ifeq ($(BRILLO_USE_DBUS),1)
+
 # libchrome-dbus shared library for target
 # ========================================================
 include $(CLEAR_VARS)
@@ -435,6 +441,8 @@ LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 include $(BUILD_SHARED_LIBRARY)
 
+endif  # BRILLO_USE_DBUS == 1
+
 # Helpers needed for unit tests.
 # ========================================================
 include $(CLEAR_VARS)
@@ -455,6 +463,8 @@ LOCAL_SRC_FILES := \
 
 include $(BUILD_STATIC_LIBRARY)
 
+ifeq ($(BRILLO_USE_DBUS),1)
+
 # Helpers needed for D-Bus unit tests.
 # ========================================================
 include $(CLEAR_VARS)
@@ -472,6 +482,8 @@ LOCAL_SRC_FILES := \
 	dbus/mock_object_proxy.cc \
 
 include $(BUILD_STATIC_LIBRARY)
+
+endif  # BRILLO_USE_DBUS == 1
 
 # Helpers needed for unit tests (for host).
 # ========================================================
