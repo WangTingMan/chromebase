@@ -23,9 +23,12 @@
 
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
+// We define this macro conditionally as it may be defined by another libraries.
+#if !defined(DISALLOW_COPY_AND_ASSIGN)
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&);               \
   void operator=(const TypeName&)
+#endif
 
 // An older, deprecated, politically incorrect name for the above.
 // NOTE: The usage of this macro was banned from our code base, but some
