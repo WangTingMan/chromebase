@@ -114,7 +114,7 @@ HistogramBase* Histogram::FactoryGet(const std::string& name,
     // return NULL here with the expectation that bad code in Chrome will crash
     // on dereference, but extension/Pepper APIs will guard against NULL and not
     // crash.
-    DLOG(ERROR) << "Histogram " << name << " has bad construction arguments";
+    LOG(ERROR) << "Histogram " << name << " has bad construction arguments";
     return NULL;
   }
   return histogram;
@@ -574,7 +574,7 @@ HistogramBase* LinearHistogram::FactoryGetWithRangeDescription(
     // return NULL here with the expectation that bad code in Chrome will crash
     // on dereference, but extension/Pepper APIs will guard against NULL and not
     // crash.
-    DLOG(ERROR) << "Histogram " << name << " has bad construction arguments";
+    LOG(ERROR) << "Histogram " << name << " has bad construction arguments";
     return NULL;
   }
   return histogram;
