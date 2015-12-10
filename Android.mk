@@ -392,7 +392,7 @@ include $(BUILD_SHARED_LIBRARY)
 # libchrome shared library for host
 # ========================================================
 include $(CLEAR_VARS)
-LOCAL_MODULE := libchrome-host
+LOCAL_MODULE := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
