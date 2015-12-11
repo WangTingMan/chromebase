@@ -490,7 +490,7 @@ endif  # BRILLO_USE_DBUS == 1
 ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test_helpers-host
-LOCAL_SHARED_LIBRARIES := libchrome-host
+LOCAL_SHARED_LIBRARIES := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
@@ -500,10 +500,10 @@ LOCAL_SRC_FILES := base/test/simple_test_clock.cc
 include $(BUILD_HOST_STATIC_LIBRARY)
 
 # Host unit tests. Run (from repo root) with:
-# ./out/host/<arch>/bin/libchrome-host_test
+# ./out/host/<arch>/bin/libchrome_test
 # ========================================================
 include $(CLEAR_VARS)
-LOCAL_MODULE := libchrome-host_test
+LOCAL_MODULE := libchrome_test
 ifdef BRILLO
   LOCAL_MODULE_TAGS := debug
 endif
@@ -513,7 +513,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libchrome-host libevent-host
+LOCAL_SHARED_LIBRARIES := libchrome libevent-host
 LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libBionicGtestMain
 LOCAL_LDLIBS := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
