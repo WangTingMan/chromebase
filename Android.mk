@@ -356,6 +356,7 @@ libchromeCommonUnittestSrc := \
 	base/values_unittest.cc \
 	base/vlog_unittest.cc \
 	testing/multiprocess_func_list.cc \
+	testrunner.cc \
 
 libchromeHostCFlags := -D__ANDROID_HOST__
 
@@ -514,7 +515,7 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent-host
-LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host libBionicGtestMain
+LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host
 LOCAL_LDLIBS := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
 endif
@@ -534,5 +535,5 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
-LOCAL_STATIC_LIBRARIES := libgmock libgtest libBionicGtestMain
+LOCAL_STATIC_LIBRARIES := libgmock libgtest
 include $(BUILD_NATIVE_TEST)
