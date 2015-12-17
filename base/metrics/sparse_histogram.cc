@@ -38,9 +38,9 @@ HistogramType SparseHistogram::GetHistogramType() const {
 }
 
 bool SparseHistogram::HasConstructionArguments(
-    Sample expected_minimum,
-    Sample expected_maximum,
-    size_t expected_bucket_count) const {
+    Sample /* expected_minimum */,
+    Sample /* expected_maximum */,
+    size_t /* expected_bucket_count */) const {
   // SparseHistogram never has min/max/bucket_count limit.
   return false;
 }
@@ -99,13 +99,13 @@ HistogramBase* SparseHistogram::DeserializeInfoImpl(PickleIterator* iter) {
   return SparseHistogram::FactoryGet(histogram_name, flags);
 }
 
-void SparseHistogram::GetParameters(DictionaryValue* params) const {
+void SparseHistogram::GetParameters(DictionaryValue* /* params */) const {
   // TODO(kaiwang): Implement. (See HistogramBase::WriteJSON.)
 }
 
-void SparseHistogram::GetCountAndBucketData(Count* count,
-                                            int64* sum,
-                                            ListValue* buckets) const {
+void SparseHistogram::GetCountAndBucketData(Count* /* count */,
+                                            int64* /* sum */,
+                                            ListValue* /* buckets */) const {
   // TODO(kaiwang): Implement. (See HistogramBase::WriteJSON.)
 }
 

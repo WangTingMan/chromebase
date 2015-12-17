@@ -50,7 +50,7 @@ struct IntToStringT {
   struct TestNegT {};
   template <typename INT2>
   struct TestNegT<INT2, false> {
-    static bool TestNeg(INT2 value) {
+    static bool TestNeg(INT2 /* value */) {
       // value is unsigned, and can never be negative.
       return false;
     }

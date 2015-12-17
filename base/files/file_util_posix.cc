@@ -559,7 +559,7 @@ bool CreateTemporaryDirInDir(const FilePath& base_dir,
   return CreateTemporaryDirInDirImpl(base_dir, mkdtemp_template, new_dir);
 }
 
-bool CreateNewTempDirectory(const FilePath::StringType& prefix,
+bool CreateNewTempDirectory(const FilePath::StringType& /* prefix */,
                             FilePath* new_temp_path) {
   FilePath tmpdir;
   if (!GetTempDir(&tmpdir))
