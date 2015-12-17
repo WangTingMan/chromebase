@@ -44,6 +44,7 @@ BASE_EXPORT string16 Uint64ToString16(uint64 value);
 BASE_EXPORT std::string SizeTToString(size_t value);
 BASE_EXPORT string16 SizeTToString16(size_t value);
 
+// Deprecated: prefer std::to_string(double) instead.
 // DoubleToString converts the double to a string format that ignores the
 // locale. If you want to use locale specific formatting, use ICU.
 BASE_EXPORT std::string DoubleToString(double value);
@@ -79,6 +80,7 @@ BASE_EXPORT bool StringToUint64(const StringPiece16& input, uint64* output);
 BASE_EXPORT bool StringToSizeT(const StringPiece& input, size_t* output);
 BASE_EXPORT bool StringToSizeT(const StringPiece16& input, size_t* output);
 
+// Deprecated: prefer std::stod() instead.
 // For floating-point conversions, only conversions of input strings in decimal
 // form are defined to work.  Behavior with strings representing floating-point
 // numbers in hexadecimal, and strings representing non-fininte values (such as

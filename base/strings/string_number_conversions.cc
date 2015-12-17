@@ -12,9 +12,7 @@
 #include <limits>
 
 #include "base/logging.h"
-#include "base/scoped_clear_errno.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/third_party/dmg_fp/dmg_fp.h"
 
 namespace base {
 
@@ -412,10 +410,18 @@ string16 SizeTToString16(size_t value) {
 }
 
 std::string DoubleToString(double value) {
-  // According to g_fmt.cc, it is sufficient to declare a buffer of size 32.
-  char buffer[32];
-  dmg_fp::g_fmt(buffer, value);
-  return std::string(buffer);
+  auto ret = std::to_string(value);
+  // If this returned an integer, don't do anything.
+  if (ret.find('.') == std::string::npos) {
+    return ret;
+  }
+  // Otherwise, it has an annoying tendency to leave trailing zeros.
+  size_t len = ret.size();
+  while (len >= 2 && ret[len - 1] == '0' && ret[len - 2] != '.') {
+    --len;
+  }
+  ret.erase(len);
+  return ret;
 }
 
 bool StringToInt(const StringPiece& input, int* output) {
@@ -459,14 +465,10 @@ bool StringToSizeT(const StringPiece16& input, size_t* output) {
 }
 
 bool StringToDouble(const std::string& input, double* output) {
-  // Thread-safe?  It is on at least Mac, Linux, and Windows.
-  ScopedClearErrno clear_errno;
-
-  char* endptr = NULL;
-  *output = dmg_fp::strtod(input.c_str(), &endptr);
+  char* endptr = nullptr;
+  *output = strtod(input.c_str(), &endptr);
 
   // Cases to return false:
-  //  - If errno is ERANGE, there was an overflow or underflow.
   //  - If the input string is empty, there was nothing to parse.
   //  - If endptr does not point to the end of the string, there are either
   //    characters remaining in the string after a parsed number, or the string
@@ -474,10 +476,11 @@ bool StringToDouble(const std::string& input, double* output) {
   //    expected end given the string's stated length to correctly catch cases
   //    where the string contains embedded NUL characters.
   //  - If the first character is a space, there was leading whitespace
-  return errno == 0 &&
-         !input.empty() &&
+  return !input.empty() &&
          input.c_str() + input.length() == endptr &&
-         !isspace(input[0]);
+         !isspace(input[0]) &&
+         *output != std::numeric_limits<double>::infinity() &&
+         *output != -std::numeric_limits<double>::infinity();
 }
 
 // Note: if you need to add String16ToDouble, first ask yourself if it's
