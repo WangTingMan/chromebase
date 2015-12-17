@@ -797,7 +797,8 @@ TEST(StringNumberConversionsTest, StringToDouble) {
   for (size_t i = 0; i < arraysize(cases); ++i) {
     double output;
     errno = 1;
-    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output));
+    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output))
+        << "for input=" << cases[i].input << "got output=" << output;
     if (cases[i].success)
       EXPECT_EQ(1, errno) << i;  // confirm that errno is unchanged.
     EXPECT_DOUBLE_EQ(cases[i].output, output);
@@ -818,13 +819,13 @@ TEST(StringNumberConversionsTest, DoubleToString) {
     double input;
     const char* expected;
   } cases[] = {
-    {0.0, "0"},
+    {0.0, "0.0"},
     {1.25, "1.25"},
-    {1.33518e+012, "1.33518e+12"},
-    {1.33489e+012, "1.33489e+12"},
-    {1.33505e+012, "1.33505e+12"},
-    {1.33545e+009, "1335450000"},
-    {1.33503e+009, "1335030000"},
+    {1.33518e+012, "1335180000000.0"},
+    {1.33489e+012, "1334890000000.0"},
+    {1.33505e+012, "1335050000000.0"},
+    {1.33545e+009, "1335450000.0"},
+    {1.33503e+009, "1335030000.0"},
   };
 
   for (size_t i = 0; i < arraysize(cases); ++i) {

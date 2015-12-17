@@ -361,10 +361,18 @@ string16 NumberToString16(unsigned long long value) {
 }
 
 std::string NumberToString(double value) {
-  // According to g_fmt.cc, it is sufficient to declare a buffer of size 32.
-  char buffer[32];
-  dmg_fp::g_fmt(buffer, value);
-  return std::string(buffer);
+  auto ret = std::to_string(value);
+  // If this returned an integer, don't do anything.
+  if (ret.find('.') == std::string::npos) {
+    return ret;
+  }
+  // Otherwise, it has an annoying tendency to leave trailing zeros.
+  size_t len = ret.size();
+  while (len >= 2 && ret[len - 1] == '0' && ret[len - 2] != '.') {
+    --len;
+  }
+  ret.erase(len);
+  return ret;
 }
 
 base::string16 NumberToString16(double value) {
@@ -429,7 +437,7 @@ bool StringToDouble(const std::string& input, double* output) {
   ScopedClearErrno clear_errno;
 
   char* endptr = nullptr;
-  *output = dmg_fp::strtod(input.c_str(), &endptr);
+  *output = strtod(input.c_str(), &endptr);
 
   // Cases to return false:
   //  - If errno is ERANGE, there was an overflow or underflow.
@@ -440,10 +448,11 @@ bool StringToDouble(const std::string& input, double* output) {
   //    expected end given the string's stated length to correctly catch cases
   //    where the string contains embedded NUL characters.
   //  - If the first character is a space, there was leading whitespace
-  return errno == 0 &&
-         !input.empty() &&
+  return !input.empty() &&
          input.c_str() + input.length() == endptr &&
-         !isspace(input[0]);
+         !isspace(input[0]) &&
+         *output != std::numeric_limits<double>::infinity() &&
+         *output != -std::numeric_limits<double>::infinity();
 }
 
 // Note: if you need to add String16ToDouble, first ask yourself if it's
