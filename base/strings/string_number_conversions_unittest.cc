@@ -715,8 +715,10 @@ TEST(StringNumberConversionsTest, StringToDouble) {
     {"2.99792458e8", 299792458.0, true},
     {"149597870.691E+3", 149597870691.0, true},
     {"6.", 6.0, true},
-    {"9e99999999999999999999", HUGE_VAL, false},
-    {"-9e99999999999999999999", -HUGE_VAL, false},
+    {"9e99999999999999999999", std::numeric_limits<double>::infinity(),
+                               false},
+    {"-9e99999999999999999999", -std::numeric_limits<double>::infinity(),
+                                false},
     {"1e-2", 0.01, true},
     {"42 ", 42.0, false},
     {" 1e-2", 0.01, false},
@@ -739,7 +741,8 @@ TEST(StringNumberConversionsTest, StringToDouble) {
   for (size_t i = 0; i < arraysize(cases); ++i) {
     double output;
     errno = 1;
-    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output));
+    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output))
+        << "for input=" << cases[i].input << "got output=" << output;
     if (cases[i].success)
       EXPECT_EQ(1, errno) << i;  // confirm that errno is unchanged.
     EXPECT_DOUBLE_EQ(cases[i].output, output);
@@ -760,13 +763,13 @@ TEST(StringNumberConversionsTest, DoubleToString) {
     double input;
     const char* expected;
   } cases[] = {
-    {0.0, "0"},
+    {0.0, "0.0"},
     {1.25, "1.25"},
-    {1.33518e+012, "1.33518e+12"},
-    {1.33489e+012, "1.33489e+12"},
-    {1.33505e+012, "1.33505e+12"},
-    {1.33545e+009, "1335450000"},
-    {1.33503e+009, "1335030000"},
+    {1.33518e+012, "1335180000000.0"},
+    {1.33489e+012, "1334890000000.0"},
+    {1.33505e+012, "1335050000000.0"},
+    {1.33545e+009, "1335450000.0"},
+    {1.33503e+009, "1335030000.0"},
   };
 
   for (size_t i = 0; i < arraysize(cases); ++i) {
@@ -777,12 +780,12 @@ TEST(StringNumberConversionsTest, DoubleToString) {
   const char input_bytes[8] = {0, 0, 0, 0, '\xee', '\x6d', '\x73', '\x42'};
   double input = 0;
   memcpy(&input, input_bytes, arraysize(input_bytes));
-  EXPECT_EQ("1335179083776", DoubleToString(input));
+  EXPECT_EQ("1335179083776.0", DoubleToString(input));
   const char input_bytes2[8] =
       {0, 0, 0, '\xa0', '\xda', '\x6c', '\x73', '\x42'};
   input = 0;
   memcpy(&input, input_bytes2, arraysize(input_bytes2));
-  EXPECT_EQ("1334890332160", DoubleToString(input));
+  EXPECT_EQ("1334890332160.0", DoubleToString(input));
 }
 
 TEST(StringNumberConversionsTest, HexEncode) {

@@ -139,8 +139,6 @@ libchromeCommonSrc := \
 	base/sys_info_posix.cc \
 	base/task/cancelable_task_tracker.cc \
 	base/task_runner.cc \
-	base/third_party/dmg_fp/dtoa.cc \
-	base/third_party/dmg_fp/g_fmt.cc \
 	base/third_party/dynamic_annotations/dynamic_annotations.c \
 	base/third_party/icu/icu_utf.cc \
 	base/third_party/nspr/prtime.cc \
