@@ -23,10 +23,12 @@ namespace dbus {
 
 namespace {
 
+#if !defined(__ANDROID__)
 const char kDisconnectedSignal[] = "Disconnected";
 const char kDisconnectedMatchRule[] =
     "type='signal', path='/org/freedesktop/DBus/Local',"
     "interface='org.freedesktop.DBus.Local', member='Disconnected'";
+#endif
 
 // The NameOwnerChanged member in org.freedesktop.DBus
 const char kNameOwnerChangedSignal[] = "NameOwnerChanged";
@@ -444,12 +446,15 @@ bool Bus::Connect() {
       return false;
     }
   }
+
+#if !defined(__ANDROID__)
   // We shouldn't exit on the disconnected signal.
   dbus_connection_set_exit_on_disconnect(connection_, false);
 
   // Watch Disconnected signal.
   AddFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
   AddMatch(kDisconnectedMatchRule, error.get());
+#endif
 
   return true;
 }
@@ -509,8 +514,11 @@ void Bus::ShutdownAndBlock() {
   if (connection_) {
     // Remove Disconnected watcher.
     ScopedDBusError error;
+
+#if !defined(__ANDROID__)
     RemoveFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
     RemoveMatch(kDisconnectedMatchRule, error.get());
+#endif
 
     if (connection_type_ == PRIVATE)
       ClosePrivateConnection();
@@ -1187,6 +1195,7 @@ void Bus::OnDispatchStatusChangedThunk(DBusConnection* connection,
   self->OnDispatchStatusChanged(connection, status);
 }
 
+#if !defined(__ANDROID__)
 // static
 DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
     DBusConnection* connection,
@@ -1200,6 +1209,7 @@ DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
   }
   return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
+#endif
 
 // static
 DBusHandlerResult Bus::OnServiceOwnerChangedFilter(
