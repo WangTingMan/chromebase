@@ -16,8 +16,8 @@
 #include "base/process/process_handle.h"
 #include "base/profiler/alternate_timer.h"
 #include "base/strings/stringprintf.h"
-#include "base/third_party/valgrind/memcheck.h"
 #include "base/tracking_info.h"
+#include "third_party/valgrind/memcheck.h"
 
 using base::TimeDelta;
 

@@ -16,9 +16,9 @@
 #include "base/debug/leak_annotations.h"
 #include "base/files/file_util.h"
 #include "base/posix/eintr_wrapper.h"
-#include "base/third_party/valgrind/valgrind.h"
 #include "build/build_config.h"
 #include "sandbox/linux/tests/unit_tests.h"
+#include "third_party/valgrind/valgrind.h"
 
 // Specifically, PNaCl toolchain does not have this flag.
 #if !defined(POLLRDHUP)

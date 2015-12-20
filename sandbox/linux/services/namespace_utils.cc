@@ -19,7 +19,7 @@
 #include "base/posix/eintr_wrapper.h"
 #include "base/process/launch.h"
 #include "base/strings/safe_sprintf.h"
-#include "base/third_party/valgrind/valgrind.h"
+#include "third_party/valgrind/valgrind.h"
 
 namespace sandbox {
 
