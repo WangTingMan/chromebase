@@ -10,7 +10,6 @@
 #include "base/base_switches.h"
 #include "base/bind.h"
 #include "base/command_line.h"
-#include "base/debug/leak_annotations.h"
 #include "base/format_macros.h"
 #include "base/json/string_escape.h"
 #include "base/lazy_instance.h"
@@ -27,7 +26,6 @@
 #include "base/synchronization/cancellation_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/sys_info.h"
-#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_id_name_manager.h"
@@ -1273,14 +1271,6 @@ TraceLog::TraceLog()
   // accessing the enabled flag. We don't care whether edge-case events are
   // traced or not, so we allow races on the enabled flag to keep the trace
   // macros fast.
-  // TODO(jbates): ANNOTATE_BENIGN_RACE_SIZED crashes windows TSAN bots:
-  // ANNOTATE_BENIGN_RACE_SIZED(g_category_group_enabled,
-  //                            sizeof(g_category_group_enabled),
-  //                           "trace_event category enabled");
-  for (int i = 0; i < MAX_CATEGORY_GROUPS; ++i) {
-    ANNOTATE_BENIGN_RACE(&g_category_group_enabled[i],
-                         "trace_event category enabled");
-  }
 #if defined(OS_NACL)  // NaCl shouldn't expose the process id.
   SetProcessID(0);
 #else
@@ -1438,7 +1428,6 @@ const unsigned char* TraceLog::GetCategoryGroupEnabledInternal(
     // category groups with strings not known at compile time (this is
     // required by SetWatchEvent).
     const char* new_group = strdup(category_group);
-    ANNOTATE_LEAKING_OBJECT_PTR(new_group);
     g_category_groups[category_index] = new_group;
     DCHECK(!g_category_group_enabled[category_index]);
     // Note that if both included and excluded patterns in the
