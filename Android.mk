@@ -65,7 +65,6 @@ libchromeCommonSrc := \
 	base/files/scoped_temp_dir.cc \
 	base/guid.cc \
 	base/guid_posix.cc \
-	base/hash.cc \
 	base/json/json_parser.cc \
 	base/json/json_reader.cc \
 	base/json/json_string_value_serializer.cc \
@@ -142,7 +141,6 @@ libchromeCommonSrc := \
 	base/third_party/dynamic_annotations/dynamic_annotations.c \
 	base/third_party/icu/icu_utf.cc \
 	base/third_party/nspr/prtime.cc \
-	base/third_party/superfasthash/superfasthash.c \
 	base/threading/non_thread_safe_impl.cc \
 	base/threading/platform_thread_posix.cc \
 	base/threading/post_task_and_reply_impl.cc \
@@ -250,7 +248,6 @@ libchromeCommonUnittestSrc := \
 	base/files/scoped_temp_dir_unittest.cc \
 	base/gmock_unittest.cc \
 	base/guid_unittest.cc \
-	base/hash_unittest.cc \
 	base/id_map_unittest.cc \
 	base/json/json_parser_unittest.cc \
 	base/json/json_writer_unittest.cc \

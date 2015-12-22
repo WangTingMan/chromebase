@@ -60,7 +60,6 @@ base_libs = [
                 files/scoped_temp_dir.cc
                 guid.cc
                 guid_posix.cc
-                hash.cc
                 json/json_parser.cc
                 json/json_reader.cc
                 json/json_string_value_serializer.cc
@@ -146,7 +145,6 @@ base_libs = [
                 third_party/dynamic_annotations/dynamic_annotations.c
                 third_party/icu/icu_utf.cc
                 third_party/nspr/prtime.cc
-                third_party/superfasthash/superfasthash.c
                 threading/non_thread_safe_impl.cc
                 threading/platform_thread_internal_posix.cc
                 threading/platform_thread_linux.cc
