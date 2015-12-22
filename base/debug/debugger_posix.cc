@@ -41,7 +41,7 @@
 #include "base/strings/string_piece.h"
 
 #if defined(USE_SYMBOLIZE)
-#include "base/third_party/symbolize/symbolize.h"
+#error "symbolize support was removed from libchrome"
 #endif
 
 #if defined(OS_ANDROID)
