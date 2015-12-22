@@ -21,7 +21,6 @@
 #include "base/macros.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/posix/eintr_wrapper.h"
-#include "base/third_party/valgrind/valgrind.h"
 #include "sandbox/linux/bpf_dsl/codegen.h"
 #include "sandbox/linux/bpf_dsl/policy.h"
 #include "sandbox/linux/bpf_dsl/policy_compiler.h"
@@ -36,6 +35,7 @@
 #include "sandbox/linux/system_headers/linux_filter.h"
 #include "sandbox/linux/system_headers/linux_seccomp.h"
 #include "sandbox/linux/system_headers/linux_syscalls.h"
+#include "third_party/valgrind/valgrind.h"
 
 namespace sandbox {
 

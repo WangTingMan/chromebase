@@ -19,10 +19,10 @@
 #include "base/pickle.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/unix_domain_socket_linux.h"
-#include "base/third_party/valgrind/valgrind.h"
 #include "sandbox/linux/syscall_broker/broker_common.h"
 #include "sandbox/linux/syscall_broker/broker_policy.h"
 #include "sandbox/linux/system_headers/linux_syscalls.h"
+#include "third_party/valgrind/valgrind.h"
 
 namespace sandbox {
 
