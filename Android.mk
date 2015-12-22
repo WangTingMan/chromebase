@@ -30,6 +30,8 @@ libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo \
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
+	external/valgrind/include \
+	external/valgrind \
 
 libchromeCommonSrc := \
 	base/allocator/type_profiler_control.cc \
