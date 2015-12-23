@@ -11,7 +11,6 @@
 #include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/compiler_specific.h"
-#include "base/debug/leak_annotations.h"
 #include "base/logging.h"
 #include "base/process/process_handle.h"
 #include "base/profiler/alternate_timer.h"
@@ -825,7 +824,6 @@ void ThreadData::ShutdownSingleThreadedCleanup(bool leak) {
   if (leak) {
     ThreadData* thread_data = thread_data_list;
     while (thread_data) {
-      ANNOTATE_LEAKING_OBJECT_PTR(thread_data);
       thread_data = thread_data->next();
     }
     return;

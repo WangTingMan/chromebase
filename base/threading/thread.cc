@@ -8,7 +8,6 @@
 #include "base/lazy_instance.h"
 #include "base/location.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_restrictions.h"
@@ -216,7 +215,6 @@ bool Thread::GetThreadWasQuitProperly() {
 void Thread::ThreadMain() {
   // Complete the initialization of our Thread object.
   PlatformThread::SetName(name_.c_str());
-  ANNOTATE_THREAD_NAME(name_.c_str());  // Tell the name to race detector.
 
   // Lazily initialize the message_loop so that it can run on this thread.
   DCHECK(message_loop_);
