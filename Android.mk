@@ -140,7 +140,6 @@ libchromeCommonSrc := \
 	base/sys_info_posix.cc \
 	base/task/cancelable_task_tracker.cc \
 	base/task_runner.cc \
-	base/third_party/dynamic_annotations/dynamic_annotations.c \
 	base/third_party/icu/icu_utf.cc \
 	base/third_party/nspr/prtime.cc \
 	base/threading/non_thread_safe_impl.cc \
@@ -337,7 +336,6 @@ libchromeCommonUnittestSrc := \
 	base/time/time_unittest.cc \
 	base/timer/hi_res_timer_manager_unittest.cc \
 	base/timer/timer_unittest.cc \
-	base/tools_sanity_unittest.cc \
 	base/trace_event/memory_allocator_dump_unittest.cc \
 	base/trace_event/memory_dump_manager_unittest.cc \
 	base/trace_event/process_memory_dump_unittest.cc \

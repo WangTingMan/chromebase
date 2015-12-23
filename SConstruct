@@ -142,7 +142,6 @@ base_libs = [
                 sys_info_posix.cc
                 task_runner.cc
                 task/cancelable_task_tracker.cc
-                third_party/dynamic_annotations/dynamic_annotations.c
                 third_party/icu/icu_utf.cc
                 third_party/nspr/prtime.cc
                 threading/non_thread_safe_impl.cc

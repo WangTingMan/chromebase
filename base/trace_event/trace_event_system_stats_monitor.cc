@@ -4,7 +4,6 @@
 
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 
-#include "base/debug/leak_annotations.h"
 #include "base/json/json_writer.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"

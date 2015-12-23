@@ -7,7 +7,6 @@
 #include <string>
 
 #include "base/bind.h"
-#include "base/debug/leak_annotations.h"
 #include "base/location.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/single_thread_task_runner.h"

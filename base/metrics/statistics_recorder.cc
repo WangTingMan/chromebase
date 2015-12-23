@@ -5,7 +5,6 @@
 #include "base/metrics/statistics_recorder.h"
 
 #include "base/at_exit.h"
-#include "base/debug/leak_annotations.h"
 #include "base/json/string_escape.h"
 #include "base/logging.h"
 #include "base/memory/scoped_ptr.h"
@@ -39,13 +38,8 @@ bool StatisticsRecorder::IsActive() {
 // static
 HistogramBase* StatisticsRecorder::RegisterOrDeleteDuplicate(
     HistogramBase* histogram) {
-  // As per crbug.com/79322 the histograms are intentionally leaked, so we need
-  // to annotate them. Because ANNOTATE_LEAKING_OBJECT_PTR may be used only once
-  // for an object, the duplicates should not be annotated.
-  // Callers are responsible for not calling RegisterOrDeleteDuplicate(ptr)
-  // twice if (lock_ == NULL) || (!histograms_).
+  // As per crbug.com/79322 the histograms are intentionally leaked.
   if (lock_ == NULL) {
-    ANNOTATE_LEAKING_OBJECT_PTR(histogram);  // see crbug.com/79322
     return histogram;
   }
 
@@ -60,7 +54,6 @@ HistogramBase* StatisticsRecorder::RegisterOrDeleteDuplicate(
       HistogramMap::iterator it = histograms_->find(name);
       if (histograms_->end() == it) {
         (*histograms_)[name] = histogram;
-        ANNOTATE_LEAKING_OBJECT_PTR(histogram);  // see crbug.com/79322
         histogram_to_return = histogram;
       } else if (histogram == it->second) {
         // The histogram was registered before.
@@ -83,13 +76,11 @@ const BucketRanges* StatisticsRecorder::RegisterOrDeleteDuplicateRanges(
   scoped_ptr<const BucketRanges> ranges_deleter;
 
   if (lock_ == NULL) {
-    ANNOTATE_LEAKING_OBJECT_PTR(ranges);
     return ranges;
   }
 
   base::AutoLock auto_lock(*lock_);
   if (ranges_ == NULL) {
-    ANNOTATE_LEAKING_OBJECT_PTR(ranges);
     return ranges;
   }
 
@@ -98,7 +89,6 @@ const BucketRanges* StatisticsRecorder::RegisterOrDeleteDuplicateRanges(
   if (ranges_->end() == ranges_it) {
     // Add a new matching list to map.
     checksum_matching_list = new std::list<const BucketRanges*>();
-    ANNOTATE_LEAKING_OBJECT_PTR(checksum_matching_list);
     (*ranges_)[ranges->checksum()] = checksum_matching_list;
   } else {
     checksum_matching_list = ranges_it->second;

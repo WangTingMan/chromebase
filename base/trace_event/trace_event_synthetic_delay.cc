@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "base/memory/singleton.h"
-#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/trace_event/trace_event_synthetic_delay.h"
 
 namespace {
@@ -81,7 +80,6 @@ void TraceEventSyntheticDelay::Begin() {
   // calculation is done with a lock held, it will always be correct. The only
   // downside of this is that we may fail to apply some delays when the target
   // duration changes.
-  ANNOTATE_BENIGN_RACE(&target_duration_, "Synthetic delay duration");
   if (!target_duration_.ToInternalValue())
     return;
 
@@ -96,7 +94,6 @@ void TraceEventSyntheticDelay::Begin() {
 
 void TraceEventSyntheticDelay::BeginParallel(base::TimeTicks* out_end_time) {
   // See note in Begin().
-  ANNOTATE_BENIGN_RACE(&target_duration_, "Synthetic delay duration");
   if (!target_duration_.ToInternalValue()) {
     *out_end_time = base::TimeTicks();
     return;
@@ -111,7 +108,6 @@ void TraceEventSyntheticDelay::BeginParallel(base::TimeTicks* out_end_time) {
 
 void TraceEventSyntheticDelay::End() {
   // See note in Begin().
-  ANNOTATE_BENIGN_RACE(&target_duration_, "Synthetic delay duration");
   if (!target_duration_.ToInternalValue())
     return;
 
