@@ -103,9 +103,8 @@ SyncSocket::Handle SyncSocket::UnwrapHandle(
   return descriptor.fd;
 }
 
-bool SyncSocket::PrepareTransitDescriptor(
-    ProcessHandle /* peer_process_handle */,
-    TransitDescriptor* descriptor) {
+bool SyncSocket::PrepareTransitDescriptor(ProcessHandle peer_process_handle,
+                                          TransitDescriptor* descriptor) {
   descriptor->fd = handle();
   descriptor->auto_close = false;
   return descriptor->fd != kInvalidHandle;

@@ -399,7 +399,7 @@ class CheckedNumericState<T, NUMERIC_FLOATING> {
   template <typename Src>
   CheckedNumericState(
       Src value,
-      RangeConstraint /* validity */,
+      RangeConstraint validity,
       typename enable_if<std::numeric_limits<Src>::is_integer, int>::type = 0) {
     switch (DstRangeRelationToSrcRange<T>(value)) {
       case RANGE_VALID:

@@ -69,10 +69,12 @@ const char kSymbolCharacters[] =
 // "out/Debug/base_unittests(_ZN10StackTraceC1Ev+0x20) [0x817778c]"
 // =>
 // "out/Debug/base_unittests(StackTrace::StackTrace()+0x20) [0x817778c]"
-#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
 void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
+
+#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
+
   std::string::size_type search_from = 0;
   while (search_from < text->size()) {
     // Look for the start of a mangled symbol, from search_from.
@@ -107,11 +109,9 @@ void DemangleSymbols(std::string* text) {
       search_from = mangled_start + 2;
     }
   }
-}
-#elif !defined(__UCLIBC__)
-void DemangleSymbols(std::string* /* text */) {}
-#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
 
+#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
+}
 #endif  // !defined(USE_SYMBOLIZE)
 
 class BacktraceOutputHandler {
@@ -122,7 +122,6 @@ class BacktraceOutputHandler {
   virtual ~BacktraceOutputHandler() {}
 };
 
-#if defined(USE_SYMBOLIZE) || !defined(__UCLIBC__)
 void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
   // This should be more than enough to store a 64-bit number in hex:
   // 16 hex digits + 1 for null-terminator.
@@ -132,7 +131,6 @@ void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
                    buf, sizeof(buf), 16, 12);
   handler->HandleOutput(buf);
 }
-#endif  // defined(USE_SYMBOLIZE) ||  !defined(__UCLIBC__)
 
 #if defined(USE_SYMBOLIZE)
 void OutputFrameId(intptr_t frame_id, BacktraceOutputHandler* handler) {
@@ -146,13 +144,9 @@ void OutputFrameId(intptr_t frame_id, BacktraceOutputHandler* handler) {
 }
 #endif  // defined(USE_SYMBOLIZE)
 
-#if !defined(__UCLIBC__)
-void ProcessBacktrace(void *const * trace,
+void ProcessBacktrace(void *const *trace,
                       size_t size,
                       BacktraceOutputHandler* handler) {
-  (void)trace;  // unused based on build context below.
-  (void)size;  // unusud based on build context below.
-  (void)handler;  // unused based on build context below.
   // NOTE: This code MUST be async-signal safe (it's used by in-process
   // stack dumping signal handler). NO malloc or stdio is allowed here.
 
@@ -204,7 +198,6 @@ void ProcessBacktrace(void *const * trace,
   }
 #endif  // defined(USE_SYMBOLIZE)
 }
-#endif  // !defined(__UCLIBC__)
 
 void PrintToStderr(const char* output) {
   // NOTE: This code MUST be async-signal safe (it's used by in-process
@@ -212,10 +205,7 @@ void PrintToStderr(const char* output) {
   ignore_result(HANDLE_EINTR(write(STDERR_FILENO, output, strlen(output))));
 }
 
-void StackDumpSignalHandler(int signal,
-                            siginfo_t* info,
-                            void* void_context) {
-  (void)void_context;  // unused depending on build context
+void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   // NOTE: This code MUST be async-signal safe.
   // NO malloc or stdio is allowed here.
 

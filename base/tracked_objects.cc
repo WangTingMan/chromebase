@@ -776,8 +776,7 @@ TrackedTime ThreadData::Now() {
 }
 
 // static
-void ThreadData::EnsureCleanupWasCalled(
-    int /* major_threads_shutdown_count */) {
+void ThreadData::EnsureCleanupWasCalled(int major_threads_shutdown_count) {
   base::AutoLock lock(*list_lock_.Pointer());
   if (worker_thread_data_creation_count_ == 0)
     return;  // We haven't really run much, and couldn't have leaked.

@@ -453,7 +453,7 @@ void ObjectProxy::WaitForServiceToBeAvailableInternal() {
 }
 
 DBusHandlerResult ObjectProxy::HandleMessage(
-    DBusConnection* /* connection */,
+    DBusConnection* connection,
     DBusMessage* raw_message) {
   bus_->AssertOnDBusThread();
 

@@ -194,8 +194,7 @@ class LoggingLock {
     UnlockLogging();
   }
 
-  static void Init(LogLockingState lock_log,
-                   const PathChar* /* new_log_file */) {
+  static void Init(LogLockingState lock_log, const PathChar* new_log_file) {
     if (initialized)
       return;
     lock_log_file = lock_log;
@@ -671,7 +670,7 @@ void LogMessage::Init(const char* file, int line) {
     stream_ << base::PlatformThread::CurrentId() << ':';
   if (g_log_timestamp) {
     time_t t = time(nullptr);
-    struct tm local_time = {};
+    struct tm local_time = {0};
 #ifdef _MSC_VER
     localtime_s(&local_time, &t);
 #else
