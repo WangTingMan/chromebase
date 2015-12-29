@@ -21,6 +21,8 @@ LOCAL_PATH := $(call my-dir)
 # Common variables
 # ========================================================
 
+# Set libchromeUseClang to "true" to force clang or "false" to force gcc.
+libchromeUseClang :=
 libchromeCommonCppExtension := .cc
 libchromeCommonCFlags := -Wall -Werror \
 	-Wno-char-subscripts -Wno-missing-field-initializers \
@@ -378,6 +380,7 @@ LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeLinuxSrc) base/sys_info_chro
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libevent liblog libcutils
@@ -391,6 +394,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -426,6 +430,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 # webservd uses RTTI, so that this library also needs to be built with it.
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := \
@@ -447,6 +452,7 @@ LOCAL_SHARED_LIBRARIES := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := \
@@ -469,6 +475,7 @@ LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := \
@@ -490,6 +497,7 @@ LOCAL_SHARED_LIBRARIES := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := base/test/simple_test_clock.cc
@@ -507,6 +515,7 @@ LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent-host
@@ -527,6 +536,7 @@ LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
+LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
