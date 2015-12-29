@@ -55,7 +55,7 @@ bool ReadUnicodeCharacter(const char16* src,
 
 #if defined(WCHAR_T_IS_UTF32)
 bool ReadUnicodeCharacter(const wchar_t* src,
-                          int32 src_len,
+                          int32 /* src_len */,
                           int32* char_index,
                           uint32* code_point) {
   // Conversion is easy since the source is 32-bit.
