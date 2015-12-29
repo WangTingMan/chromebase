@@ -48,7 +48,11 @@
 // initialization, as base's LINKER_INITIALIZED requires a constructor and on
 // some compilers (notably gcc 4.4) this still ends up needing runtime
 // initialization.
-#define LAZY_INSTANCE_INITIALIZER {0}
+#ifdef __clang__
+  #define LAZY_INSTANCE_INITIALIZER {}
+#else
+  #define LAZY_INSTANCE_INITIALIZER {0, 0}
+#endif
 
 namespace base {
 

@@ -671,7 +671,8 @@ void LogMessage::Init(const char* file, int line) {
     stream_ << base::PlatformThread::CurrentId() << ':';
   if (g_log_timestamp) {
     time_t t = time(nullptr);
-    struct tm local_time = {0};
+    struct tm local_time;
+    memset(&local_time, 0, sizeof(local_time));
 #ifdef _MSC_VER
     localtime_s(&local_time, &t);
 #else

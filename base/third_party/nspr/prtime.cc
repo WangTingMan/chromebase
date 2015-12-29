@@ -160,7 +160,8 @@ PR_ImplodeTime(const PRExplodedTime *exploded)
     result += exploded->tm_usec;
     return result;
 #elif defined(OS_POSIX)
-    struct tm exp_tm = {0};
+    struct tm exp_tm;
+    memset(&exp_tm, 0, sizeof(exp_tm));
     exp_tm.tm_sec  = exploded->tm_sec;
     exp_tm.tm_min  = exploded->tm_min;
     exp_tm.tm_hour = exploded->tm_hour;
