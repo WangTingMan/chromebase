@@ -152,7 +152,7 @@ int sys_rt_sigaction(int sig, const struct kernel_sigaction* act,
 // See crbug.com/177956.
 void ResetChildSignalHandlersToDefaults(void) {
   for (int signum = 1; ; ++signum) {
-    struct kernel_sigaction act = {};
+    struct kernel_sigaction act = {0};
     int sigaction_get_ret = sys_rt_sigaction(signum, NULL, &act);
     if (sigaction_get_ret && errno == EINVAL) {
 #if !defined(NDEBUG)

@@ -247,7 +247,7 @@ DBusHandlerResult ObjectManager::HandleMessageThunk(DBusConnection* connection,
   return self->HandleMessage(connection, raw_message);
 }
 
-DBusHandlerResult ObjectManager::HandleMessage(DBusConnection* /* connection */,
+DBusHandlerResult ObjectManager::HandleMessage(DBusConnection* connection,
                                                DBusMessage* raw_message) {
   DCHECK(bus_);
   bus_->AssertOnDBusThread();
@@ -377,10 +377,9 @@ void ObjectManager::InterfacesAddedReceived(Signal* signal) {
   UpdateObject(object_path, &reader);
 }
 
-void ObjectManager::InterfacesAddedConnected(
-    const std::string& /* interface_name */,
-    const std::string& /* signal_name */,
-    bool success) {
+void ObjectManager::InterfacesAddedConnected(const std::string& interface_name,
+                                             const std::string& signal_name,
+                                             bool success) {
   LOG_IF(WARNING, !success) << service_name_ << " " << object_path_.value()
                             << ": Failed to connect to InterfacesAdded signal.";
 }
@@ -403,8 +402,8 @@ void ObjectManager::InterfacesRemovedReceived(Signal* signal) {
 }
 
 void ObjectManager::InterfacesRemovedConnected(
-    const std::string& /* interface_name */,
-    const std::string& /* signal_name */,
+    const std::string& interface_name,
+    const std::string& signal_name,
     bool success) {
   LOG_IF(WARNING, !success) << service_name_ << " " << object_path_.value()
                             << ": Failed to connect to "

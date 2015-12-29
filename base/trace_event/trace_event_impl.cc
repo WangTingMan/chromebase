@@ -238,18 +238,17 @@ class TraceBufferRingBuffer : public TraceBuffer {
           chunks_[current_iteration_index_++] : NULL;
     }
 
-    scoped_ptr<TraceBufferChunk> GetChunk(size_t* /* index */) override {
+    scoped_ptr<TraceBufferChunk> GetChunk(size_t* index) override {
       NOTIMPLEMENTED();
       return scoped_ptr<TraceBufferChunk>();
     }
-    void ReturnChunk(size_t /* index */,
-                     scoped_ptr<TraceBufferChunk>) override {
+    void ReturnChunk(size_t index, scoped_ptr<TraceBufferChunk>) override {
       NOTIMPLEMENTED();
     }
     bool IsFull() const override { return false; }
     size_t Size() const override { return 0; }
     size_t Capacity() const override { return 0; }
-    TraceEvent* GetEventByHandle(TraceEventHandle /* handle */) override {
+    TraceEvent* GetEventByHandle(TraceEventHandle handle) override {
       return NULL;
     }
     scoped_ptr<TraceBuffer> CloneForIteration() const override {
@@ -257,7 +256,7 @@ class TraceBufferRingBuffer : public TraceBuffer {
       return scoped_ptr<TraceBuffer>();
     }
     void EstimateTraceMemoryOverhead(
-        TraceEventMemoryOverhead* /* overhead */) override {
+        TraceEventMemoryOverhead* overhead) override {
       NOTIMPLEMENTED();
     }
 

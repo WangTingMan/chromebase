@@ -31,16 +31,15 @@ class TimeTest : public testing::Test {
     // must be a time guaranteed to be outside of a DST fallback hour in
     // any timezone.
     struct tm local_comparison_tm = {
-      .tm_sec = 0,
-      .tm_min = 45,
-      .tm_hour = 12,
-      .tm_mday = 15,
-      .tm_mon = 10 - 1,
-      .tm_year = 2007 - 1900,
-      .tm_wday = 0,  // (ignored, output only)
-      .tm_yday = 0,  // (ignored, output only)
-      .tm_isdst = -1,  // DST in effect, -1 tells mktime to figure it out
-      .tm_gmtoff = 0,
+      0,            // second
+      45,           // minute
+      12,           // hour
+      15,           // day of month
+      10 - 1,       // month
+      2007 - 1900,  // year
+      0,            // day of week (ignored, output only)
+      0,            // day of year (ignored, output only)
+      -1            // DST in effect, -1 tells mktime to figure it out
     };
 
     time_t converted_time = mktime(&local_comparison_tm);
@@ -116,11 +115,11 @@ TEST_F(TimeTest, FromExplodedWithMilliseconds) {
   // Some platform implementations of FromExploded are liable to drop
   // milliseconds if we aren't careful.
   Time now = Time::NowFromSystemTime();
-  Time::Exploded exploded1 = {};
+  Time::Exploded exploded1 = {0};
   now.UTCExplode(&exploded1);
   exploded1.millisecond = 500;
   Time time = Time::FromUTCExploded(exploded1);
-  Time::Exploded exploded2 = {};
+  Time::Exploded exploded2 = {0};
   time.UTCExplode(&exploded2);
   EXPECT_EQ(exploded1.millisecond, exploded2.millisecond);
 }
@@ -168,8 +167,8 @@ TEST_F(TimeTest, ParseTimeTest1) {
   time(&current_time);
 
   const int BUFFER_SIZE = 64;
-  struct tm local_time = {};
-  char time_buf[BUFFER_SIZE] = {};
+  struct tm local_time = {0};
+  char time_buf[BUFFER_SIZE] = {0};
 #if defined(OS_WIN)
   localtime_s(&local_time, &current_time);
   asctime_s(time_buf, arraysize(time_buf), &local_time);

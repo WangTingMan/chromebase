@@ -130,7 +130,7 @@ void HistogramSamples::IncreaseRedundantCount(HistogramBase::Count diff) {
 
 SampleCountIterator::~SampleCountIterator() {}
 
-bool SampleCountIterator::GetBucketIndex(size_t* /* index */) const {
+bool SampleCountIterator::GetBucketIndex(size_t* index) const {
   DCHECK(!Done());
   return false;
 }

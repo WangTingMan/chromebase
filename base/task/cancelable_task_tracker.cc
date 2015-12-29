@@ -37,7 +37,7 @@ void RunIfNotCanceledThenUntrack(const CancellationFlag* flag,
 }
 
 bool IsCanceled(const CancellationFlag* flag,
-                base::ScopedClosureRunner* /* cleanup_runner */) {
+                base::ScopedClosureRunner* cleanup_runner) {
   return flag->IsSet();
 }
 

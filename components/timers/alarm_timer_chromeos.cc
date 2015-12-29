@@ -250,7 +250,7 @@ void AlarmTimer::Delegate::OnFileCanReadWithoutBlocking(int fd) {
   }
 }
 
-void AlarmTimer::Delegate::OnFileCanWriteWithoutBlocking(int /* fd */) {
+void AlarmTimer::Delegate::OnFileCanWriteWithoutBlocking(int fd) {
   NOTREACHED();
 }
 

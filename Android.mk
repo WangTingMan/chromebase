@@ -22,8 +22,11 @@ LOCAL_PATH := $(call my-dir)
 # ========================================================
 
 libchromeCommonCppExtension := .cc
-libchromeCommonCFlags := -Wall -Werror
-libchromeCommonCppFlags :=
+libchromeCommonCFlags := -Wall -Werror \
+	-Wno-char-subscripts -Wno-missing-field-initializers \
+	-Wno-unused-function -Wno-unused-parameter
+libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo \
+	-Wno-non-virtual-dtor
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
@@ -503,7 +506,7 @@ endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST -Wno-unused-parameter
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent-host
@@ -523,7 +526,7 @@ endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA -Wno-unused-parameter
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent

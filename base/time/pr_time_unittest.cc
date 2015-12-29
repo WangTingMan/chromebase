@@ -31,16 +31,15 @@ class PRTimeTest : public testing::Test {
     // must be a time guaranteed to be outside of a DST fallback hour in
     // any timezone.
     struct tm local_comparison_tm = {
-      .tm_sec = 0,
-      .tm_min = 45,
-      .tm_hour = 12,
-      .tm_mday = 15,
-      .tm_mon = 10 - 1,
-      .tm_year = 2007 - 1900,
-      .tm_wday = 0,  // (ignored, output only)
-      .tm_yday = 0,  // (ignored, output only)
-      .tm_isdst = -1,  // DST in effect, -1 tells mktime to figure it out
-      .tm_gmtoff = 0,
+      0,            // second
+      45,           // minute
+      12,           // hour
+      15,           // day of month
+      10 - 1,       // month
+      2007 - 1900,  // year
+      0,            // day of week (ignored, output only)
+      0,            // day of year (ignored, output only)
+      -1            // DST in effect, -1 tells mktime to figure it out
     };
     comparison_time_local_ =
         mktime(&local_comparison_tm) * Time::kMicrosecondsPerSecond;
@@ -48,16 +47,15 @@ class PRTimeTest : public testing::Test {
 
     const int microseconds = 441381;
     struct tm local_comparison_tm_2 = {
-      .tm_sec = 12,
-      .tm_min = 28,
-      .tm_hour = 11,
-      .tm_mday = 8,
-      .tm_mon = 7 - 1,
-      .tm_year = 2013 - 1900,
-      .tm_wday = 0,  // (ignored, output only)
-      .tm_yday = 0,  // (ignored, output only)
-      .tm_isdst = -1,  // DST in effect, -1 tells mktime to figure it out
-      .tm_gmtoff = 0,
+      12,           // second
+      28,           // minute
+      11,           // hour
+      8,            // day of month
+      7 - 1,        // month
+      2013 - 1900,  // year
+      0,            // day of week (ignored, output only)
+      0,            // day of year (ignored, output only)
+      -1            // DST in effect, -1 tells mktime to figure it out
     };
     comparison_time_local_2_ =
         mktime(&local_comparison_tm_2) * Time::kMicrosecondsPerSecond;
@@ -76,7 +74,7 @@ TEST_F(PRTimeTest, ParseTimeTest1) {
   time(&current_time);
 
   const int BUFFER_SIZE = 64;
-  struct tm local_time = {};
+  struct tm local_time = {0};
   char time_buf[BUFFER_SIZE] = {0};
 #if defined(OS_WIN)
   localtime_s(&local_time, &current_time);

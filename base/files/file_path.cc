@@ -45,7 +45,7 @@ const FilePath::CharType kStringTerminator = FILE_PATH_LITERAL('\0');
 // otherwise returns npos.  This can only be true on Windows, when a pathname
 // begins with a letter followed by a colon.  On other platforms, this always
 // returns npos.
-StringType::size_type FindDriveLetter(const StringType& /* path */) {
+StringType::size_type FindDriveLetter(const StringType& path) {
 #if defined(FILE_PATH_USES_DRIVE_LETTERS)
   // This is dependent on an ASCII-based character set, but that's a
   // reasonable assumption.  iswalpha can be too inclusive here.
@@ -1297,7 +1297,7 @@ FilePath FilePath::NormalizePathSeparators() const {
   return NormalizePathSeparatorsTo(kSeparators[0]);
 }
 
-FilePath FilePath::NormalizePathSeparatorsTo(CharType /* separator */) const {
+FilePath FilePath::NormalizePathSeparatorsTo(CharType separator) const {
 #if defined(FILE_PATH_USES_WIN_SEPARATORS)
   DCHECK_NE(kSeparators + kSeparatorsLength,
             std::find(kSeparators, kSeparators + kSeparatorsLength, separator));

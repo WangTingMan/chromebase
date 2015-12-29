@@ -135,7 +135,7 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
                                       DstSign,
                                       SrcSign,
                                       NUMERIC_RANGE_CONTAINED> {
-  static RangeConstraint Check(Src /* value */) { return RANGE_VALID; }
+  static RangeConstraint Check(Src value) { return RANGE_VALID; }
 };
 
 // Signed to signed narrowing: Both the upper and lower boundaries may be

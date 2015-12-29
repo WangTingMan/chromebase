@@ -92,47 +92,47 @@ scoped_ptr<Value> Value::CreateNullValue() {
   return make_scoped_ptr(new Value(TYPE_NULL));
 }
 
-bool Value::GetAsBinary(const BinaryValue** /* out_value */) const {
+bool Value::GetAsBinary(const BinaryValue** out_value) const {
   return false;
 }
 
-bool Value::GetAsBoolean(bool* /* out_value */) const {
+bool Value::GetAsBoolean(bool* out_value) const {
   return false;
 }
 
-bool Value::GetAsInteger(int* /* out_value */) const {
+bool Value::GetAsInteger(int* out_value) const {
   return false;
 }
 
-bool Value::GetAsDouble(double* /* out_value */) const {
+bool Value::GetAsDouble(double* out_value) const {
   return false;
 }
 
-bool Value::GetAsString(std::string* /* out_value */) const {
+bool Value::GetAsString(std::string* out_value) const {
   return false;
 }
 
-bool Value::GetAsString(string16* /* out_value */) const {
+bool Value::GetAsString(string16* out_value) const {
   return false;
 }
 
-bool Value::GetAsString(const StringValue** /* out_value */) const {
+bool Value::GetAsString(const StringValue** out_value) const {
   return false;
 }
 
-bool Value::GetAsList(ListValue** /* out_value */) {
+bool Value::GetAsList(ListValue** out_value) {
   return false;
 }
 
-bool Value::GetAsList(const ListValue** /* out_value */) const {
+bool Value::GetAsList(const ListValue** out_value) const {
   return false;
 }
 
-bool Value::GetAsDictionary(DictionaryValue** /* out_value */) {
+bool Value::GetAsDictionary(DictionaryValue** out_value) {
   return false;
 }
 
-bool Value::GetAsDictionary(const DictionaryValue** /* out_value */) const {
+bool Value::GetAsDictionary(const DictionaryValue** out_value) const {
   return false;
 }
 
