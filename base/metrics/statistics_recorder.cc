@@ -253,7 +253,7 @@ StatisticsRecorder::StatisticsRecorder() {
 }
 
 // static
-void StatisticsRecorder::DumpHistogramsToVlog(void* instance) {
+void StatisticsRecorder::DumpHistogramsToVlog(void* /* instance */) {
   std::string output;
   StatisticsRecorder::WriteGraph(std::string(), &output);
   VLOG(1) << output;

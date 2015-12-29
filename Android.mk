@@ -24,9 +24,9 @@ LOCAL_PATH := $(call my-dir)
 # Set libchromeUseClang to "true" to force clang or "false" to force gcc.
 libchromeUseClang :=
 libchromeCommonCppExtension := .cc
+libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function
 libchromeCommonCFlags := -Wall -Werror \
-	-Wno-char-subscripts -Wno-missing-field-initializers \
-	-Wno-unused-function -Wno-unused-parameter
+	-Wno-char-subscripts -Wno-missing-field-initializers
 libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo \
 	-Wno-non-virtual-dtor
 libchromeCommonCIncludes := \
@@ -451,7 +451,7 @@ LOCAL_MODULE := libchrome_test_helpers
 LOCAL_SHARED_LIBRARIES := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -474,7 +474,7 @@ LOCAL_MODULE := libchrome_dbus_test_helpers
 LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -496,7 +496,7 @@ LOCAL_MODULE := libchrome_test_helpers-host
 LOCAL_SHARED_LIBRARIES := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -514,7 +514,7 @@ endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags) -DUNIT_TEST
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -535,7 +535,7 @@ endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-LOCAL_CFLAGS := $(libchromeCommonCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
+LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)

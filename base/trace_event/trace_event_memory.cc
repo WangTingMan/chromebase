@@ -119,7 +119,7 @@ TraceMemoryStack* GetTraceMemoryStack() {
 //    stack_out[2] = "category2"
 //    stack_out[3] = "name2"
 // Returns int instead of size_t to match the signature required by tcmalloc.
-int GetPseudoStack(int skip_count_ignored, void** stack_out) {
+int GetPseudoStack(int /* skip_count_ignored */, void** stack_out) {
   // If the tracing system isn't fully initialized, just skip this allocation.
   // Attempting to initialize will allocate memory, causing this function to
   // be called recursively from inside the allocator.
