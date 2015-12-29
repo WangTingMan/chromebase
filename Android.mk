@@ -27,7 +27,6 @@ libchromeCommonCppExtension := .cc
 libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function \
 	-Wno-missing-field-initializers
 libchromeCommonCFlags := -Wall -Werror
-libchromeCommonCppFlags := -Wno-sign-promo
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
@@ -380,7 +379,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libevent liblog libcutils
 LOCAL_STATIC_LIBRARIES := libmodpb64
@@ -394,7 +392,6 @@ LOCAL_MODULE := libchrome
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
@@ -430,7 +427,6 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := \
 	libchrome \
@@ -452,7 +448,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := \
 	base/test/simple_test_clock.cc \
@@ -475,7 +470,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := \
 	dbus/mock_bus.cc \
@@ -497,7 +491,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SRC_FILES := base/test/simple_test_clock.cc
 include $(BUILD_HOST_STATIC_LIBRARY)
@@ -515,7 +508,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent-host
 LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host
@@ -536,7 +528,6 @@ LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CLANG := $(libchromeUseClang)
-LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
 LOCAL_STATIC_LIBRARIES := libgmock libgtest
