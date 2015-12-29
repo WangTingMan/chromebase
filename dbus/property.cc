@@ -88,7 +88,7 @@ void PropertySet::ChangedReceived(Signal* signal) {
   }
 }
 
-void PropertySet::ChangedConnected(const std::string& interface_name,
+void PropertySet::ChangedConnected(const std::string& /* interface_name */,
                                    const std::string& signal_name,
                                    bool success) {
   LOG_IF(WARNING, !success) << "Failed to connect to " << signal_name
