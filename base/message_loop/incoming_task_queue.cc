@@ -26,17 +26,16 @@ const int kTaskDelayWarningThresholdInSeconds =
 
 // Returns true if MessagePump::ScheduleWork() must be called one
 // time for every task that is added to the MessageLoop incoming queue.
-#if defined(OS_ANDROID)
 bool AlwaysNotifyPump(MessageLoop::Type type) {
+#if defined(OS_ANDROID)
   // The Android UI message loop needs to get notified each time a task is
-  // added to the incoming queue.
+  // added
+  // to the incoming queue.
   return type == MessageLoop::TYPE_UI || type == MessageLoop::TYPE_JAVA;
-}
 #else
-bool AlwaysNotifyPump(MessageLoop::Type /* type */) {
   return false;
-}
 #endif
+}
 
 }  // namespace
 

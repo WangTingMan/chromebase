@@ -48,7 +48,7 @@
 // initialization, as base's LINKER_INITIALIZED requires a constructor and on
 // some compilers (notably gcc 4.4) this still ends up needing runtime
 // initialization.
-#define LAZY_INSTANCE_INITIALIZER {}
+#define LAZY_INSTANCE_INITIALIZER {0}
 
 namespace base {
 
@@ -96,7 +96,7 @@ struct LeakyLazyInstanceTraits {
   static Type* New(void* instance) {
     return DefaultLazyInstanceTraits<Type>::New(instance);
   }
-  static void Delete(Type* /* instance */) {
+  static void Delete(Type* instance) {
   }
 };
 

@@ -313,7 +313,7 @@ Histogram::Histogram(const std::string& name,
 Histogram::~Histogram() {
 }
 
-bool Histogram::PrintEmptyBucket(size_t /* index */) const {
+bool Histogram::PrintEmptyBucket(size_t index) const {
   return true;
 }
 
@@ -775,8 +775,7 @@ bool CustomHistogram::SerializeInfoImpl(Pickle* pickle) const {
   return true;
 }
 
-double CustomHistogram::GetBucketSize(Count /* current */,
-                                      size_t /* i */) const {
+double CustomHistogram::GetBucketSize(Count current, size_t i) const {
   return 1;
 }
 

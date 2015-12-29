@@ -57,7 +57,6 @@ static const int kChildValue = 2;
 
 class Parent {
  public:
-  virtual ~Parent() = default;
   void AddRef(void) const {}
   void Release(void) const {}
   virtual void VirtualSet() { value = kParentValue; }
@@ -67,22 +66,18 @@ class Parent {
 
 class Child : public Parent {
  public:
-  ~Child() override = default;
   void VirtualSet() override { value = kChildValue; }
   void NonVirtualSet() { value = kChildValue; }
 };
 
 class NoRefParent {
  public:
-  virtual ~NoRefParent() = default;
   virtual void VirtualSet() { value = kParentValue; }
   void NonVirtualSet() { value = kParentValue; }
   int value;
 };
 
 class NoRefChild : public NoRefParent {
- public:
-  ~NoRefChild() override = default;
   void VirtualSet() override { value = kChildValue; }
   void NonVirtualSet() { value = kChildValue; }
 };

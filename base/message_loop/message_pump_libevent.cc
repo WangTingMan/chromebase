@@ -218,7 +218,7 @@ void MessagePumpLibevent::RemoveIOObserver(IOObserver *obs) {
 }
 
 // Tell libevent to break out of inner loop.
-static void timer_callback(int /* fd */, short /* events */, void *context)
+static void timer_callback(int fd, short events, void *context)
 {
   event_base_loopbreak((struct event_base *)context);
 }
@@ -370,8 +370,7 @@ void MessagePumpLibevent::OnLibeventNotification(int fd, short flags,
 
 // Called if a byte is received on the wakeup pipe.
 // static
-void MessagePumpLibevent::OnWakeup(int socket, short /* flags */,
-                                   void* context) {
+void MessagePumpLibevent::OnWakeup(int socket, short flags, void* context) {
   MessagePumpLibevent* that = static_cast<MessagePumpLibevent*>(context);
   DCHECK(that->wakeup_pipe_out_ == socket);
 
