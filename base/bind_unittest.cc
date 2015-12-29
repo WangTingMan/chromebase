@@ -91,6 +91,7 @@ class NoRefParent {
 };
 
 class NoRefChild : public NoRefParent {
+ public:
   void VirtualSet() override { value = kChildValue; }
   void NonVirtualSet() { value = kChildValue; }
 };
