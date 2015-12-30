@@ -226,7 +226,8 @@ void AlarmTimer::Delegate::Stop() {
 
   // Now clear the timer.
   DCHECK_NE(alarm_fd_, -1);
-  itimerspec blank_time = {};
+  itimerspec blank_time;
+  memset(&blank_time, 0, sizeof(blank_time));
   if (timerfd_settime(alarm_fd_, 0, &blank_time, NULL) < 0)
     PLOG(ERROR) << "Unable to clear alarm time.  Timer may still fire.";
 }
@@ -282,7 +283,8 @@ void AlarmTimer::Delegate::ResetImpl(base::TimeDelta delay,
 
   // Actually set the timer.  This will also clear the pre-existing timer, if
   // any.
-  itimerspec alarm_time = {};
+  itimerspec alarm_time;
+  memset(&alarm_time, 0, sizeof(alarm_time));
   alarm_time.it_value.tv_sec = delay.InSeconds();
   alarm_time.it_value.tv_nsec =
       (delay.InMicroseconds() % base::Time::kMicrosecondsPerSecond) *
