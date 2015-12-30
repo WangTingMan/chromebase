@@ -26,9 +26,8 @@ libchromeUseClang :=
 libchromeCommonCppExtension := .cc
 libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function \
 	-Wno-missing-field-initializers
-libchromeCommonCFlags := -Wall -Werror \
-	-Wno-char-subscripts
-libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo
+libchromeCommonCFlags := -Wall -Werror
+libchromeCommonCppFlags := -Wno-sign-promo
 libchromeCommonCIncludes := \
 	external/gmock/include \
 	external/gtest/include \
