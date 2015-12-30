@@ -166,7 +166,8 @@ bool ExportedObject::Register() {
 
   ScopedDBusError error;
 
-  DBusObjectPathVTable vtable = {};
+  DBusObjectPathVTable vtable;
+  memset(&vtable, 0, sizeof(vtable));
   vtable.message_function = &ExportedObject::HandleMessageThunk;
   vtable.unregister_function = &ExportedObject::OnUnregisteredThunk;
   const bool success = bus_->TryRegisterObjectPath(object_path_,

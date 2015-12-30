@@ -24,9 +24,10 @@ LOCAL_PATH := $(call my-dir)
 # Set libchromeUseClang to "true" to force clang or "false" to force gcc.
 libchromeUseClang :=
 libchromeCommonCppExtension := .cc
-libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function
+libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function \
+	-Wno-missing-field-initializers
 libchromeCommonCFlags := -Wall -Werror \
-	-Wno-char-subscripts -Wno-missing-field-initializers
+	-Wno-char-subscripts
 libchromeCommonCppFlags := -Wno-deprecated-register -Wno-sign-promo
 libchromeCommonCIncludes := \
 	external/gmock/include \
