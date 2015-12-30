@@ -48,7 +48,7 @@ bool GetTaskInfo(mach_port_t task, task_basic_info_64* task_info_data) {
   return kr == KERN_SUCCESS;
 }
 
-bool GetCPUTypeForProcess(pid_t pid, cpu_type_t* cpu_type) {
+bool GetCPUTypeForProcess(pid_t /* pid */, cpu_type_t* cpu_type) {
   size_t len = sizeof(*cpu_type);
   int result = sysctlbyname("sysctl.proc_cputype",
                             cpu_type,
@@ -320,7 +320,7 @@ int ProcessMetrics::GetIdleWakeupsPerSecond() {
       power_info_data.task_platform_idle_wakeups);
 }
 
-bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
+bool ProcessMetrics::GetIOCounters(IoCounters* /* io_counters */) const {
   return false;
 }
 
@@ -333,7 +333,7 @@ ProcessMetrics::ProcessMetrics(ProcessHandle process,
   processor_count_ = SysInfo::NumberOfProcessors();
 }
 
-mach_port_t ProcessMetrics::TaskForPid(ProcessHandle process) const {
+mach_port_t ProcessMetrics::TaskForPid(ProcessHandle /* process */) const {
   mach_port_t task = MACH_PORT_NULL;
   if (port_provider_)
     task = port_provider_->TaskForPid(process_);
