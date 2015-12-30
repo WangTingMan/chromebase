@@ -17,7 +17,7 @@ LibDispatchTaskRunner::LibDispatchTaskRunner(const char* name)
 }
 
 bool LibDispatchTaskRunner::PostDelayedTask(
-    const tracked_objects::Location& from_here,
+    const tracked_objects::Location& /* from_here */,
     const Closure& task,
     base::TimeDelta delay) {
   if (!queue_)
