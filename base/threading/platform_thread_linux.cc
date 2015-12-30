@@ -37,7 +37,7 @@ const ThreadPriorityToNiceValuePair kThreadPriorityToNiceValueMap[4] = {
     {ThreadPriority::REALTIME_AUDIO, -10},
 };
 
-bool SetThreadPriorityForPlatform(PlatformThreadHandle handle,
+bool SetThreadPriorityForPlatform(PlatformThreadHandle /* handle */,
                                   ThreadPriority priority) {
 #if !defined(OS_NACL)
   // TODO(gab): Assess the correctness of using |pthread_self()| below instead
@@ -49,7 +49,7 @@ bool SetThreadPriorityForPlatform(PlatformThreadHandle handle,
 #endif
 }
 
-bool GetThreadPriorityForPlatform(PlatformThreadHandle handle,
+bool GetThreadPriorityForPlatform(PlatformThreadHandle /* handle */,
                                   ThreadPriority* priority) {
 #if !defined(OS_NACL)
   int maybe_sched_rr = 0;
@@ -100,7 +100,7 @@ void InitOnThread() {}
 
 void TerminateOnThread() {}
 
-size_t GetDefaultThreadStackSize(const pthread_attr_t& attributes) {
+size_t GetDefaultThreadStackSize(const pthread_attr_t& /* attributes */) {
 #if !defined(THREAD_SANITIZER)
   return 0;
 #else

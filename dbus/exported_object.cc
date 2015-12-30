@@ -184,7 +184,7 @@ bool ExportedObject::Register() {
 }
 
 DBusHandlerResult ExportedObject::HandleMessage(
-    DBusConnection* connection,
+    DBusConnection* /* connection */,
     DBusMessage* raw_message) {
   bus_->AssertOnDBusThread();
   DCHECK_EQ(DBUS_MESSAGE_TYPE_METHOD_CALL, dbus_message_get_type(raw_message));
@@ -300,7 +300,7 @@ void ExportedObject::OnMethodCompleted(scoped_ptr<MethodCall> method_call,
                       base::TimeTicks::Now() - start_time);
 }
 
-void ExportedObject::OnUnregistered(DBusConnection* connection) {
+void ExportedObject::OnUnregistered(DBusConnection* /* connection */) {
 }
 
 DBusHandlerResult ExportedObject::HandleMessageThunk(

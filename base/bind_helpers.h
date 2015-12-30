@@ -520,7 +520,7 @@ struct MaybeScopedRefPtr<false, T[n], Rest...> {
 
 template <typename T, typename... Rest>
 struct MaybeScopedRefPtr<true, T, Rest...> {
-  MaybeScopedRefPtr(const T& o, const Rest&...) {}
+  MaybeScopedRefPtr(const T& /* o */, const Rest&...) {}
 };
 
 template <typename T, typename... Rest>
