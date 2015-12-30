@@ -174,7 +174,8 @@ void PlatformThread::SetThreadPriority(PlatformThreadHandle handle,
 }
 
 // static
-ThreadPriority PlatformThread::GetThreadPriority(PlatformThreadHandle handle) {
+ThreadPriority PlatformThread::GetThreadPriority(
+    PlatformThreadHandle /* handle */) {
   NOTIMPLEMENTED();
   return ThreadPriority::NORMAL;
 }

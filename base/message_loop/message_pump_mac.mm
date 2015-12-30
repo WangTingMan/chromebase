@@ -57,7 +57,7 @@ void CFRunLoopRemoveObserverFromAllModes(CFRunLoopRef rl,
   CFRunLoopRemoveObserver(rl, observer, kMessageLoopExclusiveRunLoopMode);
 }
 
-void NoOp(void* info) {
+void NoOp(void* /* info */) {
 }
 
 const CFTimeInterval kCFTimeIntervalMax =
@@ -282,8 +282,9 @@ void MessagePumpCFRunLoopBase::SetTimerSlack(TimerSlack timer_slack) {
 
 // Called from the run loop.
 // static
-void MessagePumpCFRunLoopBase::RunDelayedWorkTimer(CFRunLoopTimerRef timer,
-                                                   void* info) {
+void MessagePumpCFRunLoopBase::RunDelayedWorkTimer(
+    CFRunLoopTimerRef /* timer */,
+    void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
 
   // The timer won't fire again until it's reset.
@@ -436,9 +437,10 @@ void MessagePumpCFRunLoopBase::MaybeScheduleNestingDeferredWork() {
 
 // Called from the run loop.
 // static
-void MessagePumpCFRunLoopBase::PreWaitObserver(CFRunLoopObserverRef observer,
-                                               CFRunLoopActivity activity,
-                                               void* info) {
+void MessagePumpCFRunLoopBase::PreWaitObserver(
+    CFRunLoopObserverRef /* observer */,
+    CFRunLoopActivity /* activity */,
+    void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
 
   // Attempt to do some idle work before going to sleep.
@@ -453,9 +455,10 @@ void MessagePumpCFRunLoopBase::PreWaitObserver(CFRunLoopObserverRef observer,
 
 // Called from the run loop.
 // static
-void MessagePumpCFRunLoopBase::PreSourceObserver(CFRunLoopObserverRef observer,
-                                                 CFRunLoopActivity activity,
-                                                 void* info) {
+void MessagePumpCFRunLoopBase::PreSourceObserver(
+    CFRunLoopObserverRef /* observer */,
+    CFRunLoopActivity /* activity */,
+    void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
 
   // The run loop has reached the top of the loop and is about to begin
@@ -468,9 +471,10 @@ void MessagePumpCFRunLoopBase::PreSourceObserver(CFRunLoopObserverRef observer,
 
 // Called from the run loop.
 // static
-void MessagePumpCFRunLoopBase::EnterExitObserver(CFRunLoopObserverRef observer,
-                                                 CFRunLoopActivity activity,
-                                                 void* info) {
+void MessagePumpCFRunLoopBase::EnterExitObserver(
+    CFRunLoopObserverRef /* observer */,
+    CFRunLoopActivity activity,
+    void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
 
   switch (activity) {
@@ -511,7 +515,8 @@ void MessagePumpCFRunLoopBase::EnterExitObserver(CFRunLoopObserverRef observer,
 
 // Called by MessagePumpCFRunLoopBase::EnterExitRunLoop.  The default
 // implementation is a no-op.
-void MessagePumpCFRunLoopBase::EnterExitRunLoop(CFRunLoopActivity activity) {
+void MessagePumpCFRunLoopBase::EnterExitRunLoop(
+    CFRunLoopActivity /* activity */) {
 }
 
 // Base version returns a standard NSAutoreleasePool.
@@ -529,7 +534,7 @@ MessagePumpCFRunLoop::~MessagePumpCFRunLoop() {}
 // running lower on the run loop thread's stack when this object was created,
 // the same number of CFRunLoopRun loops must be running for the outermost call
 // to Run.  Run/DoRun are reentrant after that point.
-void MessagePumpCFRunLoop::DoRun(Delegate* delegate) {
+void MessagePumpCFRunLoop::DoRun(Delegate* /* delegate */) {
   // This is completely identical to calling CFRunLoopRun(), except autorelease
   // pool management is introduced.
   int result;
@@ -586,7 +591,7 @@ MessagePumpNSRunLoop::~MessagePumpNSRunLoop() {
   CFRelease(quit_source_);
 }
 
-void MessagePumpNSRunLoop::DoRun(Delegate* delegate) {
+void MessagePumpNSRunLoop::DoRun(Delegate* /* delegate */) {
   while (keep_running_) {
     // NSRunLoop manages autorelease pools itself.
     [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
@@ -633,7 +638,7 @@ MessagePumpNSApplication::MessagePumpNSApplication()
 
 MessagePumpNSApplication::~MessagePumpNSApplication() {}
 
-void MessagePumpNSApplication::DoRun(Delegate* delegate) {
+void MessagePumpNSApplication::DoRun(Delegate* /* delegate */) {
   bool last_running_own_loop_ = running_own_loop_;
 
   // NSApp must be initialized by calling:

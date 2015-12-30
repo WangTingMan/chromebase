@@ -302,7 +302,7 @@ void FilePathWatcherKQueue::OnFileCanReadWithoutBlocking(int fd) {
   }
 }
 
-void FilePathWatcherKQueue::OnFileCanWriteWithoutBlocking(int fd) {
+void FilePathWatcherKQueue::OnFileCanWriteWithoutBlocking(int /* fd */) {
   NOTREACHED();
 }
 

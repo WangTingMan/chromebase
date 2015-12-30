@@ -97,7 +97,8 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
     return false;
   }
 
-  struct kevent change = {0};
+  struct kevent change;
+  memset(&change, 0, sizeof(change));
   EV_SET(&change, handle, EVFILT_PROC, EV_ADD, NOTE_EXIT, 0, NULL);
   int result = HANDLE_EINTR(kevent(kq.get(), &change, 1, NULL, 0, NULL));
   if (result == -1) {
@@ -121,7 +122,8 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
   }
 
   result = -1;
-  struct kevent event = {0};
+  struct kevent event;
+  memset(&event, 0, sizeof(event));
 
   while (wait_forever || remaining_delta > base::TimeDelta()) {
     struct timespec remaining_timespec;
