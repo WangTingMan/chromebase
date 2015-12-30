@@ -194,7 +194,8 @@ class LoggingLock {
     UnlockLogging();
   }
 
-  static void Init(LogLockingState lock_log, const PathChar* new_log_file) {
+  static void Init(LogLockingState lock_log,
+                   const PathChar* /* new_log_file */) {
     if (initialized)
       return;
     lock_log_file = lock_log;

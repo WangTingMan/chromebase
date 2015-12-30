@@ -293,7 +293,7 @@ void Process::Close() {
 }
 
 #if !defined(OS_NACL_NONSFI)
-bool Process::Terminate(int exit_code, bool wait) const {
+bool Process::Terminate(int /* exit_code */, bool wait) const {
   // result_code isn't supportable.
   DCHECK(IsValid());
   DCHECK_GT(process_, 1);
