@@ -375,7 +375,6 @@ endif
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
 LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeLinuxSrc) base/sys_info_chromeos.cc
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
@@ -389,7 +388,6 @@ include $(BUILD_SHARED_LIBRARY)
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
@@ -424,7 +422,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 # webservd uses RTTI, so that this library also needs to be built with it.
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -444,7 +441,6 @@ endif  # BRILLO_USE_DBUS == 1
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test_helpers
 LOCAL_SHARED_LIBRARIES := libchrome
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
@@ -466,7 +462,6 @@ ifeq ($(BRILLO_USE_DBUS),1)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_dbus_test_helpers
 LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
@@ -487,7 +482,6 @@ ifeq ($(HOST_OS),linux)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test_helpers-host
 LOCAL_SHARED_LIBRARIES := libchrome
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
@@ -504,7 +498,6 @@ ifdef BRILLO
   LOCAL_MODULE_TAGS := debug
 endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CLANG := $(libchromeUseClang)
@@ -524,7 +517,6 @@ ifdef BRILLO
   LOCAL_MODULE_TAGS := debug
 endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
-LOCAL_RTTI_FLAG := -frtti
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CLANG := $(libchromeUseClang)
