@@ -33,6 +33,8 @@ libchromeCommonCIncludes := \
 	external/valgrind/include \
 	external/valgrind \
 
+libchromeExportedCIncludes := $(LOCAL_PATH) $(TOP)/external/gtest/include
+
 libchromeCommonSrc := \
 	base/allocator/type_profiler_control.cc \
 	base/at_exit.cc \
@@ -381,7 +383,7 @@ LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libevent liblog libcutils
 LOCAL_STATIC_LIBRARIES := libmodpb64
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
 # libchrome shared library for host
@@ -392,7 +394,7 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeHostCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 LOCAL_SHARED_LIBRARIES := libevent-host
 LOCAL_STATIC_LIBRARIES := libmodpb64-host
 LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
@@ -431,7 +433,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libprotobuf-cpp-lite \
 
 LOCAL_STATIC_LIBRARIES :=
-LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
 endif  # BRILLO_USE_DBUS == 1
