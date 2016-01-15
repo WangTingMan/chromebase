@@ -5,10 +5,10 @@
 #include "base/file_version_info.h"
 #include "base/files/file_path.h"
 #include "base/memory/scoped_ptr.h"
-#include "base/path_service.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if defined(OS_WIN)
+#include "base/path_service.h"
 #include "base/file_version_info_win.h"
 #endif
 
