@@ -94,7 +94,6 @@
         [ 'OS == "win"', {
           'msvs_disabled_warnings': [
             4267,  # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-            4018,
           ],
         }],
         [ 'use_openssl==1', {
@@ -104,6 +103,8 @@
             # TODO(joth): Use a glob to match exclude patterns once the
             #             OpenSSL file set is complete.
             'sources!': [
+              'curve25519-donna.c',
+              'curve25519_nss.cc',
               'ec_private_key_nss.cc',
               'ec_signature_creator_nss.cc',
               'encryptor_nss.cc',
@@ -127,6 +128,7 @@
             'sources!': [
               'aead_openssl.cc',
               'aead_openssl.h',
+              'curve25519_openssl.cc',
               'ec_private_key_openssl.cc',
               'ec_signature_creator_openssl.cc',
               'encryptor_openssl.cc',
@@ -254,9 +256,6 @@
           'defines': [
            'CRYPTO_IMPLEMENTATION',
            '<@(nacl_win64_defines)',
-          ],
-          'msvs_disabled_warnings': [
-            4018,
           ],
           'configurations': {
             'Common_Base': {

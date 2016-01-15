@@ -12,6 +12,7 @@
 #include "base/strings/string_util.h"
 #include "base/sys_info_internal.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -41,26 +42,26 @@ bool SysInfo::IsLowEndDevice() {
 
   // Low End Device Mode will be enabled if this client is assigned to
   // one of those EnabledXXX groups.
-  if (StartsWithASCII(group_name, "Enabled", true))
+  if (StartsWith(group_name, "Enabled", CompareCase::SENSITIVE))
     return true;
 
   return g_lazy_low_end_device.Get().value();
 }
 #endif
 
-#if !defined(OS_MACOSX) || defined(OS_IOS)
+#if (!defined(OS_MACOSX) || defined(OS_IOS)) && !defined(OS_ANDROID)
 std::string SysInfo::HardwareModelName() {
   return std::string();
 }
 #endif
 
 // static
-int64 SysInfo::Uptime() {
+base::TimeDelta SysInfo::Uptime() {
   // This code relies on an implementation detail of TimeTicks::Now() - that
   // its return value happens to coincide with the system uptime value in
   // microseconds, on Win/Mac/iOS/Linux/ChromeOS and Android.
-  int64 uptime_in_microseconds = TimeTicks::Now().ToInternalValue();
-  return uptime_in_microseconds / 1000;
+  int64_t uptime_in_microseconds = TimeTicks::Now().ToInternalValue();
+  return base::TimeDelta::FromMicroseconds(uptime_in_microseconds);
 }
 
 }  // namespace base

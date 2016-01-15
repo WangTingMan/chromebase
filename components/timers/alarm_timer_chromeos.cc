@@ -4,7 +4,9 @@
 
 #include "components/timers/alarm_timer_chromeos.h"
 
+#include <stdint.h>
 #include <sys/timerfd.h>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
@@ -16,6 +18,7 @@
 #include "base/pending_task.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/thread.h"
+#include "base/trace_event/trace_event.h"
 
 namespace timers {
 namespace {
@@ -352,6 +355,9 @@ void AlarmTimer::Init() {
 }
 
 void AlarmTimer::Stop() {
+  if (!base::Timer::is_running())
+    return;
+
   if (!can_wake_from_suspend_) {
     base::Timer::Stop();
     return;
@@ -422,7 +428,7 @@ void AlarmTimer::OnTimerFired() {
 
   // Take ownership of the pending user task, which is going to be cleared by
   // the Stop() or Reset() functions below.
-  scoped_ptr<base::PendingTask> pending_user_task(pending_task_.Pass());
+  scoped_ptr<base::PendingTask> pending_user_task(std::move(pending_task_));
 
   // Re-schedule or stop the timer as requested.
   if (base::Timer::is_repeating())
@@ -430,9 +436,11 @@ void AlarmTimer::OnTimerFired() {
   else
     Stop();
 
+  TRACE_TASK_EXECUTION("AlarmTimer::OnTimerFired", *pending_user_task);
+
   // Now run the user task.
-  base::MessageLoop::current()->task_annotator()->RunTask(
-      "AlarmTimer::Reset", "AlarmTimer::OnTimerFired", *pending_user_task);
+  base::MessageLoop::current()->task_annotator()->RunTask("AlarmTimer::Reset",
+                                                          *pending_user_task);
 }
 
 OneShotAlarmTimer::OneShotAlarmTimer() : AlarmTimer(false, false) {

@@ -19,8 +19,9 @@ component("crypto") {
     "cssm_init.cc",
     "cssm_init.h",
     "curve25519-donna.c",
-    "curve25519.cc",
     "curve25519.h",
+    "curve25519_nss.cc",
+    "curve25519_openssl.cc",
     "ec_private_key.h",
     "ec_private_key_nss.cc",
     "ec_private_key_openssl.cc",
@@ -136,6 +137,8 @@ component("crypto") {
   if (use_openssl) {
     # Remove NSS files when using OpenSSL
     sources -= [
+      "curve25519-donna.c",
+      "curve25519_nss.cc",
       "ec_private_key_nss.cc",
       "ec_signature_creator_nss.cc",
       "encryptor_nss.cc",
@@ -157,6 +160,7 @@ component("crypto") {
     sources -= [
       "aead_openssl.cc",
       "aead_openssl.h",
+      "curve25519_openssl.cc",
       "ec_private_key_openssl.cc",
       "ec_signature_creator_openssl.cc",
       "encryptor_openssl.cc",
@@ -186,6 +190,10 @@ component("crypto") {
   }
 
   defines = [ "CRYPTO_IMPLEMENTATION" ]
+
+  if (is_nacl) {
+    deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+  }
 }
 
 # TODO(GYP): TODO(dpranke), fix the compile errors for this stuff
@@ -220,9 +228,18 @@ if (false && is_win) {
   }
 }
 
+# TODO(GYP): Delete this after we've converted everything to GN.
+# The _run targets exist only for compatibility w/ GYP.
+group("crypto_unittests_run") {
+  testonly = true
+  deps = [
+    ":crypto_unittests",
+  ]
+}
+
 test("crypto_unittests") {
   sources = [
-    # Tests.
+    "aead_openssl_unittest.cc",
     "curve25519_unittest.cc",
     "ec_private_key_unittest.cc",
     "ec_signature_creator_unittest.cc",
@@ -316,11 +333,11 @@ config("platform_config") {
 # on the current SSL library should just depend on this.
 group("platform") {
   if (use_openssl) {
-    deps = [
+    public_deps = [
       "//third_party/boringssl",
     ]
   } else {
-    deps = [
+    public_deps = [
       "//net/third_party/nss/ssl:libssl",
     ]
   }
@@ -345,7 +362,7 @@ group("platform") {
       public_configs += [ "//third_party/nss:system_nss_no_ssl_config" ]
     } else {
       # Non-Linux platforms use the hermetic NSS from the tree.
-      deps += [
+      public_deps += [
         "//third_party/nss:nspr",
         "//third_party/nss:nss",
       ]

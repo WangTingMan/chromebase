@@ -39,7 +39,6 @@
 
 #include "base/atomicops.h"
 #include "base/base_export.h"
-#include "base/basictypes.h"
 #include "base/logging.h"
 #include "base/memory/aligned_memory.h"
 #include "base/threading/thread_restrictions.h"

@@ -8,10 +8,11 @@
 #include "base/command_line.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "build/build_config.h"
 
 namespace base {
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
 Process SpawnMultiProcessTestChild(
     const std::string& procname,
     const CommandLine& base_command_line,

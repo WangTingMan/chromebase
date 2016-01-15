@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "base/logging.h"
+#include "base/macros.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
@@ -24,14 +25,14 @@ namespace {
 
 const int kStackMaxDepth = 100;
 
-const int32 kExtendedASCIIStart = 0x80;
+const int32_t kExtendedASCIIStart = 0x80;
 
 // This and the class below are used to own the JSON input string for when
 // string tokens are stored as StringPiece instead of std::string. This
 // optimization avoids about 2/3rds of string memory copies. The constructor
 // takes ownership of the input string. The real root value is Swap()ed into
 // the new instance.
-class DictionaryHiddenRootValue : public base::DictionaryValue {
+class DictionaryHiddenRootValue : public DictionaryValue {
  public:
   DictionaryHiddenRootValue(std::string* json, Value* root) : json_(json) {
     DCHECK(root->IsType(Value::TYPE_DICTIONARY));
@@ -43,7 +44,7 @@ class DictionaryHiddenRootValue : public base::DictionaryValue {
 
     // First deep copy to convert JSONStringValue to std::string and swap that
     // copy with |other|, which contains the new contents of |this|.
-    scoped_ptr<base::DictionaryValue> copy(DeepCopy());
+    scoped_ptr<DictionaryValue> copy(DeepCopy());
     copy->Swap(other);
 
     // Then erase the contents of the current dictionary and swap in the
@@ -81,7 +82,7 @@ class DictionaryHiddenRootValue : public base::DictionaryValue {
   DISALLOW_COPY_AND_ASSIGN(DictionaryHiddenRootValue);
 };
 
-class ListHiddenRootValue : public base::ListValue {
+class ListHiddenRootValue : public ListValue {
  public:
   ListHiddenRootValue(std::string* json, Value* root) : json_(json) {
     DCHECK(root->IsType(Value::TYPE_LIST));
@@ -93,7 +94,7 @@ class ListHiddenRootValue : public base::ListValue {
 
     // First deep copy to convert JSONStringValue to std::string and swap that
     // copy with |other|, which contains the new contents of |this|.
-    scoped_ptr<base::ListValue> copy(DeepCopy());
+    scoped_ptr<ListValue> copy(DeepCopy());
     copy->Swap(other);
 
     // Then erase the contents of the current list and swap in the new contents,
@@ -130,14 +131,14 @@ class ListHiddenRootValue : public base::ListValue {
 // A variant on StringValue that uses StringPiece instead of copying the string
 // into the Value. This can only be stored in a child of hidden root (above),
 // otherwise the referenced string will not be guaranteed to outlive it.
-class JSONStringValue : public base::Value {
+class JSONStringValue : public Value {
  public:
-  explicit JSONStringValue(const base::StringPiece& piece)
+  explicit JSONStringValue(const StringPiece& piece)
       : Value(TYPE_STRING),
         string_piece_(piece) {
   }
 
-  // Overridden from base::Value:
+  // Overridden from Value:
   bool GetAsString(std::string* out_value) const override {
     string_piece_.CopyToString(out_value);
     return true;
@@ -157,7 +158,7 @@ class JSONStringValue : public base::Value {
 
  private:
   // The location in the original input stream.
-  base::StringPiece string_piece_;
+  StringPiece string_piece_;
 
   DISALLOW_COPY_AND_ASSIGN(JSONStringValue);
 };
@@ -227,9 +228,9 @@ Value* JSONParser::Parse(const StringPiece& input) {
   // <0xEF 0xBB 0xBF>, advance the start position to avoid the
   // ParseNextToken function mis-treating a Unicode BOM as an invalid
   // character and returning NULL.
-  if (CanConsume(3) && static_cast<uint8>(*pos_) == 0xEF &&
-      static_cast<uint8>(*(pos_ + 1)) == 0xBB &&
-      static_cast<uint8>(*(pos_ + 2)) == 0xBF) {
+  if (CanConsume(3) && static_cast<uint8_t>(*pos_) == 0xEF &&
+      static_cast<uint8_t>(*(pos_ + 1)) == 0xBB &&
+      static_cast<uint8_t>(*(pos_ + 2)) == 0xBF) {
     NextNChars(3);
   }
 
@@ -272,6 +273,14 @@ JSONReader::JsonParseError JSONParser::error_code() const {
 std::string JSONParser::GetErrorMessage() const {
   return FormatErrorMessage(error_line_, error_column_,
       JSONReader::ErrorCodeToString(error_code_));
+}
+
+int JSONParser::error_line() const {
+  return error_line_;
+}
+
+int JSONParser::error_column() const {
+  return error_column_;
 }
 
 // StringBuilder ///////////////////////////////////////////////////////////////
@@ -613,7 +622,7 @@ bool JSONParser::ConsumeStringRaw(StringBuilder* out) {
   StringBuilder string(NextChar());
 
   int length = end_pos_ - start_pos_;
-  int32 next_char = 0;
+  int32_t next_char = 0;
 
   while (CanConsume(1)) {
     pos_ = start_pos_ + index_;  // CBU8_NEXT is postcrement.
@@ -774,13 +783,19 @@ bool JSONParser::DecodeUTF16(std::string* dest_string) {
       return false;
     }
 
-    uint32 code_point = CBU16_GET_SUPPLEMENTARY(code_unit16_high,
-                                                code_unit16_low);
+    uint32_t code_point =
+        CBU16_GET_SUPPLEMENTARY(code_unit16_high, code_unit16_low);
+    if (!IsValidCharacter(code_point))
+      return false;
+
     offset = 0;
     CBU8_APPEND_UNSAFE(code_unit8, offset, code_point);
   } else {
     // Not a surrogate.
     DCHECK(CBU16_IS_SINGLE(code_unit16_high));
+    if (!IsValidCharacter(code_unit16_high))
+      return false;
+
     CBU8_APPEND_UNSAFE(code_unit8, offset, code_unit16_high);
   }
 
@@ -788,9 +803,11 @@ bool JSONParser::DecodeUTF16(std::string* dest_string) {
   return true;
 }
 
-void JSONParser::DecodeUTF8(const int32& point, StringBuilder* dest) {
+void JSONParser::DecodeUTF8(const int32_t& point, StringBuilder* dest) {
+  DCHECK(IsValidCharacter(point));
+
   // Anything outside of the basic ASCII plane will need to be decoded from
-  // int32 to a multi-byte sequence.
+  // int32_t to a multi-byte sequence.
   if (point < kExtendedASCIIStart) {
     dest->Append(static_cast<char>(point));
   } else {
@@ -872,7 +889,7 @@ Value* JSONParser::ConsumeNumber() {
     return new FundamentalValue(num_int);
 
   double num_double;
-  if (base::StringToDouble(num_string.as_string(), &num_double) &&
+  if (StringToDouble(num_string.as_string(), &num_double) &&
       std::isfinite(num_double)) {
     return new FundamentalValue(num_double);
   }

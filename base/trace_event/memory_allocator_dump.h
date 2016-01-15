@@ -5,11 +5,13 @@
 #ifndef BASE_TRACE_EVENT_MEMORY_ALLOCATOR_DUMP_H_
 #define BASE_TRACE_EVENT_MEMORY_ALLOCATOR_DUMP_H_
 
+#include <stdint.h>
+
 #include <string>
 
 #include "base/base_export.h"
-#include "base/basictypes.h"
 #include "base/logging.h"
+#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
 #include "base/values.h"
@@ -32,24 +34,31 @@ class BASE_EXPORT MemoryAllocatorDump {
                       ProcessMemoryDump* process_memory_dump);
   ~MemoryAllocatorDump();
 
-  // Standard attribute name to model allocated space.
-  static const char kNameSize[];
+  // Standard attribute |name|s for the AddScalar and AddString() methods.
+  static const char kNameSize[];          // To represent allocated space.
+  static const char kNameObjectCount[];   // To represent number of objects.
 
-  // Standard attribute name to model the number of objects allocated.
-  static const char kNameObjectsCount[];
-
-  static const char kTypeScalar[];    // Type name for scalar attributes.
-  static const char kTypeString[];    // Type name for string attributes.
+  // Standard attribute |unit|s for the AddScalar and AddString() methods.
   static const char kUnitsBytes[];    // Unit name to represent bytes.
   static const char kUnitsObjects[];  // Unit name to represent #objects.
 
-  // Absolute name, unique within the scope of an entire ProcessMemoryDump.
-  const std::string& absolute_name() const { return absolute_name_; }
+  // Constants used only internally and by tests.
+  static const char kTypeScalar[];  // Type name for scalar attributes.
+  static const char kTypeString[];  // Type name for string attributes.
 
-  // Helper setter for scalar attributes.
-  void AddScalar(const char* name, const char* units, uint64 value);
+  // Setters for scalar attributes. Some examples:
+  // - "size" column (all dumps are expected to have at least this one):
+  //     AddScalar(kNameSize, kUnitsBytes, 1234);
+  // - Some extra-column reporting internal details of the subsystem:
+  //    AddScalar("number_of_freelist_entires", kUnitsObjects, 42)
+  // - Other informational column (will not be auto-added in the UI)
+  //    AddScalarF("kittens_ratio", "ratio", 42.0f)
+  void AddScalar(const char* name, const char* units, uint64_t value);
   void AddScalarF(const char* name, const char* units, double value);
   void AddString(const char* name, const char* units, const std::string& value);
+
+  // Absolute name, unique within the scope of an entire ProcessMemoryDump.
+  const std::string& absolute_name() const { return absolute_name_; }
 
   // Called at trace generation time to populate the TracedValue.
   void AsValueInto(TracedValue* value) const;
