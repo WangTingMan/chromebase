@@ -19,6 +19,8 @@
         'os_compatibility.h',
         'policy.cc',
         'policy.h',
+        'pre_exec_delegate.cc',
+        'pre_exec_delegate.h',
         'xpc.cc',
         'xpc.h',
         'xpc_message_server.cc',
@@ -110,5 +112,20 @@
         ],
       },
     },
+  ],
+  'conditions': [
+    ['test_isolation_mode != "noop"', {
+      'targets': [
+        {
+          'target_name': 'sandbox_mac_unittests_run',
+          'type': 'none',
+          'dependencies': [
+            'sandbox_mac_unittests',
+          ],
+          'includes': [ '../../build/isolate.gypi' ],
+          'sources': [ '../sandbox_mac_unittests.isolate' ],
+        },
+      ],
+    }],
   ],
 }

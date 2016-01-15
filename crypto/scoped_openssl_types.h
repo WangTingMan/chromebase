@@ -11,7 +11,9 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
+#include <openssl/mem.h>
 #include <openssl/rsa.h>
+#include <stdint.h>
 
 #include "base/memory/scoped_ptr.h"
 
@@ -22,7 +24,6 @@ namespace crypto {
 // base::internal::RunnableAdapter<>, but that's far too heavy weight.
 template <typename Type, void (*Destroyer)(Type*)>
 struct OpenSSLDestroyer {
-  using AllowSelfReset = void;
   void operator()(Type* ptr) const { Destroyer(ptr); }
 };
 

@@ -36,10 +36,9 @@ libchromeCommonCIncludes := \
 libchromeExportedCIncludes := $(LOCAL_PATH) $(TOP)/external/gtest/include
 
 libchromeCommonSrc := \
-	base/allocator/type_profiler_control.cc \
 	base/at_exit.cc \
-	base/atomicops_internals_x86_gcc.cc \
 	base/base64.cc \
+	base/base64url.cc \
 	base/base_switches.cc \
 	base/bind_helpers.cc \
 	base/build_time.cc \
@@ -69,9 +68,11 @@ libchromeCommonSrc := \
 	base/files/scoped_temp_dir.cc \
 	base/guid.cc \
 	base/guid_posix.cc \
+	base/json/json_file_value_serializer.cc \
 	base/json/json_parser.cc \
 	base/json/json_reader.cc \
 	base/json/json_string_value_serializer.cc \
+	base/json/json_value_converter.cc \
 	base/json/json_writer.cc \
 	base/json/string_escape.cc \
 	base/lazy_instance.cc \
@@ -85,13 +86,13 @@ libchromeCommonSrc := \
 	base/memory/weak_ptr.cc \
 	base/message_loop/incoming_task_queue.cc \
 	base/message_loop/message_loop.cc \
-	base/message_loop/message_loop_proxy.cc \
-	base/message_loop/message_loop_proxy_impl.cc \
+	base/message_loop/message_loop_task_runner.cc \
 	base/message_loop/message_pump.cc \
 	base/message_loop/message_pump_default.cc \
 	base/message_loop/message_pump_libevent.cc \
 	base/metrics/bucket_ranges.cc \
 	base/metrics/field_trial.cc \
+	base/metrics/metrics_hashes.cc \
 	base/metrics/histogram_base.cc \
 	base/metrics/histogram.cc \
 	base/metrics/histogram_samples.cc \
@@ -123,6 +124,7 @@ libchromeCommonSrc := \
 	base/sequence_checker_impl.cc \
 	base/sequenced_task_runner.cc \
 	base/sha1_portable.cc \
+	base/strings/pattern.cc \
 	base/strings/safe_sprintf.cc \
 	base/strings/string16.cc \
 	base/strings/string_number_conversions.cc \
@@ -169,22 +171,29 @@ libchromeCommonSrc := \
 	base/time/time_posix.cc \
 	base/timer/elapsed_timer.cc \
 	base/timer/timer.cc \
+	base/trace_event/heap_profiler_allocation_context.cc \
+	base/trace_event/heap_profiler_allocation_context_tracker.cc \
+	base/trace_event/heap_profiler_stack_frame_deduplicator.cc \
+	base/trace_event/heap_profiler_type_name_deduplicator.cc \
 	base/trace_event/memory_allocator_dump.cc \
 	base/trace_event/memory_allocator_dump_guid.cc \
 	base/trace_event/memory_dump_manager.cc \
+	base/trace_event/memory_dump_request_args.cc \
 	base/trace_event/memory_dump_session_state.cc \
 	base/trace_event/process_memory_dump.cc \
 	base/trace_event/process_memory_maps.cc \
 	base/trace_event/process_memory_maps_dump_provider.cc \
 	base/trace_event/process_memory_totals.cc \
 	base/trace_event/process_memory_totals_dump_provider.cc \
+	base/trace_event/trace_buffer.cc \
 	base/trace_event/trace_config.cc \
 	base/trace_event/trace_event_argument.cc \
 	base/trace_event/trace_event_impl.cc \
-	base/trace_event/trace_event_impl_constants.cc \
-	base/trace_event/trace_event_memory.cc \
 	base/trace_event/trace_event_memory_overhead.cc \
 	base/trace_event/trace_event_synthetic_delay.cc \
+	base/trace_event/trace_log.cc \
+	base/trace_event/trace_log_constants.cc \
+	base/trace_event/trace_sampling_thread.cc \
 	base/tracked_objects.cc \
 	base/tracking_info.cc \
 	base/values.cc \
@@ -230,6 +239,7 @@ libchromeCommonUnittestSrc := \
 	base/at_exit_unittest.cc \
 	base/atomicops_unittest.cc \
 	base/base64_unittest.cc \
+	base/base64url_unittest.cc \
 	base/bind_unittest.cc \
 	base/bits_unittest.cc \
 	base/build_time_unittest.cc \
@@ -254,6 +264,9 @@ libchromeCommonUnittestSrc := \
 	base/guid_unittest.cc \
 	base/id_map_unittest.cc \
 	base/json/json_parser_unittest.cc \
+	base/json/json_reader_unittest.cc \
+	base/json/json_value_converter_unittest.cc \
+	base/json/json_value_serializer_unittest.cc \
 	base/json/json_writer_unittest.cc \
 	base/json/string_escape_unittest.cc \
 	base/lazy_instance_unittest.cc \
@@ -269,12 +282,12 @@ libchromeCommonUnittestSrc := \
 	base/memory/singleton_unittest.cc \
 	base/memory/weak_ptr_unittest.cc \
 	base/memory/weak_ptr_unittest.nc \
-	base/message_loop/message_loop_proxy_impl_unittest.cc \
-	base/message_loop/message_loop_proxy_unittest.cc \
 	base/message_loop/message_loop_test.cc \
+	base/message_loop/message_loop_task_runner_unittest.cc \
 	base/message_loop/message_loop_unittest.cc \
 	base/metrics/bucket_ranges_unittest.cc \
 	base/metrics/field_trial_unittest.cc \
+	base/metrics/metrics_hashes_unittest.cc \
 	base/metrics/histogram_base_unittest.cc \
 	base/metrics/histogram_macros_unittest.cc \
 	base/metrics/histogram_snapshot_manager_unittest.cc \
@@ -283,7 +296,6 @@ libchromeCommonUnittestSrc := \
 	base/metrics/sample_vector_unittest.cc \
 	base/metrics/sparse_histogram_unittest.cc \
 	base/metrics/statistics_recorder_unittest.cc \
-	base/move_unittest.cc \
 	base/numerics/safe_numerics_unittest.cc \
 	base/observer_list_unittest.cc \
 	base/pickle_unittest.cc \
@@ -298,6 +310,7 @@ libchromeCommonUnittestSrc := \
 	base/sequence_checker_unittest.cc \
 	base/sha1_unittest.cc \
 	base/stl_util_unittest.cc \
+	base/strings/pattern_unittest.cc \
 	base/strings/string16_unittest.cc \
 	base/strings/string_number_conversions_unittest.cc \
 	base/strings/string_piece_unittest.cc \
@@ -315,6 +328,7 @@ libchromeCommonUnittestSrc := \
 	base/task/cancelable_task_tracker_unittest.cc \
 	base/task_runner_util_unittest.cc \
 	base/template_util_unittest.cc \
+	base/test/multiprocess_test.cc \
 	base/test/multiprocess_test_android.cc \
 	base/test/opaque_ref_counted.cc \
 	base/test/scoped_locale.cc \
@@ -322,10 +336,12 @@ libchromeCommonUnittestSrc := \
 	base/test/test_file_util.cc \
 	base/test/test_file_util_linux.cc \
 	base/test/test_file_util_posix.cc \
+	base/test/test_io_thread.cc \
 	base/test/test_pending_task.cc \
 	base/test/test_simple_task_runner.cc \
 	base/test/test_switches.cc \
 	base/test/test_timeouts.cc \
+	base/test/trace_event_analyzer.cc \
 	base/threading/non_thread_safe_unittest.cc \
 	base/threading/platform_thread_unittest.cc \
 	base/threading/simple_thread_unittest.cc \
@@ -341,6 +357,9 @@ libchromeCommonUnittestSrc := \
 	base/time/time_unittest.cc \
 	base/timer/hi_res_timer_manager_unittest.cc \
 	base/timer/timer_unittest.cc \
+	base/trace_event/heap_profiler_allocation_context_tracker_unittest.cc \
+	base/trace_event/heap_profiler_stack_frame_deduplicator_unittest.cc \
+	base/trace_event/heap_profiler_type_name_deduplicator_unittest.cc \
 	base/trace_event/memory_allocator_dump_unittest.cc \
 	base/trace_event/memory_dump_manager_unittest.cc \
 	base/trace_event/process_memory_dump_unittest.cc \
@@ -348,7 +367,6 @@ libchromeCommonUnittestSrc := \
 	base/trace_event/process_memory_totals_dump_provider_unittest.cc \
 	base/trace_event/trace_config_unittest.cc \
 	base/trace_event/trace_event_argument_unittest.cc \
-	base/trace_event/trace_event_memory_unittest.cc \
 	base/trace_event/trace_event_synthetic_delay_unittest.cc \
 	base/trace_event/trace_event_unittest.cc \
 	base/tracked_objects_unittest.cc \

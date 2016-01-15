@@ -9,15 +9,15 @@
 #include <string>
 
 #include "base/base_export.h"
-#include "base/basictypes.h"
 #include "base/callback_forward.h"
 #include "base/debug/task_annotator.h"
+#include "base/gtest_prod_util.h"
 #include "base/location.h"
+#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop/incoming_task_queue.h"
-#include "base/message_loop/message_loop_proxy.h"
-#include "base/message_loop/message_loop_proxy_impl.h"
+#include "base/message_loop/message_loop_task_runner.h"
 #include "base/message_loop/message_pump.h"
 #include "base/message_loop/timer_slack.h"
 #include "base/observer_list.h"
@@ -26,6 +26,7 @@
 #include "base/synchronization/lock.h"
 #include "base/time/time.h"
 #include "base/tracking_info.h"
+#include "build/build_config.h"
 
 // TODO(sky): these includes should not be necessary. Nuke them.
 #if defined(OS_WIN)
@@ -243,9 +244,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Return as soon as all items that can be run are taken care of.
   void RunUntilIdle();
 
-  // TODO(jbates) remove this. crbug.com/131220. See QuitWhenIdle().
-  void Quit() { QuitWhenIdle(); }
-
   // Deprecated: use RunLoop instead.
   //
   // Signals the Run method to return when it becomes idle. It will continue to
@@ -268,9 +266,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // This method is a variant of Quit, that does not wait for pending messages
   // to be processed before returning from Run.
   void QuitNow();
-
-  // TODO(jbates) remove this. crbug.com/131220. See QuitWhenIdleClosure().
-  static Closure QuitClosure() { return QuitWhenIdleClosure(); }
 
   // Deprecated: use RunLoop instead.
   // Construct a Closure that will call QuitWhenIdle(). Useful to schedule an
@@ -296,33 +291,31 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   }
   const std::string& thread_name() const { return thread_name_; }
 
-  // Gets the message loop proxy associated with this message loop.
-  //
-  // NOTE: Deprecated; prefer task_runner() and the TaskRunner interfaces
-  scoped_refptr<MessageLoopProxy> message_loop_proxy() {
-    return message_loop_proxy_;
+  // Gets the TaskRunner associated with this message loop.
+  const scoped_refptr<SingleThreadTaskRunner>& task_runner() {
+    return task_runner_;
   }
 
-  // Gets the TaskRunner associated with this message loop.
-  // TODO(skyostil): Change this to return a const reference to a refptr
-  // once the internal type matches what is being returned (crbug.com/465354).
-  scoped_refptr<SingleThreadTaskRunner> task_runner() {
-    return message_loop_proxy_;
-  }
+  // Sets a new TaskRunner for this message loop. The message loop must already
+  // have been bound to a thread prior to this call, and the task runner must
+  // belong to that thread. Note that changing the task runner will also affect
+  // the ThreadTaskRunnerHandle for the target thread. Must be called on the
+  // thread to which the message loop is bound.
+  void SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner);
 
   // Enables or disables the recursive task processing. This happens in the case
-  // of recursive message loops. Some unwanted message loop may occurs when
+  // of recursive message loops. Some unwanted message loops may occur when
   // using common controls or printer functions. By default, recursive task
   // processing is disabled.
   //
-  // Please utilize |ScopedNestableTaskAllower| instead of calling these methods
-  // directly.  In general nestable message loops are to be avoided.  They are
+  // Please use |ScopedNestableTaskAllower| instead of calling these methods
+  // directly.  In general, nestable message loops are to be avoided.  They are
   // dangerous and difficult to get right, so please use with extreme caution.
   //
   // The specific case where tasks get queued is:
   // - The thread is running a message loop.
-  // - It receives a task #1 and execute it.
-  // - The task #1 implicitly start a message loop, like a MessageBox in the
+  // - It receives a task #1 and executes it.
+  // - The task #1 implicitly starts a message loop, like a MessageBox in the
   //   unit test. This can also be StartDoc or GetSaveFileName.
   // - The thread receives a task #2 before or while in this second message
   //   loop.
@@ -411,6 +404,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   friend class internal::IncomingTaskQueue;
   friend class ScheduleWorkTest;
   friend class Thread;
+  FRIEND_TEST_ALL_PREFIXES(MessageLoopTest, DeleteUnboundLoop);
 
   using MessagePumpFactoryCallback = Callback<scoped_ptr<MessagePump>()>;
 
@@ -423,9 +417,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // and then pass it to the thread where the message loop actually runs.
   // The message loop's BindToCurrentThread() method must be called on the
   // thread the message loop runs on, before calling Run().
-  // Before BindToCurrentThread() is called only Post*Task() functions can
+  // Before BindToCurrentThread() is called, only Post*Task() functions can
   // be called on the message loop.
-  scoped_ptr<MessageLoop> CreateUnbound(
+  static scoped_ptr<MessageLoop> CreateUnbound(
       Type type,
       MessagePumpFactoryCallback pump_factory);
 
@@ -435,6 +429,10 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
   // Configure various members and bind this message loop to the current thread.
   void BindToCurrentThread();
+
+  // Sets the ThreadTaskRunnerHandle for the current thread to point to the
+  // task runner for this message loop.
+  void SetThreadTaskRunnerHandle();
 
   // Invokes the actual run loop using the message pump.
   void RunHandler();
@@ -475,7 +473,6 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   bool DoWork() override;
   bool DoDelayedWork(TimeTicks* next_delayed_work_time) override;
   bool DoIdleWork() override;
-  TimeTicks GetNewlyAddedTaskDelay() override;
 
   const Type type_;
 
@@ -511,7 +508,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   bool nestable_tasks_allowed_;
 
 #if defined(OS_WIN)
-  // Should be set to true before calling Windows APIs like TrackPopupMenu, etc
+  // Should be set to true before calling Windows APIs like TrackPopupMenu, etc.
   // which enter a modal message loop.
   bool os_modal_loop_;
 #endif
@@ -532,8 +529,11 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 
   scoped_refptr<internal::IncomingTaskQueue> incoming_task_queue_;
 
-  // The message loop proxy associated with this message loop.
-  scoped_refptr<internal::MessageLoopProxyImpl> message_loop_proxy_;
+  // A task runner which we haven't bound to a thread yet.
+  scoped_refptr<internal::MessageLoopTaskRunner> unbound_task_runner_;
+
+  // The task runner associated with this message loop.
+  scoped_refptr<SingleThreadTaskRunner> task_runner_;
   scoped_ptr<ThreadTaskRunnerHandle> thread_task_runner_handle_;
 
   template <class T, class R> friend class base::subtle::DeleteHelperInternal;
@@ -604,8 +604,8 @@ class BASE_EXPORT MessageLoopForUI : public MessageLoop {
 // Do not add any member variables to MessageLoopForUI!  This is important b/c
 // MessageLoopForUI is often allocated via MessageLoop(TYPE_UI).  Any extra
 // data that you need should be stored on the MessageLoop's pump_ instance.
-COMPILE_ASSERT(sizeof(MessageLoop) == sizeof(MessageLoopForUI),
-               MessageLoopForUI_should_not_have_extra_member_variables);
+static_assert(sizeof(MessageLoop) == sizeof(MessageLoopForUI),
+              "MessageLoopForUI should not have extra member variables");
 
 #endif  // !defined(OS_NACL)
 
@@ -684,8 +684,8 @@ class BASE_EXPORT MessageLoopForIO : public MessageLoop {
 // Do not add any member variables to MessageLoopForIO!  This is important b/c
 // MessageLoopForIO is often allocated via MessageLoop(TYPE_IO).  Any extra
 // data that you need should be stored on the MessageLoop's pump_ instance.
-COMPILE_ASSERT(sizeof(MessageLoop) == sizeof(MessageLoopForIO),
-               MessageLoopForIO_should_not_have_extra_member_variables);
+static_assert(sizeof(MessageLoop) == sizeof(MessageLoopForIO),
+              "MessageLoopForIO should not have extra member variables");
 
 }  // namespace base
 

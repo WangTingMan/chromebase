@@ -4,12 +4,14 @@
 
 #include "base/test/trace_event_analyzer.h"
 
-#include <algorithm>
 #include <math.h>
+
+#include <algorithm>
 #include <set>
 
 #include "base/json/json_reader.h"
 #include "base/memory/scoped_ptr.h"
+#include "base/strings/pattern.h"
 #include "base/values.h"
 
 namespace trace_analyzer {
@@ -218,11 +220,11 @@ Query Query::Double(double num) {
   return Query(num);
 }
 
-Query Query::Int(int32 num) {
+Query Query::Int(int32_t num) {
   return Query(static_cast<double>(num));
 }
 
-Query Query::Uint(uint32 num) {
+Query Query::Uint(uint32_t num) {
   return Query(static_cast<double>(num));
 }
 
@@ -321,17 +323,17 @@ bool Query::CompareAsString(const TraceEvent& event, bool* result) const {
   switch (operator_) {
     case OP_EQ:
       if (right().is_pattern_)
-        *result = MatchPattern(lhs, rhs);
+        *result = base::MatchPattern(lhs, rhs);
       else if (left().is_pattern_)
-        *result = MatchPattern(rhs, lhs);
+        *result = base::MatchPattern(rhs, lhs);
       else
         *result = (lhs == rhs);
       return true;
     case OP_NE:
       if (right().is_pattern_)
-        *result = !MatchPattern(lhs, rhs);
+        *result = !base::MatchPattern(lhs, rhs);
       else if (left().is_pattern_)
-        *result = !MatchPattern(rhs, lhs);
+        *result = !base::MatchPattern(rhs, lhs);
       else
         *result = (lhs != rhs);
       return true;
@@ -379,8 +381,8 @@ bool Query::EvaluateArithmeticOperator(const TraceEvent& event,
       *num = lhs / rhs;
       return true;
     case OP_MOD:
-      *num = static_cast<double>(static_cast<int64>(lhs) %
-                                 static_cast<int64>(rhs));
+      *num = static_cast<double>(static_cast<int64_t>(lhs) %
+                                 static_cast<int64_t>(rhs));
       return true;
     case OP_NEGATE:
       *num = -lhs;
@@ -647,8 +649,7 @@ size_t FindMatchingEvents(const std::vector<TraceEvent>& events,
 
 bool ParseEventsFromJson(const std::string& json,
                          std::vector<TraceEvent>* output) {
-  scoped_ptr<base::Value> root;
-  root.reset(base::JSONReader::DeprecatedRead(json));
+  scoped_ptr<base::Value> root = base::JSONReader::Read(json);
 
   base::ListValue* root_list = NULL;
   if (!root.get() || !root->GetAsList(&root_list))

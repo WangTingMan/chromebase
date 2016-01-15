@@ -5,6 +5,7 @@
 #include "base/message_loop/message_loop.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
@@ -18,7 +19,9 @@
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/thread_local.h"
 #include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
+#include "build/build_config.h"
 
 #if defined(OS_MACOSX)
 #include "base/message_loop/message_pump_mac.h"
@@ -42,7 +45,7 @@ namespace {
 LazyInstance<base::ThreadLocalPointer<MessageLoop> >::Leaky lazy_tls_ptr =
     LAZY_INSTANCE_INITIALIZER;
 
-// Logical events for Histogram profiling. Run with -message-loop-histogrammer
+// Logical events for Histogram profiling. Run with --message-loop-histogrammer
 // to get an accounting of messages and actions taken on each thread.
 const int kTaskRunEvent = 0x1;
 #if !defined(OS_NACL)
@@ -54,9 +57,9 @@ const int kMaxMessageId = 1099;
 const int kNumberOfDistinctMessagesDisplayed = 1100;
 
 // Provide a macro that takes an expression (such as a constant, or macro
-// constant) and creates a pair to initalize an array of pairs.  In this case,
+// constant) and creates a pair to initialize an array of pairs.  In this case,
 // our pair consists of the expressions value, and the "stringized" version
-// of the expression (i.e., the exrpression put in quotes).  For example, if
+// of the expression (i.e., the expression put in quotes).  For example, if
 // we have:
 //    #define FOO 2
 //    #define BAR 5
@@ -77,7 +80,7 @@ const LinearHistogram::DescriptionPair event_descriptions_[] = {
   VALUE_TO_NUMBER_AND_NAME(kTaskRunEvent)
   VALUE_TO_NUMBER_AND_NAME(kTimerEvent)
 
-  {-1, NULL}  // The list must be null terminated, per API to histogram.
+  {-1, NULL}  // The list must be null-terminated, per API to histogram.
 };
 #endif  // !defined(OS_NACL)
 
@@ -129,9 +132,11 @@ MessageLoop::MessageLoop(scoped_ptr<MessagePump> pump)
 }
 
 MessageLoop::~MessageLoop() {
-  // current() could be NULL if this message loop is destructed before it is
-  // bound to a thread.
-  DCHECK(current() == this || !current());
+  // If |pump_| is non-null, this message loop has been bound and should be the
+  // current one on this thread. Otherwise, this loop is being destructed before
+  // it was bound to a thread, so a different message loop (or no loop at all)
+  // may be current.
+  DCHECK((pump_ && current() == this) || (!pump_ && current() != this));
 
   // iOS just attaches to the loop, it doesn't Run it.
   // TODO(stuartmorgan): Consider wiring up a Detach().
@@ -169,10 +174,12 @@ MessageLoop::~MessageLoop() {
   // Tell the incoming queue that we are dying.
   incoming_task_queue_->WillDestroyCurrentMessageLoop();
   incoming_task_queue_ = NULL;
-  message_loop_proxy_ = NULL;
+  unbound_task_runner_ = NULL;
+  task_runner_ = NULL;
 
   // OK, now make it so that no one can find us.
-  lazy_tls_ptr.Pointer()->Set(NULL);
+  if (current() == this)
+    lazy_tls_ptr.Pointer()->Set(nullptr);
 }
 
 // static
@@ -256,27 +263,27 @@ void MessageLoop::RemoveDestructionObserver(
 void MessageLoop::PostTask(
     const tracked_objects::Location& from_here,
     const Closure& task) {
-  message_loop_proxy_->PostTask(from_here, task);
+  task_runner_->PostTask(from_here, task);
 }
 
 void MessageLoop::PostDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  message_loop_proxy_->PostDelayedTask(from_here, task, delay);
+  task_runner_->PostDelayedTask(from_here, task, delay);
 }
 
 void MessageLoop::PostNonNestableTask(
     const tracked_objects::Location& from_here,
     const Closure& task) {
-  message_loop_proxy_->PostNonNestableTask(from_here, task);
+  task_runner_->PostNonNestableTask(from_here, task);
 }
 
 void MessageLoop::PostNonNestableDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  message_loop_proxy_->PostNonNestableDelayedTask(from_here, task, delay);
+  task_runner_->PostNonNestableDelayedTask(from_here, task, delay);
 }
 
 void MessageLoop::Run() {
@@ -359,13 +366,14 @@ bool MessageLoop::HasHighResolutionTasks() {
 }
 
 bool MessageLoop::IsIdleForTesting() {
-  // We only check the imcoming queue|, since we don't want to lock the work
+  // We only check the incoming queue, since we don't want to lock the work
   // queue.
   return incoming_task_queue_->IsIdleForTesting();
 }
 
 //------------------------------------------------------------------------------
 
+// static
 scoped_ptr<MessageLoop> MessageLoop::CreateUnbound(
     Type type, MessagePumpFactoryCallback pump_factory) {
   return make_scoped_ptr(new MessageLoop(type, pump_factory));
@@ -385,8 +393,9 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
       message_histogram_(NULL),
       run_loop_(NULL),
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
-      message_loop_proxy_(
-          new internal::MessageLoopProxyImpl(incoming_task_queue_)) {
+      unbound_task_runner_(
+          new internal::MessageLoopTaskRunner(incoming_task_queue_)),
+      task_runner_(unbound_task_runner_) {
   // If type is TYPE_CUSTOM non-null pump_factory must be given.
   DCHECK_EQ(type_ == TYPE_CUSTOM, !pump_factory_.is_null());
 }
@@ -402,9 +411,26 @@ void MessageLoop::BindToCurrentThread() {
   lazy_tls_ptr.Pointer()->Set(this);
 
   incoming_task_queue_->StartScheduling();
-  message_loop_proxy_->BindToCurrentThread();
-  thread_task_runner_handle_.reset(
-      new ThreadTaskRunnerHandle(message_loop_proxy_));
+  unbound_task_runner_->BindToCurrentThread();
+  unbound_task_runner_ = nullptr;
+  SetThreadTaskRunnerHandle();
+}
+
+void MessageLoop::SetTaskRunner(
+    scoped_refptr<SingleThreadTaskRunner> task_runner) {
+  DCHECK_EQ(this, current());
+  DCHECK(task_runner->BelongsToCurrentThread());
+  DCHECK(!unbound_task_runner_);
+  task_runner_ = std::move(task_runner);
+  SetThreadTaskRunnerHandle();
+}
+
+void MessageLoop::SetThreadTaskRunnerHandle() {
+  DCHECK_EQ(this, current());
+  // Clear the previous thread task runner first, because only one can exist at
+  // a time.
+  thread_task_runner_handle_.reset();
+  thread_task_runner_handle_.reset(new ThreadTaskRunnerHandle(task_runner_));
 }
 
 void MessageLoop::RunHandler() {
@@ -452,10 +478,11 @@ void MessageLoop::RunTask(const PendingTask& pending_task) {
 
   HistogramEvent(kTaskRunEvent);
 
+  TRACE_TASK_EXECUTION("MessageLoop::RunTask", pending_task);
+
   FOR_EACH_OBSERVER(TaskObserver, task_observers_,
                     WillProcessTask(pending_task));
-  task_annotator_.RunTask(
-      "MessageLoop::PostTask", "MessageLoop::RunTask", pending_task);
+  task_annotator_.RunTask("MessageLoop::PostTask", pending_task);
   FOR_EACH_OBSERVER(TaskObserver, task_observers_,
                     DidProcessTask(pending_task));
 
@@ -542,7 +569,7 @@ void MessageLoop::StartHistogrammer() {
         "MsgLoop:" + thread_name_,
         kLeastNonZeroMessageId, kMaxMessageId,
         kNumberOfDistinctMessagesDisplayed,
-        message_histogram_->kHexRangePrintingFlag,
+        HistogramBase::kHexRangePrintingFlag,
         event_descriptions_);
   }
 #endif
@@ -592,7 +619,7 @@ bool MessageLoop::DoDelayedWork(TimeTicks* next_delayed_work_time) {
     return false;
   }
 
-  // When we "fall behind," there will be a lot of tasks in the delayed work
+  // When we "fall behind", there will be a lot of tasks in the delayed work
   // queue that are ready to run.  To increase efficiency when we fall behind,
   // we will only call Time::Now() intermittently, and then process all tasks
   // that are ready to run before calling it again.  As a result, the more we
@@ -637,10 +664,6 @@ bool MessageLoop::DoIdleWork() {
   }
 #endif
   return false;
-}
-
-TimeTicks MessageLoop::GetNewlyAddedTaskDelay() {
-  return incoming_task_queue_->GetNewlyAddedTaskDelay();
 }
 
 void MessageLoop::DeleteSoonInternal(const tracked_objects::Location& from_here,

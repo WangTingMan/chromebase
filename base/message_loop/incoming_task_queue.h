@@ -6,6 +6,7 @@
 #define BASE_MESSAGE_LOOP_INCOMING_TASK_QUEUE_H_
 
 #include "base/base_export.h"
+#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/pending_task.h"
 #include "base/synchronization/lock.h"
@@ -56,9 +57,6 @@ class BASE_EXPORT IncomingTaskQueue
   // This should be called when the message loop becomes ready for
   // scheduling work.
   void StartScheduling();
-
-  // Returns the delay for the most recently added task.
-  TimeTicks GetNewlyAddedTaskDelay();
 
  private:
   friend class RefCountedThreadSafe<IncomingTaskQueue>;
