@@ -6,7 +6,6 @@
 #define BASE_MESSAGE_LOOP_MESSAGE_PUMP_H_
 
 #include "base/base_export.h"
-#include "base/basictypes.h"
 #include "base/message_loop/timer_slack.h"
 #include "base/threading/non_thread_safe.h"
 
@@ -42,9 +41,6 @@ class BASE_EXPORT MessagePump : public NonThreadSafe {
     // Returns true to indicate that idle work was done. Returning false means
     // the pump will now wait.
     virtual bool DoIdleWork() = 0;
-
-    // Returns the delay for the newly added task.
-    virtual TimeTicks GetNewlyAddedTaskDelay() = 0;
   };
 
   MessagePump();

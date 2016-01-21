@@ -10,10 +10,13 @@
 #include <limits>
 
 #include "base/logging.h"
+#include "base/mac/call_with_eh_frame.h"
 #include "base/mac/scoped_cftyperef.h"
+#include "base/macros.h"
 #include "base/message_loop/timer_slack.h"
 #include "base/run_loop.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 #if !defined(OS_IOS)
 #import <AppKit/AppKit.h>
@@ -301,7 +304,9 @@ void MessagePumpCFRunLoopBase::RunDelayedWorkTimer(
 // static
 void MessagePumpCFRunLoopBase::RunWorkSource(void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
-  self->RunWork();
+  base::mac::CallWithEHFrame(^{
+    self->RunWork();
+  });
 }
 
 // Called by MessagePumpCFRunLoopBase::RunWorkSource.
@@ -360,7 +365,9 @@ bool MessagePumpCFRunLoopBase::RunWork() {
 // static
 void MessagePumpCFRunLoopBase::RunIdleWorkSource(void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
-  self->RunIdleWork();
+  base::mac::CallWithEHFrame(^{
+    self->RunIdleWork();
+  });
 }
 
 // Called by MessagePumpCFRunLoopBase::RunIdleWorkSource.
@@ -394,7 +401,9 @@ bool MessagePumpCFRunLoopBase::RunIdleWork() {
 // static
 void MessagePumpCFRunLoopBase::RunNestingDeferredWorkSource(void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
-  self->RunNestingDeferredWork();
+  base::mac::CallWithEHFrame(^{
+    self->RunNestingDeferredWork();
+  });
 }
 
 // Called by MessagePumpCFRunLoopBase::RunNestingDeferredWorkSource.
@@ -442,15 +451,16 @@ void MessagePumpCFRunLoopBase::PreWaitObserver(
     CFRunLoopActivity /* activity */,
     void* info) {
   MessagePumpCFRunLoopBase* self = static_cast<MessagePumpCFRunLoopBase*>(info);
+  base::mac::CallWithEHFrame(^{
+    // Attempt to do some idle work before going to sleep.
+    self->RunIdleWork();
 
-  // Attempt to do some idle work before going to sleep.
-  self->RunIdleWork();
-
-  // The run loop is about to go to sleep.  If any of the work done since it
-  // started or woke up resulted in a nested run loop running,
-  // nesting-deferred work may have accumulated.  Schedule it for processing
-  // if appropriate.
-  self->MaybeScheduleNestingDeferredWork();
+    // The run loop is about to go to sleep.  If any of the work done since it
+    // started or woke up resulted in a nested run loop running,
+    // nesting-deferred work may have accumulated.  Schedule it for processing
+    // if appropriate.
+    self->MaybeScheduleNestingDeferredWork();
+  });
 }
 
 // Called from the run loop.
@@ -466,7 +476,9 @@ void MessagePumpCFRunLoopBase::PreSourceObserver(
   // level did not sleep or exit, nesting-deferred work may have accumulated
   // if a nested loop ran.  Schedule nesting-deferred work for processing if
   // appropriate.
-  self->MaybeScheduleNestingDeferredWork();
+  base::mac::CallWithEHFrame(^{
+    self->MaybeScheduleNestingDeferredWork();
+  });
 }
 
 // Called from the run loop.
@@ -502,7 +514,9 @@ void MessagePumpCFRunLoopBase::EnterExitObserver(
       // to sleep or exiting.  It must be called before decrementing the
       // value so that the value still corresponds to the level of the exiting
       // loop.
-      self->MaybeScheduleNestingDeferredWork();
+      base::mac::CallWithEHFrame(^{
+        self->MaybeScheduleNestingDeferredWork();
+      });
       --self->nesting_level_;
       break;
 
@@ -510,7 +524,9 @@ void MessagePumpCFRunLoopBase::EnterExitObserver(
       break;
   }
 
-  self->EnterExitRunLoop(activity);
+  base::mac::CallWithEHFrame(^{
+    self->EnterExitRunLoop(activity);
+  });
 }
 
 // Called by MessagePumpCFRunLoopBase::EnterExitRunLoop.  The default

@@ -35,10 +35,13 @@
               'sync_socket_nacl.cc',
               'time/time_posix.cc',
             ],
-            'gcc_compile_flags': [
+            'compile_flags': [
               '-fno-strict-aliasing',
             ],
           },
+          'dependencies': [
+            'base.gyp:base_debugging_flags',
+          ],
         },
         {
           'target_name': 'base_i18n_nacl',
@@ -96,6 +99,10 @@
               # For GetKnownDeadTerminationStatus and GetTerminationStatus.
               'process/kill_posix.cc',
 
+              # For ForkWithFlags.
+              'process/launch.h',
+              'process/launch_posix.cc',
+
               # Unlike libbase_nacl, for Non-SFI build, we need to use
               # rand_util_posix for random implementation, instead of
               # rand_util_nacl.cc, which is based on IRT. rand_util_nacl.cc is
@@ -110,7 +117,8 @@
             'rand_util_nacl.cc',
           ],
           'dependencies': [
-            '../third_party/libevent/libevent_nacl_nonsfi.gyp:event_nacl_nonsfi',
+            'base.gyp:base_debugging_flags',
+            'third_party/libevent/libevent_nacl_nonsfi.gyp:event_nacl_nonsfi',
           ],
         },
         {

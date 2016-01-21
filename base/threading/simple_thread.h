@@ -40,16 +40,17 @@
 #ifndef BASE_THREADING_SIMPLE_THREAD_H_
 #define BASE_THREADING_SIMPLE_THREAD_H_
 
-#include <string>
+#include <stddef.h>
+
 #include <queue>
+#include <string>
 #include <vector>
 
 #include "base/base_export.h"
-#include "base/basictypes.h"
 #include "base/compiler_specific.h"
-#include "base/threading/platform_thread.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/threading/platform_thread.h"
 
 namespace base {
 
@@ -59,8 +60,10 @@ class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
  public:
   class BASE_EXPORT Options {
    public:
-    Options() : stack_size_(0), priority_(ThreadPriority::NORMAL) { }
-    ~Options() { }
+    Options() : stack_size_(0), priority_(ThreadPriority::NORMAL) {}
+    explicit Options(ThreadPriority priority)
+        : stack_size_(0), priority_(priority) {}
+    ~Options() {}
 
     // We use the standard compiler-supplied copy constructor.
 
@@ -108,12 +111,6 @@ class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
 
   // Overridden from PlatformThread::Delegate:
   void ThreadMain() override;
-
-  // Only set priorities with a careful understanding of the consequences.
-  // This is meant for very limited use cases.
-  void SetThreadPriority(ThreadPriority priority) {
-    PlatformThread::SetThreadPriority(thread_, priority);
-  }
 
  private:
   const std::string name_prefix_;
