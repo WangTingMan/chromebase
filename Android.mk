@@ -78,6 +78,7 @@ libchromeCommonSrc := \
 	base/location.cc \
 	base/logging.cc \
 	base/md5.cc \
+	base/memory/aligned_memory.cc \
 	base/memory/ref_counted.cc \
 	base/memory/ref_counted_memory.cc \
 	base/memory/singleton.cc \
@@ -258,6 +259,7 @@ libchromeCommonUnittestSrc := \
 	base/lazy_instance_unittest.cc \
 	base/logging_unittest.cc \
 	base/md5_unittest.cc \
+	base/memory/aligned_memory_unittest.cc \
 	base/memory/linked_ptr_unittest.cc \
 	base/memory/ref_counted_memory_unittest.cc \
 	base/memory/ref_counted_unittest.cc \
@@ -293,7 +295,7 @@ libchromeCommonUnittestSrc := \
 	base/scoped_clear_errno_unittest.cc \
 	base/scoped_generic_unittest.cc \
 	base/security_unittest.cc \
-	base/sequence_checker_unittest \
+	base/sequence_checker_unittest.cc \
 	base/sha1_unittest.cc \
 	base/stl_util_unittest.cc \
 	base/strings/string16_unittest.cc \
@@ -316,6 +318,7 @@ libchromeCommonUnittestSrc := \
 	base/test/multiprocess_test_android.cc \
 	base/test/opaque_ref_counted.cc \
 	base/test/scoped_locale.cc \
+	base/test/sequenced_worker_pool_owner.cc \
 	base/test/test_file_util.cc \
 	base/test/test_file_util_linux.cc \
 	base/test/test_file_util_posix.cc \
