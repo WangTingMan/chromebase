@@ -109,6 +109,7 @@ libchromeCommonSrc := \
 	base/process/kill_posix.cc \
 	base/process/launch.cc \
 	base/process/launch_posix.cc \
+	base/process/process_handle.cc \
 	base/process/process_handle_posix.cc \
 	base/process/process_iterator.cc \
 	base/process/process_metrics.cc \
@@ -178,6 +179,7 @@ libchromeCommonSrc := \
 	base/trace_event/memory_allocator_dump.cc \
 	base/trace_event/memory_allocator_dump_guid.cc \
 	base/trace_event/memory_dump_manager.cc \
+	base/trace_event/malloc_dump_provider.cc \
 	base/trace_event/memory_dump_request_args.cc \
 	base/trace_event/memory_dump_session_state.cc \
 	base/trace_event/process_memory_dump.cc \
@@ -211,7 +213,6 @@ libchromeLinuxSrc := \
 	base/sys_info_linux.cc \
 	base/threading/platform_thread_internal_posix.cc \
 	base/threading/platform_thread_linux.cc \
-	base/trace_event/malloc_dump_provider.cc \
 	components/timers/alarm_timer_chromeos.cc \
 
 libchromeMacSrc := \
@@ -227,6 +228,7 @@ libchromeMacSrc := \
 	base/mac/scoped_nsautorelease_pool.mm \
 	base/message_loop/message_pump_mac.mm \
 	base/process/launch_mac.cc \
+	base/process/port_provider_mac.cc \
 	base/process/process_handle_mac.cc \
 	base/process/process_iterator_mac.cc \
 	base/process/process_metrics_mac.cc \
