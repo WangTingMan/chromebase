@@ -26,9 +26,9 @@ base_libs = [
   {
     'name' : 'core',
     'sources' : """
-                allocator/type_profiler_control.cc
                 at_exit.cc
-                atomicops_internals_x86_gcc.cc
+                base64.cc
+                base64url.cc
                 base_switches.cc
                 bind_helpers.cc
                 build_time.cc
@@ -60,9 +60,11 @@ base_libs = [
                 files/scoped_temp_dir.cc
                 guid.cc
                 guid_posix.cc
+                json/json_file_value_serializer.cc
                 json/json_parser.cc
                 json/json_reader.cc
                 json/json_string_value_serializer.cc
+                json/json_value_converter.cc
                 json/json_writer.cc
                 json/string_escape.cc
                 lazy_instance.cc
@@ -75,14 +77,14 @@ base_libs = [
                 memory/weak_ptr.cc
                 message_loop/incoming_task_queue.cc
                 message_loop/message_loop.cc
-                message_loop/message_loop_proxy.cc
-                message_loop/message_loop_proxy_impl.cc
+                message_loop/message_loop_task_runner.cc
                 message_loop/message_pump.cc
                 message_loop/message_pump_default.cc
                 message_loop/message_pump_glib.cc
                 message_loop/message_pump_libevent.cc
                 metrics/bucket_ranges.cc
                 metrics/field_trial.cc
+                metrics/metrics_hashes.cc
                 metrics/histogram_base.cc
                 metrics/histogram.cc
                 metrics/histogram_samples.cc
@@ -119,6 +121,7 @@ base_libs = [
                 sequence_checker_impl.cc
                 sequenced_task_runner.cc
                 sha1_portable.cc
+                strings/pattern.cc
                 strings/safe_sprintf.cc
                 strings/string16.cc
                 strings/string_number_conversions.cc
@@ -170,23 +173,30 @@ base_libs = [
                 time/tick_clock.cc
                 time/time.cc
                 time/time_posix.cc
+                trace_event/heap_profiler_allocation_context.cc
+                trace_event/heap_profiler_allocation_context_tracker.cc
+                trace_event/heap_profiler_stack_frame_deduplicator.cc
+                trace_event/heap_profiler_type_name_deduplicator.cc
                 trace_event/malloc_dump_provider.cc
                 trace_event/memory_allocator_dump.cc
                 trace_event/memory_allocator_dump_guid.cc
                 trace_event/memory_dump_manager.cc
+                trace_event/memory_dump_request_args.cc
                 trace_event/memory_dump_session_state.cc
                 trace_event/process_memory_dump.cc
                 trace_event/process_memory_maps.cc
                 trace_event/process_memory_maps_dump_provider.cc
                 trace_event/process_memory_totals.cc
                 trace_event/process_memory_totals_dump_provider.cc
+                trace_event/trace_buffer.cc
                 trace_event/trace_config.cc
                 trace_event/trace_event_argument.cc
                 trace_event/trace_event_impl.cc
-                trace_event/trace_event_impl_constants.cc
-                trace_event/trace_event_memory.cc
                 trace_event/trace_event_memory_overhead.cc
                 trace_event/trace_event_synthetic_delay.cc
+                trace_event/trace_log.cc
+                trace_event/trace_log_constants.cc
+                trace_event/trace_sampling_thread.cc
                 tracked_objects.cc
                 tracking_info.cc
                 values.cc

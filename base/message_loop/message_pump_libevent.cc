@@ -14,9 +14,6 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/posix/eintr_wrapper.h"
-#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
-#include "base/third_party/libevent/event.h"
-#endif
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
@@ -25,6 +22,8 @@
 #include <event2/event.h>
 #include <event2/event_compat.h>
 #include <event2/event_struct.h>
+#else
+#include "third_party/libevent/event.h"
 #endif
 
 #if defined(OS_MACOSX)
