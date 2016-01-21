@@ -27,9 +27,7 @@ class BASE_EXPORT ProcessMemoryMapsDumpProvider : public MemoryDumpProvider {
   friend struct DefaultSingletonTraits<ProcessMemoryMapsDumpProvider>;
   FRIEND_TEST_ALL_PREFIXES(ProcessMemoryMapsDumpProviderTest, ParseProcSmaps);
 
-#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_NACL)
   static FILE* proc_smaps_for_testing;
-#endif
 
   ProcessMemoryMapsDumpProvider();
   ~ProcessMemoryMapsDumpProvider() override;
