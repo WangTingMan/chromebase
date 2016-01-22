@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Default values for the USE flags. Set these variables in your product .mk
-# file.
-BRILLO_USE_DBUS ?= 1
+# Default values for the USE flags. Override these USE flags from your product
+# by setting BRILLO_USE_* values. Note that we define local variables like
+# local_use_* to prevent leaking our default setting for other packages.
+local_use_dbus := $(if $(BRILLO_USE_DBUS),$(BRILLO_USE_DBUS),1)
 
 LOCAL_PATH := $(call my-dir)
 
@@ -424,7 +425,7 @@ LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
 
-ifeq ($(BRILLO_USE_DBUS),1)
+ifeq ($(local_use_dbus),1)
 
 # libchrome-dbus shared library for target
 # ========================================================
@@ -459,7 +460,7 @@ LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
-endif  # BRILLO_USE_DBUS == 1
+endif  # local_use_dbus == 1
 
 # Helpers needed for unit tests.
 # ========================================================
@@ -480,7 +481,7 @@ LOCAL_SRC_FILES := \
 
 include $(BUILD_STATIC_LIBRARY)
 
-ifeq ($(BRILLO_USE_DBUS),1)
+ifeq ($(local_use_dbus),1)
 
 # Helpers needed for D-Bus unit tests.
 # ========================================================
@@ -499,7 +500,7 @@ LOCAL_SRC_FILES := \
 
 include $(BUILD_STATIC_LIBRARY)
 
-endif  # BRILLO_USE_DBUS == 1
+endif  # local_use_dbus == 1
 
 # Helpers needed for unit tests (for host).
 # ========================================================
