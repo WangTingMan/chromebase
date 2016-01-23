@@ -4,7 +4,7 @@
 
 // Note: This file also tests child_process.*.
 
-#include "mojo/runner/host/child_process_host.h"
+#include "mojo/shell/runner/host/child_process_host.h"
 
 #include "base/bind.h"
 #include "base/logging.h"
@@ -18,7 +18,7 @@
 #include "third_party/mojo/src/mojo/edk/embedder/process_delegate.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 namespace {
 
 using PidAvailableCallback = base::Callback<void(base::ProcessId)>;
@@ -89,5 +89,5 @@ TEST(ChildProcessHostTest, MAYBE_StartJoin) {
 }
 
 }  // namespace
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

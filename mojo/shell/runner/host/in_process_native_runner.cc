@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/in_process_native_runner.h"
+#include "mojo/shell/runner/host/in_process_native_runner.h"
 
 #include <utility>
 
@@ -12,12 +12,12 @@
 #include "base/task_runner.h"
 #include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
-#include "mojo/runner/host/native_application_support.h"
-#include "mojo/runner/host/out_of_process_native_runner.h"
-#include "mojo/runner/init.h"
+#include "mojo/shell/runner/host/native_application_support.h"
+#include "mojo/shell/runner/host/out_of_process_native_runner.h"
+#include "mojo/shell/runner/init.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 InProcessNativeRunner::InProcessNativeRunner() : app_library_(nullptr) {}
 
@@ -78,7 +78,7 @@ void InProcessNativeRunner::Run() {
   app_completed_callback_runner_.Reset();
 }
 
-scoped_ptr<shell::NativeRunner> InProcessNativeRunnerFactory::Create(
+scoped_ptr<NativeRunner> InProcessNativeRunnerFactory::Create(
     const base::FilePath& app_path) {
   // Non-Mojo apps are always run in a new process.
   if (!app_path.MatchesExtension(FILE_PATH_LITERAL(".mojo"))) {
@@ -88,5 +88,5 @@ scoped_ptr<shell::NativeRunner> InProcessNativeRunnerFactory::Create(
   return make_scoped_ptr(new InProcessNativeRunner);
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

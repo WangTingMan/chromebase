@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/child_process_host.h"
+#include "mojo/shell/runner/host/child_process_host.h"
 
 #include <stdint.h>
 
@@ -20,7 +20,7 @@
 #include "base/thread_task_runner_handle.h"
 #include "mojo/public/cpp/bindings/interface_ptr_info.h"
 #include "mojo/public/cpp/system/core.h"
-#include "mojo/runner/host/switches.h"
+#include "mojo/shell/runner/host/switches.h"
 #include "third_party/mojo/src/mojo/edk/embedder/embedder.h"
 
 #if defined(OS_LINUX) && !defined(OS_ANDROID)
@@ -32,7 +32,7 @@
 #endif
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 ChildProcessHost::ChildProcessHost(base::TaskRunner* launch_process_runner,
                                    bool start_sandboxed,
@@ -238,5 +238,5 @@ void ChildProcessHost::DidCreateChannel(embedder::ChannelInfo* channel_info) {
   channel_info_ = channel_info;
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_HOST_CHILD_PROCESS_HOST_H_
-#define MOJO_RUNNER_HOST_CHILD_PROCESS_HOST_H_
+#ifndef MOJO_SHELL_RUNNER_HOST_CHILD_PROCESS_HOST_H_
+#define MOJO_SHELL_RUNNER_HOST_CHILD_PROCESS_HOST_H_
 
 #include <stdint.h>
 
@@ -14,8 +14,8 @@
 #include "base/synchronization/waitable_event.h"
 #include "mojo/edk/embedder/platform_channel_pair.h"
 #include "mojo/public/cpp/system/message_pipe.h"
-#include "mojo/runner/child/child_controller.mojom.h"
-#include "mojo/runner/host/child_process_host.h"
+#include "mojo/shell/runner/child/child_controller.mojom.h"
+#include "mojo/shell/runner/host/child_process_host.h"
 #include "third_party/mojo/src/mojo/edk/embedder/channel_info_forward.h"
 #include "third_party/mojo/src/mojo/edk/embedder/platform_channel_pair.h"
 #include "third_party/mojo/src/mojo/edk/embedder/scoped_platform_handle.h"
@@ -25,7 +25,7 @@ class TaskRunner;
 }
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 // This class represents a "child process host". Handles launching and
 // connecting a platform-specific "pipe" to the child, and supports joining the
@@ -103,7 +103,7 @@ class ChildProcessHost {
   DISALLOW_COPY_AND_ASSIGN(ChildProcessHost);
 };
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_HOST_CHILD_PROCESS_HOST_H_
+#endif  // MOJO_SHELL_RUNNER_HOST_CHILD_PROCESS_HOST_H_

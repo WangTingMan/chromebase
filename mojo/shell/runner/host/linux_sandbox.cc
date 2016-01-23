@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/linux_sandbox.h"
+#include "mojo/shell/runner/host/linux_sandbox.h"
 
 #include <fcntl.h>
 #include <sys/syscall.h>
@@ -29,7 +29,7 @@
 using sandbox::syscall_broker::BrokerFilePermission;
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 namespace {
 
@@ -160,5 +160,5 @@ void LinuxSandbox::Seal() {
   proc_fd_.reset();
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

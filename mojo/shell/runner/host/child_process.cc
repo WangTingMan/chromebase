@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/child_process.h"
+#include "mojo/shell/runner/host/child_process.h"
 
 #include <stdint.h>
 
@@ -31,10 +31,10 @@
 #include "mojo/message_pump/message_pump_mojo.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/system/core.h"
-#include "mojo/runner/child/child_controller.mojom.h"
-#include "mojo/runner/host/native_application_support.h"
-#include "mojo/runner/host/switches.h"
-#include "mojo/runner/init.h"
+#include "mojo/shell/runner/child/child_controller.mojom.h"
+#include "mojo/shell/runner/host/native_application_support.h"
+#include "mojo/shell/runner/host/switches.h"
+#include "mojo/shell/runner/init.h"
 #include "third_party/mojo/src/mojo/edk/embedder/embedder.h"
 #include "third_party/mojo/src/mojo/edk/embedder/platform_channel_pair.h"
 #include "third_party/mojo/src/mojo/edk/embedder/process_delegate.h"
@@ -43,11 +43,11 @@
 #if defined(OS_LINUX) && !defined(OS_ANDROID)
 #include "base/rand_util.h"
 #include "base/sys_info.h"
-#include "mojo/runner/host/linux_sandbox.h"
+#include "mojo/shell/runner/host/linux_sandbox.h"
 #endif
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 namespace {
 
@@ -275,7 +275,7 @@ class ChildControllerImpl : public ChildController {
 };
 
 #if defined(OS_LINUX) && !defined(OS_ANDROID)
-scoped_ptr<mojo::runner::LinuxSandbox> InitializeSandbox() {
+scoped_ptr<mojo::shell::LinuxSandbox> InitializeSandbox() {
   using sandbox::syscall_broker::BrokerFilePermission;
   // Warm parts of base in the copy of base in the mojo runner.
   base::RandUint64();
@@ -290,8 +290,8 @@ scoped_ptr<mojo::runner::LinuxSandbox> InitializeSandbox() {
   std::vector<BrokerFilePermission> permissions;
   permissions.push_back(
       BrokerFilePermission::ReadWriteCreateUnlinkRecursive("/dev/shm/"));
-  scoped_ptr<mojo::runner::LinuxSandbox> sandbox(
-      new mojo::runner::LinuxSandbox(permissions));
+  scoped_ptr<mojo::shell::LinuxSandbox> sandbox(
+      new mojo::shell::LinuxSandbox(permissions));
   sandbox->Warmup();
   sandbox->EngageNamespaceSandbox();
   sandbox->EngageSeccompSandbox();
@@ -346,11 +346,11 @@ int ChildProcessMain() {
       *base::CommandLine::ForCurrentProcess();
 
 #if defined(OS_LINUX) && !defined(OS_ANDROID)
-  scoped_ptr<mojo::runner::LinuxSandbox> sandbox;
+  scoped_ptr<mojo::shell::LinuxSandbox> sandbox;
 #endif
   base::NativeLibrary app_library = 0;
   // Load the application library before we engage the sandbox.
-  app_library = mojo::runner::LoadNativeApplication(
+  app_library = mojo::shell::LoadNativeApplication(
       command_line.GetSwitchValuePath(switches::kChildProcess));
   base::i18n::InitializeICU();
   if (app_library)
@@ -391,5 +391,5 @@ int ChildProcessMain() {
   return 0;
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

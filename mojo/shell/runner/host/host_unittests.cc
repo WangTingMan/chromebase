@@ -8,9 +8,9 @@
 #include "base/logging.h"
 #include "base/test/launcher/unit_test_launcher.h"
 #include "base/test/test_suite.h"
-#include "mojo/runner/host/child_process.h"
-#include "mojo/runner/host/switches.h"
-#include "mojo/runner/init.h"
+#include "mojo/shell/runner/host/child_process.h"
+#include "mojo/shell/runner/host/switches.h"
+#include "mojo/shell/runner/init.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/mojo/src/mojo/edk/embedder/embedder.h"
 
@@ -19,12 +19,12 @@ int main(int argc, char** argv) {
   const base::CommandLine& command_line =
       *base::CommandLine::ForCurrentProcess();
 
-  mojo::runner::WaitForDebuggerIfNecessary();
+  mojo::shell::WaitForDebuggerIfNecessary();
 
   if (command_line.HasSwitch(switches::kChildProcess)) {
     base::AtExitManager at_exit;
 
-    return mojo::runner::ChildProcessMain();
+    return mojo::shell::ChildProcessMain();
   }
 
   mojo::embedder::Init();

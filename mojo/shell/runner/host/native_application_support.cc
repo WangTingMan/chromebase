@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/native_application_support.h"
+#include "mojo/shell/runner/host/native_application_support.h"
 
 #include <stddef.h>
 
@@ -17,7 +17,7 @@
 #include "mojo/public/platform/native/system_thunks.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 namespace {
 
@@ -127,5 +127,5 @@ bool RunNativeApplication(base::NativeLibrary app_library,
   return true;
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

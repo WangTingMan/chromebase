@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_
-#define MOJO_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_
+#ifndef MOJO_SHELL_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_
+#define MOJO_SHELL_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_
 
 #include "base/native_library.h"
 #include "mojo/public/cpp/bindings/interface_request.h"
@@ -13,10 +13,8 @@ class FilePath;
 }
 
 namespace mojo {
-
 class Application;
-
-namespace runner {
+namespace shell {
 
 // Loads the native Mojo application from the DSO specified by |app_path|.
 // Returns the |base::NativeLibrary| for the application on success (or null on
@@ -37,7 +35,7 @@ base::NativeLibrary LoadNativeApplication(const base::FilePath& app_path);
 bool RunNativeApplication(base::NativeLibrary app_library,
                           InterfaceRequest<Application> application_request);
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_
+#endif  // MOJO_SHELL_RUNNER_HOST_NATIVE_APPLICATION_SUPPORT_H_

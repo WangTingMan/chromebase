@@ -5,12 +5,12 @@
 #include "base/at_exit.h"
 #include "base/command_line.h"
 #include "base/macros.h"
-#include "mojo/runner/child/test_native_main.h"
-#include "mojo/runner/init.h"
 #include "mojo/shell/application_manager_apptests.mojom.h"
 #include "mojo/shell/public/cpp/application_connection.h"
 #include "mojo/shell/public/cpp/application_delegate.h"
 #include "mojo/shell/public/cpp/application_impl.h"
+#include "mojo/shell/runner/child/test_native_main.h"
+#include "mojo/shell/runner/init.h"
 
 using mojo::shell::test::mojom::CreateInstanceForHandleTestPtr;
 
@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
 
-  mojo::runner::InitializeLogging();
+  mojo::shell::InitializeLogging();
 
   TargetApplicationDelegate delegate;
-  return mojo::runner::TestNativeMain(&delegate);
+  return mojo::shell::TestNativeMain(&delegate);
 }

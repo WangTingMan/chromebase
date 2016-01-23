@@ -8,20 +8,20 @@
 #include "base/command_line.h"
 #include "base/macros.h"
 #include "mojo/common/weak_binding_set.h"
-#include "mojo/runner/child/test_native_main.h"
-#include "mojo/runner/child/test_native_service.mojom.h"
-#include "mojo/runner/init.h"
 #include "mojo/shell/public/cpp/application_connection.h"
 #include "mojo/shell/public/cpp/application_delegate.h"
 #include "mojo/shell/public/cpp/application_impl.h"
 #include "mojo/shell/public/cpp/interface_factory.h"
+#include "mojo/shell/runner/child/test_native_main.h"
+#include "mojo/shell/runner/child/test_native_service.mojom.h"
+#include "mojo/shell/runner/init.h"
 
 namespace {
 
 class TargetApplicationDelegate
     : public mojo::ApplicationDelegate,
-      public mojo::runner::test::TestNativeService,
-      public mojo::InterfaceFactory<mojo::runner::test::TestNativeService> {
+      public mojo::shell::test::TestNativeService,
+      public mojo::InterfaceFactory<mojo::shell::test::TestNativeService> {
  public:
   TargetApplicationDelegate() {}
   ~TargetApplicationDelegate() override {}
@@ -31,23 +31,23 @@ class TargetApplicationDelegate
   void Initialize(mojo::ApplicationImpl* app) override {}
   bool ConfigureIncomingConnection(
       mojo::ApplicationConnection* connection) override {
-    connection->AddService<mojo::runner::test::TestNativeService>(this);
+    connection->AddService<mojo::shell::test::TestNativeService>(this);
     return true;
   }
 
-  // mojo::runner::test::TestNativeService:
+  // mojo::shell::test::TestNativeService:
   void Invert(bool from_driver, const InvertCallback& callback) override {
     callback.Run(!from_driver);
   }
 
-  // mojo::InterfaceFactory<mojo::runner::test::TestNativeService>:
+  // mojo::InterfaceFactory<mojo::shell::test::TestNativeService>:
   void Create(mojo::ApplicationConnection* connection,
-              mojo::InterfaceRequest<mojo::runner::test::TestNativeService>
+              mojo::InterfaceRequest<mojo::shell::test::TestNativeService>
                   request) override {
     bindings_.AddBinding(this, std::move(request));
   }
 
-  mojo::WeakBindingSet<mojo::runner::test::TestNativeService> bindings_;
+  mojo::WeakBindingSet<mojo::shell::test::TestNativeService> bindings_;
 
   DISALLOW_COPY_AND_ASSIGN(TargetApplicationDelegate);
 };
@@ -58,8 +58,8 @@ int main(int argc, char** argv) {
   base::AtExitManager at_exit;
   base::CommandLine::Init(argc, argv);
 
-  mojo::runner::InitializeLogging();
+  mojo::shell::InitializeLogging();
 
   TargetApplicationDelegate delegate;
-  return mojo::runner::TestNativeMain(&delegate);
+  return mojo::shell::TestNativeMain(&delegate);
 }

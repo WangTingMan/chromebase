@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/init.h"
+#include "mojo/shell/runner/init.h"
 
 #include <stdint.h>
 
@@ -16,7 +16,7 @@
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
-#include "mojo/runner/host/switches.h"
+#include "mojo/shell/runner/host/switches.h"
 
 #if defined(OS_WIN)
 #include <windows.h>
@@ -25,7 +25,7 @@
 #endif
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 void InitializeLogging() {
   logging::LoggingSettings settings;
@@ -84,5 +84,5 @@ void CallLibraryEarlyInitialization(base::NativeLibrary app_library) {
   // general system for other people.
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

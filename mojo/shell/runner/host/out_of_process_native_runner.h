@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_
-#define MOJO_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_
+#ifndef MOJO_SHELL_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_
+#define MOJO_SHELL_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_
 
 #include <stdint.h>
 
@@ -18,13 +18,13 @@ class TaskRunner;
 }
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 class ChildProcessHost;
 
 // An implementation of |NativeRunner| that loads/runs the given app (from the
 // file system) in a separate process (of its own).
-class OutOfProcessNativeRunner : public shell::NativeRunner {
+class OutOfProcessNativeRunner : public NativeRunner {
  public:
   explicit OutOfProcessNativeRunner(base::TaskRunner* launch_process_runner);
   ~OutOfProcessNativeRunner() override;
@@ -53,15 +53,14 @@ class OutOfProcessNativeRunner : public shell::NativeRunner {
   DISALLOW_COPY_AND_ASSIGN(OutOfProcessNativeRunner);
 };
 
-class OutOfProcessNativeRunnerFactory : public shell::NativeRunnerFactory {
+class OutOfProcessNativeRunnerFactory : public NativeRunnerFactory {
  public:
   explicit OutOfProcessNativeRunnerFactory(
       base::TaskRunner* launch_process_runner)
       : launch_process_runner_(launch_process_runner) {}
   ~OutOfProcessNativeRunnerFactory() override {}
 
-  scoped_ptr<shell::NativeRunner> Create(
-      const base::FilePath& app_path) override;
+  scoped_ptr<NativeRunner> Create(const base::FilePath& app_path) override;
 
  private:
   base::TaskRunner* const launch_process_runner_;
@@ -69,7 +68,7 @@ class OutOfProcessNativeRunnerFactory : public shell::NativeRunnerFactory {
   DISALLOW_COPY_AND_ASSIGN(OutOfProcessNativeRunnerFactory);
 };
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_
+#endif  // MOJO_SHELL_RUNNER_HOST_OUT_OF_PROCESS_NATIVE_RUNNER_H_

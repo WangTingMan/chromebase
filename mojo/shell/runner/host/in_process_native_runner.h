@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_
-#define MOJO_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_
+#ifndef MOJO_SHELL_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_
+#define MOJO_SHELL_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_
 
 #include "base/callback.h"
 #include "base/files/file_path.h"
@@ -11,19 +11,19 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/scoped_native_library.h"
 #include "base/threading/simple_thread.h"
-#include "mojo/runner/host/native_application_support.h"
 #include "mojo/shell/native_runner.h"
+#include "mojo/shell/runner/host/native_application_support.h"
 
 namespace base {
 class TaskRunner;
 }
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 // An implementation of |NativeRunner| that loads/runs the given app (from the
 // file system) on a separate thread (in the current process).
-class InProcessNativeRunner : public shell::NativeRunner,
+class InProcessNativeRunner : public NativeRunner,
                               public base::DelegateSimpleThread::Delegate {
  public:
   InProcessNativeRunner();
@@ -53,14 +53,13 @@ class InProcessNativeRunner : public shell::NativeRunner,
   DISALLOW_COPY_AND_ASSIGN(InProcessNativeRunner);
 };
 
-class InProcessNativeRunnerFactory : public shell::NativeRunnerFactory {
+class InProcessNativeRunnerFactory : public NativeRunnerFactory {
  public:
   explicit InProcessNativeRunnerFactory(base::TaskRunner* launch_process_runner)
       : launch_process_runner_(launch_process_runner) {}
   ~InProcessNativeRunnerFactory() override {}
 
-  scoped_ptr<shell::NativeRunner> Create(
-      const base::FilePath& app_path) override;
+  scoped_ptr<NativeRunner> Create(const base::FilePath& app_path) override;
 
  private:
   base::TaskRunner* const launch_process_runner_;
@@ -68,7 +67,7 @@ class InProcessNativeRunnerFactory : public shell::NativeRunnerFactory {
   DISALLOW_COPY_AND_ASSIGN(InProcessNativeRunnerFactory);
 };
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_
+#endif  // MOJO_SHELL_RUNNER_HOST_IN_PROCESS_NATIVE_RUNNER_H_

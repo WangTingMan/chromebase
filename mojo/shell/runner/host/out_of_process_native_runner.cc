@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/host/out_of_process_native_runner.h"
+#include "mojo/shell/runner/host/out_of_process_native_runner.h"
 
 #include <stdint.h>
 
@@ -13,11 +13,11 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/task_runner.h"
-#include "mojo/runner/host/child_process_host.h"
-#include "mojo/runner/host/in_process_native_runner.h"
+#include "mojo/shell/runner/host/child_process_host.h"
+#include "mojo/shell/runner/host/in_process_native_runner.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 OutOfProcessNativeRunner::OutOfProcessNativeRunner(
     base::TaskRunner* launch_process_runner)
@@ -71,10 +71,10 @@ void OutOfProcessNativeRunner::AppCompleted(int32_t result) {
   app_completed_callback.Run();
 }
 
-scoped_ptr<shell::NativeRunner> OutOfProcessNativeRunnerFactory::Create(
+scoped_ptr<NativeRunner> OutOfProcessNativeRunnerFactory::Create(
     const base::FilePath& app_path) {
   return make_scoped_ptr(new OutOfProcessNativeRunner(launch_process_runner_));
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_INIT_H_
-#define MOJO_RUNNER_INIT_H_
+#ifndef MOJO_SHELL_RUNNER_INIT_H_
+#define MOJO_SHELL_RUNNER_INIT_H_
 
 #include "base/native_library.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 // Initialization routines shared by desktop and Android main functions.
 void InitializeLogging();
@@ -19,7 +19,7 @@ void WaitForDebuggerIfNecessary();
 // common initialization there now.
 void CallLibraryEarlyInitialization(base::NativeLibrary app_library);
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_INIT_H_
+#endif  // MOJO_SHELL_RUNNER_INIT_H_

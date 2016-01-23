@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_RUNNER_HOST_LINUX_SANDBOX_H_
-#define MOJO_RUNNER_HOST_LINUX_SANDBOX_H_
+#ifndef MOJO_SHELL_RUNNER_HOST_LINUX_SANDBOX_H_
+#define MOJO_SHELL_RUNNER_HOST_LINUX_SANDBOX_H_
 
 #include "base/files/scoped_file.h"
 #include "base/macros.h"
@@ -12,7 +12,7 @@
 #include "sandbox/linux/syscall_broker/broker_process.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 
 // Encapsulates all tasks related to raising the sandbox for mojo runner.
 class LinuxSandbox {
@@ -45,7 +45,7 @@ class LinuxSandbox {
   DISALLOW_COPY_AND_ASSIGN(LinuxSandbox);
 };
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
 
-#endif  // MOJO_RUNNER_HOST_LINUX_SANDBOX_H_
+#endif  // MOJO_SHELL_RUNNER_HOST_LINUX_SANDBOX_H_

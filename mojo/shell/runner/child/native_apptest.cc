@@ -5,12 +5,12 @@
 #include "base/bind.h"
 #include "base/macros.h"
 #include "mojo/converters/network/network_type_converters.h"
-#include "mojo/runner/child/test_native_service.mojom.h"
 #include "mojo/shell/public/cpp/application_impl.h"
 #include "mojo/shell/public/cpp/application_test_base.h"
+#include "mojo/shell/runner/child/test_native_service.mojom.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 namespace {
 void InvertCallback(bool* result, bool from_native) {
   *result = from_native;
@@ -36,5 +36,5 @@ TEST_F(NativeAppTest, Connect) {
   EXPECT_TRUE(result);
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

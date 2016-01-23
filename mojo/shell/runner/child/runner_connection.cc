@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/child/runner_connection.h"
+#include "mojo/shell/runner/child/runner_connection.h"
 
 #include <stdint.h>
 
@@ -21,13 +21,13 @@
 #include "mojo/edk/embedder/platform_channel_pair.h"
 #include "mojo/message_pump/message_pump_mojo.h"
 #include "mojo/public/cpp/bindings/binding.h"
-#include "mojo/runner/child/child_controller.mojom.h"
+#include "mojo/shell/runner/child/child_controller.mojom.h"
 #include "third_party/mojo/src/mojo/edk/embedder/embedder.h"
 #include "third_party/mojo/src/mojo/edk/embedder/platform_channel_pair.h"
 #include "third_party/mojo/src/mojo/edk/embedder/scoped_platform_handle.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 namespace {
 
 void DidCreateChannel(embedder::ChannelInfo* channel_info) {}
@@ -289,5 +289,5 @@ RunnerConnection* RunnerConnection::ConnectToRunner(
 
 RunnerConnection::RunnerConnection() {}
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo

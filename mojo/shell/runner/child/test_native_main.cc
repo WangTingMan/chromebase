@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mojo/runner/child/test_native_main.h"
+#include "mojo/shell/runner/child/test_native_main.h"
 
 #include <utility>
 
@@ -13,15 +13,15 @@
 #include "base/threading/thread.h"
 #include "build/build_config.h"
 #include "mojo/message_pump/message_pump_mojo.h"
-#include "mojo/runner/child/runner_connection.h"
-#include "mojo/runner/init.h"
 #include "mojo/shell/public/cpp/application_delegate.h"
 #include "mojo/shell/public/cpp/application_impl.h"
+#include "mojo/shell/runner/child/runner_connection.h"
+#include "mojo/shell/runner/init.h"
 #include "third_party/mojo/src/mojo/edk/embedder/embedder.h"
 #include "third_party/mojo/src/mojo/edk/embedder/process_delegate.h"
 
 namespace mojo {
-namespace runner {
+namespace shell {
 namespace {
 
 class ProcessDelegate : public mojo::embedder::ProcessDelegate {
@@ -38,7 +38,7 @@ class ProcessDelegate : public mojo::embedder::ProcessDelegate {
 }  // namespace
 
 int TestNativeMain(mojo::ApplicationDelegate* application_delegate) {
-  mojo::runner::WaitForDebuggerIfNecessary();
+  mojo::shell::WaitForDebuggerIfNecessary();
 
 #if !defined(OFFICIAL_BUILD)
   base::debug::EnableInProcessStackDumping();
@@ -61,8 +61,8 @@ int TestNativeMain(mojo::ApplicationDelegate* application_delegate) {
         io_thread.task_runner().get(), mojo::embedder::ScopedPlatformHandle());
 
     mojo::InterfaceRequest<mojo::Application> application_request;
-    scoped_ptr<mojo::runner::RunnerConnection> connection(
-        mojo::runner::RunnerConnection::ConnectToRunner(
+    scoped_ptr<mojo::shell::RunnerConnection> connection(
+        mojo::shell::RunnerConnection::ConnectToRunner(
             &application_request, ScopedMessagePipeHandle()));
     base::MessageLoop loop(mojo::common::MessagePumpMojo::Create());
     mojo::ApplicationImpl impl(application_delegate,
@@ -75,5 +75,5 @@ int TestNativeMain(mojo::ApplicationDelegate* application_delegate) {
   return 0;
 }
 
-}  // namespace runner
+}  // namespace shell
 }  // namespace mojo
