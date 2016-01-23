@@ -26,6 +26,7 @@ base_libs = [
   {
     'name' : 'core',
     'sources' : """
+                allocator/allocator_extension.cc
                 at_exit.cc
                 base64.cc
                 base64url.cc
@@ -173,11 +174,11 @@ base_libs = [
                 time/tick_clock.cc
                 time/time.cc
                 time/time_posix.cc
+                trace_event/malloc_dump_provider.cc
                 trace_event/heap_profiler_allocation_context.cc
                 trace_event/heap_profiler_allocation_context_tracker.cc
                 trace_event/heap_profiler_stack_frame_deduplicator.cc
                 trace_event/heap_profiler_type_name_deduplicator.cc
-                trace_event/malloc_dump_provider.cc
                 trace_event/memory_allocator_dump.cc
                 trace_event/memory_allocator_dump_guid.cc
                 trace_event/memory_dump_manager.cc
@@ -203,7 +204,7 @@ base_libs = [
                 vlog.cc
                 """,
     'prefix' : 'base',
-    'libs' : 'pthread rt',
+    'libs' : 'pthread rt libmodp_b64',
     'pc_libs' : 'glib-2.0 libevent',
   },
   {
@@ -282,7 +283,6 @@ base_libs = [
                 linux/bpf_dsl/syscall_set.cc
                 linux/bpf_dsl/verifier.cc
                 linux/seccomp-bpf/die.cc
-                linux/seccomp-bpf/errorcode.cc
                 linux/seccomp-bpf/sandbox_bpf.cc
                 linux/seccomp-bpf/syscall.cc
                 linux/seccomp-bpf/trap.cc

@@ -11,7 +11,6 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
-#include <openssl/mem.h>
 #include <openssl/rsa.h>
 #include <stdint.h>
 
