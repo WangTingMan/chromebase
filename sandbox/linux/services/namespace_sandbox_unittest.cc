@@ -42,6 +42,12 @@ bool RootDirectoryIsEmpty() {
 class NamespaceSandboxTest : public base::MultiProcessTest {
  public:
   void TestProc(const std::string& procname) {
+    TestProcWithOptions(procname, NamespaceSandbox::Options());
+  }
+
+  void TestProcWithOptions(
+      const std::string& procname,
+      const NamespaceSandbox::Options& ns_sandbox_options) {
     if (!Credentials::CanCreateProcessInNewUserNS()) {
       return;
     }
@@ -53,8 +59,8 @@ class NamespaceSandboxTest : public base::MultiProcessTest {
     base::LaunchOptions launch_options;
     launch_options.fds_to_remap = &fds_to_remap;
 
-    base::Process process =
-        NamespaceSandbox::LaunchProcess(MakeCmdLine(procname), launch_options);
+    base::Process process = NamespaceSandbox::LaunchProcessWithOptions(
+        MakeCmdLine(procname), launch_options, ns_sandbox_options);
     ASSERT_TRUE(process.IsValid());
 
     const int kDummyExitCode = 42;
@@ -65,10 +71,9 @@ class NamespaceSandboxTest : public base::MultiProcessTest {
 };
 
 MULTIPROCESS_TEST_MAIN(SimpleChildProcess) {
-  scoped_ptr<base::Environment> env(base::Environment::Create());
-  bool in_user_ns = NamespaceSandbox::InNewUserNamespace();
-  bool in_pid_ns = NamespaceSandbox::InNewPidNamespace();
-  bool in_net_ns = NamespaceSandbox::InNewNetNamespace();
+  const bool in_user_ns = NamespaceSandbox::InNewUserNamespace();
+  const bool in_pid_ns = NamespaceSandbox::InNewPidNamespace();
+  const bool in_net_ns = NamespaceSandbox::InNewNetNamespace();
   CHECK(in_user_ns);
   CHECK_EQ(in_pid_ns,
            NamespaceUtils::KernelSupportsUnprivilegedNamespace(CLONE_NEWPID));
@@ -82,6 +87,27 @@ MULTIPROCESS_TEST_MAIN(SimpleChildProcess) {
 
 TEST_F(NamespaceSandboxTest, BasicUsage) {
   TestProc("SimpleChildProcess");
+}
+
+MULTIPROCESS_TEST_MAIN(PidNsOnlyChildProcess) {
+  const bool in_user_ns = NamespaceSandbox::InNewUserNamespace();
+  const bool in_pid_ns = NamespaceSandbox::InNewPidNamespace();
+  const bool in_net_ns = NamespaceSandbox::InNewNetNamespace();
+  CHECK(in_user_ns);
+  CHECK_EQ(in_pid_ns,
+           NamespaceUtils::KernelSupportsUnprivilegedNamespace(CLONE_NEWPID));
+  CHECK(!in_net_ns);
+  if (in_pid_ns) {
+    CHECK_EQ(1, getpid());
+  }
+  return 0;
+}
+
+
+TEST_F(NamespaceSandboxTest, BasicUsageWithOptions) {
+  NamespaceSandbox::Options options;
+  options.ns_types = CLONE_NEWUSER | CLONE_NEWPID;
+  TestProcWithOptions("PidNsOnlyChildProcess", options);
 }
 
 MULTIPROCESS_TEST_MAIN(ChrootMe) {
@@ -120,7 +146,6 @@ TEST_F(NamespaceSandboxTest, NestedNamespaceSandbox) {
 }
 
 const int kNormalExitCode = 0;
-const int kSignalTerminationExitCode = 255;
 
 // Ensure that CHECK(false) is distinguishable from _exit(kNormalExitCode).
 // Allowing noise since CHECK(false) will write a stack trace to stderr.
@@ -182,7 +207,7 @@ SANDBOX_TEST(ForkInNewPidNamespace, ExitWithSignal) {
     CHECK_EQ(1, getpid());
     CHECK(!Credentials::HasAnyCapability());
     CHECK(NamespaceSandbox::InstallTerminationSignalHandler(
-        SIGTERM, kSignalTerminationExitCode));
+        SIGTERM, NamespaceSandbox::SignalExitCode(SIGTERM)));
     while (true) {
       raise(SIGTERM);
     }
@@ -191,7 +216,7 @@ SANDBOX_TEST(ForkInNewPidNamespace, ExitWithSignal) {
   int status;
   PCHECK(waitpid(pid, &status, 0) == pid);
   CHECK(WIFEXITED(status));
-  CHECK_EQ(kSignalTerminationExitCode, WEXITSTATUS(status));
+  CHECK_EQ(NamespaceSandbox::SignalExitCode(SIGTERM), WEXITSTATUS(status));
 }
 
 volatile sig_atomic_t signal_handler_called;
@@ -206,7 +231,7 @@ SANDBOX_TEST(InstallTerminationSignalHandler, DoesNotOverrideExistingHandlers) {
 
   NamespaceSandbox::InstallDefaultTerminationSignalHandlers();
   CHECK(!NamespaceSandbox::InstallTerminationSignalHandler(
-            SIGUSR1, kSignalTerminationExitCode));
+            SIGUSR1, NamespaceSandbox::SignalExitCode(SIGUSR1)));
 
   raise(SIGUSR1);
   CHECK_EQ(1, signal_handler_called);
