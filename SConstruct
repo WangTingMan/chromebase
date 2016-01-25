@@ -57,6 +57,8 @@ base_libs = [
                 files/file_util_linux.cc
                 files/file_util_posix.cc
                 files/important_file_writer.cc
+                files/memory_mapped_file.cc
+                files/memory_mapped_file_posix.cc
                 files/scoped_file.cc
                 files/scoped_temp_dir.cc
                 guid.cc
@@ -97,6 +99,7 @@ base_libs = [
                 pending_task.cc
                 pickle.cc
                 posix/file_descriptor_shuffle.cc
+                posix/global_descriptors.cc
                 posix/safe_strerror.cc
                 posix/unix_domain_socket_linux.cc
                 process/internal_linux.cc
@@ -139,6 +142,7 @@ base_libs = [
                 synchronization/lock.cc
                 synchronization/lock_impl_posix.cc
                 synchronization/waitable_event_posix.cc
+                synchronization/waitable_event_watcher_posix.cc
                 sync_socket_posix.cc
                 sys_info.cc
                 sys_info_chromeos.cc
