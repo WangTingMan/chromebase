@@ -280,11 +280,9 @@ libchromeCommonUnittestSrc := \
 	base/memory/ref_counted_memory_unittest.cc \
 	base/memory/ref_counted_unittest.cc \
 	base/memory/scoped_ptr_unittest.cc \
-	base/memory/scoped_ptr_unittest.nc \
 	base/memory/scoped_vector_unittest.cc \
 	base/memory/singleton_unittest.cc \
 	base/memory/weak_ptr_unittest.cc \
-	base/memory/weak_ptr_unittest.nc \
 	base/message_loop/message_loop_test.cc \
 	base/message_loop/message_loop_task_runner_unittest.cc \
 	base/message_loop/message_loop_unittest.cc \
