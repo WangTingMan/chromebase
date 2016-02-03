@@ -4,6 +4,7 @@
 
 #include "crypto/secure_hash.h"
 
+#include <openssl/mem.h>
 #include <openssl/sha.h>
 #include <stddef.h>
 

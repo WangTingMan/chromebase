@@ -11,6 +11,9 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
+#ifdef OPENSSL_IS_BORINGSSL
+#include <openssl/mem.h>
+#endif
 #include <openssl/rsa.h>
 #include <stdint.h>
 
