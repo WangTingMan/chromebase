@@ -377,6 +377,10 @@ libchromeCommonUnittestSrc := \
 	testing/multiprocess_func_list.cc \
 	testrunner.cc \
 
+libchromeCryptoUnittestSrc := \
+	crypto/secure_hash_unittest.cc \
+	crypto/sha2_unittest.cc \
+
 libchromeHostCFlags := -D__ANDROID_HOST__
 
 ifeq ($(HOST_OS),linux)
@@ -445,7 +449,6 @@ LOCAL_SRC_FILES := \
 	dbus/values_util.cc \
 
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
-# webservd uses RTTI, so that this library also needs to be built with it.
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
@@ -459,6 +462,30 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
 endif  # local_use_dbus == 1
+
+# libchrome-crypto shared library for target
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome-crypto
+LOCAL_SRC_FILES := \
+	crypto/openssl_util.cc \
+	crypto/secure_hash_openssl.cc \
+	crypto/secure_util.cc \
+	crypto/sha2.cc \
+
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags) -Wno-unused-parameter
+LOCAL_CPPFLAGS := $(libchromeCommonCppFlags)
+LOCAL_CLANG := $(libchromeUseClang)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_SHARED_LIBRARIES := \
+	libchrome \
+	libcrypto \
+	libssl \
+
+LOCAL_STATIC_LIBRARIES :=
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+include $(BUILD_SHARED_LIBRARY)
 
 # Helpers needed for unit tests.
 # ========================================================
@@ -540,11 +567,11 @@ LOCAL_MODULE := libchrome_test
 ifdef BRILLO
   LOCAL_MODULE_TAGS := debug
 endif
-LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
+LOCAL_SRC_FILES := $(libchromeCryptoUnittestSrc) $(libchromeCommonUnittestSrc)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libchrome libevent
+LOCAL_SHARED_LIBRARIES := libchrome libchrome-crypto libevent
 LOCAL_STATIC_LIBRARIES := libgmock libgtest
 include $(BUILD_NATIVE_TEST)
