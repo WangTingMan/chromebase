@@ -565,7 +565,7 @@ endif
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test
 ifdef BRILLO
-  LOCAL_MODULE_TAGS := debug
+  LOCAL_MODULE_TAGS := eng
 endif
 LOCAL_SRC_FILES := $(libchromeCryptoUnittestSrc) $(libchromeCommonUnittestSrc)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
