@@ -584,7 +584,8 @@ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
 
   std::unique_ptr<ProcessMetrics> metrics(
       ProcessMetrics::CreateProcessMetrics(child.Handle()));
-  EXPECT_EQ(0, metrics->GetOpenFdCount());
+  }
+  EXPECT_EQ(0, open_fds);
   ASSERT_TRUE(child.Terminate(0, true));
 }
 #endif  // !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
