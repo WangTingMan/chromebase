@@ -17,6 +17,7 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/stringprintf.h"
 #include "base/test/multiprocess_test.h"
 #include "base/threading/thread.h"
 #include "build/build_config.h"
@@ -498,7 +499,12 @@ TEST(ProcessMetricsTest, GetOpenFdCount) {
 
   scoped_ptr<ProcessMetrics> metrics(
       ProcessMetrics::CreateProcessMetrics(child.Handle()));
-  EXPECT_EQ(0, metrics->GetOpenFdCount());
+  // TODO(wiley) Remove this once we find the root cause for b/27434105
+  const int open_fds = metrics->GetOpenFdCount();
+  if (open_fds) {
+    system(StringPrintf("ls -l /proc/%d/fd", child.Pid()).c_str());
+  }
+  EXPECT_EQ(0, open_fds);
   ASSERT_TRUE(child.Terminate(0, true));
 }
 #endif  // defined(OS_LINUX)
