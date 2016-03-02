@@ -6,7 +6,9 @@
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+#if defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/cpu.h>
+#endif
 #include <stddef.h>
 #include <stdint.h>
 
