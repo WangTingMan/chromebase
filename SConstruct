@@ -257,6 +257,7 @@ base_libs = [
                 hmac_nss.cc
                 nss_key_util.cc
                 nss_util.cc
+                openssl_util.cc
                 p224.cc
                 p224_spake.cc
                 random.cc
@@ -274,7 +275,7 @@ base_libs = [
                 """,
     'prefix' : 'crypto',
     'libs' : '%s-dl-%s' % (base_name, BASE_VER),
-    'pc_libs' : 'nss',
+    'pc_libs' : 'nss openssl',
   },
   {
     'name' : 'sandbox',
