@@ -585,6 +585,17 @@ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
 
   std::unique_ptr<ProcessMetrics> metrics(
       ProcessMetrics::CreateProcessMetrics(child.Handle()));
+  // Try a couple times to observe the child with 0 fds open.
+  // Sometimes we've seen that the child can have 1 remaining
+  // fd shortly after receiving the signal.  Potentially this
+  // is actually the signal file still open in the child.
+  int open_fds = -1;
+  for (int tries = 0; tries < 5; ++tries) {
+    open_fds = metrics->GetOpenFdCount();
+    if (!open_fds) {
+      break;
+    }
+    PlatformThread::Sleep(TimeDelta::FromMilliseconds(1));
   }
   EXPECT_EQ(0, open_fds);
   ASSERT_TRUE(child.Terminate(0, true));
