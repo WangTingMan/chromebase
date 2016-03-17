@@ -103,6 +103,7 @@ class Histogram::Factory {
           uint32_t bucket_count,
           int32_t flags)
     : Factory(name, HISTOGRAM, minimum, maximum, bucket_count, flags) {}
+  virtual ~Factory() = default;
 
   // Create histogram based on construction parameters. Caller takes
   // ownership of the returned object.

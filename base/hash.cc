@@ -4,10 +4,11 @@
 
 #include "base/hash.h"
 
-// Definition in base/third_party/superfasthash/superfasthash.c. (Third-party
-// code did not come with its own header file, so declaring the function here.)
-// Note: This algorithm is also in Blink under Source/wtf/StringHasher.h.
-extern "C" uint32_t SuperFastHash(const char* data, int len);
+#include <functional>
+
+  std::hash<std::string> hash_fn;
+  return hash_fn(std::string(data, len));
+}
 
 namespace base {
 
