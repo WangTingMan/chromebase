@@ -177,7 +177,7 @@ void ProcessBacktrace(void *const * trace,
 
     handler->HandleOutput("\n");
   }
-#elif !defined(__UCLIBC__)
+#else
   bool printed = false;
 
   // Below part is async-signal unsafe (uses malloc), so execute it only

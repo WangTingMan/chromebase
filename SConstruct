@@ -63,6 +63,7 @@ base_libs = [
                 files/scoped_temp_dir.cc
                 guid.cc
                 guid_posix.cc
+                hash.cc
                 json/json_file_value_serializer.cc
                 json/json_parser.cc
                 json/json_reader.cc
@@ -76,6 +77,7 @@ base_libs = [
                 md5.cc
                 memory/ref_counted.cc
                 memory/ref_counted_memory.cc
+                memory/shared_memory_posix.cc
                 memory/singleton.cc
                 memory/weak_ptr.cc
                 message_loop/incoming_task_queue.cc
@@ -92,6 +94,9 @@ base_libs = [
                 metrics/histogram.cc
                 metrics/histogram_samples.cc
                 metrics/histogram_snapshot_manager.cc
+                metrics/persistent_histogram_allocator.cc
+                metrics/persistent_memory_allocator.cc
+                metrics/persistent_sample_map.cc
                 metrics/sample_map.cc
                 metrics/sample_vector.cc
                 metrics/sparse_histogram.cc
@@ -115,7 +120,6 @@ base_libs = [
                 process/process_metrics_linux.cc
                 process/process_metrics_posix.cc
                 process/process_posix.cc
-                profiler/alternate_timer.cc
                 profiler/scoped_profile.cc
                 profiler/scoped_tracker.cc
                 profiler/tracked_time.cc
@@ -150,6 +154,11 @@ base_libs = [
                 sys_info_posix.cc
                 task_runner.cc
                 task/cancelable_task_tracker.cc
+                task_scheduler/scheduler_lock_impl.cc
+                task_scheduler/sequence.cc
+                task_scheduler/sequence_sort_key.cc
+                task_scheduler/task.cc
+                task_scheduler/task_traits.cc
                 third_party/icu/icu_utf.cc
                 third_party/nspr/prtime.cc
                 threading/non_thread_safe_impl.cc
@@ -190,9 +199,7 @@ base_libs = [
                 trace_event/memory_dump_session_state.cc
                 trace_event/process_memory_dump.cc
                 trace_event/process_memory_maps.cc
-                trace_event/process_memory_maps_dump_provider.cc
                 trace_event/process_memory_totals.cc
-                trace_event/process_memory_totals_dump_provider.cc
                 trace_event/trace_buffer.cc
                 trace_event/trace_config.cc
                 trace_event/trace_event_argument.cc
@@ -335,6 +342,7 @@ if os.environ.has_key('CPPFLAGS'):
 env['CCFLAGS'] += ['-DOS_CHROMEOS',
                    '-DUSE_NSS_CERTS',
                    '-DUSE_SYSTEM_LIBEVENT',
+                   '-DNO_TCMALLOC',
                    '-fPIC',
                    '-fno-exceptions',
                    '-Wall',
