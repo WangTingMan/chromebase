@@ -235,6 +235,7 @@ libchromeMacSrc := \
 	base/mac/mach_logging.cc \
 	base/mac/libdispatch_task_runner.cc \
 	base/mac/scoped_mach_port.cc \
+	base/mac/scoped_mach_vm.cc \
 	base/mac/scoped_nsautorelease_pool.mm \
 	base/memory/shared_memory_mac.cc \
 	base/message_loop/message_pump_mac.mm \
