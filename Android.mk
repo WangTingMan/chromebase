@@ -238,6 +238,7 @@ libchromeMacSrc := \
 	base/mac/scoped_mach_vm.cc \
 	base/mac/scoped_nsautorelease_pool.mm \
 	base/memory/shared_memory_mac.cc \
+	base/memory/shared_memory_handle_mac.cc \
 	base/message_loop/message_pump_mac.mm \
 	base/process/launch_mac.cc \
 	base/process/port_provider_mac.cc \
