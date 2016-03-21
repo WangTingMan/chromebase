@@ -233,7 +233,7 @@ TEST(ValuesTest, ListRemoval) {
                              &removed_item));
     EXPECT_FALSE(list.Remove(1, &removed_item));
     EXPECT_TRUE(list.Remove(0, &removed_item));
-    ASSERT_TRUE(removed_item);
+    ASSERT_TRUE(removed_item.get());
     EXPECT_EQ(0U, list.GetSize());
   }
   EXPECT_FALSE(deletion_flag);
@@ -304,7 +304,7 @@ TEST(ValuesTest, DictionaryRemoval) {
     EXPECT_FALSE(dict.Remove("absent key", &removed_item));
     EXPECT_TRUE(dict.Remove(key, &removed_item));
     EXPECT_FALSE(dict.HasKey(key));
-    ASSERT_TRUE(removed_item);
+    ASSERT_TRUE(removed_item.get());
   }
   EXPECT_FALSE(deletion_flag);
   removed_item.reset();
@@ -374,7 +374,7 @@ TEST(ValuesTest, DictionaryRemovePath) {
 
   scoped_ptr<Value> removed_item;
   EXPECT_TRUE(dict.RemovePath("a.long.way.down", &removed_item));
-  ASSERT_TRUE(removed_item);
+  ASSERT_TRUE(removed_item.get());
   EXPECT_TRUE(removed_item->IsType(base::Value::TYPE_INTEGER));
   EXPECT_FALSE(dict.HasKey("a.long.way.down"));
   EXPECT_FALSE(dict.HasKey("a.long.way"));
@@ -387,7 +387,7 @@ TEST(ValuesTest, DictionaryRemovePath) {
 
   removed_item.reset();
   EXPECT_TRUE(dict.RemovePath("a.long.key.path", &removed_item));
-  ASSERT_TRUE(removed_item);
+  ASSERT_TRUE(removed_item.get());
   EXPECT_TRUE(removed_item->IsType(base::Value::TYPE_BOOLEAN));
   EXPECT_TRUE(dict.empty());
 }

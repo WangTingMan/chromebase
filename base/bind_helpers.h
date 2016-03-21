@@ -145,15 +145,11 @@
 
 #include <stddef.h>
 
-#include <map>
-#include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 #include "base/callback.h"
 #include "base/memory/weak_ptr.h"
-#include "base/template_util.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -265,21 +261,21 @@ class SupportsAddRefAndRelease {
 // Helpers to assert that arguments of a recounted type are bound with a
 // scoped_refptr.
 template <bool IsClasstype, typename T>
-struct UnsafeBindtoRefCountedArgHelper : false_type {
+struct UnsafeBindtoRefCountedArgHelper : std::false_type {
 };
 
 template <typename T>
 struct UnsafeBindtoRefCountedArgHelper<true, T>
-    : integral_constant<bool, SupportsAddRefAndRelease<T>::value> {
+    : std::integral_constant<bool, SupportsAddRefAndRelease<T>::value> {
 };
 
 template <typename T>
-struct UnsafeBindtoRefCountedArg : false_type {
+struct UnsafeBindtoRefCountedArg : std::false_type {
 };
 
 template <typename T>
 struct UnsafeBindtoRefCountedArg<T*>
-    : UnsafeBindtoRefCountedArgHelper<is_class<T>::value, T> {
+    : UnsafeBindtoRefCountedArgHelper<std::is_class<T>::value, T> {
 };
 
 template <typename T>
@@ -381,7 +377,7 @@ class PassedWrapper {
       : is_valid_(true), scoper_(std::move(scoper)) {}
   PassedWrapper(const PassedWrapper& other)
       : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
-  T Pass() const {
+  T Take() const {
     CHECK(is_valid_);
     is_valid_ = false;
     return std::move(scoper_);
@@ -392,161 +388,41 @@ class PassedWrapper {
   mutable T scoper_;
 };
 
-// Specialize PassedWrapper for std::unique_ptr used by base::Passed().
-// Use std::move() to transfer the data from one storage to another.
-template <typename T, typename D>
-class PassedWrapper<std::unique_ptr<T, D>> {
- public:
-  explicit PassedWrapper(std::unique_ptr<T, D> scoper)
-      : is_valid_(true), scoper_(std::move(scoper)) {}
-  PassedWrapper(const PassedWrapper& other)
-      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
-
-  std::unique_ptr<T, D> Pass() const {
-    CHECK(is_valid_);
-    is_valid_ = false;
-    return std::move(scoper_);
-  }
-
- private:
-  mutable bool is_valid_;
-  mutable std::unique_ptr<T, D> scoper_;
-};
-
-// Specialize PassedWrapper for std::vector<std::unique_ptr<T>>.
-template <typename T, typename D, typename A>
-class PassedWrapper<std::vector<std::unique_ptr<T, D>, A>> {
- public:
-  explicit PassedWrapper(std::vector<std::unique_ptr<T, D>, A> scoper)
-      : is_valid_(true), scoper_(std::move(scoper)) {}
-  PassedWrapper(const PassedWrapper& other)
-      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
-
-  std::vector<std::unique_ptr<T, D>, A> Pass() const {
-    CHECK(is_valid_);
-    is_valid_ = false;
-    return std::move(scoper_);
-  }
-
- private:
-  mutable bool is_valid_;
-  mutable std::vector<std::unique_ptr<T, D>, A> scoper_;
-};
-
-// Specialize PassedWrapper for std::map<K, std::unique_ptr<T>>.
-template <typename K, typename T, typename D, typename C, typename A>
-class PassedWrapper<std::map<K, std::unique_ptr<T, D>, C, A>> {
- public:
-  explicit PassedWrapper(std::map<K, std::unique_ptr<T, D>, C, A> scoper)
-      : is_valid_(true), scoper_(std::move(scoper)) {}
-  PassedWrapper(const PassedWrapper& other)
-      : is_valid_(other.is_valid_), scoper_(std::move(other.scoper_)) {}
-
-  std::map<K, std::unique_ptr<T, D>, C, A> Pass() const {
-    CHECK(is_valid_);
-    is_valid_ = false;
-    return std::move(scoper_);
-  }
-
- private:
-  mutable bool is_valid_;
-  mutable std::map<K, std::unique_ptr<T, D>, C, A> scoper_;
-};
-
 // Unwrap the stored parameters for the wrappers above.
 template <typename T>
-struct UnwrapTraits {
-  using ForwardType = const T&;
-  static ForwardType Unwrap(const T& o) { return o; }
-};
+const T& Unwrap(const T& o) {
+  return o;
+}
 
 template <typename T>
-struct UnwrapTraits<UnretainedWrapper<T> > {
-  using ForwardType = T*;
-  static ForwardType Unwrap(UnretainedWrapper<T> unretained) {
-    return unretained.get();
-  }
-};
+T* Unwrap(UnretainedWrapper<T> unretained) {
+  return unretained.get();
+}
 
 template <typename T>
-struct UnwrapTraits<ConstRefWrapper<T> > {
-  using ForwardType = const T&;
-  static ForwardType Unwrap(ConstRefWrapper<T> const_ref) {
-    return const_ref.get();
-  }
-};
+const T& Unwrap(ConstRefWrapper<T> const_ref) {
+  return const_ref.get();
+}
 
 template <typename T>
-struct UnwrapTraits<scoped_refptr<T> > {
-  using ForwardType = T*;
-  static ForwardType Unwrap(const scoped_refptr<T>& o) { return o.get(); }
-};
+T* Unwrap(const scoped_refptr<T>& o) {
+  return o.get();
+}
 
 template <typename T>
-struct UnwrapTraits<WeakPtr<T> > {
-  using ForwardType = const WeakPtr<T>&;
-  static ForwardType Unwrap(const WeakPtr<T>& o) { return o; }
-};
+const WeakPtr<T>& Unwrap(const WeakPtr<T>& o) {
+  return o;
+}
 
 template <typename T>
-struct UnwrapTraits<OwnedWrapper<T> > {
-  using ForwardType = T*;
-  static ForwardType Unwrap(const OwnedWrapper<T>& o) {
-    return o.get();
-  }
-};
+T* Unwrap(const OwnedWrapper<T>& o) {
+  return o.get();
+}
 
 template <typename T>
-struct UnwrapTraits<PassedWrapper<T> > {
-  using ForwardType = T;
-  static T Unwrap(PassedWrapper<T>& o) {
-    return o.Pass();
-  }
-};
-
-// Utility for handling different refcounting semantics in the Bind()
-// function.
-template <bool is_method, typename... T>
-struct MaybeScopedRefPtr;
-
-template <bool is_method>
-struct MaybeScopedRefPtr<is_method> {
-  MaybeScopedRefPtr() {}
-};
-
-template <typename T, typename... Rest>
-struct MaybeScopedRefPtr<false, T, Rest...> {
-  MaybeScopedRefPtr(const T&, const Rest&...) {}
-};
-
-template <typename T, size_t n, typename... Rest>
-struct MaybeScopedRefPtr<false, T[n], Rest...> {
-  MaybeScopedRefPtr(const T*, const Rest&...) {}
-};
-
-template <typename T, typename... Rest>
-struct MaybeScopedRefPtr<true, T, Rest...> {
-  MaybeScopedRefPtr(const T& /* o */, const Rest&...) {}
-};
-
-template <typename T, typename... Rest>
-struct MaybeScopedRefPtr<true, T*, Rest...> {
-  MaybeScopedRefPtr(T* o, const Rest&...) : ref_(o) {}
-  scoped_refptr<T> ref_;
-};
-
-// No need to additionally AddRef() and Release() since we are storing a
-// scoped_refptr<> inside the storage object already.
-template <typename T, typename... Rest>
-struct MaybeScopedRefPtr<true, scoped_refptr<T>, Rest...> {
-  MaybeScopedRefPtr(const scoped_refptr<T>&, const Rest&...) {}
-};
-
-template <typename T, typename... Rest>
-struct MaybeScopedRefPtr<true, const T*, Rest...> {
-  MaybeScopedRefPtr(const T* o, const Rest&...) : ref_(o) {}
-  scoped_refptr<const T> ref_;
-};
+T Unwrap(PassedWrapper<T>& o) {
+  return o.Take();
+}
 
 // IsWeakMethod is a helper that determine if we are binding a WeakPtr<> to a
 // method.  It is used internally by Bind() to select the correct
@@ -556,14 +432,14 @@ struct MaybeScopedRefPtr<true, const T*, Rest...> {
 // The first argument should be the type of the object that will be received by
 // the method.
 template <bool IsMethod, typename... Args>
-struct IsWeakMethod : public false_type {};
+struct IsWeakMethod : public std::false_type {};
 
 template <typename T, typename... Args>
-struct IsWeakMethod<true, WeakPtr<T>, Args...> : public true_type {};
+struct IsWeakMethod<true, WeakPtr<T>, Args...> : public std::true_type {};
 
 template <typename T, typename... Args>
 struct IsWeakMethod<true, ConstRefWrapper<WeakPtr<T>>, Args...>
-    : public true_type {};
+    : public std::true_type {};
 
 
 // Packs a list of types to hold them in a single type.
@@ -686,15 +562,12 @@ static inline internal::OwnedWrapper<T> Owned(T* o) {
 // Both versions of Passed() prevent T from being an lvalue reference. The first
 // via use of enable_if, and the second takes a T* which will not bind to T&.
 template <typename T,
-          typename std::enable_if<internal::IsMoveOnlyType<T>::value &&
-                                  !std::is_lvalue_reference<T>::value>::type* =
+          typename std::enable_if<!std::is_lvalue_reference<T>::value>::type* =
               nullptr>
 static inline internal::PassedWrapper<T> Passed(T&& scoper) {
   return internal::PassedWrapper<T>(std::move(scoper));
 }
-template <typename T,
-          typename std::enable_if<internal::IsMoveOnlyType<T>::value>::type* =
-              nullptr>
+template <typename T>
 static inline internal::PassedWrapper<T> Passed(T* scoper) {
   return internal::PassedWrapper<T>(std::move(*scoper));
 }

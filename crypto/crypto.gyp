@@ -128,6 +128,7 @@
             'sources!': [
               'aead_openssl.cc',
               'aead_openssl.h',
+              'auto_cbb.h',
               'curve25519_openssl.cc',
               'ec_private_key_openssl.cc',
               'ec_signature_creator_openssl.cc',
@@ -169,7 +170,6 @@
         'ec_private_key_unittest.cc',
         'ec_signature_creator_unittest.cc',
         'encryptor_unittest.cc',
-        'ghash_unittest.cc',
         'hkdf_unittest.cc',
         'hmac_unittest.cc',
         'nss_key_util_unittest.cc',
@@ -196,14 +196,6 @@
       ],
       'conditions': [
         [ 'use_nss_certs == 1', {
-          'conditions': [
-            [ 'use_allocator!="none"', {
-                'dependencies': [
-                  '../base/allocator/allocator.gyp:allocator',
-                ],
-              },
-            ],
-          ],
           'dependencies': [
             '../build/linux/system.gyp:ssl',
           ],

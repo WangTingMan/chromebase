@@ -22,6 +22,27 @@
 
 namespace base {
 
+// Sparse histograms are well suited for recording counts of exact sample values
+// that are sparsely distributed over a large range.
+//
+// The implementation uses a lock and a map, whereas other histogram types use a
+// vector and no lock. It is thus more costly to add values to, and each value
+// stored has more overhead, compared to the other histogram types. However it
+// may be more efficient in memory if the total number of sample values is small
+// compared to the range of their values.
+//
+// UMA_HISTOGRAM_ENUMERATION would be better suited for a smaller range of
+// enumerations that are (nearly) contiguous. Also for code that is expected to
+// run often or in a tight loop.
+//
+// UMA_HISTOGRAM_SPARSE_SLOWLY is good for sparsely distributed and or
+// infrequently recorded values.
+//
+// For instance, Sqlite.Version.* are SPARSE because for any given database,
+// there's going to be exactly one version logged, meaning no gain to having a
+// pre-allocated vector of slots once the fleet gets to version 4 or 5 or 10.
+// Likewise Sqlite.Error.* are SPARSE, because most databases generate few or no
+// errors and there are large gaps in the set of possible errors.
 #define UMA_HISTOGRAM_SPARSE_SLOWLY(name, sample) \
     do { \
       base::HistogramBase* histogram = base::SparseHistogram::FactoryGet( \
@@ -30,12 +51,20 @@ namespace base {
     } while (0)
 
 class HistogramSamples;
+class PersistentMemoryAllocator;
 
 class BASE_EXPORT SparseHistogram : public HistogramBase {
  public:
   // If there's one with same name, return the existing one. If not, create a
   // new one.
   static HistogramBase* FactoryGet(const std::string& name, int32_t flags);
+
+  // Create a histogram using data in persistent storage.
+  static scoped_ptr<HistogramBase> PersistentCreate(
+      PersistentMemoryAllocator* allocator,
+      const std::string& name,
+      HistogramSamples::Metadata* meta,
+      HistogramSamples::Metadata* logged_meta);
 
   ~SparseHistogram() override;
 
@@ -44,12 +73,13 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
   HistogramType GetHistogramType() const override;
   bool HasConstructionArguments(Sample expected_minimum,
                                 Sample expected_maximum,
-                                size_t expected_bucket_count) const override;
+                                uint32_t expected_bucket_count) const override;
   void Add(Sample value) override;
   void AddCount(Sample value, int count) override;
   void AddSamples(const HistogramSamples& samples) override;
   bool AddSamplesFromPickle(base::PickleIterator* iter) override;
   scoped_ptr<HistogramSamples> SnapshotSamples() const override;
+  scoped_ptr<HistogramSamples> SnapshotDelta() override;
   void WriteHTMLGraph(std::string* output) const override;
   void WriteAscii(std::string* output) const override;
 
@@ -60,6 +90,11 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
  private:
   // Clients should always use FactoryGet to create SparseHistogram.
   explicit SparseHistogram(const std::string& name);
+
+  SparseHistogram(PersistentMemoryAllocator* allocator,
+                  const std::string& name,
+                  HistogramSamples::Metadata* meta,
+                  HistogramSamples::Metadata* logged_meta);
 
   friend BASE_EXPORT HistogramBase* DeserializeHistogramInfo(
       base::PickleIterator* iter);
@@ -85,7 +120,8 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
   // Protects access to |samples_|.
   mutable base::Lock lock_;
 
-  SampleMap samples_;
+  scoped_ptr<HistogramSamples> samples_;
+  scoped_ptr<HistogramSamples> logged_samples_;
 
   DISALLOW_COPY_AND_ASSIGN(SparseHistogram);
 };

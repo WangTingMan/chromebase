@@ -65,10 +65,13 @@ libchromeCommonSrc := \
 	base/files/file_util.cc \
 	base/files/file_util_posix.cc \
 	base/files/important_file_writer.cc \
+	base/files/memory_mapped_file.cc \
+	base/files/memory_mapped_file_posix.cc \
 	base/files/scoped_file.cc \
 	base/files/scoped_temp_dir.cc \
 	base/guid.cc \
 	base/guid_posix.cc \
+	base/hash.cc \
 	base/json/json_file_value_serializer.cc \
 	base/json/json_parser.cc \
 	base/json/json_reader.cc \
@@ -98,6 +101,9 @@ libchromeCommonSrc := \
 	base/metrics/histogram.cc \
 	base/metrics/histogram_samples.cc \
 	base/metrics/histogram_snapshot_manager.cc \
+	base/metrics/persistent_histogram_allocator.cc \
+	base/metrics/persistent_memory_allocator.cc \
+	base/metrics/persistent_sample_map.cc \
 	base/metrics/sample_map.cc \
 	base/metrics/sample_vector.cc \
 	base/metrics/sparse_histogram.cc \
@@ -116,7 +122,6 @@ libchromeCommonSrc := \
 	base/process/process_metrics.cc \
 	base/process/process_metrics_posix.cc \
 	base/process/process_posix.cc \
-	base/profiler/alternate_timer.cc \
 	base/profiler/scoped_profile.cc \
 	base/profiler/scoped_tracker.cc \
 	base/profiler/tracked_time.cc \
@@ -147,6 +152,11 @@ libchromeCommonSrc := \
 	base/sys_info_posix.cc \
 	base/task/cancelable_task_tracker.cc \
 	base/task_runner.cc \
+	base/task_scheduler/scheduler_lock_impl.cc \
+	base/task_scheduler/sequence.cc \
+	base/task_scheduler/sequence_sort_key.cc \
+	base/task_scheduler/task.cc \
+	base/task_scheduler/task_traits.cc \
 	base/third_party/icu/icu_utf.cc \
 	base/third_party/nspr/prtime.cc \
 	base/threading/non_thread_safe_impl.cc \
@@ -185,9 +195,7 @@ libchromeCommonSrc := \
 	base/trace_event/memory_dump_session_state.cc \
 	base/trace_event/process_memory_dump.cc \
 	base/trace_event/process_memory_maps.cc \
-	base/trace_event/process_memory_maps_dump_provider.cc \
 	base/trace_event/process_memory_totals.cc \
-	base/trace_event/process_memory_totals_dump_provider.cc \
 	base/trace_event/trace_buffer.cc \
 	base/trace_event/trace_config.cc \
 	base/trace_event/trace_event_argument.cc \
@@ -205,6 +213,7 @@ libchromeCommonSrc := \
 libchromeLinuxSrc := \
 	base/files/file_path_watcher_linux.cc \
 	base/files/file_util_linux.cc \
+	base/memory/shared_memory_posix.cc \
 	base/posix/unix_domain_socket_linux.cc \
 	base/process/internal_linux.cc \
 	base/process/process_handle_linux.cc \
@@ -227,6 +236,7 @@ libchromeMacSrc := \
 	base/mac/libdispatch_task_runner.cc \
 	base/mac/scoped_mach_port.cc \
 	base/mac/scoped_nsautorelease_pool.mm \
+	base/memory/shared_memory_mac.cc \
 	base/message_loop/message_pump_mac.mm \
 	base/process/launch_mac.cc \
 	base/process/port_provider_mac.cc \
@@ -279,7 +289,6 @@ libchromeCommonUnittestSrc := \
 	base/memory/linked_ptr_unittest.cc \
 	base/memory/ref_counted_memory_unittest.cc \
 	base/memory/ref_counted_unittest.cc \
-	base/memory/scoped_ptr_unittest.cc \
 	base/memory/scoped_vector_unittest.cc \
 	base/memory/singleton_unittest.cc \
 	base/memory/weak_ptr_unittest.cc \
@@ -293,6 +302,9 @@ libchromeCommonUnittestSrc := \
 	base/metrics/histogram_macros_unittest.cc \
 	base/metrics/histogram_snapshot_manager_unittest.cc \
 	base/metrics/histogram_unittest.cc \
+	base/metrics/persistent_histogram_allocator_unittest.cc \
+	base/metrics/persistent_memory_allocator_unittest.cc \
+	base/metrics/persistent_sample_map_unittest.cc \
 	base/metrics/sample_map_unittest.cc \
 	base/metrics/sample_vector_unittest.cc \
 	base/metrics/sparse_histogram_unittest.cc \
@@ -328,6 +340,10 @@ libchromeCommonUnittestSrc := \
 	base/sys_info_unittest.cc \
 	base/task/cancelable_task_tracker_unittest.cc \
 	base/task_runner_util_unittest.cc \
+	base/task_scheduler/scheduler_lock_unittest.cc \
+	base/task_scheduler/sequence_sort_key_unittest.cc \
+	base/task_scheduler/sequence_unittest.cc \
+	base/task_scheduler/task_traits.cc \
 	base/template_util_unittest.cc \
 	base/test/multiprocess_test.cc \
 	base/test/multiprocess_test_android.cc \
@@ -364,8 +380,6 @@ libchromeCommonUnittestSrc := \
 	base/trace_event/memory_allocator_dump_unittest.cc \
 	base/trace_event/memory_dump_manager_unittest.cc \
 	base/trace_event/process_memory_dump_unittest.cc \
-	base/trace_event/process_memory_maps_dump_provider_unittest.cc \
-	base/trace_event/process_memory_totals_dump_provider_unittest.cc \
 	base/trace_event/trace_config_unittest.cc \
 	base/trace_event/trace_event_argument_unittest.cc \
 	base/trace_event/trace_event_synthetic_delay_unittest.cc \
@@ -402,7 +416,12 @@ endif
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome
-LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeLinuxSrc) base/sys_info_chromeos.cc
+LOCAL_SRC_FILES := \
+	$(libchromeCommonSrc) \
+	$(libchromeLinuxSrc) \
+	base/memory/shared_memory_android.cc \
+	base/sys_info_chromeos.cc \
+
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
@@ -469,6 +488,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome-crypto
 LOCAL_SRC_FILES := \
 	crypto/openssl_util.cc \
+	crypto/random.cc \
 	crypto/secure_hash_openssl.cc \
 	crypto/secure_util.cc \
 	crypto/sha2.cc \
