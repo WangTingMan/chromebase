@@ -41,9 +41,11 @@
 // A macro to disallow all the implicit constructors, namely the
 // default constructor, copy constructor and operator= functions.
 // This is especially useful for classes containing only static methods.
+#if !defined(DISALLOW_IMPLICIT_CONSTRUCTORS)
 #define DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
   TypeName() = delete;                           \
   DISALLOW_COPY_AND_ASSIGN(TypeName)
+#endif
 
 // The arraysize(arr) macro returns the # of elements in an array arr.  The
 // expression is a compile-time constant, and therefore can be used in defining
