@@ -12,6 +12,11 @@
 
 #include <stddef.h>  // For size_t.
 
+#if defined(ANDROID)
+// Prefer Android's libbase definitions to our own.
+#include <android-base/macros.h>
+#endif  // defined(ANDROID)
+
 // We define following macros conditionally as they may be defined by another libraries.
 
 // Distinguish mips32.
@@ -25,11 +30,15 @@
 #endif
 
 // Put this in the declarations for a class to be uncopyable.
+#if !defined(DISALLOW_COPY)
 #define DISALLOW_COPY(TypeName) \
   TypeName(const TypeName&) = delete
+#endif
 
 // Put this in the declarations for a class to be unassignable.
+#if !defined(DISALLOW_ASSIGN)
 #define DISALLOW_ASSIGN(TypeName) TypeName& operator=(const TypeName&) = delete
+#endif
 
 // Put this in the declarations for a class to be uncopyable and unassignable.
 #if !defined(DISALLOW_COPY_AND_ASSIGN)
@@ -59,8 +68,10 @@
 //
 // DEPRECATED, please use base::size(array) instead.
 // TODO(https://crbug.com/837308): Replace existing arraysize usages.
+#if !defined(arraysize)
 template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
+#endif
 
 // Used to explicitly mark the return value of a function as unused. If you are
 // really sure you don't want to do anything with the return value of a function
@@ -89,8 +100,10 @@ namespace base {
 //   return *instance;
 // }
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#if !defined(CR_DEFINE_STATIC_LOCAL)
 #define CR_DEFINE_STATIC_LOCAL(type, name, arguments) \
   static type& name = *new type arguments
+#endif
 
 // Workaround for MSVC, which expands __VA_ARGS__ as one macro argument. To
 // work around this bug, wrap the entire expression in this macro...
