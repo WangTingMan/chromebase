@@ -12,13 +12,22 @@
 
 #include <stddef.h>  // For size_t.
 
+#if defined(ANDROID)
+// Prefer Android's libbase definitions to our own.
+#include <android-base/macros.h>
+#endif  // defined(ANDROID)
+
 // Put this in the declarations for a class to be uncopyable.
+#if !defined(DISALLOW_COPY)
 #define DISALLOW_COPY(TypeName) \
   TypeName(const TypeName&) = delete
+#endif
 
 // Put this in the declarations for a class to be unassignable.
+#if !defined(DISALLOW_ASSIGN)
 #define DISALLOW_ASSIGN(TypeName) \
   void operator=(const TypeName&) = delete
+#endif
 
 // A macro to disallow the copy constructor and operator= functions
 // This should be used in the private: declarations for a class
@@ -50,8 +59,10 @@
 // This template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
 // use its type.
+#if !defined(arraysize)
 template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
+#endif
 
 // Used to explicitly mark the return value of a function as unused. If you are
 // really sure you don't want to do anything with the return value of a function
@@ -84,8 +95,10 @@ enum LinkerInitialized { LINKER_INITIALIZED };
 // Use these to declare and define a static local variable (static T;) so that
 // it is leaked so that its destructors are not called at exit. If you need
 // thread-safe initialization, use base/lazy_instance.h instead.
+#if !defined(CR_DEFINE_STATIC_LOCAL)
 #define CR_DEFINE_STATIC_LOCAL(type, name, arguments) \
   static type& name = *new type arguments
+#endif
 
 }  // base
 
