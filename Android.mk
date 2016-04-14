@@ -428,7 +428,8 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libevent liblog libcutils
+LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
+LOCAL_SHARED_LIBRARIES :=  libbase libevent liblog libcutils
 LOCAL_STATIC_LIBRARIES := libmodpb64
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
@@ -442,7 +443,8 @@ LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
-LOCAL_SHARED_LIBRARIES := libevent-host
+LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
+LOCAL_SHARED_LIBRARIES := libbase libevent-host
 LOCAL_STATIC_LIBRARIES := libmodpb64-host
 LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
@@ -473,6 +475,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libchrome
 LOCAL_SHARED_LIBRARIES := \
 	libchrome \
 	libdbus \
@@ -480,6 +483,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libchrome
 include $(BUILD_SHARED_LIBRARY)
 
 endif  # local_use_dbus == 1
