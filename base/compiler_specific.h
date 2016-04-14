@@ -7,6 +7,11 @@
 
 #include "build/build_config.h"
 
+#if defined(ANDROID)
+// Prefer Android's libbase definitions to our own.
+#include <android-base/macros.h>
+#endif  // defined(ANDROID)
+
 #if defined(COMPILER_MSVC)
 
 // For _Printf_format_string_.
