@@ -75,6 +75,7 @@ base_libs = [
                 location.cc
                 logging.cc
                 md5.cc
+                memory/aligned_memory.cc
                 memory/ref_counted.cc
                 memory/ref_counted_memory.cc
                 memory/shared_memory_posix.cc
