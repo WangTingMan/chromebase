@@ -29,12 +29,10 @@ libchromeTestCFlags := -Wno-unused-parameter -Wno-unused-function \
 	-Wno-missing-field-initializers
 libchromeCommonCFlags := -Wall -Werror
 libchromeCommonCIncludes := \
-	external/gmock/include \
-	external/gtest/include \
 	external/valgrind/include \
 	external/valgrind \
 
-libchromeExportedCIncludes := $(LOCAL_PATH) $(TOP)/external/gtest/include
+libchromeExportedCIncludes := $(LOCAL_PATH)
 
 libchromeCommonSrc := \
 	base/at_exit.cc \
@@ -429,8 +427,9 @@ LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
+LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_SHARED_LIBRARIES :=  libbase libevent liblog libcutils
-LOCAL_STATIC_LIBRARIES := libmodpb64
+LOCAL_STATIC_LIBRARIES := libmodpb64 libgtest_prod
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
@@ -443,9 +442,10 @@ LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
 LOCAL_SHARED_LIBRARIES := libbase libevent-host
-LOCAL_STATIC_LIBRARIES := libmodpb64-host
+LOCAL_STATIC_LIBRARIES := libmodpb64-host libgtest_prod
 LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
@@ -475,14 +475,14 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libchrome
 LOCAL_SHARED_LIBRARIES := \
 	libchrome \
 	libdbus \
 	libprotobuf-cpp-lite \
 
-LOCAL_STATIC_LIBRARIES :=
+LOCAL_STATIC_LIBRARIES := libgtest_prod
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libchrome
 include $(BUILD_SHARED_LIBRARY)
 
@@ -509,7 +509,6 @@ LOCAL_SHARED_LIBRARIES := \
 	libcrypto \
 	libssl \
 
-LOCAL_STATIC_LIBRARIES :=
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
@@ -539,6 +538,7 @@ ifeq ($(local_use_dbus),1)
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_dbus_test_helpers
 LOCAL_SHARED_LIBRARIES := libdbus libchrome-dbus
+LOCAL_STATIC_LIBRARIES := libgmock
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
