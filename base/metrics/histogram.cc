@@ -825,6 +825,7 @@ class LinearHistogram::Factory : public Histogram::Factory {
                          bucket_count, flags) {
     descriptions_ = descriptions;
   }
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
@@ -1092,6 +1093,7 @@ class BooleanHistogram::Factory : public Histogram::Factory {
  public:
   Factory(const std::string& name, int32_t flags)
     : Histogram::Factory(name, BOOLEAN_HISTOGRAM, 1, 2, 3, flags) {}
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
@@ -1189,6 +1191,7 @@ class CustomHistogram::Factory : public Histogram::Factory {
     : Histogram::Factory(name, CUSTOM_HISTOGRAM, 0, 0, 0, flags) {
     custom_ranges_ = custom_ranges;
   }
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
