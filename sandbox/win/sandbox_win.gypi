@@ -15,8 +15,6 @@
         'sources': [
             'src/acl.cc',
             'src/acl.h',
-            'src/app_container.cc',
-            'src/app_container.h',
             'src/broker_services.cc',
             'src/broker_services.h',
             'src/crosscall_client.h',
@@ -35,12 +33,6 @@
             'src/handle_closer.h',
             'src/handle_closer_agent.cc',
             'src/handle_closer_agent.h',
-            'src/handle_dispatcher.cc',
-            'src/handle_dispatcher.h',
-            'src/handle_interception.cc',
-            'src/handle_interception.h',
-            'src/handle_policy.cc',
-            'src/handle_policy.h',
             'src/interception.cc',
             'src/interception.h',
             'src/interception_agent.cc',
@@ -148,7 +140,6 @@
               'src/interceptors_64.h',
               'src/resolver_64.cc',
               'src/service_resolver_64.cc',
-              'src/Wow64_64.cc',
             ],
           }],
           ['target_arch=="ia32"', {
@@ -164,8 +155,6 @@
               'src/sidestep\mini_disassembler.h',
               'src/sidestep\preamble_patcher_with_stub.cpp',
               'src/sidestep\preamble_patcher.h',
-              'src/Wow64.cc',
-              'src/Wow64.h',
             ],
           }],
         ],
@@ -216,7 +205,6 @@
         'src/app_container_test.cc',
         'src/file_policy_test.cc',
         'src/handle_inheritance_test.cc',
-        'src/handle_policy_test.cc',
         'tests/integration_tests/integration_tests_test.cc',
         'src/handle_closer_test.cc',
         'src/integrity_level_test.cc',
@@ -227,6 +215,7 @@
         'src/process_mitigations_test.cc',
         'src/process_policy_test.cc',
         'src/registry_policy_test.cc',
+        'src/restricted_token_test.cc',
         'src/sync_policy_test.cc',
         'src/sync_policy_test.h',
         'src/unload_dll_test.cc',
@@ -236,6 +225,11 @@
         'tests/common/test_utils.h',
         'tests/integration_tests/integration_tests.cc',
       ],
+      'link_settings': {
+        'libraries': [
+          '-ldxva2.lib',
+        ],
+      },
     },
     {
       'target_name': 'sbox_validation_tests',
@@ -253,6 +247,11 @@
         'tests/validation_tests/commands.h',
         'tests/validation_tests/suite.cc',
       ],
+      'link_settings': {
+        'libraries': [
+          '-lshlwapi.lib',
+        ],
+      },
     },
     {
       'target_name': 'sbox_unittests',
@@ -263,7 +262,6 @@
         '../testing/gtest.gyp:gtest',
       ],
       'sources': [
-        'src/app_container_unittest.cc',
         'src/interception_unittest.cc',
         'src/service_resolver_unittest.cc',
         'src/restricted_token_unittest.cc',

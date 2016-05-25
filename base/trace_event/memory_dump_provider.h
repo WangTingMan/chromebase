@@ -56,7 +56,7 @@ class BASE_EXPORT MemoryDumpProvider {
 
   // Called by the MemoryDumpManager when an allocator should start or stop
   // collecting extensive allocation data, if supported.
-  virtual void OnHeapProfilingEnabled(bool /* enabled */) {}
+  virtual void OnHeapProfilingEnabled(bool) {}
 
  protected:
   MemoryDumpProvider() {}

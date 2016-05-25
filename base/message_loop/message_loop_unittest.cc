@@ -20,9 +20,9 @@
 #include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/test/test_simple_task_runner.h"
-#include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -30,6 +30,7 @@
 #include "base/message_loop/message_pump_win.h"
 #include "base/process/memory.h"
 #include "base/strings/string16.h"
+#include "base/win/current_module.h"
 #include "base/win/scoped_handle.h"
 #endif
 
@@ -40,15 +41,15 @@ namespace base {
 
 namespace {
 
-scoped_ptr<MessagePump> TypeDefaultMessagePumpFactory() {
+std::unique_ptr<MessagePump> TypeDefaultMessagePumpFactory() {
   return MessageLoop::CreateMessagePumpForType(MessageLoop::TYPE_DEFAULT);
 }
 
-scoped_ptr<MessagePump> TypeIOMessagePumpFactory() {
+std::unique_ptr<MessagePump> TypeIOMessagePumpFactory() {
   return MessageLoop::CreateMessagePumpForType(MessageLoop::TYPE_IO);
 }
 
-scoped_ptr<MessagePump> TypeUIMessagePumpFactory() {
+std::unique_ptr<MessagePump> TypeUIMessagePumpFactory() {
   return MessageLoop::CreateMessagePumpForType(MessageLoop::TYPE_UI);
 }
 
@@ -449,8 +450,6 @@ class TestIOHandler : public MessageLoopForIO::IOHandler {
 TestIOHandler::TestIOHandler(const wchar_t* name, HANDLE signal, bool wait)
     : signal_(signal), wait_(wait) {
   memset(buffer_, 0, sizeof(buffer_));
-  memset(&context_, 0, sizeof(context_));
-  context_.handler = this;
 
   file_.Set(CreateFile(name, GENERIC_READ, 0, NULL, OPEN_EXISTING,
                        FILE_FLAG_OVERLAPPED, NULL));
@@ -923,7 +922,7 @@ LRESULT CALLBACK TestWndProcThunk(HWND hwnd, UINT message,
 
 TEST(MessageLoopTest, AlwaysHaveUserMessageWhenNesting) {
   MessageLoop loop(MessageLoop::TYPE_UI);
-  HINSTANCE instance = GetModuleFromAddress(&TestWndProcThunk);
+  HINSTANCE instance = CURRENT_MODULE();
   WNDCLASSEX wc = {0};
   wc.cbSize = sizeof(wc);
   wc.lpfnWndProc = TestWndProcThunk;
@@ -970,7 +969,7 @@ TEST(MessageLoopTest, DeleteUnboundLoop) {
   // It should be possible to delete an unbound message loop on a thread which
   // already has another active loop. This happens when thread creation fails.
   MessageLoop loop;
-  scoped_ptr<MessageLoop> unbound_loop(MessageLoop::CreateUnbound(
+  std::unique_ptr<MessageLoop> unbound_loop(MessageLoop::CreateUnbound(
       MessageLoop::TYPE_DEFAULT, MessageLoop::MessagePumpFactoryCallback()));
   unbound_loop.reset();
   EXPECT_EQ(&loop, MessageLoop::current());

@@ -7,24 +7,18 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include "base/auto_reset.h"
 #include "base/compiler_specific.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/observer_list.h"
 #include "base/posix/eintr_wrapper.h"
+#include "base/third_party/libevent/event.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
-
-#if defined(__ANDROID__) || defined(__ANDROID_HOST__)
-#include <event2/event.h>
-#include <event2/event_compat.h>
-#include <event2/event_struct.h>
-#else
-#include "third_party/libevent/event.h"
-#endif
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
@@ -94,22 +88,20 @@ event *MessagePumpLibevent::FileDescriptorWatcher::ReleaseEvent() {
 }
 
 void MessagePumpLibevent::FileDescriptorWatcher::OnFileCanReadWithoutBlocking(
-    int fd, MessagePumpLibevent* pump) {
+    int fd,
+    MessagePumpLibevent*) {
   // Since OnFileCanWriteWithoutBlocking() gets called first, it can stop
   // watching the file descriptor.
   if (!watcher_)
     return;
-  pump->WillProcessIOEvent();
   watcher_->OnFileCanReadWithoutBlocking(fd);
-  pump->DidProcessIOEvent();
 }
 
 void MessagePumpLibevent::FileDescriptorWatcher::OnFileCanWriteWithoutBlocking(
-    int fd, MessagePumpLibevent* pump) {
+    int fd,
+    MessagePumpLibevent*) {
   DCHECK(watcher_);
-  pump->WillProcessIOEvent();
   watcher_->OnFileCanWriteWithoutBlocking(fd);
-  pump->DidProcessIOEvent();
 }
 
 MessagePumpLibevent::MessagePumpLibevent()
@@ -160,7 +152,7 @@ bool MessagePumpLibevent::WatchFileDescriptor(int fd,
     event_mask |= EV_WRITE;
   }
 
-  scoped_ptr<event> evt(controller->ReleaseEvent());
+  std::unique_ptr<event> evt(controller->ReleaseEvent());
   if (evt.get() == NULL) {
     // Ownership is transferred to the controller.
     evt.reset(new event);
@@ -205,17 +197,8 @@ bool MessagePumpLibevent::WatchFileDescriptor(int fd,
   return true;
 }
 
-void MessagePumpLibevent::AddIOObserver(IOObserver *obs) {
-  io_observers_.AddObserver(obs);
-}
-
-void MessagePumpLibevent::RemoveIOObserver(IOObserver *obs) {
-  io_observers_.RemoveObserver(obs);
-}
-
 // Tell libevent to break out of inner loop.
-static void timer_callback(int /* fd */, short /* events */, void *context)
-{
+static void timer_callback(int /*fd*/, short /*events*/, void* context) {
   event_base_loopbreak((struct event_base *)context);
 }
 
@@ -226,7 +209,7 @@ void MessagePumpLibevent::Run(Delegate* delegate) {
 
   // event_base_loopexit() + EVLOOP_ONCE is leaky, see http://crbug.com/25641.
   // Instead, make our own timer and reuse it on each call to event_base_loop().
-  scoped_ptr<event> timer_event(new event);
+  std::unique_ptr<event> timer_event(new event);
 
   for (;;) {
 #if defined(OS_MACOSX)
@@ -307,14 +290,6 @@ void MessagePumpLibevent::ScheduleDelayedWork(
   delayed_work_time_ = delayed_work_time;
 }
 
-void MessagePumpLibevent::WillProcessIOEvent() {
-  FOR_EACH_OBSERVER(IOObserver, io_observers_, WillProcessIOEvent());
-}
-
-void MessagePumpLibevent::DidProcessIOEvent() {
-  FOR_EACH_OBSERVER(IOObserver, io_observers_, DidProcessIOEvent());
-}
-
 bool MessagePumpLibevent::Init() {
   int fds[2];
   if (pipe(fds)) {
@@ -374,8 +349,7 @@ void MessagePumpLibevent::OnLibeventNotification(int fd,
 
 // Called if a byte is received on the wakeup pipe.
 // static
-void MessagePumpLibevent::OnWakeup(int socket, short /* flags */,
-                                   void* context) {
+void MessagePumpLibevent::OnWakeup(int socket, short /*flags*/, void* context) {
   MessagePumpLibevent* that = static_cast<MessagePumpLibevent*>(context);
   DCHECK(that->wakeup_pipe_out_ == socket);
 

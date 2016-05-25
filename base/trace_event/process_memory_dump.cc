@@ -5,9 +5,13 @@
 #include "base/trace_event/process_memory_dump.h"
 
 #include <errno.h>
+
 #include <vector>
 
+#include "base/memory/ptr_util.h"
 #include "base/process/process_metrics.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/heap_profiler_heap_dump_writer.h"
 #include "base/trace_event/process_memory_totals.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "build/build_config.h"
@@ -82,12 +86,12 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
   size_t max_vec_size =
       GetSystemPageCount(std::min(mapped_size, kMaxChunkSize), page_size);
 #if defined(OS_MACOSX) || defined(OS_IOS)
-  scoped_ptr<char[]> vec(new char[max_vec_size]);
+  std::unique_ptr<char[]> vec(new char[max_vec_size]);
 #elif defined(OS_WIN)
-  scoped_ptr<PSAPI_WORKING_SET_EX_INFORMATION[]> vec(
+  std::unique_ptr<PSAPI_WORKING_SET_EX_INFORMATION[]> vec(
       new PSAPI_WORKING_SET_EX_INFORMATION[max_vec_size]);
 #elif defined(OS_POSIX)
-  scoped_ptr<unsigned char[]> vec(new unsigned char[max_vec_size]);
+  std::unique_ptr<unsigned char[]> vec(new unsigned char[max_vec_size]);
 #endif
 
   while (offset < mapped_size) {
@@ -144,32 +148,34 @@ size_t ProcessMemoryDump::CountResidentBytes(void* start_address,
 #endif  // defined(COUNT_RESIDENT_BYTES_SUPPORTED)
 
 ProcessMemoryDump::ProcessMemoryDump(
-    const scoped_refptr<MemoryDumpSessionState>& session_state)
+    scoped_refptr<MemoryDumpSessionState> session_state)
     : has_process_totals_(false),
       has_process_mmaps_(false),
-      session_state_(session_state) {}
+      session_state_(std::move(session_state)) {}
 
 ProcessMemoryDump::~ProcessMemoryDump() {}
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name) {
   return AddAllocatorDumpInternal(
-      make_scoped_ptr(new MemoryAllocatorDump(absolute_name, this)));
+      WrapUnique(new MemoryAllocatorDump(absolute_name, this)));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::CreateAllocatorDump(
     const std::string& absolute_name,
     const MemoryAllocatorDumpGuid& guid) {
   return AddAllocatorDumpInternal(
-      make_scoped_ptr(new MemoryAllocatorDump(absolute_name, this, guid)));
+      WrapUnique(new MemoryAllocatorDump(absolute_name, this, guid)));
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::AddAllocatorDumpInternal(
-    scoped_ptr<MemoryAllocatorDump> mad) {
+    std::unique_ptr<MemoryAllocatorDump> mad) {
   auto insertion_result = allocator_dumps_.insert(
       std::make_pair(mad->absolute_name(), std::move(mad)));
-  DCHECK(insertion_result.second) << "Duplicate name: " << mad->absolute_name();
-  return insertion_result.first->second.get();
+  MemoryAllocatorDump* inserted_mad = insertion_result.first->second.get();
+  DCHECK(insertion_result.second) << "Duplicate name: "
+                                  << inserted_mad->absolute_name();
+  return inserted_mad;
 }
 
 MemoryAllocatorDump* ProcessMemoryDump::GetAllocatorDump(
@@ -214,9 +220,25 @@ MemoryAllocatorDump* ProcessMemoryDump::GetSharedGlobalAllocatorDump(
 }
 
 void ProcessMemoryDump::AddHeapDump(const std::string& absolute_name,
-                                    scoped_ptr<TracedValue> heap_dump) {
+                                    std::unique_ptr<TracedValue> heap_dump) {
   DCHECK_EQ(0ul, heap_dumps_.count(absolute_name));
   heap_dumps_[absolute_name] = std::move(heap_dump);
+}
+
+void ProcessMemoryDump::DumpHeapUsage(
+    const base::hash_map<base::trace_event::AllocationContext,
+        base::trace_event::AllocationMetrics>& metrics_by_context,
+    base::trace_event::TraceEventMemoryOverhead& overhead,
+    const char* allocator_name) {
+  if (!metrics_by_context.empty()) {
+    std::unique_ptr<TracedValue> heap_dump = ExportHeapDump(
+        metrics_by_context, *session_state());
+    AddHeapDump(allocator_name, std::move(heap_dump));
+  }
+
+  std::string base_name = base::StringPrintf("tracing/heap_profiler_%s",
+                                             allocator_name);
+  overhead.DumpInto(base_name.c_str(), this);
 }
 
 void ProcessMemoryDump::Clear() {

@@ -8,6 +8,7 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -19,17 +20,18 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
-#include "base/thread_task_runner_handle.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/trace_event.h"
 #include "base/tracked_objects.h"
 #include "build/build_config.h"
@@ -98,7 +100,7 @@ struct SequencedTaskLessThan {
 class SequencedWorkerPoolTaskRunner : public TaskRunner {
  public:
   SequencedWorkerPoolTaskRunner(
-      const scoped_refptr<SequencedWorkerPool>& pool,
+      scoped_refptr<SequencedWorkerPool> pool,
       SequencedWorkerPool::WorkerShutdown shutdown_behavior);
 
   // TaskRunner implementation
@@ -118,11 +120,9 @@ class SequencedWorkerPoolTaskRunner : public TaskRunner {
 };
 
 SequencedWorkerPoolTaskRunner::SequencedWorkerPoolTaskRunner(
-    const scoped_refptr<SequencedWorkerPool>& pool,
+    scoped_refptr<SequencedWorkerPool> pool,
     SequencedWorkerPool::WorkerShutdown shutdown_behavior)
-    : pool_(pool),
-      shutdown_behavior_(shutdown_behavior) {
-}
+    : pool_(std::move(pool)), shutdown_behavior_(shutdown_behavior) {}
 
 SequencedWorkerPoolTaskRunner::~SequencedWorkerPoolTaskRunner() {
 }
@@ -131,7 +131,7 @@ bool SequencedWorkerPoolTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  if (delay == TimeDelta()) {
+  if (delay.is_zero()) {
     return pool_->PostWorkerTaskWithShutdownBehavior(
         from_here, task, shutdown_behavior_);
   }
@@ -150,7 +150,7 @@ bool SequencedWorkerPoolTaskRunner::RunsTasksOnCurrentThread() const {
 class SequencedWorkerPoolSequencedTaskRunner : public SequencedTaskRunner {
  public:
   SequencedWorkerPoolSequencedTaskRunner(
-      const scoped_refptr<SequencedWorkerPool>& pool,
+      scoped_refptr<SequencedWorkerPool> pool,
       SequencedWorkerPool::SequenceToken token,
       SequencedWorkerPool::WorkerShutdown shutdown_behavior);
 
@@ -178,13 +178,12 @@ class SequencedWorkerPoolSequencedTaskRunner : public SequencedTaskRunner {
 };
 
 SequencedWorkerPoolSequencedTaskRunner::SequencedWorkerPoolSequencedTaskRunner(
-    const scoped_refptr<SequencedWorkerPool>& pool,
+    scoped_refptr<SequencedWorkerPool> pool,
     SequencedWorkerPool::SequenceToken token,
     SequencedWorkerPool::WorkerShutdown shutdown_behavior)
-    : pool_(pool),
+    : pool_(std::move(pool)),
       token_(token),
-      shutdown_behavior_(shutdown_behavior) {
-}
+      shutdown_behavior_(shutdown_behavior) {}
 
 SequencedWorkerPoolSequencedTaskRunner::
 ~SequencedWorkerPoolSequencedTaskRunner() {
@@ -194,7 +193,7 @@ bool SequencedWorkerPoolSequencedTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  if (delay == TimeDelta()) {
+  if (delay.is_zero()) {
     return pool_->PostSequencedWorkerTaskWithShutdownBehavior(
         token_, from_here, task, shutdown_behavior_);
   }
@@ -230,7 +229,7 @@ class SequencedWorkerPool::Worker : public SimpleThread {
  public:
   // Hold a (cyclic) ref to |worker_pool|, since we want to keep it
   // around as long as we are running.
-  Worker(const scoped_refptr<SequencedWorkerPool>& worker_pool,
+  Worker(scoped_refptr<SequencedWorkerPool> worker_pool,
          int thread_number,
          const std::string& thread_name_prefix);
   ~Worker() override;
@@ -448,7 +447,7 @@ class SequencedWorkerPool::Inner {
   // Owning pointers to all threads we've created so far, indexed by
   // ID. Since we lazily create threads, this may be less than
   // max_threads_ and will be initially empty.
-  using ThreadMap = std::map<PlatformThreadId, scoped_ptr<Worker>>;
+  using ThreadMap = std::map<PlatformThreadId, std::unique_ptr<Worker>>;
   ThreadMap threads_;
 
   // Set to true when we're in the process of creating another thread.
@@ -504,11 +503,11 @@ class SequencedWorkerPool::Inner {
 // Worker definitions ---------------------------------------------------------
 
 SequencedWorkerPool::Worker::Worker(
-    const scoped_refptr<SequencedWorkerPool>& worker_pool,
+    scoped_refptr<SequencedWorkerPool> worker_pool,
     int thread_number,
     const std::string& prefix)
     : SimpleThread(prefix + StringPrintf("Worker%d", thread_number)),
-      worker_pool_(worker_pool),
+      worker_pool_(std::move(worker_pool)),
       task_shutdown_behavior_(BLOCK_SHUTDOWN),
       is_processing_task_(false) {
   Start();
@@ -612,7 +611,7 @@ bool SequencedWorkerPool::Inner::PostTask(
     const tracked_objects::Location& from_here,
     const Closure& task,
     TimeDelta delay) {
-  DCHECK(delay == TimeDelta() || shutdown_behavior == SKIP_ON_SHUTDOWN);
+  DCHECK(delay.is_zero() || shutdown_behavior == SKIP_ON_SHUTDOWN);
   SequencedTask sequenced(from_here);
   sequenced.sequence_token_id = sequence_token.id_;
   sequenced.shutdown_behavior = shutdown_behavior;
@@ -789,7 +788,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
     DCHECK(thread_being_created_);
     thread_being_created_ = false;
     auto result = threads_.insert(
-        std::make_pair(this_worker->tid(), make_scoped_ptr(this_worker)));
+        std::make_pair(this_worker->tid(), WrapUnique(this_worker)));
     DCHECK(result.second);
 
     while (true) {
@@ -812,6 +811,8 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
             TRACE_EVENT_FLAG_FLOW_IN,
             "src_file", task.posted_from.file_name(),
             "src_func", task.posted_from.function_name());
+        TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION task_event(
+            task.posted_from.file_name());
         int new_thread_id = WillRunWorkerTask(task);
         {
           AutoUnlock unlock(lock_);
@@ -1316,7 +1317,7 @@ bool SequencedWorkerPool::PostDelayedWorkerTask(
     const Closure& task,
     TimeDelta delay) {
   WorkerShutdown shutdown_behavior =
-      delay == TimeDelta() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
+      delay.is_zero() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
   return inner_->PostTask(NULL, SequenceToken(), shutdown_behavior,
                           from_here, task, delay);
 }
@@ -1343,7 +1344,7 @@ bool SequencedWorkerPool::PostDelayedSequencedWorkerTask(
     const Closure& task,
     TimeDelta delay) {
   WorkerShutdown shutdown_behavior =
-      delay == TimeDelta() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
+      delay.is_zero() ? BLOCK_SHUTDOWN : SKIP_ON_SHUTDOWN;
   return inner_->PostTask(NULL, sequence_token, shutdown_behavior,
                           from_here, task, delay);
 }

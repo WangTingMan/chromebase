@@ -11,12 +11,13 @@
 #include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/compiler_specific.h"
+#include "base/debug/leak_annotations.h"
 #include "base/logging.h"
 #include "base/process/process_handle.h"
 #include "base/strings/stringprintf.h"
+#include "base/third_party/valgrind/memcheck.h"
 #include "base/tracking_info.h"
 #include "build/build_config.h"
-#include "third_party/valgrind/memcheck.h"
 
 using base::TimeDelta;
 
@@ -740,8 +741,7 @@ TrackedTime ThreadData::Now() {
 }
 
 // static
-void ThreadData::EnsureCleanupWasCalled(
-    int /* major_threads_shutdown_count */) {
+void ThreadData::EnsureCleanupWasCalled(int /*major_threads_shutdown_count*/) {
   base::AutoLock lock(*list_lock_.Pointer());
   if (worker_thread_data_creation_count_ == 0)
     return;  // We haven't really run much, and couldn't have leaked.
@@ -790,6 +790,7 @@ void ThreadData::ShutdownSingleThreadedCleanup(bool leak) {
   if (leak) {
     ThreadData* thread_data = thread_data_list;
     while (thread_data) {
+      ANNOTATE_LEAKING_OBJECT_PTR(thread_data);
       thread_data = thread_data->next();
     }
     return;

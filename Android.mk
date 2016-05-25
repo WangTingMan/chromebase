@@ -35,6 +35,7 @@ libchromeCommonCIncludes := \
 libchromeExportedCIncludes := $(LOCAL_PATH)
 
 libchromeCommonSrc := \
+	base/allocator/allocator_shim.cc \
 	base/at_exit.cc \
 	base/base64.cc \
 	base/base64url.cc \
@@ -68,7 +69,6 @@ libchromeCommonSrc := \
 	base/files/scoped_file.cc \
 	base/files/scoped_temp_dir.cc \
 	base/guid.cc \
-	base/guid_posix.cc \
 	base/hash.cc \
 	base/json/json_file_value_serializer.cc \
 	base/json/json_parser.cc \
@@ -160,6 +160,7 @@ libchromeCommonSrc := \
 	base/threading/non_thread_safe_impl.cc \
 	base/threading/platform_thread_posix.cc \
 	base/threading/post_task_and_reply_impl.cc \
+	base/threading/sequenced_task_runner_handle.cc \
 	base/threading/sequenced_worker_pool.cc \
 	base/threading/simple_thread.cc \
 	base/threading/thread.cc \
@@ -170,9 +171,9 @@ libchromeCommonSrc := \
 	base/threading/thread_local_storage.cc \
 	base/threading/thread_local_storage_posix.cc \
 	base/threading/thread_restrictions.cc \
+	base/threading/thread_task_runner_handle.cc \
 	base/threading/worker_pool.cc \
 	base/threading/worker_pool_posix.cc \
-	base/thread_task_runner_handle.cc \
 	base/time/clock.cc \
 	base/time/default_clock.cc \
 	base/time/default_tick_clock.cc \
@@ -183,6 +184,9 @@ libchromeCommonSrc := \
 	base/timer/timer.cc \
 	base/trace_event/heap_profiler_allocation_context.cc \
 	base/trace_event/heap_profiler_allocation_context_tracker.cc \
+	base/trace_event/heap_profiler_allocation_register.cc \
+	base/trace_event/heap_profiler_allocation_register_posix.cc \
+	base/trace_event/heap_profiler_heap_dump_writer.cc \
 	base/trace_event/heap_profiler_stack_frame_deduplicator.cc \
 	base/trace_event/heap_profiler_type_name_deduplicator.cc \
 	base/trace_event/memory_allocator_dump.cc \
@@ -395,7 +399,7 @@ libchromeCryptoUnittestSrc := \
 	crypto/secure_hash_unittest.cc \
 	crypto/sha2_unittest.cc \
 
-libchromeHostCFlags := -D__ANDROID_HOST__
+libchromeHostCFlags := -D__ANDROID_HOST__ -DDONT_EMBED_BUILD_METADATA
 
 ifeq ($(HOST_OS),linux)
 libchromeHostSrc := $(libchromeLinuxSrc)
@@ -419,6 +423,7 @@ LOCAL_MODULE := libchrome
 LOCAL_SRC_FILES := \
 	$(libchromeCommonSrc) \
 	$(libchromeLinuxSrc) \
+	base/allocator/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc \
 	base/memory/shared_memory_android.cc \
 	base/sys_info_chromeos.cc \
 
@@ -426,6 +431,8 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags)
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_LDFLAGS := -Wl,-wrap,calloc -Wl,-wrap,free -Wl,-wrap,malloc \
+	-Wl,-wrap,memalign -Wl,-wrap,realloc
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
 LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_SHARED_LIBRARIES :=  libbase libevent liblog libcutils
@@ -446,7 +453,11 @@ LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
 LOCAL_SHARED_LIBRARIES := libbase libevent-host
 LOCAL_STATIC_LIBRARIES := libmodpb64-host libgtest_prod
-LOCAL_SRC_FILES := $(libchromeCommonSrc) $(libchromeHostSrc)
+LOCAL_SRC_FILES := \
+	$(libchromeCommonSrc) \
+	$(libchromeHostSrc) \
+	base/allocator/allocator_shim_default_dispatch_to_glibc.cc \
+
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
 
@@ -495,7 +506,7 @@ LOCAL_MODULE := libchrome-crypto
 LOCAL_SRC_FILES := \
 	crypto/openssl_util.cc \
 	crypto/random.cc \
-	crypto/secure_hash_openssl.cc \
+	crypto/secure_hash.cc \
 	crypto/secure_util.cc \
 	crypto/sha2.cc \
 

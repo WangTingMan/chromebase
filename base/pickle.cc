@@ -231,6 +231,12 @@ void PickleSizer::AddBytes(int length) {
   payload_size_ += bits::Align(length, sizeof(uint32_t));
 }
 
+void PickleSizer::AddAttachment() {
+  // From IPC::Message::WriteAttachment
+  AddBool();
+  AddInt();
+}
+
 template <size_t length> void PickleSizer::AddBytesStatic() {
   DCHECK_LE(length, static_cast<size_t>(std::numeric_limits<int>::max()));
   AddBytes(length);
@@ -358,12 +364,12 @@ void Pickle::Reserve(size_t length) {
     Resize(capacity_after_header_ * 2 + new_size);
 }
 
-bool Pickle::WriteAttachment(scoped_refptr<Attachment> /* attachment */) {
+bool Pickle::WriteAttachment(scoped_refptr<Attachment> /*attachment*/) {
   return false;
 }
 
-bool Pickle::ReadAttachment(base::PickleIterator* /* iter */,
-                            scoped_refptr<Attachment>* /* attachment */) const {
+bool Pickle::ReadAttachment(base::PickleIterator* /*iter*/,
+                            scoped_refptr<Attachment>* /*attachment*/) const {
   return false;
 }
 

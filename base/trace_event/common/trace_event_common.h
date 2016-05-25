@@ -156,7 +156,7 @@
 //   };
 //
 //   TRACE_EVENT1("foo", "bar", "data",
-//                scoped_ptr<ConvertableToTraceFormat>(new MyData()));
+//                std::unique_ptr<ConvertableToTraceFormat>(new MyData()));
 //
 // The trace framework will take ownership if the passed pointer and it will
 // be free'd when the trace buffer is flushed.
@@ -925,6 +925,11 @@
   INTERNAL_TRACE_EVENT_ADD_WITH_ID(TRACE_EVENT_PHASE_FLOW_END, category_group, \
                                    name, id, TRACE_EVENT_FLAG_COPY, arg1_name, \
                                    arg1_val, arg2_name, arg2_val)
+
+// Special trace event macro to trace task execution with the location where it
+// was posted from.
+#define TRACE_TASK_EXECUTION(run_function, task) \
+  INTERNAL_TRACE_TASK_EXECUTION(run_function, task)
 
 // TRACE_EVENT_METADATA* events are information related to other
 // injected events, not events in their own right.
