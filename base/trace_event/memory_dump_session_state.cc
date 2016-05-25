@@ -12,15 +12,20 @@ MemoryDumpSessionState::MemoryDumpSessionState() {}
 MemoryDumpSessionState::~MemoryDumpSessionState() {}
 
 void MemoryDumpSessionState::SetStackFrameDeduplicator(
-    scoped_ptr<StackFrameDeduplicator> stack_frame_deduplicator) {
+    std::unique_ptr<StackFrameDeduplicator> stack_frame_deduplicator) {
   DCHECK(!stack_frame_deduplicator_);
   stack_frame_deduplicator_ = std::move(stack_frame_deduplicator);
 }
 
 void MemoryDumpSessionState::SetTypeNameDeduplicator(
-    scoped_ptr<TypeNameDeduplicator> type_name_deduplicator) {
+    std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator) {
   DCHECK(!type_name_deduplicator_);
   type_name_deduplicator_ = std::move(type_name_deduplicator);
+}
+
+void MemoryDumpSessionState::SetMemoryDumpConfig(
+    const TraceConfig::MemoryDumpConfig& config) {
+  memory_dump_config_ = config;
 }
 
 }  // namespace trace_event

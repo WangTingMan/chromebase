@@ -89,7 +89,7 @@ void PropertySet::ChangedReceived(Signal* signal) {
   }
 }
 
-void PropertySet::ChangedConnected(const std::string& /* interface_name */,
+void PropertySet::ChangedConnected(const std::string& /*interface_name*/,
                                    const std::string& signal_name,
                                    bool success) {
   LOG_IF(WARNING, !success) << "Failed to connect to " << signal_name
@@ -141,9 +141,8 @@ bool PropertySet::GetAndBlock(PropertyBase* property) {
   writer.AppendString(property->name());
 
   DCHECK(object_proxy_);
-  scoped_ptr<dbus::Response> response(
-      object_proxy_->CallMethodAndBlock(&method_call,
-                                        ObjectProxy::TIMEOUT_USE_DEFAULT));
+  std::unique_ptr<dbus::Response> response(object_proxy_->CallMethodAndBlock(
+      &method_call, ObjectProxy::TIMEOUT_USE_DEFAULT));
 
   if (!response.get()) {
     LOG(WARNING) << property->name() << ": GetAndBlock: failed.";
@@ -212,9 +211,8 @@ bool PropertySet::SetAndBlock(PropertyBase* property) {
   property->AppendSetValueToWriter(&writer);
 
   DCHECK(object_proxy_);
-  scoped_ptr<dbus::Response> response(
-      object_proxy_->CallMethodAndBlock(&method_call,
-                                        ObjectProxy::TIMEOUT_USE_DEFAULT));
+  std::unique_ptr<dbus::Response> response(object_proxy_->CallMethodAndBlock(
+      &method_call, ObjectProxy::TIMEOUT_USE_DEFAULT));
   if (response.get())
     return true;
   return false;

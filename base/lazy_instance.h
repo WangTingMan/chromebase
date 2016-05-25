@@ -39,6 +39,7 @@
 
 #include "base/atomicops.h"
 #include "base/base_export.h"
+#include "base/debug/leak_annotations.h"
 #include "base/logging.h"
 #include "base/memory/aligned_memory.h"
 #include "base/threading/thread_restrictions.h"
@@ -97,10 +98,10 @@ struct LeakyLazyInstanceTraits {
 #endif
 
   static Type* New(void* instance) {
+    ANNOTATE_SCOPED_MEMORY_LEAK;
     return DefaultLazyInstanceTraits<Type>::New(instance);
   }
-  static void Delete(Type* /* instance */) {
-  }
+  static void Delete(Type*) {}
 };
 
 // Our AtomicWord doubles as a spinlock, where a value of

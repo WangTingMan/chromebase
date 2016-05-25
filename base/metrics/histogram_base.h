@@ -9,13 +9,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
 
@@ -195,12 +195,21 @@ class BASE_EXPORT HistogramBase {
 
   // Snapshot the current complete set of sample data.
   // Override with atomic/locked snapshot if needed.
-  virtual scoped_ptr<HistogramSamples> SnapshotSamples() const = 0;
+  virtual std::unique_ptr<HistogramSamples> SnapshotSamples() const = 0;
 
   // Calculate the change (delta) in histogram counts since the previous call
   // to this method. Each successive call will return only those counts
   // changed since the last call.
-  virtual scoped_ptr<HistogramSamples> SnapshotDelta() = 0;
+  virtual std::unique_ptr<HistogramSamples> SnapshotDelta() = 0;
+
+  // Calculate the change (delta) in histogram counts since the previous call
+  // to SnapshotDelta() but do so without modifying any internal data as to
+  // what was previous logged. After such a call, no further calls to this
+  // method or to SnapshotDelta() should be done as the result would include
+  // data previously returned. Because no internal data is changed, this call
+  // can be made on "const" histograms such as those with data held in
+  // read-only memory.
+  virtual std::unique_ptr<HistogramSamples> SnapshotFinalDelta() const = 0;
 
   // The following methods provide graphical histogram displays.
   virtual void WriteHTMLGraph(std::string* output) const = 0;

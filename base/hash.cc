@@ -8,7 +8,7 @@
 
 namespace base {
 
-uint32_t SuperFastHash(const char* data, int len) {
+uint32_t SuperFastHash(const char* data, size_t len) {
   std::hash<std::string> hash_fn;
   return hash_fn(std::string(data, len));
 }

@@ -4,9 +4,9 @@
 
 #include "base/metrics/sparse_histogram.h"
 
+#include <memory>
 #include <string>
 
-#include "base/memory/scoped_ptr.h"
 #include "base/metrics/histogram_base.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/persistent_histogram_allocator.h"
@@ -47,40 +47,37 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
   }
 
   void InitializeStatisticsRecorder() {
-    StatisticsRecorder::ResetForTesting();
-    statistics_recorder_ = new StatisticsRecorder();
+    DCHECK(!statistics_recorder_);
+    statistics_recorder_.reset(new StatisticsRecorder());
   }
 
   void UninitializeStatisticsRecorder() {
-    delete statistics_recorder_;
-    statistics_recorder_ = NULL;
+    statistics_recorder_.reset();
   }
 
   void CreatePersistentMemoryAllocator() {
     // By getting the results-histogram before any persistent allocator
     // is attached, that histogram is guaranteed not to be stored in
     // any persistent memory segment (which simplifies some tests).
-    PersistentHistogramAllocator::GetCreateHistogramResultHistogram();
+    GlobalHistogramAllocator::GetCreateHistogramResultHistogram();
 
-    PersistentHistogramAllocator::CreateGlobalAllocatorOnLocalMemory(
+    GlobalHistogramAllocator::CreateWithLocalMemory(
         kAllocatorMemorySize, 0, "SparseHistogramAllocatorTest");
-    allocator_ =
-        PersistentHistogramAllocator::GetGlobalAllocator()->memory_allocator();
+    allocator_ = GlobalHistogramAllocator::Get()->memory_allocator();
   }
 
   void DestroyPersistentMemoryAllocator() {
     allocator_ = nullptr;
-    PersistentHistogramAllocator::ReleaseGlobalAllocatorForTesting();
+    GlobalHistogramAllocator::ReleaseForTesting();
   }
 
-  scoped_ptr<SparseHistogram> NewSparseHistogram(const std::string& name) {
-    return scoped_ptr<SparseHistogram>(new SparseHistogram(name));
+  std::unique_ptr<SparseHistogram> NewSparseHistogram(const std::string& name) {
+    return std::unique_ptr<SparseHistogram>(new SparseHistogram(name));
   }
 
   const bool use_persistent_histogram_allocator_;
 
-  StatisticsRecorder* statistics_recorder_;
-  scoped_ptr<char[]> allocator_memory_;
+  std::unique_ptr<StatisticsRecorder> statistics_recorder_;
   PersistentMemoryAllocator* allocator_ = nullptr;
 
  private:
@@ -94,57 +91,57 @@ INSTANTIATE_TEST_CASE_P(HeapAndPersistent,
 
 
 TEST_P(SparseHistogramTest, BasicTest) {
-  scoped_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
-  scoped_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
+  std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
+  std::unique_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
   EXPECT_EQ(0, snapshot->TotalCount());
   EXPECT_EQ(0, snapshot->sum());
 
   histogram->Add(100);
-  scoped_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
   EXPECT_EQ(1, snapshot1->TotalCount());
   EXPECT_EQ(1, snapshot1->GetCount(100));
 
   histogram->Add(100);
   histogram->Add(101);
-  scoped_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
   EXPECT_EQ(3, snapshot2->TotalCount());
   EXPECT_EQ(2, snapshot2->GetCount(100));
   EXPECT_EQ(1, snapshot2->GetCount(101));
 }
 
 TEST_P(SparseHistogramTest, BasicTestAddCount) {
-  scoped_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
-  scoped_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
+  std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
+  std::unique_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
   EXPECT_EQ(0, snapshot->TotalCount());
   EXPECT_EQ(0, snapshot->sum());
 
   histogram->AddCount(100, 15);
-  scoped_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
   EXPECT_EQ(15, snapshot1->TotalCount());
   EXPECT_EQ(15, snapshot1->GetCount(100));
 
   histogram->AddCount(100, 15);
   histogram->AddCount(101, 25);
-  scoped_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
   EXPECT_EQ(55, snapshot2->TotalCount());
   EXPECT_EQ(30, snapshot2->GetCount(100));
   EXPECT_EQ(25, snapshot2->GetCount(101));
 }
 
 TEST_P(SparseHistogramTest, AddCount_LargeValuesDontOverflow) {
-  scoped_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
-  scoped_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
+  std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
+  std::unique_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
   EXPECT_EQ(0, snapshot->TotalCount());
   EXPECT_EQ(0, snapshot->sum());
 
   histogram->AddCount(1000000000, 15);
-  scoped_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot1(histogram->SnapshotSamples());
   EXPECT_EQ(15, snapshot1->TotalCount());
   EXPECT_EQ(15, snapshot1->GetCount(1000000000));
 
   histogram->AddCount(1000000000, 15);
   histogram->AddCount(1010000000, 25);
-  scoped_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
+  std::unique_ptr<HistogramSamples> snapshot2(histogram->SnapshotSamples());
   EXPECT_EQ(55, snapshot2->TotalCount());
   EXPECT_EQ(30, snapshot2->GetCount(1000000000));
   EXPECT_EQ(25, snapshot2->GetCount(1010000000));
@@ -170,7 +167,8 @@ TEST_P(SparseHistogramTest, MacroBasicTest) {
                                                : 0),
       sparse_histogram->flags());
 
-  scoped_ptr<HistogramSamples> samples = sparse_histogram->SnapshotSamples();
+  std::unique_ptr<HistogramSamples> samples =
+      sparse_histogram->SnapshotSamples();
   EXPECT_EQ(3, samples->TotalCount());
   EXPECT_EQ(2, samples->GetCount(100));
   EXPECT_EQ(1, samples->GetCount(200));
@@ -195,7 +193,7 @@ TEST_P(SparseHistogramTest, MacroInLoopTest) {
 }
 
 TEST_P(SparseHistogramTest, Serialize) {
-  scoped_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
+  std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
   histogram->SetFlags(HistogramBase::kIPCSerializationSourceFlag);
 
   Pickle pickle;
@@ -217,6 +215,55 @@ TEST_P(SparseHistogramTest, Serialize) {
 
   // No more data in the pickle.
   EXPECT_FALSE(iter.SkipBytes(1));
+}
+
+// Ensure that race conditions that cause multiple, identical sparse histograms
+// to be created will safely resolve to a single one.
+TEST_P(SparseHistogramTest, DuplicationSafety) {
+  const char histogram_name[] = "Duplicated";
+  size_t histogram_count = StatisticsRecorder::GetHistogramCount();
+
+  // Create a histogram that we will later duplicate.
+  HistogramBase* original =
+      SparseHistogram::FactoryGet(histogram_name, HistogramBase::kNoFlags);
+  ++histogram_count;
+  DCHECK_EQ(histogram_count, StatisticsRecorder::GetHistogramCount());
+  original->Add(1);
+
+  // Create a duplicate. This has to happen differently depending on where the
+  // memory is taken from.
+  if (use_persistent_histogram_allocator_) {
+    // To allocate from persistent memory, clear the last_created reference in
+    // the GlobalHistogramAllocator. This will cause an Import to recreate
+    // the just-created histogram which will then be released as a duplicate.
+    GlobalHistogramAllocator::Get()->ClearLastCreatedReferenceForTesting();
+    // Creating a different histogram will first do an Import to ensure it
+    // hasn't been created elsewhere, triggering the duplication and release.
+    SparseHistogram::FactoryGet("something.new", HistogramBase::kNoFlags);
+    ++histogram_count;
+  } else {
+    // To allocate from the heap, just call the (private) constructor directly.
+    // Delete it immediately like would have happened within FactoryGet();
+    std::unique_ptr<SparseHistogram> something =
+        NewSparseHistogram(histogram_name);
+    DCHECK_NE(original, something.get());
+  }
+  DCHECK_EQ(histogram_count, StatisticsRecorder::GetHistogramCount());
+
+  // Re-creating the histogram via FactoryGet() will return the same one.
+  HistogramBase* duplicate =
+      SparseHistogram::FactoryGet(histogram_name, HistogramBase::kNoFlags);
+  DCHECK_EQ(original, duplicate);
+  DCHECK_EQ(histogram_count, StatisticsRecorder::GetHistogramCount());
+  duplicate->Add(2);
+
+  // Ensure that original histograms are still cross-functional.
+  original->Add(2);
+  duplicate->Add(1);
+  std::unique_ptr<HistogramSamples> snapshot_orig = original->SnapshotSamples();
+  std::unique_ptr<HistogramSamples> snapshot_dup = duplicate->SnapshotSamples();
+  DCHECK_EQ(2, snapshot_orig->GetCount(2));
+  DCHECK_EQ(2, snapshot_dup->GetCount(1));
 }
 
 TEST_P(SparseHistogramTest, FactoryTime) {

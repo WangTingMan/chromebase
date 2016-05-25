@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/file_version_info.h"
+
 #include <stddef.h>
 
-#include "base/file_version_info.h"
+#include <memory>
+
 #include "base/files/file_path.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
+
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -60,7 +63,7 @@ TEST(FileVersionInfoTest, HardCodedProperties) {
   FilePath dll_path = GetTestDataPath();
   dll_path = dll_path.Append(kDLLName);
 
-  scoped_ptr<FileVersionInfo> version_info(
+  std::unique_ptr<FileVersionInfo> version_info(
       FileVersionInfo::CreateFileVersionInfo(dll_path));
 
   int j = 0;
@@ -101,7 +104,7 @@ TEST(FileVersionInfoTest, IsOfficialBuild) {
     FilePath dll_path = GetTestDataPath();
     dll_path = dll_path.Append(kDLLNames[i]);
 
-    scoped_ptr<FileVersionInfo> version_info(
+    std::unique_ptr<FileVersionInfo> version_info(
         FileVersionInfo::CreateFileVersionInfo(dll_path));
 
     EXPECT_EQ(kExpected[i], version_info->is_official_build());
@@ -114,7 +117,7 @@ TEST(FileVersionInfoTest, CustomProperties) {
   FilePath dll_path = GetTestDataPath();
   dll_path = dll_path.AppendASCII("FileVersionInfoTest1.dll");
 
-  scoped_ptr<FileVersionInfo> version_info(
+  std::unique_ptr<FileVersionInfo> version_info(
       FileVersionInfo::CreateFileVersionInfo(dll_path));
 
   // Test few existing properties.

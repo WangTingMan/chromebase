@@ -22,6 +22,7 @@
 
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <set>
 
 #include "base/command_line.h"
@@ -32,16 +33,16 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/process/process.h"
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
+#include "base/third_party/valgrind/valgrind.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
-#include "third_party/valgrind/valgrind.h"
 
 #if defined(OS_LINUX)
 #include <sys/prctl.h>
@@ -155,8 +156,12 @@ int sys_rt_sigaction(int sig, const struct kernel_sigaction* act,
 // See crbug.com/177956.
 void ResetChildSignalHandlersToDefaults(void) {
   for (int signum = 1; ; ++signum) {
+#if defined(ANDROID)
     struct kernel_sigaction act;
     memset(&act, 0, sizeof(act));
+#else
+    struct kernel_sigaction act = {0};
+#endif
     int sigaction_get_ret = sys_rt_sigaction(signum, NULL, &act);
     if (sigaction_get_ret && errno == EINVAL) {
 #if !defined(NDEBUG)
@@ -202,7 +207,7 @@ struct ScopedDIRClose {
 };
 
 // Automatically closes |DIR*|s.
-typedef scoped_ptr<DIR, ScopedDIRClose> ScopedDIR;
+typedef std::unique_ptr<DIR, ScopedDIRClose> ScopedDIR;
 
 #if defined(OS_LINUX)
 static const char kFDDir[] = "/proc/self/fd";
@@ -301,13 +306,13 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   fd_shuffle1.reserve(fd_shuffle_size);
   fd_shuffle2.reserve(fd_shuffle_size);
 
-  scoped_ptr<char* []> argv_cstr(new char* [argv.size() + 1]);
+  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
   for (size_t i = 0; i < argv.size(); i++) {
     argv_cstr[i] = const_cast<char*>(argv[i].c_str());
   }
   argv_cstr[argv.size()] = NULL;
 
-  scoped_ptr<char*[]> new_environ;
+  std::unique_ptr<char* []> new_environ;
   char* const empty_environ = NULL;
   char* const* old_environ = GetEnvironment();
   if (options.clear_environ)
@@ -552,7 +557,7 @@ static GetAppOutputInternalResult GetAppOutputInternal(
   int pipe_fd[2];
   pid_t pid;
   InjectiveMultimap fd_shuffle1, fd_shuffle2;
-  scoped_ptr<char*[]> argv_cstr(new char*[argv.size() + 1]);
+  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
 
   fd_shuffle1.reserve(3);
   fd_shuffle2.reserve(3);
@@ -738,7 +743,7 @@ NOINLINE pid_t CloneAndLongjmpInChild(unsigned long flags,
   // fork-like behavior.
   char stack_buf[PTHREAD_STACK_MIN] ALIGNAS(16);
 #if defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS64_FAMILY) || defined(ARCH_CPU_MIPS_FAMILY)
+    defined(ARCH_CPU_MIPS_FAMILY)
   // The stack grows downward.
   void* stack = stack_buf + sizeof(stack_buf);
 #else
@@ -772,7 +777,7 @@ pid_t ForkWithFlags(unsigned long flags, pid_t* ptid, pid_t* ctid) {
 #if defined(ARCH_CPU_X86_64)
     return syscall(__NR_clone, flags, nullptr, ptid, ctid, nullptr);
 #elif defined(ARCH_CPU_X86) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS_FAMILY) || defined(ARCH_CPU_MIPS64_FAMILY)
+    defined(ARCH_CPU_MIPS_FAMILY)
     // CONFIG_CLONE_BACKWARDS defined.
     return syscall(__NR_clone, flags, nullptr, ptid, nullptr, ctid);
 #else
