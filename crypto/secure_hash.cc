@@ -4,7 +4,11 @@
 
 #include "crypto/secure_hash.h"
 
+#if defined(OPENSSL_IS_BORINGSSL)
 #include <openssl/mem.h>
+#else
+#include <openssl/crypto.h>
+#endif
 #include <openssl/sha.h>
 #include <stddef.h>
 
@@ -16,17 +20,17 @@ namespace crypto {
 
 namespace {
 
-class SecureHashSHA256OpenSSL : public SecureHash {
+class SecureHashSHA256 : public SecureHash {
  public:
-  SecureHashSHA256OpenSSL() {
+  SecureHashSHA256() {
     SHA256_Init(&ctx_);
   }
 
-  SecureHashSHA256OpenSSL(const SecureHashSHA256OpenSSL& other) {
+  SecureHashSHA256(const SecureHashSHA256& other) : SecureHash() {
     memcpy(&ctx_, &other.ctx_, sizeof(ctx_));
   }
 
-  ~SecureHashSHA256OpenSSL() override {
+  ~SecureHashSHA256() override {
     OPENSSL_cleanse(&ctx_, sizeof(ctx_));
   }
 
@@ -41,7 +45,7 @@ class SecureHashSHA256OpenSSL : public SecureHash {
   }
 
   SecureHash* Clone() const override {
-    return new SecureHashSHA256OpenSSL(*this);
+    return new SecureHashSHA256(*this);
   }
 
   size_t GetHashLength() const override { return SHA256_DIGEST_LENGTH; }
@@ -55,7 +59,7 @@ class SecureHashSHA256OpenSSL : public SecureHash {
 SecureHash* SecureHash::Create(Algorithm algorithm) {
   switch (algorithm) {
     case SHA256:
-      return new SecureHashSHA256OpenSSL();
+      return new SecureHashSHA256();
     default:
       NOTIMPLEMENTED();
       return NULL;

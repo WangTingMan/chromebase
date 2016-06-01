@@ -40,14 +40,38 @@ class BASE_EXPORT TraceConfig {
  public:
   typedef std::vector<std::string> StringList;
 
-  // Specifies the memory dump config for tracing. Used only when
-  // "memory-infra" category is enabled.
-  struct MemoryDumpTriggerConfig {
-    uint32_t periodic_interval_ms;
-    MemoryDumpLevelOfDetail level_of_detail;
-  };
+  // Specifies the memory dump config for tracing.
+  // Used only when "memory-infra" category is enabled.
+  struct MemoryDumpConfig {
+    MemoryDumpConfig();
+    MemoryDumpConfig(const MemoryDumpConfig& other);
+    ~MemoryDumpConfig();
 
-  typedef std::vector<MemoryDumpTriggerConfig> MemoryDumpConfig;
+    // Specifies the triggers in the memory dump config.
+    struct Trigger {
+      uint32_t periodic_interval_ms;
+      MemoryDumpLevelOfDetail level_of_detail;
+    };
+
+    // Specifies the configuration options for the heap profiler.
+    struct HeapProfiler {
+      // Default value for |breakdown_threshold_bytes|.
+      enum { kDefaultBreakdownThresholdBytes = 1024 };
+
+      HeapProfiler();
+
+      // Reset the options to default.
+      void Clear();
+
+      uint32_t breakdown_threshold_bytes;
+    };
+
+    // Reset the values in the config.
+    void Clear();
+
+    std::vector<Trigger> triggers;
+    HeapProfiler heap_profiler_options;
+  };
 
   TraceConfig();
 
@@ -130,6 +154,10 @@ class BASE_EXPORT TraceConfig {
   // disabled-by-default-memory-infra category is enabled.
   explicit TraceConfig(const std::string& config_string);
 
+  // Functionally identical to the above, but takes a parsed dictionary as input
+  // instead of its JSON serialization.
+  explicit TraceConfig(const DictionaryValue& config);
+
   TraceConfig(const TraceConfig& tc);
 
   ~TraceConfig();
@@ -154,7 +182,7 @@ class BASE_EXPORT TraceConfig {
   std::string ToString() const;
 
   // Returns a copy of the TraceConfig wrapped in a ConvertableToTraceFormat
-  scoped_ptr<ConvertableToTraceFormat> AsConvertableToTraceFormat() const;
+  std::unique_ptr<ConvertableToTraceFormat> AsConvertableToTraceFormat() const;
 
   // Write the string representation of the CategoryFilter part.
   std::string ToCategoryFilterString() const;
@@ -190,7 +218,10 @@ class BASE_EXPORT TraceConfig {
   // in the suffix 'Debug' or 'Test'.
   void InitializeDefault();
 
-  // Initialize from the config string
+  // Initialize from a config dictionary.
+  void InitializeFromConfigDict(const DictionaryValue& dict);
+
+  // Initialize from a config string.
   void InitializeFromConfigString(const std::string& config_string);
 
   // Initialize from category filter and trace options strings

@@ -94,7 +94,7 @@ void InitThreading() {}
 
 void TerminateOnThread() {}
 
-size_t GetDefaultThreadStackSize(const pthread_attr_t& /* attributes */) {
+size_t GetDefaultThreadStackSize(const pthread_attr_t& /*attributes*/) {
 #if !defined(THREAD_SANITIZER)
   return 0;
 #else
