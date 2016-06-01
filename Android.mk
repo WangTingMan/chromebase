@@ -248,7 +248,7 @@ libchromeMacSrc := \
 	base/process/process_iterator_mac.cc \
 	base/process/process_metrics_mac.cc \
 	base/strings/sys_string_conversions_mac.mm \
-	base/sys_info_mac.cc \
+	base/sys_info_mac.mm \
 	base/time/time_mac.cc \
 	base/threading/platform_thread_mac.mm \
 
