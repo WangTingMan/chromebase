@@ -26,7 +26,6 @@ class TargetPolicy {
     SUBSYS_PROCESS,           // Creation of child processes.
     SUBSYS_REGISTRY,          // Creation and opening of registry keys.
     SUBSYS_SYNC,              // Creation of named sync objects.
-    SUBSYS_HANDLES,           // Duplication of handles to other processes.
     SUBSYS_WIN32K_LOCKDOWN    // Win32K Lockdown related policy.
   };
 
@@ -38,9 +37,6 @@ class TargetPolicy {
     FILES_ALLOW_QUERY,     // Allows access to query the attributes of a file.
     FILES_ALLOW_DIR_ANY,   // Allows open or create with directory semantics
                            // only.
-    HANDLES_DUP_ANY,       // Allows duplicating handles opened with any
-                           // access permissions.
-    HANDLES_DUP_BROKER,    // Allows duplicating handles to the broker process.
     NAMEDPIPES_ALLOW_ANY,  // Allows creation of a named pipe.
     PROCESS_MIN_EXEC,      // Allows to create a process with minimal rights
                            // over the resulting process and thread handles.
@@ -54,9 +50,12 @@ class TargetPolicy {
     EVENTS_ALLOW_READONLY,  // Allows opening an even with synchronize access.
     REG_ALLOW_READONLY,     // Allows readonly access to a registry key.
     REG_ALLOW_ANY,          // Allows read and write access to a registry key.
-    FAKE_USER_GDI_INIT      // Fakes user32 and gdi32 initialization. This can
+    FAKE_USER_GDI_INIT,     // Fakes user32 and gdi32 initialization. This can
                             // be used to allow the DLLs to load and initialize
                             // even if the process cannot access that subsystem.
+    IMPLEMENT_OPM_APIS      // Implements FAKE_USER_GDI_INIT and also exposes
+                            // IPC calls to handle Output Protection Manager
+                            // APIs.
   };
 
   // Increments the reference count of this object. The reference count must
@@ -173,17 +172,6 @@ class TargetPolicy {
   // than the current level, the sandbox will fail to start.
   virtual ResultCode SetDelayedIntegrityLevel(IntegrityLevel level) = 0;
 
-  // Sets the AppContainer to be used for the sandboxed process. Any capability
-  // to be enabled for the process should be added before this method is invoked
-  // (by calling SetCapability() as many times as needed).
-  // The desired AppContainer must be already installed on the system, otherwise
-  // launching the sandboxed process will fail. See BrokerServices for details
-  // about installing an AppContainer.
-  // Note that currently Windows restricts the use of impersonation within
-  // AppContainers, so this function is incompatible with the use of an initial
-  // token.
-  virtual ResultCode SetAppContainer(const wchar_t* sid) = 0;
-
   // Sets a capability to be enabled for the sandboxed process' AppContainer.
   virtual ResultCode SetCapability(const wchar_t* sid) = 0;
 
@@ -254,6 +242,16 @@ class TargetPolicy {
   // Adds a handle that will be shared with the target process. Does not take
   // ownership of the handle.
   virtual void AddHandleToShare(HANDLE handle) = 0;
+
+  // Locks down the default DACL of the created lockdown and initial tokens
+  // to restrict what other processes are allowed to access a process' kernel
+  // resources.
+  virtual void SetLockdownDefaultDacl() = 0;
+
+  // Enable OPM API redirection when in Win32k lockdown.
+  virtual void SetEnableOPMRedirection() = 0;
+  // Enable OPM API emulation when in Win32k lockdown.
+  virtual bool GetEnableOPMRedirection() = 0;
 };
 
 }  // namespace sandbox

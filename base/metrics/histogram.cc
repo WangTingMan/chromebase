@@ -18,6 +18,7 @@
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/metrics_hashes.h"
 #include "base/metrics/persistent_histogram_allocator.h"
@@ -94,7 +95,6 @@ class Histogram::Factory {
           uint32_t bucket_count,
           int32_t flags)
     : Factory(name, HISTOGRAM, minimum, maximum, bucket_count, flags) {}
-
   virtual ~Factory() = default;
 
   // Create histogram based on construction parameters. Caller takes
@@ -124,14 +124,14 @@ class Histogram::Factory {
 
   // Allocate the correct Histogram object off the heap (in case persistent
   // memory is not available).
-  virtual scoped_ptr<HistogramBase> HeapAlloc(const BucketRanges* ranges) {
-    return make_scoped_ptr(new Histogram(name_, minimum_, maximum_, ranges));
+  virtual std::unique_ptr<HistogramBase> HeapAlloc(const BucketRanges* ranges) {
+    return WrapUnique(new Histogram(name_, minimum_, maximum_, ranges));
   }
 
   // Perform any required datafill on the just-created histogram.  If
   // overridden, be sure to call the "super" version -- this method may not
   // always remain empty.
-  virtual void FillHistogram(HistogramBase* /* histogram */) {}
+  virtual void FillHistogram(HistogramBase* /*histogram*/) {}
 
   // These values are protected (instead of private) because they need to
   // be accessible to methods of sub-classes in order to avoid passing
@@ -148,12 +148,6 @@ class Histogram::Factory {
 };
 
 HistogramBase* Histogram::Factory::Build() {
-  // Import histograms from known persistent storage. Histograms could have
-  // been added by other processes and they must be fetched and recognized
-  // locally in order to be found by FindHistograms() below. If the persistent
-  // memory segment is not shared between processes, this call does nothing.
-  PersistentHistogramAllocator::ImportGlobalHistograms();
-
   HistogramBase* histogram = StatisticsRecorder::FindHistogram(name_);
   if (!histogram) {
     // To avoid racy destruction at shutdown, the following will be leaked.
@@ -178,9 +172,8 @@ HistogramBase* Histogram::Factory::Build() {
     // allocating from it fails, code below will allocate the histogram from
     // the process heap.
     PersistentHistogramAllocator::Reference histogram_ref = 0;
-    scoped_ptr<HistogramBase> tentative_histogram;
-    PersistentHistogramAllocator* allocator =
-        PersistentHistogramAllocator::GetGlobalAllocator();
+    std::unique_ptr<HistogramBase> tentative_histogram;
+    PersistentHistogramAllocator* allocator = GlobalHistogramAllocator::Get();
     if (allocator) {
       tentative_histogram = allocator->AllocateHistogram(
           histogram_type_,
@@ -234,7 +227,7 @@ HistogramBase* Histogram::Factory::Build() {
     // return NULL here with the expectation that bad code in Chrome will crash
     // on dereference, but extension/Pepper APIs will guard against NULL and not
     // crash.
-    LOG(ERROR) << "Histogram " << name_ << " has bad construction arguments";
+    DLOG(ERROR) << "Histogram " << name_ << " has bad construction arguments";
     return nullptr;
   }
   return histogram;
@@ -279,7 +272,7 @@ HistogramBase* Histogram::FactoryTimeGet(const char* name,
                         flags);
 }
 
-scoped_ptr<HistogramBase> Histogram::PersistentCreate(
+std::unique_ptr<HistogramBase> Histogram::PersistentCreate(
     const std::string& name,
     Sample minimum,
     Sample maximum,
@@ -289,9 +282,9 @@ scoped_ptr<HistogramBase> Histogram::PersistentCreate(
     uint32_t counts_size,
     HistogramSamples::Metadata* meta,
     HistogramSamples::Metadata* logged_meta) {
-  return make_scoped_ptr(new Histogram(
-      name, minimum, maximum, ranges, counts, logged_counts, counts_size,
-      meta, logged_meta));
+  return WrapUnique(new Histogram(name, minimum, maximum, ranges, counts,
+                                  logged_counts, counts_size, meta,
+                                  logged_meta));
 }
 
 // Calculate what range of values are held in each bucket.
@@ -442,12 +435,14 @@ void Histogram::AddCount(int value, int count) {
   FindAndRunCallback(value);
 }
 
-scoped_ptr<HistogramSamples> Histogram::SnapshotSamples() const {
+std::unique_ptr<HistogramSamples> Histogram::SnapshotSamples() const {
   return SnapshotSampleVector();
 }
 
-scoped_ptr<HistogramSamples> Histogram::SnapshotDelta() {
-  scoped_ptr<HistogramSamples> snapshot = SnapshotSampleVector();
+std::unique_ptr<HistogramSamples> Histogram::SnapshotDelta() {
+  DCHECK(!final_delta_created_);
+
+  std::unique_ptr<HistogramSamples> snapshot = SnapshotSampleVector();
   if (!logged_samples_) {
     // If nothing has been previously logged, save this one as
     // |logged_samples_| and gather another snapshot to return.
@@ -458,6 +453,18 @@ scoped_ptr<HistogramSamples> Histogram::SnapshotDelta() {
   // Subtract what was previously logged and update that information.
   snapshot->Subtract(*logged_samples_);
   logged_samples_->Add(*snapshot);
+  return snapshot;
+}
+
+std::unique_ptr<HistogramSamples> Histogram::SnapshotFinalDelta() const {
+  DCHECK(!final_delta_created_);
+  final_delta_created_ = true;
+
+  std::unique_ptr<HistogramSamples> snapshot = SnapshotSampleVector();
+
+  // Subtract what was previously logged and then return.
+  if (logged_samples_)
+    snapshot->Subtract(*logged_samples_);
   return snapshot;
 }
 
@@ -527,7 +534,7 @@ Histogram::Histogram(const std::string& name,
 Histogram::~Histogram() {
 }
 
-bool Histogram::PrintEmptyBucket(uint32_t /* index */) const {
+bool Histogram::PrintEmptyBucket(uint32_t /*index*/) const {
   return true;
 }
 
@@ -577,8 +584,8 @@ HistogramBase* Histogram::DeserializeInfoImpl(PickleIterator* iter) {
   return histogram;
 }
 
-scoped_ptr<SampleVector> Histogram::SnapshotSampleVector() const {
-  scoped_ptr<SampleVector> samples(
+std::unique_ptr<SampleVector> Histogram::SnapshotSampleVector() const {
+  std::unique_ptr<SampleVector> samples(
       new SampleVector(samples_->id(), bucket_ranges()));
   samples->Add(*samples_);
   return samples;
@@ -589,7 +596,7 @@ void Histogram::WriteAsciiImpl(bool graph_it,
                                std::string* output) const {
   // Get local (stack) copies of all effectively volatile class data so that we
   // are consistent across our output activities.
-  scoped_ptr<SampleVector> snapshot = SnapshotSampleVector();
+  std::unique_ptr<SampleVector> snapshot = SnapshotSampleVector();
   Count sample_count = snapshot->TotalCount();
 
   WriteAsciiHeader(*snapshot, sample_count, output);
@@ -702,14 +709,14 @@ void Histogram::GetParameters(DictionaryValue* params) const {
 void Histogram::GetCountAndBucketData(Count* count,
                                       int64_t* sum,
                                       ListValue* buckets) const {
-  scoped_ptr<SampleVector> snapshot = SnapshotSampleVector();
+  std::unique_ptr<SampleVector> snapshot = SnapshotSampleVector();
   *count = snapshot->TotalCount();
   *sum = snapshot->sum();
   uint32_t index = 0;
   for (uint32_t i = 0; i < bucket_count(); ++i) {
     Sample count_at_index = snapshot->GetCountAtIndex(i);
     if (count_at_index > 0) {
-      scoped_ptr<DictionaryValue> bucket_value(new DictionaryValue());
+      std::unique_ptr<DictionaryValue> bucket_value(new DictionaryValue());
       bucket_value->SetInteger("low", ranges(i));
       if (i != bucket_count() - 1)
         bucket_value->SetInteger("high", ranges(i + 1));
@@ -737,6 +744,7 @@ class LinearHistogram::Factory : public Histogram::Factory {
                          bucket_count, flags) {
     descriptions_ = descriptions;
   }
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
@@ -745,8 +753,9 @@ class LinearHistogram::Factory : public Histogram::Factory {
     return ranges;
   }
 
-  scoped_ptr<HistogramBase> HeapAlloc(const BucketRanges* ranges) override {
-    return make_scoped_ptr(
+  std::unique_ptr<HistogramBase> HeapAlloc(
+      const BucketRanges* ranges) override {
+    return WrapUnique(
         new LinearHistogram(name_, minimum_, maximum_, ranges));
   }
 
@@ -806,7 +815,7 @@ HistogramBase* LinearHistogram::FactoryTimeGet(const char* name,
                         flags);
 }
 
-scoped_ptr<HistogramBase> LinearHistogram::PersistentCreate(
+std::unique_ptr<HistogramBase> LinearHistogram::PersistentCreate(
     const std::string& name,
     Sample minimum,
     Sample maximum,
@@ -816,9 +825,9 @@ scoped_ptr<HistogramBase> LinearHistogram::PersistentCreate(
     uint32_t counts_size,
     HistogramSamples::Metadata* meta,
     HistogramSamples::Metadata* logged_meta) {
-  return make_scoped_ptr(new LinearHistogram(
-      name, minimum, maximum, ranges, counts, logged_counts, counts_size,
-      meta, logged_meta));
+  return WrapUnique(new LinearHistogram(name, minimum, maximum, ranges,
+                                              counts, logged_counts,
+                                              counts_size, meta, logged_meta));
 }
 
 HistogramBase* LinearHistogram::FactoryGetWithRangeDescription(
@@ -928,6 +937,7 @@ class BooleanHistogram::Factory : public Histogram::Factory {
  public:
   Factory(const std::string& name, int32_t flags)
     : Histogram::Factory(name, BOOLEAN_HISTOGRAM, 1, 2, 3, flags) {}
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
@@ -936,8 +946,9 @@ class BooleanHistogram::Factory : public Histogram::Factory {
     return ranges;
   }
 
-  scoped_ptr<HistogramBase> HeapAlloc(const BucketRanges* ranges) override {
-    return make_scoped_ptr(new BooleanHistogram(name_, ranges));
+  std::unique_ptr<HistogramBase> HeapAlloc(
+      const BucketRanges* ranges) override {
+    return WrapUnique(new BooleanHistogram(name_, ranges));
   }
 
  private:
@@ -953,14 +964,14 @@ HistogramBase* BooleanHistogram::FactoryGet(const char* name, int32_t flags) {
   return FactoryGet(std::string(name), flags);
 }
 
-scoped_ptr<HistogramBase> BooleanHistogram::PersistentCreate(
+std::unique_ptr<HistogramBase> BooleanHistogram::PersistentCreate(
     const std::string& name,
     const BucketRanges* ranges,
     HistogramBase::AtomicCount* counts,
     HistogramBase::AtomicCount* logged_counts,
     HistogramSamples::Metadata* meta,
     HistogramSamples::Metadata* logged_meta) {
-  return make_scoped_ptr(new BooleanHistogram(
+  return WrapUnique(new BooleanHistogram(
       name, ranges, counts, logged_counts, meta, logged_meta));
 }
 
@@ -1015,6 +1026,7 @@ class CustomHistogram::Factory : public Histogram::Factory {
     : Histogram::Factory(name, CUSTOM_HISTOGRAM, 0, 0, 0, flags) {
     custom_ranges_ = custom_ranges;
   }
+  ~Factory() override = default;
 
  protected:
   BucketRanges* CreateRanges() override {
@@ -1033,8 +1045,9 @@ class CustomHistogram::Factory : public Histogram::Factory {
     return bucket_ranges;
   }
 
-  scoped_ptr<HistogramBase> HeapAlloc(const BucketRanges* ranges) override {
-    return make_scoped_ptr(new CustomHistogram(name_, ranges));
+  std::unique_ptr<HistogramBase> HeapAlloc(
+      const BucketRanges* ranges) override {
+    return WrapUnique(new CustomHistogram(name_, ranges));
   }
 
  private:
@@ -1059,7 +1072,7 @@ HistogramBase* CustomHistogram::FactoryGet(
   return FactoryGet(std::string(name), custom_ranges, flags);
 }
 
-scoped_ptr<HistogramBase> CustomHistogram::PersistentCreate(
+std::unique_ptr<HistogramBase> CustomHistogram::PersistentCreate(
     const std::string& name,
     const BucketRanges* ranges,
     HistogramBase::AtomicCount* counts,
@@ -1067,7 +1080,7 @@ scoped_ptr<HistogramBase> CustomHistogram::PersistentCreate(
     uint32_t counts_size,
     HistogramSamples::Metadata* meta,
     HistogramSamples::Metadata* logged_meta) {
-  return make_scoped_ptr(new CustomHistogram(
+  return WrapUnique(new CustomHistogram(
       name, ranges, counts, logged_counts, counts_size, meta, logged_meta));
 }
 
@@ -1127,8 +1140,7 @@ bool CustomHistogram::SerializeInfoImpl(Pickle* pickle) const {
   return true;
 }
 
-double CustomHistogram::GetBucketSize(Count /* current */,
-                                      uint32_t /* i */) const {
+double CustomHistogram::GetBucketSize(Count /*current*/, uint32_t /*i*/) const {
   return 1;
 }
 

@@ -27,7 +27,6 @@
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/memory/singleton.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/stl_util.h"
@@ -560,7 +559,7 @@ bool CreateTemporaryDirInDir(const FilePath& base_dir,
   return CreateTemporaryDirInDirImpl(base_dir, mkdtemp_template, new_dir);
 }
 
-bool CreateNewTempDirectory(const FilePath::StringType& /* prefix */,
+bool CreateNewTempDirectory(const FilePath::StringType& /*prefix*/,
                             FilePath* new_temp_path) {
   FilePath tmpdir;
   if (!GetTempDir(&tmpdir))
@@ -849,7 +848,7 @@ bool GetShmemTempDir(bool executable, FilePath* path) {
     return true;
   }
 #else
-  (void)executable;  // avoid unused warning when !defined(OS_LINUX)
+  (void)executable;  // Avoid unused warning when !defined(OS_LINUX).
 #endif
   return GetTempDir(path);
 }

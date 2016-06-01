@@ -459,7 +459,7 @@ const LogSeverity LOG_0 = LOG_ERROR;
 // boolean.
 class CheckOpResult {
  public:
-  // |message| must be null if and only if the check failed.
+  // |message| must be non-null if and only if the check failed.
   CheckOpResult(std::string* message) : message_(message) {}
   // Returns true if the check succeeded.
   operator bool() const { return !message_; }
@@ -477,22 +477,28 @@ class CheckOpResult {
 // We make sure CHECK et al. always evaluates their arguments, as
 // doing CHECK(FunctionWithSideEffect()) is a common idiom.
 
-#if defined(OFFICIAL_BUILD) && defined(NDEBUG) && !defined(OS_ANDROID)
+#if defined(OFFICIAL_BUILD) && defined(NDEBUG)
 
 // Make all CHECK functions discard their log strings to reduce code
-// bloat for official release builds (except Android).
+// bloat, and improve performance, for official release builds.
 
-// TODO(akalin): This would be more valuable if there were some way to
-// remove BreakDebugger() from the backtrace, perhaps by turning it
-// into a macro (like __debugbreak() on Windows).
+#if defined(COMPILER_GCC) || __clang__
+#define LOGGING_CRASH() __builtin_trap()
+#else
+#define LOGGING_CRASH() ((void)(*(volatile char*)0 = 0))
+#endif
+
+// This is not calling BreakDebugger since this is called frequently, and
+// calling an out-of-line function instead of a noreturn inline macro prevents
+// compiler optimizations.
 #define CHECK(condition)                                                \
-  !(condition) ? ::base::debug::BreakDebugger() : EAT_STREAM_PARAMETERS
+  !(condition) ? LOGGING_CRASH() : EAT_STREAM_PARAMETERS
 
 #define PCHECK(condition) CHECK(condition)
 
 #define CHECK_OP(name, op, val1, val2) CHECK((val1) op (val2))
 
-#else
+#else  // !(OFFICIAL_BUILD && NDEBUG)
 
 #if defined(_PREFAST_) && defined(OS_WIN)
 // Use __analysis_assume to tell the VC++ static analysis engine that
@@ -540,7 +546,19 @@ class CheckOpResult {
   else                                                                         \
     logging::LogMessage(__FILE__, __LINE__, true_if_passed.message()).stream()
 
-#endif
+#endif  // !(OFFICIAL_BUILD && NDEBUG)
+
+// This formats a value for a failing CHECK_XX statement.  Ordinarily,
+// it uses the definition for operator<<, with a few special cases below.
+template <typename T>
+inline void MakeCheckOpValueString(std::ostream* os, const T& v) {
+  (*os) << v;
+}
+
+// We need an explicit specialization for std::nullptr_t.
+template <>
+BASE_EXPORT void MakeCheckOpValueString(std::ostream* os,
+                                        const std::nullptr_t& p);
 
 // Build the error message string.  This is separate from the "Impl"
 // function template because it is not performance critical and so can
@@ -549,7 +567,11 @@ class CheckOpResult {
 template<class t1, class t2>
 std::string* MakeCheckOpString(const t1& v1, const t2& v2, const char* names) {
   std::ostringstream ss;
-  ss << names << " (" << v1 << " vs. " << v2 << ")";
+  ss << names << " (";
+  MakeCheckOpValueString(&ss, v1);
+  ss << " vs. ";
+  MakeCheckOpValueString(&ss, v2);
+  ss << ")";
   std::string* msg = new std::string(ss.str());
   return msg;
 }
@@ -601,7 +623,7 @@ DEFINE_CHECK_OP_IMPL(GT, > )
 #define CHECK_GE(val1, val2) CHECK_OP(GE, >=, val1, val2)
 #define CHECK_GT(val1, val2) CHECK_OP(GT, > , val1, val2)
 
-#if defined(NDEBUG)
+#if defined(NDEBUG) && !defined(DCHECK_ALWAYS_ON)
 #define ENABLE_DLOG 0
 #else
 #define ENABLE_DLOG 1
@@ -743,9 +765,10 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // for example:
 //   DCHECK_EQ(string("abc")[1], 'b');
 //
-// WARNING: These may not compile correctly if one of the arguments is a pointer
-// and the other is NULL. To work around this, simply static_cast NULL to the
-// type of the desired pointer.
+// WARNING: These don't compile correctly if one of the arguments is a pointer
+// and the other is NULL.  In new code, prefer nullptr instead.  To
+// work around this for C++98, simply static_cast NULL to the type of the
+// desired pointer.
 
 #define DCHECK_EQ(val1, val2) DCHECK_OP(EQ, ==, val1, val2)
 #define DCHECK_NE(val1, val2) DCHECK_OP(NE, !=, val1, val2)

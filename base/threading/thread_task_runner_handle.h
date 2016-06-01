@@ -1,11 +1,12 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
+// Copyright 2016 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BASE_THREAD_TASK_RUNNER_HANDLE_H_
-#define BASE_THREAD_TASK_RUNNER_HANDLE_H_
+#ifndef BASE_THREADING_THREAD_TASK_RUNNER_HANDLE_H_
+#define BASE_THREADING_THREAD_TASK_RUNNER_HANDLE_H_
 
 #include "base/base_export.h"
+#include "base/macros.h"
 #include "base/memory/ref_counted.h"
 
 namespace base {
@@ -29,13 +30,15 @@ class BASE_EXPORT ThreadTaskRunnerHandle {
   // Binds |task_runner| to the current thread. |task_runner| must belong
   // to the current thread for this to succeed.
   explicit ThreadTaskRunnerHandle(
-      const scoped_refptr<SingleThreadTaskRunner>& task_runner);
+      scoped_refptr<SingleThreadTaskRunner> task_runner);
   ~ThreadTaskRunnerHandle();
 
  private:
   scoped_refptr<SingleThreadTaskRunner> task_runner_;
+
+  DISALLOW_COPY_AND_ASSIGN(ThreadTaskRunnerHandle);
 };
 
 }  // namespace base
 
-#endif  // BASE_THREAD_TASK_RUNNER_HANDLE_H_
+#endif  // BASE_THREADING_THREAD_TASK_RUNNER_HANDLE_H_

@@ -8,7 +8,6 @@
 
 #include "base/location.h"
 #include "base/message_loop/message_loop.h"
-#include "base/metrics/histogram.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -18,7 +17,7 @@ namespace internal {
 
 namespace {
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
 // Delays larger than this are often bogus, and a warning should be emitted in
 // debug builds to warn developers.  http://crbug.com/450045
 const int kTaskDelayWarningThresholdInSeconds =
@@ -27,17 +26,26 @@ const int kTaskDelayWarningThresholdInSeconds =
 
 // Returns true if MessagePump::ScheduleWork() must be called one
 // time for every task that is added to the MessageLoop incoming queue.
-#if defined(OS_ANDROID)
 bool AlwaysNotifyPump(MessageLoop::Type type) {
+#if defined(OS_ANDROID)
   // The Android UI message loop needs to get notified each time a task is
-  // added to the incoming queue.
+  // added
+  // to the incoming queue.
   return type == MessageLoop::TYPE_UI || type == MessageLoop::TYPE_JAVA;
-}
 #else
-bool AlwaysNotifyPump(MessageLoop::Type /* type */) {
+  (void)type;  // Avoid an unused warning.
   return false;
-}
 #endif
+}
+
+TimeTicks CalculateDelayedRuntime(TimeDelta delay) {
+  TimeTicks delayed_run_time;
+  if (delay > TimeDelta())
+    delayed_run_time = TimeTicks::Now() + delay;
+  else
+    DCHECK_EQ(delay.InMilliseconds(), 0) << "delay should not be negative";
+  return delayed_run_time;
+}
 
 }  // namespace
 
@@ -60,9 +68,9 @@ bool IncomingTaskQueue::AddToIncomingQueue(
       << "Requesting super-long task delay period of " << delay.InSeconds()
       << " seconds from here: " << from_here.ToString();
 
-  AutoLock locked(incoming_queue_lock_);
   PendingTask pending_task(
-      from_here, task, CalculateDelayedRuntime(delay), nestable);
+    from_here, task, CalculateDelayedRuntime(delay), nestable);
+  AutoLock locked(incoming_queue_lock_);
 #if defined(OS_WIN)
   // We consider the task needs a high resolution timer if the delay is
   // more than 0 and less than 32ms. This caps the relative error to
@@ -124,15 +132,6 @@ void IncomingTaskQueue::StartScheduling() {
 IncomingTaskQueue::~IncomingTaskQueue() {
   // Verify that WillDestroyCurrentMessageLoop() has been called.
   DCHECK(!message_loop_);
-}
-
-TimeTicks IncomingTaskQueue::CalculateDelayedRuntime(TimeDelta delay) {
-  TimeTicks delayed_run_time;
-  if (delay > TimeDelta())
-    delayed_run_time = TimeTicks::Now() + delay;
-  else
-    DCHECK_EQ(delay.InMilliseconds(), 0) << "delay should not be negative";
-  return delayed_run_time;
 }
 
 bool IncomingTaskQueue::PostPendingTask(PendingTask* pending_task) {

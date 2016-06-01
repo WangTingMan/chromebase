@@ -24,6 +24,9 @@ bool GetFileSystemType(const FilePath& path, FileSystemType* type) {
 
   // Not all possible |statfs_buf.f_type| values are in linux/magic.h.
   // Missing values are copied from the statfs man page.
+  // In some platforms, |statfs_buf.f_type| is declared as signed, but some of
+  // the values will overflow it, causing narrowing warnings. Cast to the
+  // largest possible unsigned integer type to avoid it.
   switch (static_cast<uintmax_t>(statfs_buf.f_type)) {
     case 0:
       *type = FILE_SYSTEM_0;

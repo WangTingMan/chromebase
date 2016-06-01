@@ -16,7 +16,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/cancellation_flag.h"
 #include "base/task_runner.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 using base::Bind;
 using base::CancellationFlag;
@@ -39,7 +39,7 @@ void RunIfNotCanceledThenUntrack(const CancellationFlag* flag,
 }
 
 bool IsCanceled(const CancellationFlag* flag,
-                base::ScopedClosureRunner* /* cleanup_runner */) {
+                base::ScopedClosureRunner* /*cleanup_runner*/) {
   return flag->IsSet();
 }
 
@@ -131,9 +131,10 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::NewTrackedTaskId(
 
   // Will always run |untrack_and_delete_flag| on current MessageLoop.
   base::ScopedClosureRunner* untrack_and_delete_flag_runner =
-      new base::ScopedClosureRunner(Bind(&RunOrPostToTaskRunner,
-                                         base::ThreadTaskRunnerHandle::Get(),
-                                         untrack_and_delete_flag));
+      new base::ScopedClosureRunner(
+          Bind(&RunOrPostToTaskRunner,
+               RetainedRef(base::ThreadTaskRunnerHandle::Get()),
+               untrack_and_delete_flag));
 
   *is_canceled_cb =
       Bind(&IsCanceled, flag, base::Owned(untrack_and_delete_flag_runner));

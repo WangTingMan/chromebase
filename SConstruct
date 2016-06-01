@@ -27,6 +27,8 @@ base_libs = [
     'name' : 'core',
     'sources' : """
                 allocator/allocator_extension.cc
+                allocator/allocator_shim.cc
+                allocator/allocator_shim_default_dispatch_to_glibc.cc
                 at_exit.cc
                 base64.cc
                 base64url.cc
@@ -62,7 +64,6 @@ base_libs = [
                 files/scoped_file.cc
                 files/scoped_temp_dir.cc
                 guid.cc
-                guid_posix.cc
                 hash.cc
                 json/json_file_value_serializer.cc
                 json/json_parser.cc
@@ -167,6 +168,7 @@ base_libs = [
                 threading/platform_thread_linux.cc
                 threading/platform_thread_posix.cc
                 threading/post_task_and_reply_impl.cc
+                threading/sequenced_task_runner_handle.cc
                 threading/sequenced_worker_pool.cc
                 threading/simple_thread.cc
                 threading/thread.cc
@@ -177,9 +179,9 @@ base_libs = [
                 threading/thread_local_storage.cc
                 threading/thread_local_storage_posix.cc
                 threading/thread_restrictions.cc
+                threading/thread_task_runner_handle.cc
                 threading/worker_pool.cc
                 threading/worker_pool_posix.cc
-                thread_task_runner_handle.cc
                 timer/elapsed_timer.cc
                 timer/timer.cc
                 time/clock.cc
@@ -191,6 +193,9 @@ base_libs = [
                 trace_event/malloc_dump_provider.cc
                 trace_event/heap_profiler_allocation_context.cc
                 trace_event/heap_profiler_allocation_context_tracker.cc
+                trace_event/heap_profiler_allocation_register.cc
+                trace_event/heap_profiler_allocation_register_posix.cc
+                trace_event/heap_profiler_heap_dump_writer.cc
                 trace_event/heap_profiler_stack_frame_deduplicator.cc
                 trace_event/heap_profiler_type_name_deduplicator.cc
                 trace_event/memory_allocator_dump.cc
@@ -272,7 +277,7 @@ base_libs = [
                 rsa_private_key.cc
                 rsa_private_key_nss.cc
                 scoped_test_nss_db.cc
-                secure_hash_default.cc
+                secure_hash.cc
                 secure_util.cc
                 sha2.cc
                 signature_creator_nss.cc

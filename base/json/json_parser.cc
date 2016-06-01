@@ -5,10 +5,11 @@
 #include "base/json/json_parser.h"
 
 #include <cmath>
+#include <utility>
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_ptr.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
@@ -27,16 +28,19 @@ const int kStackMaxDepth = 100;
 
 const int32_t kExtendedASCIIStart = 0x80;
 
-// This and the class below are used to own the JSON input string for when
-// string tokens are stored as StringPiece instead of std::string. This
-// optimization avoids about 2/3rds of string memory copies. The constructor
-// takes ownership of the input string. The real root value is Swap()ed into
-// the new instance.
+// DictionaryHiddenRootValue and ListHiddenRootValue are used in conjunction
+// with JSONStringValue as an optimization for reducing the number of string
+// copies. When this optimization is active, the parser uses a hidden root to
+// keep the original JSON input string live and creates JSONStringValue children
+// holding StringPiece references to the input string, avoiding about 2/3rds of
+// string memory copies. The real root value is Swap()ed into the new instance.
 class DictionaryHiddenRootValue : public DictionaryValue {
  public:
-  DictionaryHiddenRootValue(std::string* json, Value* root) : json_(json) {
+  DictionaryHiddenRootValue(std::unique_ptr<std::string> json,
+                            std::unique_ptr<Value> root)
+      : json_(std::move(json)) {
     DCHECK(root->IsType(Value::TYPE_DICTIONARY));
-    DictionaryValue::Swap(static_cast<DictionaryValue*>(root));
+    DictionaryValue::Swap(static_cast<DictionaryValue*>(root.get()));
   }
 
   void Swap(DictionaryValue* other) override {
@@ -44,7 +48,7 @@ class DictionaryHiddenRootValue : public DictionaryValue {
 
     // First deep copy to convert JSONStringValue to std::string and swap that
     // copy with |other|, which contains the new contents of |this|.
-    scoped_ptr<DictionaryValue> copy(DeepCopy());
+    std::unique_ptr<DictionaryValue> copy(CreateDeepCopy());
     copy->Swap(other);
 
     // Then erase the contents of the current dictionary and swap in the
@@ -58,7 +62,7 @@ class DictionaryHiddenRootValue : public DictionaryValue {
   // the method below.
 
   bool RemoveWithoutPathExpansion(const std::string& key,
-                                  scoped_ptr<Value>* out) override {
+                                  std::unique_ptr<Value>* out) override {
     // If the caller won't take ownership of the removed value, just call up.
     if (!out)
       return DictionaryValue::RemoveWithoutPathExpansion(key, out);
@@ -67,26 +71,28 @@ class DictionaryHiddenRootValue : public DictionaryValue {
 
     // Otherwise, remove the value while its still "owned" by this and copy it
     // to convert any JSONStringValues to std::string.
-    scoped_ptr<Value> out_owned;
+    std::unique_ptr<Value> out_owned;
     if (!DictionaryValue::RemoveWithoutPathExpansion(key, &out_owned))
       return false;
 
-    out->reset(out_owned->DeepCopy());
+    *out = out_owned->CreateDeepCopy();
 
     return true;
   }
 
  private:
-  scoped_ptr<std::string> json_;
+  std::unique_ptr<std::string> json_;
 
   DISALLOW_COPY_AND_ASSIGN(DictionaryHiddenRootValue);
 };
 
 class ListHiddenRootValue : public ListValue {
  public:
-  ListHiddenRootValue(std::string* json, Value* root) : json_(json) {
+  ListHiddenRootValue(std::unique_ptr<std::string> json,
+                      std::unique_ptr<Value> root)
+      : json_(std::move(json)) {
     DCHECK(root->IsType(Value::TYPE_LIST));
-    ListValue::Swap(static_cast<ListValue*>(root));
+    ListValue::Swap(static_cast<ListValue*>(root.get()));
   }
 
   void Swap(ListValue* other) override {
@@ -94,7 +100,7 @@ class ListHiddenRootValue : public ListValue {
 
     // First deep copy to convert JSONStringValue to std::string and swap that
     // copy with |other|, which contains the new contents of |this|.
-    scoped_ptr<ListValue> copy(DeepCopy());
+    std::unique_ptr<ListValue> copy(CreateDeepCopy());
     copy->Swap(other);
 
     // Then erase the contents of the current list and swap in the new contents,
@@ -104,7 +110,7 @@ class ListHiddenRootValue : public ListValue {
     ListValue::Swap(copy.get());
   }
 
-  bool Remove(size_t index, scoped_ptr<Value>* out) override {
+  bool Remove(size_t index, std::unique_ptr<Value>* out) override {
     // If the caller won't take ownership of the removed value, just call up.
     if (!out)
       return ListValue::Remove(index, out);
@@ -113,17 +119,17 @@ class ListHiddenRootValue : public ListValue {
 
     // Otherwise, remove the value while its still "owned" by this and copy it
     // to convert any JSONStringValues to std::string.
-    scoped_ptr<Value> out_owned;
+    std::unique_ptr<Value> out_owned;
     if (!ListValue::Remove(index, &out_owned))
       return false;
 
-    out->reset(out_owned->DeepCopy());
+    *out = out_owned->CreateDeepCopy();
 
     return true;
   }
 
  private:
-  scoped_ptr<std::string> json_;
+  std::unique_ptr<std::string> json_;
 
   DISALLOW_COPY_AND_ASSIGN(ListHiddenRootValue);
 };
@@ -133,10 +139,8 @@ class ListHiddenRootValue : public ListValue {
 // otherwise the referenced string will not be guaranteed to outlive it.
 class JSONStringValue : public Value {
  public:
-  explicit JSONStringValue(const StringPiece& piece)
-      : Value(TYPE_STRING),
-        string_piece_(piece) {
-  }
+  explicit JSONStringValue(StringPiece piece)
+      : Value(TYPE_STRING), string_piece_(piece) {}
 
   // Overridden from Value:
   bool GetAsString(std::string* out_value) const override {
@@ -203,13 +207,13 @@ JSONParser::JSONParser(int options)
 JSONParser::~JSONParser() {
 }
 
-Value* JSONParser::Parse(const StringPiece& input) {
-  scoped_ptr<std::string> input_copy;
+std::unique_ptr<Value> JSONParser::Parse(StringPiece input) {
+  std::unique_ptr<std::string> input_copy;
   // If the children of a JSON root can be detached, then hidden roots cannot
   // be used, so do not bother copying the input because StringPiece will not
   // be used anywhere.
   if (!(options_ & JSON_DETACHABLE_CHILDREN)) {
-    input_copy.reset(new std::string(input.as_string()));
+    input_copy = WrapUnique(new std::string(input.as_string()));
     start_pos_ = input_copy->data();
   } else {
     start_pos_ = input.data();
@@ -235,15 +239,15 @@ Value* JSONParser::Parse(const StringPiece& input) {
   }
 
   // Parse the first and any nested tokens.
-  scoped_ptr<Value> root(ParseNextToken());
-  if (!root.get())
-    return NULL;
+  std::unique_ptr<Value> root(ParseNextToken());
+  if (!root)
+    return nullptr;
 
   // Make sure the input stream is at an end.
   if (GetNextToken() != T_END_OF_INPUT) {
     if (!CanConsume(1) || (NextChar() && GetNextToken() != T_END_OF_INPUT)) {
       ReportError(JSONReader::JSON_UNEXPECTED_DATA_AFTER_ROOT, 1);
-      return NULL;
+      return nullptr;
     }
   }
 
@@ -251,19 +255,21 @@ Value* JSONParser::Parse(const StringPiece& input) {
   // hidden root.
   if (!(options_ & JSON_DETACHABLE_CHILDREN)) {
     if (root->IsType(Value::TYPE_DICTIONARY)) {
-      return new DictionaryHiddenRootValue(input_copy.release(), root.get());
+      return WrapUnique(new DictionaryHiddenRootValue(std::move(input_copy),
+                                                      std::move(root)));
     } else if (root->IsType(Value::TYPE_LIST)) {
-      return new ListHiddenRootValue(input_copy.release(), root.get());
+      return WrapUnique(
+          new ListHiddenRootValue(std::move(input_copy), std::move(root)));
     } else if (root->IsType(Value::TYPE_STRING)) {
       // A string type could be a JSONStringValue, but because there's no
       // corresponding HiddenRootValue, the memory will be lost. Deep copy to
       // preserve it.
-      return root->DeepCopy();
+      return root->CreateDeepCopy();
     }
   }
 
   // All other values can be returned directly.
-  return root.release();
+  return root;
 }
 
 JSONReader::JsonParseError JSONParser::error_code() const {
@@ -309,7 +315,7 @@ JSONParser::StringBuilder::~StringBuilder() {
 
 void JSONParser::StringBuilder::Append(const char& c) {
   DCHECK_GE(c, 0);
-  DCHECK_LT(c, 128);
+  DCHECK_LT(static_cast<unsigned char>(c), 128);
 
   if (string_)
     string_->push_back(c);
@@ -499,7 +505,7 @@ Value* JSONParser::ConsumeDictionary() {
     return NULL;
   }
 
-  scoped_ptr<DictionaryValue> dict(new DictionaryValue);
+  std::unique_ptr<DictionaryValue> dict(new DictionaryValue);
 
   NextChar();
   Token token = GetNextToken();
@@ -563,7 +569,7 @@ Value* JSONParser::ConsumeList() {
     return NULL;
   }
 
-  scoped_ptr<ListValue> list(new ListValue);
+  std::unique_ptr<ListValue> list(new ListValue);
 
   NextChar();
   Token token = GetNextToken();

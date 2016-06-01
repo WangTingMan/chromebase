@@ -17,7 +17,7 @@
 #include <openssl/rsa.h>
 #include <stdint.h>
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
 
 namespace crypto {
 
@@ -31,7 +31,7 @@ struct OpenSSLDestroyer {
 
 template <typename PointerType, void (*Destroyer)(PointerType*)>
 using ScopedOpenSSL =
-    scoped_ptr<PointerType, OpenSSLDestroyer<PointerType, Destroyer>>;
+    std::unique_ptr<PointerType, OpenSSLDestroyer<PointerType, Destroyer>>;
 
 struct OpenSSLFree {
   void operator()(uint8_t* ptr) const { OPENSSL_free(ptr); }
@@ -55,7 +55,7 @@ using ScopedEVP_PKEY_CTX = ScopedOpenSSL<EVP_PKEY_CTX, EVP_PKEY_CTX_free>;
 using ScopedRSA = ScopedOpenSSL<RSA, RSA_free>;
 
 // The bytes must have been allocated with OPENSSL_malloc.
-using ScopedOpenSSLBytes = scoped_ptr<uint8_t, OpenSSLFree>;
+using ScopedOpenSSLBytes = std::unique_ptr<uint8_t, OpenSSLFree>;
 
 }  // namespace crypto
 
