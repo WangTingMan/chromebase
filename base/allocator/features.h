@@ -6,6 +6,10 @@
 
 #include "build/buildflag.h"
 
+#if defined(__APPLE__)
+#define BUILDFLAG_INTERNAL_USE_EXPERIMENTAL_ALLOCATOR_SHIM() (0)
+#else
 #define BUILDFLAG_INTERNAL_USE_EXPERIMENTAL_ALLOCATOR_SHIM() (1)
+#endif
 
 #endif  // BASE_ALLOCATOR_FEATURES_H_
