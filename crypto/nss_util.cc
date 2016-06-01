@@ -11,6 +11,8 @@
 #include <prinit.h>
 #include <prtime.h>
 #include <secmod.h>
+
+#include <memory>
 #include <utility>
 
 #include "crypto/nss_util_internal.h"
@@ -36,7 +38,6 @@
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
 #include "base/native_library.h"
 #include "base/stl_util.h"
@@ -78,7 +79,7 @@ static const base::FilePath::CharType kReadOnlyCertDB[] =
 std::string GetNSSErrorMessage() {
   std::string result;
   if (PR_GetErrorTextLength()) {
-    scoped_ptr<char[]> error_text(new char[PR_GetErrorTextLength() + 1]);
+    std::unique_ptr<char[]> error_text(new char[PR_GetErrorTextLength() + 1]);
     PRInt32 copied = PR_GetErrorText(error_text.get());
     result = std::string(error_text.get(), copied);
   } else {
@@ -170,7 +171,7 @@ void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
 #endif
 
   if (db_on_nfs) {
-    scoped_ptr<base::Environment> env(base::Environment::Create());
+    std::unique_ptr<base::Environment> env(base::Environment::Create());
     static const char kUseCacheEnvVar[] = "NSS_SDB_USE_CACHE";
     if (!env->HasVar(kUseCacheEnvVar))
       env->SetVar(kUseCacheEnvVar, "yes");
@@ -375,7 +376,8 @@ class NSSInitSingleton {
 
     // Note that a reference is not taken to chaps_module_. This is safe since
     // NSSInitSingleton is Leaky, so the reference it holds is never released.
-    scoped_ptr<TPMModuleAndSlot> tpm_args(new TPMModuleAndSlot(chaps_module_));
+    std::unique_ptr<TPMModuleAndSlot> tpm_args(
+        new TPMModuleAndSlot(chaps_module_));
     TPMModuleAndSlot* tpm_args_ptr = tpm_args.get();
     if (base::WorkerPool::PostTaskAndReply(
             FROM_HERE,
@@ -421,7 +423,7 @@ class NSSInitSingleton {
 
   void OnInitializedTPMTokenAndSystemSlot(
       const base::Callback<void(bool)>& callback,
-      scoped_ptr<TPMModuleAndSlot> tpm_args) {
+      std::unique_ptr<TPMModuleAndSlot> tpm_args) {
     DCHECK(thread_checker_.CalledOnValidThread());
     DVLOG(2) << "Loaded chaps: " << !!tpm_args->chaps_module
              << ", got tpm slot: " << !!tpm_args->tpm_slot;
@@ -537,7 +539,8 @@ class NSSInitSingleton {
 
     // Note that a reference is not taken to chaps_module_. This is safe since
     // NSSInitSingleton is Leaky, so the reference it holds is never released.
-    scoped_ptr<TPMModuleAndSlot> tpm_args(new TPMModuleAndSlot(chaps_module_));
+    std::unique_ptr<TPMModuleAndSlot> tpm_args(
+        new TPMModuleAndSlot(chaps_module_));
     TPMModuleAndSlot* tpm_args_ptr = tpm_args.get();
     base::WorkerPool::PostTaskAndReply(
         FROM_HERE,
@@ -552,8 +555,9 @@ class NSSInitSingleton {
         );
   }
 
-  void OnInitializedTPMForChromeOSUser(const std::string& username_hash,
-                                       scoped_ptr<TPMModuleAndSlot> tpm_args) {
+  void OnInitializedTPMForChromeOSUser(
+      const std::string& username_hash,
+      std::unique_ptr<TPMModuleAndSlot> tpm_args) {
     DCHECK(thread_checker_.CalledOnValidThread());
     DVLOG(2) << "Got tpm slot for " << username_hash << " "
              << !!tpm_args->tpm_slot;
@@ -806,7 +810,6 @@ class NSSInitSingleton {
     }
   }
 
-#if defined(USE_NSS_CERTS) || defined(OS_IOS)
   // Load nss's built-in root certs.
   SECMODModule* InitDefaultRootCerts() {
     SECMODModule* root = LoadModule("Root Certs", "libnssckbi.so", NULL);
@@ -846,7 +849,6 @@ class NSSInitSingleton {
     }
     return module;
   }
-#endif
 
   bool tpm_token_enabled_for_nss_;
   bool initializing_tpm_token_;

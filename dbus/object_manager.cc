@@ -249,7 +249,7 @@ DBusHandlerResult ObjectManager::HandleMessageThunk(DBusConnection* connection,
   return self->HandleMessage(connection, raw_message);
 }
 
-DBusHandlerResult ObjectManager::HandleMessage(DBusConnection* /* connection */,
+DBusHandlerResult ObjectManager::HandleMessage(DBusConnection*,
                                                DBusMessage* raw_message) {
   DCHECK(bus_);
   bus_->AssertOnDBusThread();
@@ -263,8 +263,7 @@ DBusHandlerResult ObjectManager::HandleMessage(DBusConnection* /* connection */,
   // raw_message will be unrefed on exit of the function. Increment the
   // reference so we can use it in Signal.
   dbus_message_ref(raw_message);
-  scoped_ptr<Signal> signal(
-      Signal::FromRawMessage(raw_message));
+  std::unique_ptr<Signal> signal(Signal::FromRawMessage(raw_message));
 
   const std::string interface = signal->GetInterface();
   const std::string member = signal->GetMember();
@@ -387,8 +386,8 @@ void ObjectManager::InterfacesAddedReceived(Signal* signal) {
 }
 
 void ObjectManager::InterfacesAddedConnected(
-    const std::string& /* interface_name */,
-    const std::string& /* signal_name */,
+    const std::string& /*interface_name*/,
+    const std::string& /*signal_name*/,
     bool success) {
   LOG_IF(WARNING, !success) << service_name_ << " " << object_path_.value()
                             << ": Failed to connect to InterfacesAdded signal.";
@@ -412,8 +411,8 @@ void ObjectManager::InterfacesRemovedReceived(Signal* signal) {
 }
 
 void ObjectManager::InterfacesRemovedConnected(
-    const std::string& /* interface_name */,
-    const std::string& /* signal_name */,
+    const std::string& /*interface_name*/,
+    const std::string& /*signal_name*/,
     bool success) {
   LOG_IF(WARNING, !success) << service_name_ << " " << object_path_.value()
                             << ": Failed to connect to "
