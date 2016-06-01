@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
 #include <string>
 
 #include "base/files/file_util.h"
@@ -10,7 +11,6 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_string_value_serializer.h"
 #include "base/json/json_writer.h"
-#include "base/memory/scoped_ptr.h"
 #if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
 #include "base/path_service.h"
 #endif
@@ -78,7 +78,7 @@ void CheckJSONIsStillTheSame(const Value& value) {
 }
 
 void ValidateJsonList(const std::string& json) {
-  scoped_ptr<Value> root = JSONReader::Read(json);
+  std::unique_ptr<Value> root = JSONReader::Read(json);
   ASSERT_TRUE(root.get() && root->IsType(Value::TYPE_LIST));
   ListValue* list = static_cast<ListValue*>(root.get());
   ASSERT_EQ(1U, list->GetSize());
@@ -96,7 +96,7 @@ TEST(JSONValueDeserializerTest, ReadProperJSONFromString) {
 
   int error_code = 0;
   std::string error_message;
-  scoped_ptr<Value> value =
+  std::unique_ptr<Value> value =
       str_deserializer.Deserialize(&error_code, &error_message);
   ASSERT_TRUE(value.get());
   ASSERT_EQ(0, error_code);
@@ -115,7 +115,7 @@ TEST(JSONValueDeserializerTest, ReadProperJSONFromStringPiece) {
 
   int error_code = 0;
   std::string error_message;
-  scoped_ptr<Value> value =
+  std::unique_ptr<Value> value =
       str_deserializer.Deserialize(&error_code, &error_message);
   ASSERT_TRUE(value.get());
   ASSERT_EQ(0, error_code);
@@ -132,7 +132,7 @@ TEST(JSONValueDeserializerTest, ReadJSONWithTrailingCommasFromString) {
 
   int error_code = 0;
   std::string error_message;
-  scoped_ptr<Value> value =
+  std::unique_ptr<Value> value =
       str_deserializer.Deserialize(&error_code, &error_message);
   ASSERT_FALSE(value.get());
   ASSERT_NE(0, error_code);
@@ -160,7 +160,7 @@ TEST(JSONValueDeserializerTest, ReadProperJSONFromFile) {
 
   int error_code = 0;
   std::string error_message;
-  scoped_ptr<Value> value =
+  std::unique_ptr<Value> value =
       file_deserializer.Deserialize(&error_code, &error_message);
   ASSERT_TRUE(value.get());
   ASSERT_EQ(0, error_code);
@@ -185,7 +185,7 @@ TEST(JSONValueDeserializerTest, ReadJSONWithCommasFromFile) {
   // This must fail without the proper flag.
   int error_code = 0;
   std::string error_message;
-  scoped_ptr<Value> value =
+  std::unique_ptr<Value> value =
       file_deserializer.Deserialize(&error_code, &error_message);
   ASSERT_FALSE(value.get());
   ASSERT_NE(0, error_code);
@@ -200,8 +200,8 @@ TEST(JSONValueDeserializerTest, ReadJSONWithCommasFromFile) {
 }
 
 TEST(JSONValueDeserializerTest, AllowTrailingComma) {
-  scoped_ptr<Value> root;
-  scoped_ptr<Value> root_expected;
+  std::unique_ptr<Value> root;
+  std::unique_ptr<Value> root_expected;
   static const char kTestWithCommas[] = "{\"key\": [true,],}";
   static const char kTestNoCommas[] = "{\"key\": [true]}";
 
@@ -219,7 +219,7 @@ TEST(JSONValueSerializerTest, Roundtrip) {
   static const char kOriginalSerialization[] =
     "{\"bool\":true,\"double\":3.14,\"int\":42,\"list\":[1,2],\"null\":null}";
   JSONStringValueDeserializer deserializer(kOriginalSerialization);
-  scoped_ptr<Value> root = deserializer.Deserialize(NULL, NULL);
+  std::unique_ptr<Value> root = deserializer.Deserialize(NULL, NULL);
   ASSERT_TRUE(root.get());
   ASSERT_TRUE(root->IsType(Value::TYPE_DICTIONARY));
 
@@ -329,7 +329,7 @@ TEST(JSONValueSerializerTest, UnicodeStrings) {
 
   // escaped ascii text -> json
   JSONStringValueDeserializer deserializer(kExpected);
-  scoped_ptr<Value> deserial_root = deserializer.Deserialize(NULL, NULL);
+  std::unique_ptr<Value> deserial_root = deserializer.Deserialize(NULL, NULL);
   ASSERT_TRUE(deserial_root.get());
   DictionaryValue* dict_root =
       static_cast<DictionaryValue*>(deserial_root.get());
@@ -353,7 +353,7 @@ TEST(JSONValueSerializerTest, HexStrings) {
 
   // escaped ascii text -> json
   JSONStringValueDeserializer deserializer(kExpected);
-  scoped_ptr<Value> deserial_root = deserializer.Deserialize(NULL, NULL);
+  std::unique_ptr<Value> deserial_root = deserializer.Deserialize(NULL, NULL);
   ASSERT_TRUE(deserial_root.get());
   DictionaryValue* dict_root =
       static_cast<DictionaryValue*>(deserial_root.get());
@@ -380,7 +380,7 @@ TEST(JSONValueSerializerTest, JSONReaderComments) {
   ValidateJsonList("[ 1 //// ,2\r\n ]");
 
   // It's ok to have a comment in a string.
-  scoped_ptr<Value> root = JSONReader::Read("[\"// ok\\n /* foo */ \"]");
+  std::unique_ptr<Value> root = JSONReader::Read("[\"// ok\\n /* foo */ \"]");
   ASSERT_TRUE(root.get() && root->IsType(Value::TYPE_LIST));
   ListValue* list = static_cast<ListValue*>(root.get());
   ASSERT_EQ(1U, list->GetSize());
@@ -416,7 +416,7 @@ TEST_F(JSONFileValueSerializerTest, Roundtrip) {
   ASSERT_TRUE(PathExists(original_file_path));
 
   JSONFileValueDeserializer deserializer(original_file_path);
-  scoped_ptr<Value> root;
+  std::unique_ptr<Value> root;
   root = deserializer.Deserialize(NULL, NULL);
 
   ASSERT_TRUE(root.get());
@@ -464,7 +464,7 @@ TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
   ASSERT_TRUE(PathExists(original_file_path));
 
   JSONFileValueDeserializer deserializer(original_file_path);
-  scoped_ptr<Value> root;
+  std::unique_ptr<Value> root;
   root = deserializer.Deserialize(NULL, NULL);
   ASSERT_TRUE(root.get());
 
@@ -489,7 +489,7 @@ TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
       FILE_PATH_LITERAL("serializer_test_nowhitespace.json"));
   ASSERT_TRUE(PathExists(source_file_path));
   JSONFileValueDeserializer deserializer(source_file_path);
-  scoped_ptr<Value> root;
+  std::unique_ptr<Value> root;
   root = deserializer.Deserialize(NULL, NULL);
   ASSERT_TRUE(root.get());
 }

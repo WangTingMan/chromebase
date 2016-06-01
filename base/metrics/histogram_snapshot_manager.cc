@@ -4,7 +4,9 @@
 
 #include "base/metrics/histogram_snapshot_manager.h"
 
-#include "base/memory/scoped_ptr.h"
+#include <memory>
+
+#include "base/debug/alias.h"
 #include "base/metrics/histogram_flattener.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/statistics_recorder.h"
@@ -29,11 +31,12 @@ void HistogramSnapshotManager::StartDeltas() {
 
   DCHECK(owned_histograms_.empty());
 
-#ifdef DEBUG
-    CHECK(!iter->second.histogram);
-    CHECK(!iter->second.accumulated_samples);
-    CHECK(!(iter->second.inconsistencies &
-            HistogramBase::NEW_INCONSISTENCY_FOUND));
+#if DCHECK_IS_ON()
+  for (const auto& hash_and_info : known_histograms_) {
+    DCHECK(!hash_and_info.second.histogram);
+    DCHECK(!hash_and_info.second.accumulated_samples);
+    DCHECK(!(hash_and_info.second.inconsistencies &
+             HistogramBase::NEW_INCONSISTENCY_FOUND));
   }
 #endif
 }
@@ -43,7 +46,7 @@ void HistogramSnapshotManager::PrepareDelta(HistogramBase* histogram) {
 }
 
 void HistogramSnapshotManager::PrepareDeltaTakingOwnership(
-    scoped_ptr<HistogramBase> histogram) {
+    std::unique_ptr<HistogramBase> histogram) {
   PrepareSamples(histogram.get(), histogram->SnapshotDelta());
   owned_histograms_.push_back(std::move(histogram));
 }
@@ -53,8 +56,14 @@ void HistogramSnapshotManager::PrepareAbsolute(const HistogramBase* histogram) {
 }
 
 void HistogramSnapshotManager::PrepareAbsoluteTakingOwnership(
-    scoped_ptr<const HistogramBase> histogram) {
+    std::unique_ptr<const HistogramBase> histogram) {
   PrepareSamples(histogram.get(), histogram->SnapshotSamples());
+  owned_histograms_.push_back(std::move(histogram));
+}
+
+void HistogramSnapshotManager::PrepareFinalDeltaTakingOwnership(
+    std::unique_ptr<const HistogramBase> histogram) {
+  PrepareSamples(histogram.get(), histogram->SnapshotFinalDelta());
   owned_histograms_.push_back(std::move(histogram));
 }
 
@@ -96,7 +105,7 @@ void HistogramSnapshotManager::FinishDeltas() {
 
 void HistogramSnapshotManager::PrepareSamples(
     const HistogramBase* histogram,
-    scoped_ptr<HistogramSamples> samples) {
+    std::unique_ptr<HistogramSamples> samples) {
   DCHECK(histogram_flattener_);
 
   // Get information known about this histogram.
@@ -117,6 +126,10 @@ void HistogramSnapshotManager::PrepareSamples(
     // The checksum should have caught this, so crash separately if it didn't.
     CHECK_NE(0U, HistogramBase::RANGE_CHECKSUM_ERROR & corruption);
     CHECK(false);  // Crash for the bucket order corruption.
+    // Ensure that compiler keeps around pointers to |histogram| and its
+    // internal |bucket_ranges_| for any minidumps.
+    base::debug::Alias(
+        static_cast<const Histogram*>(histogram)->bucket_ranges());
   }
   // Checksum corruption might not have caused order corruption.
   CHECK_EQ(0U, HistogramBase::RANGE_CHECKSUM_ERROR & corruption);

@@ -26,7 +26,7 @@ Process SpawnMultiProcessTestChild(
 
   return LaunchProcess(command_line, options);
 }
-#endif  // !defined(OS_ANDROID)
+#endif  // !OS_ANDROID && !__ANDROID__ && !__ANDROID_HOST__
 
 CommandLine GetMultiProcessTestChildBaseCommandLine() {
   CommandLine cmd_line = *CommandLine::ForCurrentProcess();

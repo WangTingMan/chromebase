@@ -166,8 +166,8 @@ public:
     // called on each interface implementation with differing values of
     // |interface_name| as appropriate. An implementation class will only
     // receive multiple calls if it has registered for multiple interfaces.
-    virtual void ObjectAdded(const ObjectPath& /* object_path */,
-                             const std::string& /* interface_name */) { }
+    virtual void ObjectAdded(const ObjectPath& /*object_path*/,
+                             const std::string& /*interface_name*/) {}
 
     // Called by ObjectManager to inform the implementation class than an
     // object with the path |object_path| has been removed. Ths D-Bus interface
@@ -178,8 +178,8 @@ public:
     // This method will be called before the Properties structure and the
     // ObjectProxy object for the given interface are cleaned up, it is safe
     // to retrieve them during removal to vary processing.
-    virtual void ObjectRemoved(const ObjectPath& /* object_path */,
-                               const std::string& /* interface_name */) { }
+    virtual void ObjectRemoved(const ObjectPath& /*object_path*/,
+                               const std::string& /*interface_name*/) {}
   };
 
   // Client code should use Bus::GetObjectManager() instead of this constructor.

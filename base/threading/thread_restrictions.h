@@ -37,8 +37,8 @@ namespace content {
 class BrowserGpuChannelHostFactory;
 class BrowserGpuMemoryBufferManager;
 class BrowserShutdownProfileDumper;
+class BrowserSurfaceViewManager;
 class BrowserTestBase;
-class GpuChannelHost;
 class NestedMessagePumpAndroid;
 class ScopedAllowWaitForAndroidLayoutTests;
 class ScopedAllowWaitForDebugURL;
@@ -55,6 +55,9 @@ class InFlightIO;
 }
 namespace gles2 {
 class CommandBufferClientImpl;
+}
+namespace gpu {
+class GpuChannelHost;
 }
 namespace mojo {
 namespace common {
@@ -177,9 +180,9 @@ class BASE_EXPORT ThreadRestrictions {
 #else
   // Inline the empty definitions of these functions so that they can be
   // compiled out.
-  static bool SetIOAllowed(bool /* allowed */) { return true; }
+  static bool SetIOAllowed(bool) { return true; }
   static void AssertIOAllowed() {}
-  static bool SetSingletonAllowed(bool /* allowed */) { return true; }
+  static bool SetSingletonAllowed(bool) { return true; }
   static void AssertSingletonAllowed() {}
   static void DisallowWaiting() {}
   static void AssertWaitAllowed() {}
@@ -189,6 +192,7 @@ class BASE_EXPORT ThreadRestrictions {
   // DO NOT ADD ANY OTHER FRIEND STATEMENTS, talk to jam or brettw first.
   // BEGIN ALLOWED USAGE.
   friend class content::BrowserShutdownProfileDumper;
+  friend class content::BrowserSurfaceViewManager;
   friend class content::BrowserTestBase;
   friend class content::NestedMessagePumpAndroid;
   friend class content::ScopedAllowWaitForAndroidLayoutTests;
@@ -221,11 +225,11 @@ class BASE_EXPORT ThreadRestrictions {
       content::BrowserGpuChannelHostFactory;      // http://crbug.com/125248
   friend class
       content::BrowserGpuMemoryBufferManager;     // http://crbug.com/420368
-  friend class content::GpuChannelHost;           // http://crbug.com/125264
   friend class content::TextInputClientMac;       // http://crbug.com/121917
   friend class dbus::Bus;                         // http://crbug.com/125222
   friend class disk_cache::BackendImpl;           // http://crbug.com/74623
   friend class disk_cache::InFlightIO;            // http://crbug.com/74623
+  friend class gpu::GpuChannelHost;               // http://crbug.com/125264
   friend class net::internal::AddressTrackerLinux;  // http://crbug.com/125097
   friend class net::NetworkChangeNotifierMac;     // http://crbug.com/125097
   friend class ::BrowserProcessImpl;              // http://crbug.com/125207
@@ -239,7 +243,7 @@ class BASE_EXPORT ThreadRestrictions {
 #if ENABLE_THREAD_RESTRICTIONS
   static bool SetWaitAllowed(bool allowed);
 #else
-  static bool SetWaitAllowed(bool /* allowed */) { return true; }
+  static bool SetWaitAllowed(bool) { return true; }
 #endif
 
   // Constructing a ScopedAllowWait temporarily allows waiting on the current

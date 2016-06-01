@@ -16,11 +16,11 @@
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/third_party/valgrind/valgrind.h"
 #include "build/build_config.h"
 #include "sandbox/linux/system_headers/capability.h"
 #include "sandbox/linux/system_headers/linux_signal.h"
 #include "sandbox/linux/system_headers/linux_syscalls.h"
-#include "third_party/valgrind/valgrind.h"
 
 namespace sandbox {
 
@@ -55,7 +55,7 @@ long sys_clone(unsigned long flags,
 #if defined(ARCH_CPU_X86_64)
   return syscall(__NR_clone, flags, child_stack, ptid, ctid, tls);
 #elif defined(ARCH_CPU_X86) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS_FAMILY) || defined(ARCH_CPU_MIPS64_FAMILY)
+    defined(ARCH_CPU_MIPS_FAMILY)
   // CONFIG_CLONE_BACKWARDS defined.
   return syscall(__NR_clone, flags, child_stack, ptid, tls, ctid);
 #endif

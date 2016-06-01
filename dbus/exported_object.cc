@@ -169,8 +169,7 @@ bool ExportedObject::Register() {
 
   ScopedDBusError error;
 
-  DBusObjectPathVTable vtable;
-  memset(&vtable, 0, sizeof(vtable));
+  DBusObjectPathVTable vtable = {};
   vtable.message_function = &ExportedObject::HandleMessageThunk;
   vtable.unregister_function = &ExportedObject::OnUnregisteredThunk;
   const bool success = bus_->TryRegisterObjectPath(object_path_,
@@ -187,16 +186,15 @@ bool ExportedObject::Register() {
   return true;
 }
 
-DBusHandlerResult ExportedObject::HandleMessage(
-    DBusConnection* /* connection */,
-    DBusMessage* raw_message) {
+DBusHandlerResult ExportedObject::HandleMessage(DBusConnection*,
+                                                DBusMessage* raw_message) {
   bus_->AssertOnDBusThread();
   DCHECK_EQ(DBUS_MESSAGE_TYPE_METHOD_CALL, dbus_message_get_type(raw_message));
 
   // raw_message will be unrefed on exit of the function. Increment the
   // reference so we can use it in MethodCall.
   dbus_message_ref(raw_message);
-  scoped_ptr<MethodCall> method_call(
+  std::unique_ptr<MethodCall> method_call(
       MethodCall::FromRawMessage(raw_message));
   const std::string interface = method_call->GetInterface();
   const std::string member = method_call->GetMember();
@@ -242,7 +240,7 @@ DBusHandlerResult ExportedObject::HandleMessage(
 }
 
 void ExportedObject::RunMethod(MethodCallCallback method_call_callback,
-                               scoped_ptr<MethodCall> method_call,
+                               std::unique_ptr<MethodCall> method_call,
                                base::TimeTicks start_time) {
   bus_->AssertOnOriginThread();
   MethodCall* method = method_call.get();
@@ -254,8 +252,8 @@ void ExportedObject::RunMethod(MethodCallCallback method_call_callback,
 }
 
 void ExportedObject::SendResponse(base::TimeTicks start_time,
-                                  scoped_ptr<MethodCall> method_call,
-                                  scoped_ptr<Response> response) {
+                                  std::unique_ptr<MethodCall> method_call,
+                                  std::unique_ptr<Response> response) {
   DCHECK(method_call);
   if (bus_->HasDBusThread()) {
     bus_->GetDBusTaskRunner()->PostTask(
@@ -270,8 +268,8 @@ void ExportedObject::SendResponse(base::TimeTicks start_time,
   }
 }
 
-void ExportedObject::OnMethodCompleted(scoped_ptr<MethodCall> method_call,
-                                       scoped_ptr<Response> response,
+void ExportedObject::OnMethodCompleted(std::unique_ptr<MethodCall> method_call,
+                                       std::unique_ptr<Response> response,
                                        base::TimeTicks start_time) {
   bus_->AssertOnDBusThread();
 
@@ -287,11 +285,9 @@ void ExportedObject::OnMethodCompleted(scoped_ptr<MethodCall> method_call,
 
   if (!response) {
     // Something bad happened in the method call.
-    scoped_ptr<ErrorResponse> error_response(
-        ErrorResponse::FromMethodCall(
-            method_call.get(),
-            DBUS_ERROR_FAILED,
-            "error occurred in " + method_call->GetMember()));
+    std::unique_ptr<ErrorResponse> error_response(ErrorResponse::FromMethodCall(
+        method_call.get(), DBUS_ERROR_FAILED,
+        "error occurred in " + method_call->GetMember()));
     bus_->Send(error_response->raw_message(), NULL);
     return;
   }
@@ -304,8 +300,7 @@ void ExportedObject::OnMethodCompleted(scoped_ptr<MethodCall> method_call,
                       base::TimeTicks::Now() - start_time);
 }
 
-void ExportedObject::OnUnregistered(DBusConnection* /* connection */) {
-}
+void ExportedObject::OnUnregistered(DBusConnection*) {}
 
 DBusHandlerResult ExportedObject::HandleMessageThunk(
     DBusConnection* connection,

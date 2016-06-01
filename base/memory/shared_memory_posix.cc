@@ -288,7 +288,7 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
     }
     requested_size_ = options.size;
   }
-  if (fp == NULL) {
+  if (fp == nullptr) {
     PLOG(ERROR) << "Creating shared memory in " << path.value() << " failed";
     FilePath dir = path.DirName();
     if (access(dir.value().c_str(), W_OK | X_OK) < 0) {
@@ -405,7 +405,7 @@ void SharedMemory::Close() {
 bool SharedMemory::PrepareMapFile(ScopedFILE fp, ScopedFD readonly_fd) {
   DCHECK_EQ(-1, mapped_file_);
   DCHECK_EQ(-1, readonly_mapped_file_);
-  if (fp == NULL)
+  if (fp == nullptr)
     return false;
 
   // This function theoretically can block on the disk, but realistically
@@ -464,7 +464,7 @@ bool SharedMemory::FilePathForMemoryName(const std::string& mem_name,
 }
 #endif  // !defined(OS_ANDROID) && !defined(__ANDROID__)
 
-bool SharedMemory::ShareToProcessCommon(ProcessHandle /* process */,
+bool SharedMemory::ShareToProcessCommon(ProcessHandle,
                                         SharedMemoryHandle* new_handle,
                                         bool close_self,
                                         ShareMode share_mode) {

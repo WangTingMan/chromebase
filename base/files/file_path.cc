@@ -44,7 +44,7 @@ const FilePath::CharType kStringTerminator = FILE_PATH_LITERAL('\0');
 // otherwise returns npos.  This can only be true on Windows, when a pathname
 // begins with a letter followed by a colon.  On other platforms, this always
 // returns npos.
-StringPieceType::size_type FindDriveLetter(StringPieceType /* path */) {
+StringPieceType::size_type FindDriveLetter(StringPieceType path) {
 #if defined(FILE_PATH_USES_DRIVE_LETTERS)
   // This is dependent on an ASCII-based character set, but that's a
   // reasonable assumption.  iswalpha can be too inclusive here.
@@ -53,6 +53,8 @@ StringPieceType::size_type FindDriveLetter(StringPieceType /* path */) {
        (path[0] >= L'a' && path[0] <= L'z'))) {
     return 1;
   }
+#else
+  (void)path;  // Avoid an unused warning.
 #endif  // FILE_PATH_USES_DRIVE_LETTERS
   return StringType::npos;
 }
@@ -1192,6 +1194,7 @@ int FilePath::HFSFastUnicodeCompare(StringPieceType string1,
 }
 
 StringType FilePath::GetHFSDecomposedForm(StringPieceType string) {
+  StringType result;
   ScopedCFTypeRef<CFStringRef> cfstring(
       CFStringCreateWithBytesNoCopy(
           NULL,
@@ -1200,26 +1203,27 @@ StringType FilePath::GetHFSDecomposedForm(StringPieceType string) {
           kCFStringEncodingUTF8,
           false,
           kCFAllocatorNull));
-  // Query the maximum length needed to store the result. In most cases this
-  // will overestimate the required space. The return value also already
-  // includes the space needed for a terminating 0.
-  CFIndex length = CFStringGetMaximumSizeOfFileSystemRepresentation(cfstring);
-  DCHECK_GT(length, 0);  // should be at least 1 for the 0-terminator.
-  // Reserve enough space for CFStringGetFileSystemRepresentation to write into.
-  // Also set the length to the maximum so that we can shrink it later.
-  // (Increasing rather than decreasing it would clobber the string contents!)
-  StringType result;
-  result.reserve(length);
-  result.resize(length - 1);
-  Boolean success = CFStringGetFileSystemRepresentation(cfstring,
-                                                        &result[0],
-                                                        length);
-  if (success) {
-    // Reduce result.length() to actual string length.
-    result.resize(strlen(result.c_str()));
-  } else {
-    // An error occurred -> clear result.
-    result.clear();
+  if (cfstring) {
+    // Query the maximum length needed to store the result. In most cases this
+    // will overestimate the required space. The return value also already
+    // includes the space needed for a terminating 0.
+    CFIndex length = CFStringGetMaximumSizeOfFileSystemRepresentation(cfstring);
+    DCHECK_GT(length, 0);  // should be at least 1 for the 0-terminator.
+    // Reserve enough space for CFStringGetFileSystemRepresentation to write
+    // into. Also set the length to the maximum so that we can shrink it later.
+    // (Increasing rather than decreasing it would clobber the string contents!)
+    result.reserve(length);
+    result.resize(length - 1);
+    Boolean success = CFStringGetFileSystemRepresentation(cfstring,
+                                                          &result[0],
+                                                          length);
+    if (success) {
+      // Reduce result.length() to actual string length.
+      result.resize(strlen(result.c_str()));
+    } else {
+      // An error occurred -> clear result.
+      result.clear();
+    }
   }
   return result;
 }
@@ -1307,7 +1311,7 @@ FilePath FilePath::NormalizePathSeparators() const {
   return NormalizePathSeparatorsTo(kSeparators[0]);
 }
 
-FilePath FilePath::NormalizePathSeparatorsTo(CharType /* separator */) const {
+FilePath FilePath::NormalizePathSeparatorsTo(CharType separator) const {
 #if defined(FILE_PATH_USES_WIN_SEPARATORS)
   DCHECK_NE(kSeparators + kSeparatorsLength,
             std::find(kSeparators, kSeparators + kSeparatorsLength, separator));
@@ -1317,6 +1321,7 @@ FilePath FilePath::NormalizePathSeparatorsTo(CharType /* separator */) const {
   }
   return FilePath(copy);
 #else
+  (void)separator;  // Avoid an unused warning.
   return *this;
 #endif
 }

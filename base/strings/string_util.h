@@ -21,9 +21,11 @@
 #include "base/strings/string_piece.h"  // For implicit conversions.
 #include "build/build_config.h"
 
+#if defined(ANDROID)
 // On Android, bionic's stdio.h defines an snprintf macro when being built with
 // clang. Undefine it here so it won't collide with base::snprintf().
 #undef snprintf
+#endif  // defined(ANDROID)
 
 namespace base {
 
@@ -341,7 +343,15 @@ inline bool IsAsciiWhitespace(Char c) {
 }
 template <typename Char>
 inline bool IsAsciiAlpha(Char c) {
-  return ((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z'));
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+template <typename Char>
+inline bool IsAsciiUpper(Char c) {
+  return c >= 'A' && c <= 'Z';
+}
+template <typename Char>
+inline bool IsAsciiLower(Char c) {
+  return c >= 'a' && c <= 'z';
 }
 template <typename Char>
 inline bool IsAsciiDigit(Char c) {
@@ -433,7 +443,7 @@ BASE_EXPORT std::string JoinString(const std::vector<std::string>& parts,
 BASE_EXPORT string16 JoinString(const std::vector<string16>& parts,
                                 StringPiece16 separator);
 
-// Replace $1-$2-$3..$9 in the format string with |a|-|b|-|c|..|i| respectively.
+// Replace $1-$2-$3..$9 in the format string with values from |subst|.
 // Additionally, any number of consecutive '$' characters is replaced by that
 // number less one. Eg $$->$, $$$->$$, etc. The offsets parameter here can be
 // NULL. This only allows you to use up to nine replacements.

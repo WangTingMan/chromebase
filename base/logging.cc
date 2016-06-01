@@ -30,8 +30,6 @@ typedef HANDLE MutexHandle;
 #elif defined(OS_POSIX)
 #if defined(OS_NACL)
 #include <sys/time.h>  // timespec doesn't seem to be in <time.h>
-#else
-#include <sys/syscall.h>
 #endif
 #include <time.h>
 #endif
@@ -51,7 +49,6 @@ typedef pthread_mutex_t* MutexHandle;
 #endif
 
 #include <algorithm>
-#include <cassert>
 #include <cstring>
 #include <ctime>
 #include <iomanip>
@@ -63,7 +60,6 @@ typedef pthread_mutex_t* MutexHandle;
 #include "base/debug/alias.h"
 #include "base/debug/debugger.h"
 #include "base/debug/stack_trace.h"
-#include "base/files/file_path.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
@@ -75,6 +71,10 @@ typedef pthread_mutex_t* MutexHandle;
 #include "base/vlog.h"
 #if defined(OS_POSIX)
 #include "base/posix/safe_strerror.h"
+#endif
+
+#if !defined(OS_ANDROID)
+#include "base/files/file_path.h"
 #endif
 
 #if defined(OS_ANDROID) || defined(__ANDROID__)
@@ -209,8 +209,7 @@ class LoggingLock {
     UnlockLogging();
   }
 
-  static void Init(LogLockingState lock_log,
-                   const PathChar* /* new_log_file */) {
+  static void Init(LogLockingState lock_log, const PathChar* /*new_log_file*/) {
     if (initialized)
       return;
     lock_log_file = lock_log;
@@ -460,6 +459,11 @@ template std::string* MakeCheckOpString<unsigned int, unsigned long>(
     const unsigned int&, const unsigned long&, const char* names);
 template std::string* MakeCheckOpString<std::string, std::string>(
     const std::string&, const std::string&, const char* name);
+
+template <>
+void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t&) {
+  (*os) << "nullptr";
+}
 
 #if !defined(NDEBUG)
 // Displays a message box to the user with the error message in it.
@@ -769,8 +773,12 @@ void LogMessage::Init(const char* file, int line) {
     stream_ << base::PlatformThread::CurrentId() << ':';
   if (g_log_timestamp) {
     time_t t = time(nullptr);
+#if defined(__ANDROID__) || defined(ANDROID)
     struct tm local_time;
     memset(&local_time, 0, sizeof(local_time));
+#else
+    struct tm local_time = {0};
+#endif
 #ifdef _MSC_VER
     localtime_s(&local_time, &t);
 #else

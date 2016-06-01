@@ -16,8 +16,8 @@
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
 #include "base/pending_task.h"
-#include "base/thread_task_runner_handle.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
 
 namespace timers {
@@ -145,7 +145,7 @@ class AlarmTimer::Delegate
   base::Closure on_timer_fired_callback_for_test_;
 
   // Manages watching file descriptors.
-  scoped_ptr<base::MessageLoopForIO::FileDescriptorWatcher> fd_watcher_;
+  std::unique_ptr<base::MessageLoopForIO::FileDescriptorWatcher> fd_watcher_;
 
   // The sequence numbers of the last Reset() call handled respectively on
   // |origin_task_runner_| and on the MessageLoopForIO used for watching the
@@ -229,8 +229,12 @@ void AlarmTimer::Delegate::Stop() {
 
   // Now clear the timer.
   DCHECK_NE(alarm_fd_, -1);
+#if defined(ANDROID)
   itimerspec blank_time;
   memset(&blank_time, 0, sizeof(blank_time));
+#else
+  itimerspec blank_time = {};
+#endif  // defined(ANDROID)
   if (timerfd_settime(alarm_fd_, 0, &blank_time, NULL) < 0)
     PLOG(ERROR) << "Unable to clear alarm time.  Timer may still fire.";
 }
@@ -254,7 +258,7 @@ void AlarmTimer::Delegate::OnFileCanReadWithoutBlocking(int fd) {
   }
 }
 
-void AlarmTimer::Delegate::OnFileCanWriteWithoutBlocking(int /* fd */) {
+void AlarmTimer::Delegate::OnFileCanWriteWithoutBlocking(int /*fd*/) {
   NOTREACHED();
 }
 
@@ -286,8 +290,12 @@ void AlarmTimer::Delegate::ResetImpl(base::TimeDelta delay,
 
   // Actually set the timer.  This will also clear the pre-existing timer, if
   // any.
+#if defined(ANDROID)
   itimerspec alarm_time;
   memset(&alarm_time, 0, sizeof(alarm_time));
+#else
+  itimerspec alarm_time = {};
+#endif  // defined(ANDROID)
   alarm_time.it_value.tv_sec = delay.InSeconds();
   alarm_time.it_value.tv_nsec =
       (delay.InMicroseconds() % base::Time::kMicrosecondsPerSecond) *
@@ -428,7 +436,8 @@ void AlarmTimer::OnTimerFired() {
 
   // Take ownership of the pending user task, which is going to be cleared by
   // the Stop() or Reset() functions below.
-  scoped_ptr<base::PendingTask> pending_user_task(std::move(pending_task_));
+  std::unique_ptr<base::PendingTask> pending_user_task(
+      std::move(pending_task_));
 
   // Re-schedule or stop the timer as requested.
   if (base::Timer::is_repeating())

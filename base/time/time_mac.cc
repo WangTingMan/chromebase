@@ -92,9 +92,11 @@ int64_t ComputeThreadTicks() {
   MACH_DCHECK(kr == KERN_SUCCESS, kr) << "thread_info";
 
   base::CheckedNumeric<int64_t> absolute_micros(
-      thread_info_data.user_time.seconds);
+      thread_info_data.user_time.seconds +
+      thread_info_data.system_time.seconds);
   absolute_micros *= base::Time::kMicrosecondsPerSecond;
-  absolute_micros += thread_info_data.user_time.microseconds;
+  absolute_micros += (thread_info_data.user_time.microseconds +
+                      thread_info_data.system_time.microseconds);
   return absolute_micros.ValueOrDie();
 #endif  // defined(OS_IOS)
 }
@@ -234,6 +236,15 @@ TimeTicks TimeTicks::Now() {
 // static
 bool TimeTicks::IsHighResolution() {
   return true;
+}
+
+// static
+TimeTicks::Clock TimeTicks::GetClock() {
+#if defined(OS_IOS)
+  return Clock::IOS_CF_ABSOLUTE_TIME_MINUS_KERN_BOOTTIME;
+#else
+  return Clock::MAC_MACH_ABSOLUTE_TIME;
+#endif  // defined(OS_IOS)
 }
 
 // static
