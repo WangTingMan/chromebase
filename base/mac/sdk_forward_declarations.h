@@ -495,12 +495,6 @@ BASE_EXPORT extern "C" void NSAccessibilityPostNotificationWithUserInfo(
 @property(readonly, nonatomic) NSUUID* identifier;
 @end
 
-@interface NSVisualEffectView (MavericksSDK)
-- (void)setState:(NSVisualEffectState)state;
-@end
-
-@class NSVisualEffectView;
-
 #endif  // MAC_OS_X_VERSION_10_9
 
 // Once Chrome no longer supports OSX 10.9, everything within this preprocessor
@@ -530,10 +524,6 @@ BASE_EXPORT extern "C" void NSAccessibilityPostNotificationWithUserInfo(
 
 @interface NSWindow (YosemiteSDK)
 - (void)setTitlebarAppearsTransparent:(BOOL)flag;
-@end
-
-@interface NSProcessInfo (YosemiteSDK)
-@property(readonly) NSOperatingSystemVersion operatingSystemVersion;
 @end
 
 #endif  // MAC_OS_X_VERSION_10_10
