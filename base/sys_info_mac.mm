@@ -39,29 +39,21 @@ std::string SysInfo::OperatingSystemVersion() {
 void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
                                             int32_t* minor_version,
                                             int32_t* bugfix_version) {
-  NSProcessInfo* processInfo = [NSProcessInfo processInfo];
-  if ([processInfo respondsToSelector:@selector(operatingSystemVersion)]) {
-    NSOperatingSystemVersion version = [processInfo operatingSystemVersion];
-    *major_version = version.majorVersion;
-    *minor_version = version.minorVersion;
-    *bugfix_version = version.patchVersion;
-  } else {
-    // -[NSProcessInfo operatingSystemVersion] is documented available in 10.10.
-    // It's also available via a private API since 10.9.2. For the remaining
-    // cases in 10.9, rely on ::Gestalt(..). Since this code is only needed for
-    // 10.9.0 and 10.9.1 and uses the recommended replacement thereafter,
-    // suppress the warning for this fallback case.
-    DCHECK(base::mac::IsOSMavericks());
+  // -[NSProcessInfo operatingSystemVersion] is documented available in 10.10.
+  // It's also available via a private API since 10.9.2. For the remaining
+  // cases in 10.9, rely on ::Gestalt(..). Since this code is only needed for
+  // 10.9.0 and 10.9.1 and uses the recommended replacement thereafter,
+  // suppress the warning for this fallback case.
+  DCHECK(base::mac::IsOSMavericks());
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    Gestalt(gestaltSystemVersionMajor,
-            reinterpret_cast<SInt32*>(major_version));
-    Gestalt(gestaltSystemVersionMinor,
-            reinterpret_cast<SInt32*>(minor_version));
-    Gestalt(gestaltSystemVersionBugFix,
-            reinterpret_cast<SInt32*>(bugfix_version));
+  Gestalt(gestaltSystemVersionMajor,
+          reinterpret_cast<SInt32*>(major_version));
+  Gestalt(gestaltSystemVersionMinor,
+          reinterpret_cast<SInt32*>(minor_version));
+  Gestalt(gestaltSystemVersionBugFix,
+          reinterpret_cast<SInt32*>(bugfix_version));
 #pragma clang diagnostic pop
-  }
 }
 
 // static
