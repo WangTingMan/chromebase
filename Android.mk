@@ -234,11 +234,12 @@ libchromeMacSrc := \
 	base/files/file_util_mac.mm \
 	base/mac/bundle_locations.mm \
 	base/mac/foundation_util.mm \
-	base/mac/mach_logging.cc \
 	base/mac/libdispatch_task_runner.cc \
+	base/mac/mach_logging.cc \
 	base/mac/scoped_mach_port.cc \
 	base/mac/scoped_mach_vm.cc \
 	base/mac/scoped_nsautorelease_pool.mm \
+	base/mac/sdk_forward_declarations.mm \
 	base/memory/shared_memory_mac.cc \
 	base/memory/shared_memory_handle_mac.cc \
 	base/message_loop/message_pump_mac.mm \
