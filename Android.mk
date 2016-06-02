@@ -35,7 +35,6 @@ libchromeCommonCIncludes := \
 libchromeExportedCIncludes := $(LOCAL_PATH)
 
 libchromeCommonSrc := \
-	base/allocator/allocator_shim.cc \
 	base/at_exit.cc \
 	base/base64.cc \
 	base/base64url.cc \
@@ -213,6 +212,7 @@ libchromeCommonSrc := \
 	base/vlog.cc \
 
 libchromeLinuxSrc := \
+	base/allocator/allocator_shim.cc \
 	base/files/file_path_watcher_linux.cc \
 	base/files/file_util_linux.cc \
 	base/memory/shared_memory_posix.cc \
@@ -402,7 +402,8 @@ libchromeCryptoUnittestSrc := \
 libchromeHostCFlags := -D__ANDROID_HOST__ -DDONT_EMBED_BUILD_METADATA
 
 ifeq ($(HOST_OS),linux)
-libchromeHostSrc := $(libchromeLinuxSrc)
+libchromeHostSrc := $(libchromeLinuxSrc) \
+	base/allocator/allocator_shim_default_dispatch_to_glibc.cc
 libchromeHostLdFlags :=
 endif
 
@@ -456,7 +457,6 @@ LOCAL_STATIC_LIBRARIES := libmodpb64-host libgtest_prod
 LOCAL_SRC_FILES := \
 	$(libchromeCommonSrc) \
 	$(libchromeHostSrc) \
-	base/allocator/allocator_shim_default_dispatch_to_glibc.cc \
 
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
