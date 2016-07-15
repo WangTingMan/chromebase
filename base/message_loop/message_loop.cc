@@ -18,6 +18,7 @@
 #include "base/metrics/statistics_recorder.h"
 #include "base/run_loop.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
+#include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -303,9 +304,9 @@ void MessageLoop::RunUntilIdle() {
 void MessageLoop::QuitWhenIdle() {
   DCHECK_EQ(this, current());
   if (run_loop_) {
-    run_loop_->quit_when_idle_received_ = true;
+    run_loop_->QuitWhenIdle();
   } else {
-    NOTREACHED() << "Must be inside Run to call Quit";
+    NOTREACHED() << "Must be inside Run to call QuitWhenIdle";
   }
 }
 
@@ -389,16 +390,14 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
       in_high_res_mode_(false),
 #endif
       nestable_tasks_allowed_(true),
-#if defined(OS_WIN)
-      os_modal_loop_(false),
-#endif  // OS_WIN
       pump_factory_(pump_factory),
       message_histogram_(NULL),
       run_loop_(NULL),
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
       unbound_task_runner_(
           new internal::MessageLoopTaskRunner(incoming_task_queue_)),
-      task_runner_(unbound_task_runner_) {
+      task_runner_(unbound_task_runner_),
+      thread_id_(kInvalidThreadId) {
   // If type is TYPE_CUSTOM non-null pump_factory must be given.
   DCHECK(type_ != TYPE_CUSTOM || !pump_factory_.is_null());
 }
@@ -417,6 +416,22 @@ void MessageLoop::BindToCurrentThread() {
   unbound_task_runner_->BindToCurrentThread();
   unbound_task_runner_ = nullptr;
   SetThreadTaskRunnerHandle();
+  {
+    // Save the current thread's ID for potential use by other threads
+    // later from GetThreadName().
+    thread_id_ = PlatformThread::CurrentId();
+    subtle::MemoryBarrier();
+  }
+}
+
+std::string MessageLoop::GetThreadName() const {
+  if (thread_id_ == kInvalidThreadId) {
+    // |thread_id_| may already have been initialized but this thread might not
+    // have received the update yet.
+    subtle::MemoryBarrier();
+    DCHECK_NE(kInvalidThreadId, thread_id_);
+  }
+  return ThreadIdNameManager::GetInstance()->GetName(thread_id_);
 }
 
 void MessageLoop::SetTaskRunner(
@@ -449,7 +464,8 @@ bool MessageLoop::ProcessNextDelayedNonNestableTask() {
   if (deferred_non_nestable_work_queue_.empty())
     return false;
 
-  PendingTask pending_task = deferred_non_nestable_work_queue_.front();
+  PendingTask pending_task =
+      std::move(deferred_non_nestable_work_queue_.front());
   deferred_non_nestable_work_queue_.pop();
 
   RunTask(pending_task);
@@ -482,7 +498,7 @@ void MessageLoop::RunTask(const PendingTask& pending_task) {
   nestable_tasks_allowed_ = true;
 }
 
-bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task) {
+bool MessageLoop::DeferOrRunPendingTask(PendingTask pending_task) {
   if (pending_task.nestable || run_loop_->run_depth_ == 1) {
     RunTask(pending_task);
     // Show that we ran a task (Note: a new one might arrive as a
@@ -492,25 +508,25 @@ bool MessageLoop::DeferOrRunPendingTask(const PendingTask& pending_task) {
 
   // We couldn't run the task now because we're in a nested message loop
   // and the task isn't nestable.
-  deferred_non_nestable_work_queue_.push(pending_task);
+  deferred_non_nestable_work_queue_.push(std::move(pending_task));
   return false;
 }
 
-void MessageLoop::AddToDelayedWorkQueue(const PendingTask& pending_task) {
+void MessageLoop::AddToDelayedWorkQueue(PendingTask pending_task) {
   // Move to the delayed work queue.
-  delayed_work_queue_.push(pending_task);
+  delayed_work_queue_.push(std::move(pending_task));
 }
 
 bool MessageLoop::DeletePendingTasks() {
   bool did_work = !work_queue_.empty();
   while (!work_queue_.empty()) {
-    PendingTask pending_task = work_queue_.front();
+    PendingTask pending_task = std::move(work_queue_.front());
     work_queue_.pop();
     if (!pending_task.delayed_run_time.is_null()) {
       // We want to delete delayed tasks in the same order in which they would
       // normally be deleted in case of any funny dependencies between delayed
       // tasks.
-      AddToDelayedWorkQueue(pending_task);
+      AddToDelayedWorkQueue(std::move(pending_task));
     }
   }
   did_work |= !deferred_non_nestable_work_queue_.empty();
@@ -549,6 +565,12 @@ void MessageLoop::ScheduleWork() {
   pump_->ScheduleWork();
 }
 
+#if defined(OS_WIN)
+bool MessageLoop::MessagePumpWasSignaled() {
+  return pump_->WasSignaled();
+}
+#endif
+
 //------------------------------------------------------------------------------
 // Method and data for histogramming events and actions taken by each instance
 // on each thread.
@@ -557,13 +579,12 @@ void MessageLoop::StartHistogrammer() {
 #if !defined(OS_NACL)  // NaCl build has no metrics code.
   if (enable_histogrammer_ && !message_histogram_
       && StatisticsRecorder::IsActive()) {
-    DCHECK(!thread_name_.empty());
+    std::string thread_name = GetThreadName();
+    DCHECK(!thread_name.empty());
     message_histogram_ = LinearHistogram::FactoryGetWithRangeDescription(
-        "MsgLoop:" + thread_name_,
-        kLeastNonZeroMessageId, kMaxMessageId,
+        "MsgLoop:" + thread_name, kLeastNonZeroMessageId, kMaxMessageId,
         kNumberOfDistinctMessagesDisplayed,
-        HistogramBase::kHexRangePrintingFlag,
-        event_descriptions_);
+        HistogramBase::kHexRangePrintingFlag, event_descriptions_);
   }
 #endif
 }
@@ -593,15 +614,17 @@ bool MessageLoop::DoWork() {
 
     // Execute oldest task.
     do {
-      PendingTask pending_task = work_queue_.front();
+      PendingTask pending_task = std::move(work_queue_.front());
       work_queue_.pop();
       if (!pending_task.delayed_run_time.is_null()) {
-        AddToDelayedWorkQueue(pending_task);
+        int sequence_num = pending_task.sequence_num;
+        TimeTicks delayed_run_time = pending_task.delayed_run_time;
+        AddToDelayedWorkQueue(std::move(pending_task));
         // If we changed the topmost task, then it is time to reschedule.
-        if (delayed_work_queue_.top().task.Equals(pending_task.task))
-          pump_->ScheduleDelayedWork(pending_task.delayed_run_time);
+        if (delayed_work_queue_.top().sequence_num == sequence_num)
+          pump_->ScheduleDelayedWork(delayed_run_time);
       } else {
-        if (DeferOrRunPendingTask(pending_task))
+        if (DeferOrRunPendingTask(std::move(pending_task)))
           return true;
       }
     } while (!work_queue_.empty());
@@ -633,13 +656,14 @@ bool MessageLoop::DoDelayedWork(TimeTicks* next_delayed_work_time) {
     }
   }
 
-  PendingTask pending_task = delayed_work_queue_.top();
+  PendingTask pending_task =
+      std::move(const_cast<PendingTask&>(delayed_work_queue_.top()));
   delayed_work_queue_.pop();
 
   if (!delayed_work_queue_.empty())
     *next_delayed_work_time = delayed_work_queue_.top().delayed_run_time;
 
-  return DeferOrRunPendingTask(pending_task);
+  return DeferOrRunPendingTask(std::move(pending_task));
 }
 
 bool MessageLoop::DoIdleWork() {

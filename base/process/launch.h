@@ -72,7 +72,7 @@ struct BASE_EXPORT LaunchOptions {
   bool start_hidden;
 
   // If non-null, inherit exactly the list of handles in this vector (these
-  // handles must be inheritable). This is only supported on Vista and higher.
+  // handles must be inheritable).
   HandlesToInheritVector* handles_to_inherit;
 
   // If true, the new process inherits handles from the parent. In production
@@ -80,7 +80,7 @@ struct BASE_EXPORT LaunchOptions {
   // binaries, because open handles from other libraries and subsystems will
   // leak to the child process, causing errors such as open socket hangs.
   // Note: If |handles_to_inherit| is non-null, this flag is ignored and only
-  // those handles will be inherited (on Vista and higher).
+  // those handles will be inherited.
   bool inherit_handles;
 
   // If non-null, runs as if the user represented by the token had launched it.
@@ -256,12 +256,6 @@ BASE_EXPORT bool GetAppOutput(const StringPiece16& cl, std::string* output);
 // control the command line arguments directly.
 BASE_EXPORT bool GetAppOutput(const std::vector<std::string>& argv,
                               std::string* output);
-
-// A restricted version of |GetAppOutput()| which (a) clears the environment,
-// and (b) stores at most |max_output| bytes; also, it doesn't search the path
-// for the command.
-BASE_EXPORT bool GetAppOutputRestricted(const CommandLine& cl,
-                                        std::string* output, size_t max_output);
 
 // A version of |GetAppOutput()| which also returns the exit code of the
 // executed command. Returns true if the application runs and exits cleanly. If

@@ -13,8 +13,6 @@
 #if defined(OS_WIN)
 #include <io.h>
 #include <windows.h>
-#include "base/files/file_path.h"
-#include "base/files/file_util.h"
 typedef HANDLE FileHandle;
 typedef HANDLE MutexHandle;
 // Windows warns on using write().  It prefers _write().
@@ -293,13 +291,24 @@ bool InitializeLogFileHandle() {
                             FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
                             OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (g_log_file == INVALID_HANDLE_VALUE || g_log_file == nullptr) {
+      // We are intentionally not using FilePath or FileUtil here to reduce the
+      // dependencies of the logging implementation. For e.g. FilePath and
+      // FileUtil depend on shell32 and user32.dll. This is not acceptable for
+      // some consumers of base logging like chrome_elf, etc.
+      // Please don't change the code below to use FilePath.
       // try the current directory
-      base::FilePath file_path;
-      if (!base::GetCurrentDirectory(&file_path))
+      wchar_t system_buffer[MAX_PATH];
+      system_buffer[0] = 0;
+      DWORD len = ::GetCurrentDirectory(arraysize(system_buffer),
+                                        system_buffer);
+      if (len == 0 || len > arraysize(system_buffer))
         return false;
 
-      *g_log_file_name = file_path.Append(
-          FILE_PATH_LITERAL("debug.log")).value();
+      *g_log_file_name = system_buffer;
+      // Append a trailing backslash if needed.
+      if (g_log_file_name->back() != L'\\')
+        *g_log_file_name += L"\\";
+      *g_log_file_name += L"debug.log";
 
       g_log_file = CreateFile(g_log_file_name->c_str(), FILE_APPEND_DATA,
                               FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
@@ -348,23 +357,21 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
   // Can log only to the system debug log.
   CHECK_EQ(settings.logging_dest & ~LOG_TO_SYSTEM_DEBUG_LOG, 0);
 #endif
-  if (base::CommandLine::InitializedForCurrentProcess()) {
-    base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
-    // Don't bother initializing |g_vlog_info| unless we use one of the
-    // vlog switches.
-    if (command_line->HasSwitch(switches::kV) ||
-        command_line->HasSwitch(switches::kVModule)) {
-      // NOTE: If |g_vlog_info| has already been initialized, it might be in use
-      // by another thread. Don't delete the old VLogInfo, just create a second
-      // one. We keep track of both to avoid memory leak warnings.
-      CHECK(!g_vlog_info_prev);
-      g_vlog_info_prev = g_vlog_info;
+  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+  // Don't bother initializing |g_vlog_info| unless we use one of the
+  // vlog switches.
+  if (command_line->HasSwitch(switches::kV) ||
+      command_line->HasSwitch(switches::kVModule)) {
+    // NOTE: If |g_vlog_info| has already been initialized, it might be in use
+    // by another thread. Don't delete the old VLogInfo, just create a second
+    // one. We keep track of both to avoid memory leak warnings.
+    CHECK(!g_vlog_info_prev);
+    g_vlog_info_prev = g_vlog_info;
 
-      g_vlog_info =
-          new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
-                       command_line->GetSwitchValueASCII(switches::kVModule),
-                       &g_min_log_level);
-    }
+    g_vlog_info =
+        new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
+                     command_line->GetSwitchValueASCII(switches::kVModule),
+                     &g_min_log_level);
   }
 
   g_logging_destination = settings.logging_dest;
@@ -460,8 +467,7 @@ template std::string* MakeCheckOpString<unsigned int, unsigned long>(
 template std::string* MakeCheckOpString<std::string, std::string>(
     const std::string&, const std::string&, const char* name);
 
-template <>
-void MakeCheckOpValueString(std::ostream* os, const std::nullptr_t&) {
+void MakeCheckOpValueString(std::ostream* os, std::nullptr_t) {
   (*os) << "nullptr";
 }
 
