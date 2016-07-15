@@ -218,6 +218,7 @@ base_libs = [
                 tracked_objects.cc
                 tracking_info.cc
                 values.cc
+                versions.cc
                 vlog.cc
                 """,
     'prefix' : 'base',
