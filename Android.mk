@@ -453,8 +453,8 @@ LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := libgtest_prod
 LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libbase
-LOCAL_SHARED_LIBRARIES := libbase libevent-host
-LOCAL_STATIC_LIBRARIES := libmodpb64-host libgtest_prod
+LOCAL_SHARED_LIBRARIES := libbase libevent
+LOCAL_STATIC_LIBRARIES := libmodpb64 libgtest_prod
 LOCAL_SRC_FILES := \
 	$(libchromeCommonSrc) \
 	$(libchromeHostSrc) \
@@ -591,7 +591,7 @@ LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) $(libchromeHostCFlags) -DUNIT_TEST
 LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
-LOCAL_SHARED_LIBRARIES := libchrome libevent-host
+LOCAL_SHARED_LIBRARIES := libchrome libevent
 LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host
 LOCAL_LDLIBS := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
