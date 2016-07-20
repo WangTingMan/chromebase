@@ -316,12 +316,14 @@ class CounterThread : public SimpleThread {
   CounterThread(const std::string& name,
                 PersistentMemoryAllocator::Iterator* iterator,
                 Lock* lock,
-                ConditionVariable* condition)
+                ConditionVariable* condition,
+                bool* wake_up)
       : SimpleThread(name, Options()),
         iterator_(iterator),
         lock_(lock),
         condition_(condition),
-        count_(0) {}
+        count_(0),
+        wake_up_(wake_up) {}
 
   void Run() override {
     // Wait so all threads can start at approximately the same time.
@@ -329,7 +331,9 @@ class CounterThread : public SimpleThread {
     // releases the next, etc., etc.
     {
       AutoLock autolock(*lock_);
-      condition_->Wait();
+      while (!*wake_up_) {
+        condition_->Wait();
+      }
       condition_->Signal();
     }
 
@@ -346,6 +350,7 @@ class CounterThread : public SimpleThread {
   Lock* lock_;
   ConditionVariable* condition_;
   unsigned count_;
+  bool* wake_up_;
 };
 
 // Ensure that parallel iteration returns the same number of objects as
@@ -369,18 +374,26 @@ TEST_F(PersistentMemoryAllocatorTest, IteratorParallelismTest) {
   PersistentMemoryAllocator::Iterator iter(allocator_.get());
   Lock lock;
   ConditionVariable condition(&lock);
+  bool wake_up = false;
 
-  CounterThread t1("t1", &iter, &lock, &condition);
-  CounterThread t2("t2", &iter, &lock, &condition);
-  CounterThread t3("t3", &iter, &lock, &condition);
-  CounterThread t4("t4", &iter, &lock, &condition);
-  CounterThread t5("t5", &iter, &lock, &condition);
+  CounterThread t1("t1", &iter, &lock, &condition, &wake_up);
+  CounterThread t2("t2", &iter, &lock, &condition, &wake_up);
+  CounterThread t3("t3", &iter, &lock, &condition, &wake_up);
+  CounterThread t4("t4", &iter, &lock, &condition, &wake_up);
+  CounterThread t5("t5", &iter, &lock, &condition, &wake_up);
 
   t1.Start();
   t2.Start();
   t3.Start();
   t4.Start();
   t5.Start();
+
+  // Avoid a race condition with the threads calling Wait() and sending
+  // the condition.Signal().
+  {
+    AutoLock autolock(lock);
+    wake_up = true;
+  }
 
   // This will release all the waiting threads.
   condition.Signal();
