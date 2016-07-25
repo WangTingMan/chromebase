@@ -412,6 +412,24 @@ LOCAL_STATIC_LIBRARIES := libmodpb64
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
+# libchrome static library for target
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome
+LOCAL_SRC_FILES := \
+	$(libchromeCommonSrc) \
+	$(libchromeLinuxSrc) \
+	base/sys_info_chromeos.cc \
+
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_STATIC_LIBRARIES := libmodpb64 libbase libevent liblog libcutils
+LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := $(LOCAL_STATIC_LIBRARIES)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+include $(BUILD_STATIC_LIBRARY)
+
 # libchrome shared library for host
 # ========================================================
 include $(CLEAR_VARS)
