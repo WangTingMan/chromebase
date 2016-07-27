@@ -71,6 +71,18 @@ config("tcmalloc_flags") {
       # typedefs.
       "-Wno-unused-private-field",
     ]
+  } else {
+    cflags = []
+  }
+
+  if (is_linux || is_android) {
+    # We enable all warnings by default, but upstream disables a few.
+    # Keep "-Wno-*" flags in sync with upstream by comparing against:
+    # http://code.google.com/p/google-perftools/source/browse/trunk/Makefile.am
+    cflags += [
+      "-Wno-sign-compare",
+      "-Wno-unused-result",
+    ]
   }
 }
 
@@ -228,16 +240,16 @@ if (use_allocator == "tcmalloc") {
         "$tcmalloc_dir/src/windows/port.h",
       ]
 
-      # We enable all warnings by default, but upstream disables a few.
-      # Keep "-Wno-*" flags in sync with upstream by comparing against:
-      # http://code.google.com/p/google-perftools/source/browse/trunk/Makefile.am
-      cflags = [
-        "-Wno-sign-compare",
-        "-Wno-unused-result",
-      ]
-
-      configs -= [ "//build/config/gcc:symbol_visibility_hidden" ]
-      configs += [ "//build/config/gcc:symbol_visibility_default" ]
+      # Compiling tcmalloc with -fvisibility=default is only necessary when
+      # not using the allocator shim, which provides the correct visibility
+      # annotations for those symbols which need to be exported (see
+      # //base/allocator/allocator_shim_override_glibc_weak_symbols.h and
+      # //base/allocator/allocator_shim_internals.h for the definition of
+      # SHIM_ALWAYS_EXPORT).
+      if (!use_experimental_allocator_shim) {
+        configs -= [ "//build/config/gcc:symbol_visibility_hidden" ]
+        configs += [ "//build/config/gcc:symbol_visibility_default" ]
+      }
 
       ldflags = [
         # Don't let linker rip this symbol out, otherwise the heap&cpu

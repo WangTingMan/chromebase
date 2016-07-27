@@ -44,7 +44,7 @@ class ScopedAllowWaitForAndroidLayoutTests;
 class ScopedAllowWaitForDebugURL;
 class SoftwareOutputDeviceMus;
 class TextInputClientMac;
-class RasterWorkerPool;
+class CategorizedWorkerPool;
 }  // namespace content
 namespace dbus {
 class Bus;
@@ -53,9 +53,6 @@ namespace disk_cache {
 class BackendImpl;
 class InFlightIO;
 }
-namespace gles2 {
-class CommandBufferClientImpl;
-}
 namespace gpu {
 class GpuChannelHost;
 }
@@ -63,8 +60,10 @@ namespace mojo {
 namespace common {
 class MessagePumpMojo;
 }
+class SyncCallRestrictions;
 }
-namespace mus {
+namespace ui {
+class CommandBufferClientImpl;
 class CommandBufferLocal;
 class GpuState;
 }
@@ -201,7 +200,7 @@ class BASE_EXPORT ThreadRestrictions {
   friend class ::ScopedAllowWaitForLegacyWebViewApi;
   friend class cc::CompletionEvent;
   friend class cc::SingleThreadTaskGraphRunner;
-  friend class content::RasterWorkerPool;
+  friend class content::CategorizedWorkerPool;
   friend class remoting::AutoThread;
   friend class ui::WindowResizeHelperMac;
   friend class MessagePumpDefault;
@@ -211,10 +210,11 @@ class BASE_EXPORT ThreadRestrictions {
   friend class ThreadTestHelper;
   friend class PlatformThread;
   friend class android::JavaHandlerThread;
-  friend class gles2::CommandBufferClientImpl;
   friend class mojo::common::MessagePumpMojo;
-  friend class mus::CommandBufferLocal;
-  friend class mus::GpuState;
+  friend class mojo::SyncCallRestrictions;
+  friend class ui::CommandBufferClientImpl;
+  friend class ui::CommandBufferLocal;
+  friend class ui::GpuState;
 
   // END ALLOWED USAGE.
   // BEGIN USAGE THAT NEEDS TO BE FIXED.

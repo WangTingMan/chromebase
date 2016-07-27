@@ -174,7 +174,7 @@ struct TrackingInfo;
 // (worker threads don't have message loops generally, and hence gathering from
 // them will continue to be asynchronous).  We had an implementation of this in
 // the past, but the difficulty is dealing with message loops being terminated.
-// We can *try* to spam the available threads via some message loop proxy to
+// We can *try* to spam the available threads via some task runner to
 // achieve this feat, and it *might* be valuable when we are collecting data
 // for upload via UMA (where correctness of data may be more significant than
 // for a single screen of about:profiler).
@@ -514,7 +514,7 @@ class BASE_EXPORT ThreadData {
 
   // Initializes all statics if needed (this initialization call should be made
   // while we are single threaded).
-  static void Initialize();
+  static void EnsureTlsInitialization();
 
   // Sets internal status_.
   // If |status| is false, then status_ is set to DEACTIVATED.
