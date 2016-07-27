@@ -24,6 +24,7 @@
         'allocator/allocator.gyp:allocator',
         'allocator/allocator.gyp:allocator_features#target',
         'base_debugging_flags#target',
+        'base_win_features#target',
         'base_static',
         'base_build_date#target',
         '../testing/gtest.gyp:gtest_prod',
@@ -406,7 +407,7 @@
         'deferred_sequenced_task_runner_unittest.cc',
         'environment_unittest.cc',
         'feature_list_unittest.cc',
-        'file_version_info_unittest.cc',
+        'file_version_info_win_unittest.cc',
         'files/dir_reader_posix_unittest.cc',
         'files/file_locking_unittest.cc',
         'files/file_path_unittest.cc',
@@ -449,7 +450,6 @@
         'mac/call_with_eh_frame_unittest.mm',
         'mac/dispatch_source_mach_unittest.cc',
         'mac/foundation_util_unittest.mm',
-        'mac/libdispatch_task_runner_unittest.cc',
         'mac/mac_util_unittest.mm',
         'mac/mach_port_broker_unittest.cc',
         'mac/objc_property_releaser_unittest.mm',
@@ -514,6 +514,7 @@
         'profiler/stack_sampling_profiler_unittest.cc',
         'profiler/tracked_time_unittest.cc',
         'rand_util_unittest.cc',
+        'run_loop_unittest.cc',
         'scoped_clear_errno_unittest.cc',
         'scoped_generic_unittest.cc',
         'scoped_native_library_unittest.cc',
@@ -541,8 +542,10 @@
         'synchronization/cancellation_flag_unittest.cc',
         'synchronization/condition_variable_unittest.cc',
         'synchronization/lock_unittest.cc',
+        'synchronization/read_write_lock_unittest.cc',
         'synchronization/waitable_event_unittest.cc',
         'synchronization/waitable_event_watcher_unittest.cc',
+        'sys_byteorder_unittest.cc',
         'sys_info_unittest.cc',
         'system_monitor/system_monitor_unittest.cc',
         'task/cancelable_task_tracker_unittest.cc',
@@ -551,9 +554,9 @@
         'task_scheduler/priority_queue_unittest.cc',
         'task_scheduler/scheduler_lock_unittest.cc',
         'task_scheduler/scheduler_service_thread_unittest.cc',
-        'task_scheduler/scheduler_thread_pool_impl_unittest.cc',
-        'task_scheduler/scheduler_worker_thread_stack_unittest.cc',
-        'task_scheduler/scheduler_worker_thread_unittest.cc',
+        'task_scheduler/scheduler_worker_unittest.cc',
+        'task_scheduler/scheduler_worker_pool_impl_unittest.cc',
+        'task_scheduler/scheduler_worker_stack_unittest.cc',
         'task_scheduler/sequence_sort_key_unittest.cc',
         'task_scheduler/sequence_unittest.cc',
         'task_scheduler/task_scheduler_impl_unittest.cc',
@@ -636,6 +639,17 @@
         'module_dir': 'base'
       },
       'conditions': [
+        ['cfi_vptr==1 and cfi_cast==1', {
+          'defines': [
+             # TODO(krasin): remove CFI_CAST_CHECK, see https://crbug.com/626794.
+            'CFI_CAST_CHECK',
+          ],
+        }],
+        ['OS == "ios" or OS == "mac"', {
+          'dependencies': [
+            'base_unittests_arc',
+          ],
+        }],
         ['OS == "android"', {
           'dependencies': [
             'android/jni_generator/jni_generator.gyp:jni_generator_tests',
@@ -674,9 +688,6 @@
         ['desktop_linux == 1 or chromeos == 1', {
           'defines': [
             'USE_SYMBOLIZE',
-          ],
-          'sources!': [
-            'file_version_info_unittest.cc',
           ],
           'conditions': [
             [ 'desktop_linux==1', {
@@ -867,6 +878,8 @@
         'test/ios/wait_util.mm',
         'test/launcher/test_launcher.cc',
         'test/launcher/test_launcher.h',
+        'test/launcher/test_launcher_tracer.cc',
+        'test/launcher/test_launcher_tracer.h',
         'test/launcher/test_result.cc',
         'test/launcher/test_result.h',
         'test/launcher/test_results_tracker.cc',
@@ -1019,7 +1032,7 @@
     },
     {
       # GN version: //base/debug:debugging_flags
-      # Since this generates a file, it most only be referenced in the target
+      # Since this generates a file, it must only be referenced in the target
       # toolchain or there will be multiple rules that generate the header.
       # When referenced from a target that might be compiled in the host
       # toolchain, always refer to 'base_debugging_flags#target'.
@@ -1031,6 +1044,27 @@
           'ENABLE_PROFILING=<(profiling)',
         ],
       },
+    },
+    {
+      # GN version: //base/win:base_win_features
+      # Since this generates a file, it must only be referenced in the target
+      # toolchain or there will be multiple rules that generate the header.
+      # When referenced from a target that might be compiled in the host
+      # toolchain, always refer to 'base_win_features#target'.
+      'target_name': 'base_win_features',
+      'conditions': [
+        ['OS=="win"', {
+          'includes': [ '../build/buildflag_header.gypi' ],
+          'variables': {
+            'buildflag_header_path': 'base/win/base_features.h',
+            'buildflag_flags': [
+              'SINGLE_MODULE_MODE_HANDLE_VERIFIER=<(single_module_mode_handle_verifier)',
+            ],
+          },
+        }, {
+          'type': 'none',
+        }],
+      ],
     },
     {
       'type': 'none',
@@ -1732,6 +1766,33 @@
           ],
           'sources': [
             'base_unittests.isolate',
+          ],
+        },
+      ],
+    }],
+    ['OS == "ios" or OS == "mac"', {
+      'targets': [
+        {
+          'target_name': 'base_unittests_arc',
+          'type': 'static_library',
+          'dependencies': [
+            'base',
+            '../testing/gtest.gyp:gtest',
+          ],
+          'sources': [
+            'mac/bind_objc_block_unittest_arc.mm',
+            'mac/scoped_nsobject_unittest_arc.mm'
+          ],
+          'xcode_settings': {
+            'CLANG_ENABLE_OBJC_ARC': 'YES',
+          },
+          'target_conditions': [
+            ['OS == "ios" and _toolset != "host"', {
+              'sources/': [
+                ['include', 'mac/bind_objc_block_unittest_arc\\.mm$'],
+                ['include', 'mac/scoped_nsobject_unittest_arc\\.mm$'],
+              ],
+            }]
           ],
         },
       ],

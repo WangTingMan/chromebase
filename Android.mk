@@ -143,6 +143,7 @@ libchromeCommonSrc := \
 	base/synchronization/condition_variable_posix.cc \
 	base/synchronization/lock.cc \
 	base/synchronization/lock_impl_posix.cc \
+	base/synchronization/read_write_lock_posix.cc \
 	base/synchronization/waitable_event_posix.cc \
 	base/sync_socket_posix.cc \
 	base/sys_info.cc \
@@ -188,12 +189,13 @@ libchromeCommonSrc := \
 	base/trace_event/heap_profiler_heap_dump_writer.cc \
 	base/trace_event/heap_profiler_stack_frame_deduplicator.cc \
 	base/trace_event/heap_profiler_type_name_deduplicator.cc \
+	base/trace_event/malloc_dump_provider.cc \
 	base/trace_event/memory_allocator_dump.cc \
 	base/trace_event/memory_allocator_dump_guid.cc \
 	base/trace_event/memory_dump_manager.cc \
-	base/trace_event/malloc_dump_provider.cc \
 	base/trace_event/memory_dump_request_args.cc \
 	base/trace_event/memory_dump_session_state.cc \
+	base/trace_event/memory_infra_background_whitelist.cc \
 	base/trace_event/process_memory_dump.cc \
 	base/trace_event/process_memory_maps.cc \
 	base/trace_event/process_memory_totals.cc \
@@ -209,6 +211,7 @@ libchromeCommonSrc := \
 	base/tracked_objects.cc \
 	base/tracking_info.cc \
 	base/values.cc \
+	base/version.cc \
 	base/vlog.cc \
 
 libchromeLinuxSrc := \
@@ -316,6 +319,7 @@ libchromeCommonUnittestSrc := \
 	base/metrics/statistics_recorder_unittest.cc \
 	base/numerics/safe_numerics_unittest.cc \
 	base/observer_list_unittest.cc \
+	base/optional_unittest.cc \
 	base/pickle_unittest.cc \
 	base/posix/file_descriptor_shuffle_unittest.cc \
 	base/posix/unix_domain_socket_linux_unittest.cc \
@@ -392,6 +396,7 @@ libchromeCommonUnittestSrc := \
 	base/tracked_objects_unittest.cc \
 	base/tuple_unittest.cc \
 	base/values_unittest.cc \
+	base/version_unittest.cc \
 	base/vlog_unittest.cc \
 	testing/multiprocess_func_list.cc \
 	testrunner.cc \

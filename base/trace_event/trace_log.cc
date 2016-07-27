@@ -86,7 +86,7 @@ const size_t kEchoToConsoleTraceEventBufferChunks = 256;
 const size_t kTraceEventBufferSizeInBytes = 100 * 1024;
 const int kThreadFlushTimeoutMs = 3000;
 
-#define MAX_CATEGORY_GROUPS 105
+#define MAX_CATEGORY_GROUPS 200
 
 // Parallel arrays g_category_groups and g_category_group_enabled are separate
 // so that a pointer to a member of g_category_group_enabled can be easily
@@ -334,7 +334,7 @@ void TraceLog::ThreadLocalEventBuffer::FlushWhileLocked() {
 }
 
 struct TraceLog::RegisteredAsyncObserver {
-  RegisteredAsyncObserver(WeakPtr<AsyncEnabledStateObserver> observer)
+  explicit RegisteredAsyncObserver(WeakPtr<AsyncEnabledStateObserver> observer)
       : observer(observer), task_runner(ThreadTaskRunnerHandle::Get()) {}
   ~RegisteredAsyncObserver() {}
 
@@ -402,7 +402,7 @@ void TraceLog::InitializeThreadLocalEventBufferIfSupported() {
   if (thread_blocks_message_loop_.Get() || !MessageLoop::current())
     return;
   HEAP_PROFILER_SCOPED_IGNORE;
-  auto thread_local_event_buffer = thread_local_event_buffer_.Get();
+  auto* thread_local_event_buffer = thread_local_event_buffer_.Get();
   if (thread_local_event_buffer &&
       !CheckGeneration(thread_local_event_buffer->generation())) {
     delete thread_local_event_buffer;
@@ -477,6 +477,12 @@ void TraceLog::UpdateCategoryGroupEnabledFlag(size_t category_index) {
     enabled_flag |= ENABLED_FOR_ETW_EXPORT;
   }
 #endif
+
+  // TODO(primiano): this is a temporary workaround for catapult:#2341,
+  // to guarantee that metadata events are always added even if the category
+  // filter is "-*". See crbug.com/618054 for more details and long-term fix.
+  if (mode_ == RECORDING_MODE && !strcmp(category_group, "__metadata"))
+    enabled_flag |= ENABLED_FOR_RECORDING;
 
   g_category_group_enabled[category_index] = enabled_flag;
 }
@@ -890,7 +896,7 @@ void TraceLog::FlushInternal(const TraceLog::OutputCallback& cb,
     flush_task_runner_ = ThreadTaskRunnerHandle::IsSet()
                              ? ThreadTaskRunnerHandle::Get()
                              : nullptr;
-    DCHECK(!thread_message_loops_.size() || flush_task_runner_);
+    DCHECK(thread_message_loops_.empty() || flush_task_runner_);
     flush_output_callback_ = cb;
 
     if (thread_shared_chunk_) {
@@ -1037,7 +1043,7 @@ void TraceLog::OnFlushTimeout(int generation, bool discard_events) {
     for (hash_set<MessageLoop*>::const_iterator it =
              thread_message_loops_.begin();
          it != thread_message_loops_.end(); ++it) {
-      LOG(WARNING) << "Thread: " << (*it)->thread_name();
+      LOG(WARNING) << "Thread: " << (*it)->GetThreadName();
     }
   }
   FinishFlush(generation, discard_events);
@@ -1220,7 +1226,7 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
   // |thread_local_event_buffer_| can be null if the current thread doesn't have
   // a message loop or the message loop is blocked.
   InitializeThreadLocalEventBufferIfSupported();
-  auto thread_local_event_buffer = thread_local_event_buffer_.Get();
+  auto* thread_local_event_buffer = thread_local_event_buffer_.Get();
 
   // Check and update the current thread name only if the event is for the
   // current thread to avoid locks in most cases.
@@ -1347,11 +1353,12 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
           phase == TRACE_EVENT_PHASE_COMPLETE) {
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->PushPseudoStackFrame(name);
-      } else if (phase == TRACE_EVENT_PHASE_END)
+      } else if (phase == TRACE_EVENT_PHASE_END) {
         // The pop for |TRACE_EVENT_PHASE_COMPLETE| events
         // is in |TraceLog::UpdateTraceEventDuration|.
         AllocationContextTracker::GetInstanceForCurrentThread()
             ->PopPseudoStackFrame(name);
+      }
     }
   }
 

@@ -147,6 +147,7 @@ base_libs = [
                 synchronization/condition_variable_posix.cc
                 synchronization/lock.cc
                 synchronization/lock_impl_posix.cc
+                synchronization/read_write_lock_posix.cc
                 synchronization/waitable_event_posix.cc
                 synchronization/waitable_event_watcher_posix.cc
                 sync_socket_posix.cc
@@ -190,7 +191,6 @@ base_libs = [
                 time/tick_clock.cc
                 time/time.cc
                 time/time_posix.cc
-                trace_event/malloc_dump_provider.cc
                 trace_event/heap_profiler_allocation_context.cc
                 trace_event/heap_profiler_allocation_context_tracker.cc
                 trace_event/heap_profiler_allocation_register.cc
@@ -198,11 +198,13 @@ base_libs = [
                 trace_event/heap_profiler_heap_dump_writer.cc
                 trace_event/heap_profiler_stack_frame_deduplicator.cc
                 trace_event/heap_profiler_type_name_deduplicator.cc
+                trace_event/malloc_dump_provider.cc
                 trace_event/memory_allocator_dump.cc
                 trace_event/memory_allocator_dump_guid.cc
                 trace_event/memory_dump_manager.cc
                 trace_event/memory_dump_request_args.cc
                 trace_event/memory_dump_session_state.cc
+                trace_event/memory_infra_background_whitelist.cc
                 trace_event/process_memory_dump.cc
                 trace_event/process_memory_maps.cc
                 trace_event/process_memory_totals.cc
@@ -218,6 +220,7 @@ base_libs = [
                 tracked_objects.cc
                 tracking_info.cc
                 values.cc
+                version.cc
                 vlog.cc
                 """,
     'prefix' : 'base',

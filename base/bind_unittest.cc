@@ -63,7 +63,7 @@ static const int kChildValue = 2;
 
 class Parent {
  public:
-  virtual ~Parent() = default;
+  virtual ~Parent() {}
   void AddRef() const {}
   void Release() const {}
   virtual void VirtualSet() { value = kParentValue; }
@@ -73,14 +73,14 @@ class Parent {
 
 class Child : public Parent {
  public:
-  ~Child() override = default;
+  ~Child() override {}
   void VirtualSet() override { value = kChildValue; }
   void NonVirtualSet() { value = kChildValue; }
 };
 
 class NoRefParent {
  public:
-  virtual ~NoRefParent() = default;
+  virtual ~NoRefParent() {}
   virtual void VirtualSet() { value = kParentValue; }
   void NonVirtualSet() { value = kParentValue; }
   int value;
@@ -88,7 +88,8 @@ class NoRefParent {
 
 class NoRefChild : public NoRefParent {
  public:
-  ~NoRefChild() override = default;
+  ~NoRefChild() override {}
+ private:
   void VirtualSet() override { value = kChildValue; }
   void NonVirtualSet() { value = kChildValue; }
 };
@@ -655,28 +656,6 @@ TEST_F(BindTest, ArrayArgumentBinding) {
   EXPECT_EQ(3, const_array_cb.Run());
 }
 
-// Verify SupportsAddRefAndRelease correctly introspects the class type for
-// AddRef() and Release().
-//  - Class with AddRef() and Release()
-//  - Class without AddRef() and Release()
-//  - Derived Class with AddRef() and Release()
-//  - Derived Class without AddRef() and Release()
-//  - Derived Class with AddRef() and Release() and a private destructor.
-TEST_F(BindTest, SupportsAddRefAndRelease) {
-  EXPECT_TRUE(internal::SupportsAddRefAndRelease<HasRef>::value);
-  EXPECT_FALSE(internal::SupportsAddRefAndRelease<NoRef>::value);
-
-  // StrictMock<T> is a derived class of T.  So, we use StrictMock<HasRef> and
-  // StrictMock<NoRef> to test that SupportsAddRefAndRelease works over
-  // inheritance.
-  EXPECT_TRUE(internal::SupportsAddRefAndRelease<StrictMock<HasRef> >::value);
-  EXPECT_FALSE(internal::SupportsAddRefAndRelease<StrictMock<NoRef> >::value);
-
-  // This matters because the implementation creates a dummy class that
-  // inherits from the template type.
-  EXPECT_TRUE(internal::SupportsAddRefAndRelease<HasRefPrivateDtor>::value);
-}
-
 // Unretained() wrapper support.
 //   - Method bound to Unretained() non-const object.
 //   - Const method bound to Unretained() non-const object.
@@ -1063,6 +1042,36 @@ TEST_F(BindTest, ArgumentCopiesAndMoves) {
   EXPECT_EQ(0, assigns);
   EXPECT_EQ(2, move_constructs);
   EXPECT_EQ(0, move_assigns);
+}
+
+TEST_F(BindTest, CapturelessLambda) {
+  EXPECT_FALSE(internal::IsConvertibleToRunType<void>::value);
+  EXPECT_FALSE(internal::IsConvertibleToRunType<int>::value);
+  EXPECT_FALSE(internal::IsConvertibleToRunType<void(*)()>::value);
+  EXPECT_FALSE(internal::IsConvertibleToRunType<void(NoRef::*)()>::value);
+
+  auto f = []() {};
+  EXPECT_TRUE(internal::IsConvertibleToRunType<decltype(f)>::value);
+
+  int i = 0;
+  auto g = [i]() {};
+  EXPECT_FALSE(internal::IsConvertibleToRunType<decltype(g)>::value);
+
+  auto h = [](int, double) { return 'k'; };
+  EXPECT_TRUE((std::is_same<
+      char(int, double),
+      internal::ExtractCallableRunType<decltype(h)>>::value));
+
+  EXPECT_EQ(42, Bind([] { return 42; }).Run());
+  EXPECT_EQ(42, Bind([](int i) { return i * 7; }, 6).Run());
+
+  int x = 1;
+  base::Callback<void(int)> cb =
+      Bind([](int* x, int i) { *x *= i; }, Unretained(&x));
+  cb.Run(6);
+  EXPECT_EQ(6, x);
+  cb.Run(7);
+  EXPECT_EQ(42, x);
 }
 
 // Callback construction and assignment tests.

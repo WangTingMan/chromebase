@@ -24,6 +24,10 @@
 #include "base/files/scoped_file.h"
 #endif
 
+#if defined(OS_WIN)
+#include "base/win/scoped_handle.h"
+#endif
+
 namespace base {
 
 class FilePath;
@@ -55,12 +59,6 @@ struct BASE_EXPORT SharedMemoryCreateOptions {
 
   // If true, the file can be shared read-only to a process.
   bool share_read_only;
-
-#if defined(OS_WIN)
-  // If true, creates a file mapping without a name or proper ACLs. This is a
-  // stop-gap measure during investigation of https://crbug.com/585013.
-  bool create_without_name_or_permissions = false;
-#endif
 };
 
 // Platform abstraction for shared memory.  Provides a C++ wrapper
@@ -269,7 +267,7 @@ class BASE_EXPORT SharedMemory {
   // before being mapped.
   bool external_section_;
   std::wstring       name_;
-  HANDLE             mapped_file_;
+  win::ScopedHandle  mapped_file_;
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
   // The OS primitive that backs the shared memory region.
   SharedMemoryHandle shm_;

@@ -26,6 +26,8 @@
 #include "base/metrics/histogram_base.h"
 #include "base/strings/string_piece.h"
 
+class SubprocessMetricsProviderTest;
+
 namespace base {
 
 class BucketRanges;
@@ -165,12 +167,26 @@ class BASE_EXPORT StatisticsRecorder {
   // Returns the number of known histograms.
   static size_t GetHistogramCount();
 
+  // Initializes logging histograms with --v=1. Safe to call multiple times.
+  // Is called from ctor but for browser it seems that it is more useful to
+  // start logging after statistics recorder, so we need to init log-on-shutdown
+  // later.
+  static void InitLogOnShutdown();
+
   // Removes a histogram from the internal set of known ones. This can be
   // necessary during testing persistent histograms where the underlying
   // memory is being released.
   static void ForgetHistogramForTesting(base::StringPiece name);
 
-  // Reset any global instance of the statistics-recorder that was created
+  // Creates a local StatisticsRecorder object for testing purposes. All new
+  // histograms will be registered in it until it is destructed or pushed
+  // aside for the lifetime of yet another SR object. The destruction of the
+  // returned object will re-activate the previous one. Always release SR
+  // objects in the opposite order to which they're created.
+  static std::unique_ptr<StatisticsRecorder> CreateTemporaryForTesting()
+      WARN_UNUSED_RESULT;
+
+  // Resets any global instance of the statistics-recorder that was created
   // by a call to Initialize().
   static void UninitializeForTesting();
 
@@ -185,15 +201,7 @@ class BASE_EXPORT StatisticsRecorder {
   typedef std::map<uint32_t, std::list<const BucketRanges*>*> RangesMap;
 
   friend struct DefaultLazyInstanceTraits<StatisticsRecorder>;
-  friend class HistogramBaseTest;
-  friend class HistogramSnapshotManagerTest;
-  friend class HistogramTest;
-  friend class JsonPrefStoreTest;
-  friend class SharedHistogramTest;
-  friend class SparseHistogramTest;
   friend class StatisticsRecorderTest;
-  FRIEND_TEST_ALL_PREFIXES(HistogramDeltaSerializationTest,
-                           DeserializeHistogramAndAddSamples);
 
   // Imports histograms from global persistent memory. The global lock must
   // not be held during this call.
@@ -204,12 +212,18 @@ class BASE_EXPORT StatisticsRecorder {
   // call the constructor to get a clean StatisticsRecorder.
   StatisticsRecorder();
 
+  // Initialize implementation but without lock. Caller should guard
+  // StatisticsRecorder by itself if needed (it isn't in unit tests).
+  void InitLogOnShutdownWithoutLock();
+
   // These are copies of everything that existed when the (test) Statistics-
   // Recorder was created. The global ones have to be moved aside to create a
   // clean environment.
   std::unique_ptr<HistogramMap> existing_histograms_;
   std::unique_ptr<CallbackMap> existing_callbacks_;
   std::unique_ptr<RangesMap> existing_ranges_;
+
+  bool vlog_initialized_ = false;
 
   static void Reset();
   static void DumpHistogramsToVlog(void* instance);
