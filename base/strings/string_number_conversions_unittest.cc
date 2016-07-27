@@ -13,6 +13,7 @@
 #include <cmath>
 #include <limits>
 
+#include "base/bit_cast.h"
 #include "base/format_macros.h"
 #include "base/macros.h"
 #include "base/strings/stringprintf.h"

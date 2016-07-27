@@ -10,6 +10,7 @@
 #include "base/debug/leak_annotations.h"
 #include "base/json/string_escape.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram.h"
 #include "base/metrics/metrics_hashes.h"
 #include "base/metrics/persistent_histogram_allocator.h"
@@ -287,7 +288,7 @@ void StatisticsRecorder::GetBucketRanges(
     return;
 
   for (const auto& entry : *ranges_) {
-    for (const auto& range_entry : *entry.second) {
+    for (auto* range_entry : *entry.second) {
       output->push_back(range_entry);
     }
   }
@@ -334,6 +335,14 @@ StatisticsRecorder::HistogramIterator StatisticsRecorder::end() {
     iter_end = histograms_->end();
   }
   return HistogramIterator(iter_end, true);
+}
+
+// static
+void StatisticsRecorder::InitLogOnShutdown() {
+  if (lock_ == nullptr)
+    return;
+  base::AutoLock auto_lock(*lock_);
+  g_statistics_recorder_.Get().InitLogOnShutdownWithoutLock();
 }
 
 // static
@@ -421,6 +430,12 @@ void StatisticsRecorder::ForgetHistogramForTesting(base::StringPiece name) {
 }
 
 // static
+std::unique_ptr<StatisticsRecorder>
+StatisticsRecorder::CreateTemporaryForTesting() {
+  return WrapUnique(new StatisticsRecorder());
+}
+
+// static
 void StatisticsRecorder::UninitializeForTesting() {
   // Stop now if it's never been initialized.
   if (lock_ == NULL || histograms_ == NULL)
@@ -475,8 +490,14 @@ StatisticsRecorder::StatisticsRecorder() {
   callbacks_ = new CallbackMap;
   ranges_ = new RangesMap;
 
-  if (VLOG_IS_ON(1))
+  InitLogOnShutdownWithoutLock();
+}
+
+void StatisticsRecorder::InitLogOnShutdownWithoutLock() {
+  if (!vlog_initialized_ && VLOG_IS_ON(1)) {
+    vlog_initialized_ = true;
     AtExitManager::RegisterCallback(&DumpHistogramsToVlog, this);
+  }
 }
 
 // static
