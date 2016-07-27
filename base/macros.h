@@ -34,8 +34,8 @@
 // We define this macro conditionally as it may be defined by another libraries.
 #if !defined(DISALLOW_COPY_AND_ASSIGN)
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&);               \
-  void operator=(const TypeName&)
+  TypeName(const TypeName&) = delete;      \
+  void operator=(const TypeName&) = delete
 #endif
 
 // A macro to disallow all the implicit constructors, namely the

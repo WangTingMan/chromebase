@@ -12,9 +12,9 @@
 #include <limits>
 
 #include "base/logging.h"
-#include "base/numerics/safe_conversions.h"
 #include "base/numerics/safe_math.h"
-#include "base/strings/utf_string_conversions.h"
+#include "base/scoped_clear_errno.h"
+#include "base/scoped_clear_errno.h"
 
 namespace base {
 
