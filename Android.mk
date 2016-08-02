@@ -587,9 +587,6 @@ include $(BUILD_HOST_STATIC_LIBRARY)
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test
-ifdef BRILLO
-  LOCAL_MODULE_TAGS := debug
-endif
 LOCAL_SRC_FILES := $(libchromeCommonUnittestSrc)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) $(libchromeHostCFlags) -DUNIT_TEST
@@ -606,9 +603,6 @@ endif
 # ========================================================
 include $(CLEAR_VARS)
 LOCAL_MODULE := libchrome_test
-ifdef BRILLO
-  LOCAL_MODULE_TAGS := eng
-endif
 LOCAL_SRC_FILES := $(libchromeCryptoUnittestSrc) $(libchromeCommonUnittestSrc)
 LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
 LOCAL_CFLAGS := $(libchromeCommonCFlags) $(libchromeTestCFlags) -DUNIT_TEST -DDONT_EMBED_BUILD_METADATA
