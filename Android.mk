@@ -446,6 +446,29 @@ LOCAL_STATIC_LIBRARIES := libmodpb64 libgtest_prod
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
 include $(BUILD_SHARED_LIBRARY)
 
+# libchrome static library for target
+# ========================================================
+include $(CLEAR_VARS)
+LOCAL_MODULE := libchrome
+LOCAL_SRC_FILES := \
+	$(libchromeCommonSrc) \
+	$(libchromeLinuxSrc) \
+	base/allocator/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc \
+	base/memory/shared_memory_android.cc \
+	base/sys_info_chromeos.cc \
+
+LOCAL_CPP_EXTENSION := $(libchromeCommonCppExtension)
+LOCAL_CFLAGS := $(libchromeCommonCFlags)
+LOCAL_CLANG := $(libchromeUseClang)
+LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
+LOCAL_LDFLAGS := -Wl,-wrap,calloc -Wl,-wrap,free -Wl,-wrap,malloc \
+	-Wl,-wrap,memalign -Wl,-wrap,realloc
+LOCAL_STATIC_LIBRARIES := libmodpb64 libgtest_prod \
+	libbase libevent liblog libcutils
+LOCAL_EXPORT_STATIC_LIBRARY_HEADERS := $(LOCAL_STATIC_LIBRARIES)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(libchromeExportedCIncludes)
+include $(BUILD_STATIC_LIBRARY)
+
 # libchrome shared library for host
 # ========================================================
 include $(CLEAR_VARS)
