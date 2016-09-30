@@ -15,7 +15,7 @@
 # Default values for the USE flags. Override these USE flags from your product
 # by setting BRILLO_USE_* values. Note that we define local variables like
 # local_use_* to prevent leaking our default setting for other packages.
-local_use_dbus := $(if $(BRILLO_USE_DBUS),$(BRILLO_USE_DBUS),1)
+local_use_dbus := $(if $(BRILLO_USE_DBUS),$(BRILLO_USE_DBUS),0)
 
 LOCAL_PATH := $(call my-dir)
 
