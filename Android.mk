@@ -486,6 +486,7 @@ LOCAL_SRC_FILES := \
 	$(libchromeCommonSrc) \
 	$(libchromeHostSrc) \
 
+LOCAL_LDLIBS_linux := -lrt
 LOCAL_LDFLAGS := $(libchromeHostLdFlags)
 include $(BUILD_HOST_SHARED_LIBRARY)
 
@@ -617,7 +618,7 @@ LOCAL_CLANG := $(libchromeUseClang)
 LOCAL_C_INCLUDES := $(libchromeCommonCIncludes)
 LOCAL_SHARED_LIBRARIES := libchrome libevent
 LOCAL_STATIC_LIBRARIES := libgmock_host libgtest_host
-LOCAL_LDLIBS := -lrt
+LOCAL_LDLIBS_linux := -lrt
 include $(BUILD_HOST_NATIVE_TEST)
 endif
 
