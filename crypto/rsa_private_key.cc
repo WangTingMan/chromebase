@@ -10,7 +10,6 @@
 #include <algorithm>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_util.h"
 
 // This file manually encodes and decodes RSA private keys using PrivateKeyInfo

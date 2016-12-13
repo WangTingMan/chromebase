@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include <algorithm>
+#include <memory>
 
 #include "base/logging.h"
 #include "crypto/secure_util.h"

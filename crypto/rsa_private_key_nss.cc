@@ -10,9 +10,9 @@
 #include <stdint.h>
 
 #include <list>
+#include <memory>
 
 #include "base/logging.h"
-#include "base/memory/scoped_ptr.h"
 #include "base/strings/string_util.h"
 #include "crypto/nss_key_util.h"
 #include "crypto/nss_util.h"
