@@ -243,7 +243,6 @@ libchromeCommonSrc = [
 ]
 
 libchromeLinuxSrc = [
-    "base/allocator/allocator_shim.cc",
     "base/files/file_path_watcher_linux.cc",
     "base/files/file_util_linux.cc",
     "base/memory/shared_memory_posix.cc",
@@ -307,7 +306,6 @@ cc_library {
     target: {
         android: {
             srcs: libchromeLinuxSrc + [
-                "base/allocator/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
                 "base/memory/shared_memory_android.cc",
                 "base/sys_info_chromeos.cc",
             ],
@@ -315,16 +313,10 @@ cc_library {
                 "liblog",
                 "libcutils",
             ],
-            ldflags: [
-                "-Wl,-wrap,calloc",
-                "-Wl,-wrap,free",
-                "-Wl,-wrap,malloc",
-                "-Wl,-wrap,memalign",
-                "-Wl,-wrap,realloc",
-            ],
         },
         linux: {
             srcs: libchromeLinuxSrc + [
+                "base/allocator/allocator_shim.cc",
                 "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
             ],
             host_ldlibs: ["-lrt"],

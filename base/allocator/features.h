@@ -6,7 +6,7 @@
 
 #include "build/buildflag.h"
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(ANDROID)
 #define BUILDFLAG_INTERNAL_USE_EXPERIMENTAL_ALLOCATOR_SHIM() (0)
 #else
 #define BUILDFLAG_INTERNAL_USE_EXPERIMENTAL_ALLOCATOR_SHIM() (1)
