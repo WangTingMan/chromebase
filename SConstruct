@@ -265,6 +265,17 @@ base_libs = [
     'pc_libs' : '',
   },
   {
+    'name' : 'policy',
+    'sources' : """
+                core/common/policy_load_status.cc
+                core/common/preg_parser.cc
+                core/common/registry_dict.cc
+                """,
+    'prefix' : 'components/policy',
+    'libs' : '',
+    'pc_libs' : '',
+  },
+  {
     'name' : 'crypto',
     'sources' : """
                 hmac.cc
