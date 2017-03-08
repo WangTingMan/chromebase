@@ -14,6 +14,9 @@ env = Environment()
 BASE_VER = os.environ.get('BASE_VER', '0')
 PKG_CONFIG = os.environ.get('PKG_CONFIG', 'pkg-config')
 CHROME_INCLUDE_PATH = os.environ.get('CHROME_INCLUDE_PATH', '.')
+USE_CRYPTO = os.environ.get('USE_CRYPTO', '1')
+USE_DBUS = os.environ.get('USE_DBUS', '1')
+USE_TIMERS = os.environ.get('USE_TIMERS', '1')
 
 # This block will need updating whenever libchrome gets updated. The order of
 # the libs below doesn't matter (as scons will take care of building things in
@@ -235,36 +238,6 @@ base_libs = [
     'pc_libs' : '',
   },
   {
-    'name' : 'dbus',
-    'sources' : """
-                bus.cc
-                dbus_statistics.cc
-                exported_object.cc
-                file_descriptor.cc
-                message.cc
-                object_manager.cc
-                object_path.cc
-                object_proxy.cc
-                property.cc
-                scoped_dbus_error.cc
-                string_util.cc
-                util.cc
-                values_util.cc
-                """,
-    'prefix' : 'dbus',
-    'libs' : '',
-    'pc_libs' : 'dbus-1 protobuf-lite',
-  },
-  {
-    'name' : 'timers',
-    'sources' : """
-                alarm_timer_chromeos.cc
-                """,
-    'prefix' : 'components/timers',
-    'libs' : '',
-    'pc_libs' : '',
-  },
-  {
     'name' : 'policy',
     'sources' : """
                 core/common/policy_load_status.cc
@@ -274,33 +247,6 @@ base_libs = [
     'prefix' : 'components/policy',
     'libs' : '',
     'pc_libs' : '',
-  },
-  {
-    'name' : 'crypto',
-    'sources' : """
-                hmac.cc
-                hmac_nss.cc
-                nss_key_util.cc
-                nss_util.cc
-                openssl_util.cc
-                p224.cc
-                p224_spake.cc
-                random.cc
-                rsa_private_key.cc
-                rsa_private_key_nss.cc
-                scoped_test_nss_db.cc
-                secure_hash.cc
-                secure_util.cc
-                sha2.cc
-                signature_creator_nss.cc
-                signature_verifier_nss.cc
-                symmetric_key_nss.cc
-                third_party/nss/rsawrapr.c
-                third_party/nss/sha512.cc
-                """,
-    'prefix' : 'crypto',
-    'libs' : '%s-dl-%s' % (base_name, BASE_VER),
-    'pc_libs' : 'nss openssl',
   },
   {
     'name' : 'sandbox',
@@ -345,6 +291,69 @@ base_libs = [
     'pc_libs' : '',
   },
 ]
+
+if USE_CRYPTO == '1':
+  base_libs.append({
+    'name' : 'crypto',
+    'sources' : """
+                hmac.cc
+                hmac_nss.cc
+                nss_key_util.cc
+                nss_util.cc
+                openssl_util.cc
+                p224.cc
+                p224_spake.cc
+                random.cc
+                rsa_private_key.cc
+                rsa_private_key_nss.cc
+                scoped_test_nss_db.cc
+                secure_hash.cc
+                secure_util.cc
+                sha2.cc
+                signature_creator_nss.cc
+                signature_verifier_nss.cc
+                symmetric_key_nss.cc
+                third_party/nss/rsawrapr.c
+                third_party/nss/sha512.cc
+                """,
+    'prefix' : 'crypto',
+    'libs' : '%s-dl-%s' % (base_name, BASE_VER),
+    'pc_libs' : 'nss openssl',
+  })
+
+if USE_DBUS == '1':
+  base_libs.append({
+    'name' : 'dbus',
+    'sources' : """
+                bus.cc
+                dbus_statistics.cc
+                exported_object.cc
+                file_descriptor.cc
+                message.cc
+                object_manager.cc
+                object_path.cc
+                object_proxy.cc
+                property.cc
+                scoped_dbus_error.cc
+                string_util.cc
+                util.cc
+                values_util.cc
+                """,
+    'prefix' : 'dbus',
+    'libs' : '',
+    'pc_libs' : 'dbus-1 protobuf-lite',
+  })
+
+if USE_TIMERS == '1':
+  base_libs.append({
+    'name' : 'timers',
+    'sources' : """
+                alarm_timer_chromeos.cc
+                """,
+    'prefix' : 'components/timers',
+    'libs' : '',
+    'pc_libs' : '',
+  })
 
 env.Append(
   CPPPATH=['files'],
@@ -451,7 +460,10 @@ test_libs = [
     'libs': '',
     'pc_libs': '',
   },
-  {
+]
+
+if USE_DBUS == '1':
+  test_libs.append({
     'name': 'dbus_test_support',
     'sources': """
                mock_bus.cc
@@ -462,8 +474,10 @@ test_libs = [
     'prefix': 'dbus',
     'libs': '',  # TODO(wiley) what should go here?
     'pc_libs': 'dbus-1 protobuf-lite',
-  },
-  {
+  })
+
+if USE_TIMERS == '1':
+  test_libs.append({
     'name': 'timer_test_support',
     'sources': """
                mock_timer.cc
@@ -471,8 +485,7 @@ test_libs = [
     'prefix': 'base/timer',
     'libs': '',
     'pc_libs': '',
-  },
-]
+  })
 
 for lib in test_libs:
   pc_libs = lib['pc_libs'].replace('${bslot}', BASE_VER)
