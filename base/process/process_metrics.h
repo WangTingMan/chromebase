@@ -27,6 +27,10 @@
 #include "base/process/port_provider_mac.h"
 #endif
 
+#if defined(OS_WIN)
+#include "base/win/scoped_handle.h"
+#endif
+
 namespace base {
 
 #if defined(OS_WIN)
@@ -63,8 +67,12 @@ struct IoCounters {
 // shareable:      0
 // swapped         Pages swapped out to zram.
 //
-// On OS X: TODO(thakis): Revise.
-// priv:           Memory.
+// On macOS:
+// priv:           Resident size (RSS) including shared memory. Warning: This
+//                 does not include compressed size and does not always
+//                 accurately account for shared memory due to things like
+//                 copy-on-write. TODO(erikchen): Revamp this with something
+//                 more accurate.
 // shared:         0
 // shareable:      0
 //
@@ -154,10 +162,13 @@ class BASE_EXPORT ProcessMetrics {
   // system call.
   bool GetCommittedAndWorkingSetKBytes(CommittedKBytes* usage,
                                        WorkingSetKBytes* ws_usage) const;
-  // Returns private, shared, and total resident bytes.
+  // Returns private, shared, and total resident bytes. |locked_bytes| refers to
+  // bytes that must stay resident. |locked_bytes| only counts bytes locked by
+  // this task, not bytes locked by the kernel.
   bool GetMemoryBytes(size_t* private_bytes,
                       size_t* shared_bytes,
-                      size_t* resident_bytes) const;
+                      size_t* resident_bytes,
+                      size_t* locked_bytes) const;
 #endif
 
   // Returns the CPU usage in percent since the last time this method or
@@ -188,6 +199,10 @@ class BASE_EXPORT ProcessMetrics {
   // Returns the number of file descriptors currently open by the process, or
   // -1 on error.
   int GetOpenFdCount() const;
+
+  // Returns the soft limit of file descriptors that can be opened by the
+  // process, or -1 on error.
+  int GetOpenFdSoftLimit() const;
 #endif  // defined(OS_LINUX)
 
  private:
@@ -209,7 +224,11 @@ class BASE_EXPORT ProcessMetrics {
   int CalculateIdleWakeupsPerSecond(uint64_t absolute_idle_wakeups);
 #endif
 
+#if defined(OS_WIN)
+  win::ScopedHandle process_;
+#else
   ProcessHandle process_;
+#endif
 
   int processor_count_;
 
@@ -264,11 +283,13 @@ BASE_EXPORT void SetFdLimit(unsigned int max_descriptors);
 // Data about system-wide memory consumption. Values are in KB. Available on
 // Windows, Mac, Linux, Android and Chrome OS.
 //
-// Total/free memory are available on all platforms that implement
+// Total memory are available on all platforms that implement
 // GetSystemMemoryInfo(). Total/free swap memory are available on all platforms
 // except on Mac. Buffers/cached/active_anon/inactive_anon/active_file/
-// inactive_file/dirty/pswpin/pswpout/pgmajfault are available on
+// inactive_file/dirty/reclaimable/pswpin/pswpout/pgmajfault are available on
 // Linux/Android/Chrome OS. Shmem/slab/gem_objects/gem_size are Chrome OS only.
+// Speculative/file_backed/purgeable are Mac and iOS only.
+// Free is absent on Windows (see "avail_phys" below).
 struct BASE_EXPORT SystemMemoryInfoKB {
   SystemMemoryInfoKB();
   SystemMemoryInfoKB(const SystemMemoryInfoKB& other);
@@ -276,44 +297,64 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   // Serializes the platform specific fields to value.
   std::unique_ptr<Value> ToValue() const;
 
-  int total;
-  int free;
+  int total = 0;
 
-#if defined(OS_LINUX)
+#if !defined(OS_WIN)
+  int free = 0;
+#endif
+
+#if defined(OS_WIN)
+  // "This is the amount of physical memory that can be immediately reused
+  // without having to write its contents to disk first. It is the sum of the
+  // size of the standby, free, and zero lists." (MSDN).
+  // Standby: not modified pages of physical ram (file-backed memory) that are
+  // not actively being used.
+  int avail_phys = 0;
+#endif
+
+#if defined(OS_LINUX) || defined(OS_ANDROID)
   // This provides an estimate of available memory as described here:
   // https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773
   // NOTE: this is ONLY valid in kernels 3.14 and up.  Its value will always
   // be 0 in earlier kernel versions.
-  int available;
+  // Note: it includes _all_ file-backed memory (active + inactive).
+  int available = 0;
 #endif
 
 #if !defined(OS_MACOSX)
-  int swap_total;
-  int swap_free;
+  int swap_total = 0;
+  int swap_free = 0;
 #endif
 
 #if defined(OS_ANDROID) || defined(OS_LINUX)
-  int buffers;
-  int cached;
-  int active_anon;
-  int inactive_anon;
-  int active_file;
-  int inactive_file;
-  int dirty;
+  int buffers = 0;
+  int cached = 0;
+  int active_anon = 0;
+  int inactive_anon = 0;
+  int active_file = 0;
+  int inactive_file = 0;
+  int dirty = 0;
+  int reclaimable = 0;
 
   // vmstats data.
-  unsigned long pswpin;
-  unsigned long pswpout;
-  unsigned long pgmajfault;
+  unsigned long pswpin = 0;
+  unsigned long pswpout = 0;
+  unsigned long pgmajfault = 0;
 #endif  // defined(OS_ANDROID) || defined(OS_LINUX)
 
 #if defined(OS_CHROMEOS)
-  int shmem;
-  int slab;
+  int shmem = 0;
+  int slab = 0;
   // Gem data will be -1 if not supported.
-  int gem_objects;
-  long long gem_size;
+  int gem_objects = -1;
+  long long gem_size = -1;
 #endif  // defined(OS_CHROMEOS)
+
+#if defined(OS_MACOSX)
+  int speculative = 0;
+  int file_backed = 0;
+  int purgeable = 0;
+#endif  // defined(OS_MACOSX)
 };
 
 // On Linux/Android/Chrome OS, system-wide memory consumption data is parsed
