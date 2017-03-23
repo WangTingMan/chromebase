@@ -17,6 +17,7 @@
 #include "base/files/dir_reader_posix.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/process/internal_linux.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -72,8 +73,8 @@ size_t ReadProcStatusAndGetFieldAsSizeT(pid_t pid, const std::string& field) {
     const std::string& key = pairs[i].first;
     const std::string& value_str = pairs[i].second;
     if (key == field) {
-      std::vector<StringPiece> split_value_str = SplitStringPiece(
-          value_str, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+      std::vector<StringPiece> split_value_str =
+          SplitStringPiece(value_str, " ", TRIM_WHITESPACE, SPLIT_WANT_ALL);
       if (split_value_str.size() != 2 || split_value_str[1] != "kB") {
         NOTREACHED();
         return 0;
@@ -163,8 +164,9 @@ int GetProcessCPU(pid_t pid) {
 }  // namespace
 
 // static
-ProcessMetrics* ProcessMetrics::CreateProcessMetrics(ProcessHandle process) {
-  return new ProcessMetrics(process);
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateProcessMetrics(
+    ProcessHandle process) {
+  return WrapUnique(new ProcessMetrics(process));
 }
 
 // On linux, we return vsize.
@@ -190,7 +192,7 @@ size_t ProcessMetrics::GetPeakWorkingSetSize() const {
 }
 
 bool ProcessMetrics::GetMemoryBytes(size_t* private_bytes,
-                                    size_t* shared_bytes) {
+                                    size_t* shared_bytes) const {
   WorkingSetKBytes ws_usage;
   if (!GetWorkingSetKBytes(&ws_usage))
     return false;
@@ -354,8 +356,7 @@ bool ProcessMetrics::GetWorkingSetKBytesTotmaps(WorkingSetKBytes *ws_usage)
   }
 
   std::vector<std::string> totmaps_fields = SplitString(
-      totmaps_data, base::kWhitespaceASCII, base::KEEP_WHITESPACE,
-      base::SPLIT_WANT_NONEMPTY);
+      totmaps_data, kWhitespaceASCII, KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY);
 
   DCHECK_EQ("Pss:", totmaps_fields[kPssIndex-1]);
   DCHECK_EQ("Private_Clean:", totmaps_fields[kPrivate_CleanIndex - 1]);
@@ -406,8 +407,8 @@ bool ProcessMetrics::GetWorkingSetKBytesStatm(WorkingSetKBytes* ws_usage)
       return false;
   }
 
-  std::vector<StringPiece> statm_vec = SplitStringPiece(
-      statm, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  std::vector<StringPiece> statm_vec =
+      SplitStringPiece(statm, " ", TRIM_WHITESPACE, SPLIT_WANT_ALL);
   if (statm_vec.size() != 7)
     return false;  // Not the format we expect.
 
@@ -534,6 +535,9 @@ const size_t kDiskWeightedIOTime = 13;
 SystemMemoryInfoKB::SystemMemoryInfoKB() {
   total = 0;
   free = 0;
+#if defined(OS_LINUX)
+  available = 0;
+#endif
   buffers = 0;
   cached = 0;
   active_anon = 0;
@@ -564,6 +568,9 @@ std::unique_ptr<Value> SystemMemoryInfoKB::ToValue() const {
 
   res->SetInteger("total", total);
   res->SetInteger("free", free);
+#if defined(OS_LINUX)
+  res->SetInteger("available", available);
+#endif
   res->SetInteger("buffers", buffers);
   res->SetInteger("cached", cached);
   res->SetInteger("active_anon", active_anon);
@@ -621,6 +628,10 @@ bool ParseProcMeminfo(const std::string& meminfo_data,
       target = &meminfo->total;
     else if (tokens[0] == "MemFree:")
       target = &meminfo->free;
+#if defined(OS_LINUX)
+    else if (tokens[0] == "MemAvailable:")
+      target = &meminfo->available;
+#endif
     else if (tokens[0] == "Buffers:")
       target = &meminfo->buffers;
     else if (tokens[0] == "Cached:")
@@ -676,12 +687,16 @@ bool ParseProcVmstat(const std::string& vmstat_data,
     if (tokens.size() != 2)
       continue;
 
+    uint64_t val;
+    if (!StringToUint64(tokens[1], &val))
+      continue;
+
     if (tokens[0] == "pswpin") {
-      StringToInt(tokens[1], &meminfo->pswpin);
+      meminfo->pswpin = val;
     } else if (tokens[0] == "pswpout") {
-      StringToInt(tokens[1], &meminfo->pswpout);
+      meminfo->pswpout = val;
     } else if (tokens[0] == "pgmajfault") {
-      StringToInt(tokens[1], &meminfo->pgmajfault);
+      meminfo->pgmajfault = val;
     }
   }
 
@@ -895,6 +910,10 @@ bool GetSystemDiskInfo(SystemDiskInfo* diskinfo) {
   }
 
   return true;
+}
+
+TimeDelta GetUserCpuTimeSinceBoot() {
+  return internal::GetUserCpuTimeSinceBoot();
 }
 
 #if defined(OS_CHROMEOS)

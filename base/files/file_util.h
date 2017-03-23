@@ -37,6 +37,7 @@
 
 namespace base {
 
+class Environment;
 class Time;
 
 //-----------------------------------------------------------------------------
@@ -199,6 +200,11 @@ BASE_EXPORT bool GetPosixFilePermissions(const FilePath& path, int* mode);
 // the permission of a file which the symlink points to.
 BASE_EXPORT bool SetPosixFilePermissions(const FilePath& path, int mode);
 
+// Returns true iff |executable| can be found in any directory specified by the
+// environment variable in |env|.
+BASE_EXPORT bool ExecutableExistsInPath(Environment* env,
+                                        const FilePath::StringType& executable);
+
 #endif  // OS_POSIX
 
 // Returns true if the given directory is empty
@@ -288,10 +294,6 @@ BASE_EXPORT bool DevicePathToDriveLetterPath(const FilePath& device_path,
 // be resolved with this function.
 BASE_EXPORT bool NormalizeToNativeFilePath(const FilePath& path,
                                            FilePath* nt_path);
-
-// Given an existing file in |path|, returns whether this file is on a network
-// drive or not. If |path| does not exist, this function returns false.
-BASE_EXPORT bool IsOnNetworkDrive(const base::FilePath& path);
 #endif
 
 // This function will return if the given file is a symlink or not.
@@ -305,7 +307,9 @@ BASE_EXPORT bool TouchFile(const FilePath& path,
                            const Time& last_accessed,
                            const Time& last_modified);
 
-// Wrapper for fopen-like calls. Returns non-NULL FILE* on success.
+// Wrapper for fopen-like calls. Returns non-NULL FILE* on success. The
+// underlying file descriptor (POSIX) or handle (Windows) is unconditionally
+// configured to not be propagated to child processes.
 BASE_EXPORT FILE* OpenFile(const FilePath& filename, const char* mode);
 
 // Closes file opened by OpenFile. Returns true on success.

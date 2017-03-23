@@ -24,6 +24,12 @@ const char kEnableHeapProfiling[]           = "enable-heap-profiling";
 // derived from trace events are reported.
 const char kEnableHeapProfilingModeNative[] = "native";
 
+// Report per-task heap usage and churn in the task profiler.
+// Does not keep track of individual allocations unlike the default and native
+// mode. Keeps only track of summarized churn stats in the task profiler
+// (chrome://profiler).
+const char kEnableHeapProfilingTaskProfiler[] = "task-profiler";
+
 // Generates full memory crash dump.
 const char kFullMemoryCrashReport[]         = "full-memory-crash-report";
 
@@ -88,6 +94,16 @@ const char kProfilerTiming[]                = "profiler-timing";
 // Value of the --profiler-timing flag that will disable timing information for
 // chrome://profiler.
 const char kProfilerTimingDisabledValue[]   = "0";
+
+// Specifies a location for profiling output. This will only work if chrome has
+// been built with the gyp variable profiling=1 or gn arg enable_profiling=true.
+//
+//   {pid} if present will be replaced by the pid of the process.
+//   {count} if present will be incremented each time a profile is generated
+//           for this process.
+// The default is chrome-profile-{pid} for the browser and test-profile-{pid}
+// for tests.
+const char kProfilingFile[] = "profiling-file";
 
 #if defined(OS_WIN)
 // Disables the USB keyboard detection for blocking the OSK on Win8+.

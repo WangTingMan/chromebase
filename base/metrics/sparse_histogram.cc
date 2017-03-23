@@ -68,7 +68,7 @@ HistogramBase* SparseHistogram::FactoryGet(const std::string& name,
     ReportHistogramActivity(*histogram, HISTOGRAM_LOOKUP);
   }
 
-  DCHECK_EQ(SPARSE_HISTOGRAM, histogram->GetHistogramType());
+  CHECK_EQ(SPARSE_HISTOGRAM, histogram->GetHistogramType());
   return histogram;
 }
 
@@ -208,7 +208,6 @@ HistogramBase* SparseHistogram::DeserializeInfoImpl(PickleIterator* iter) {
     return NULL;
   }
 
-  DCHECK(flags & HistogramBase::kIPCSerializationSourceFlag);
   flags &= ~HistogramBase::kIPCSerializationSourceFlag;
 
   return SparseHistogram::FactoryGet(histogram_name, flags);
@@ -283,8 +282,8 @@ void SparseHistogram::WriteAsciiHeader(const Count total_count,
                 "Histogram: %s recorded %d samples",
                 histogram_name().c_str(),
                 total_count);
-  if (flags() & ~kHexRangePrintingFlag)
-    StringAppendF(output, " (flags = 0x%x)", flags() & ~kHexRangePrintingFlag);
+  if (flags())
+    StringAppendF(output, " (flags = 0x%x)", flags());
 }
 
 }  // namespace base

@@ -19,12 +19,14 @@ RunLoop::RunLoop()
       running_(false),
       quit_when_idle_received_(false),
       weak_factory_(this) {
+  DCHECK(loop_);
 }
 
 RunLoop::~RunLoop() {
 }
 
 void RunLoop::Run() {
+  DCHECK(thread_checker_.CalledOnValidThread());
   if (!BeforeRun())
     return;
 
@@ -44,6 +46,7 @@ void RunLoop::RunUntilIdle() {
 }
 
 void RunLoop::Quit() {
+  DCHECK(thread_checker_.CalledOnValidThread());
   quit_called_ = true;
   if (running_ && loop_->run_loop_ == this) {
     // This is the inner-most RunLoop, so quit now.
@@ -51,8 +54,17 @@ void RunLoop::Quit() {
   }
 }
 
+void RunLoop::QuitWhenIdle() {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  quit_when_idle_received_ = true;
+}
+
 base::Closure RunLoop::QuitClosure() {
   return base::Bind(&RunLoop::Quit, weak_factory_.GetWeakPtr());
+}
+
+base::Closure RunLoop::QuitWhenIdleClosure() {
+  return base::Bind(&RunLoop::QuitWhenIdle, weak_factory_.GetWeakPtr());
 }
 
 bool RunLoop::BeforeRun() {

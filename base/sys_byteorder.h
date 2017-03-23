@@ -13,29 +13,53 @@
 
 #include <stdint.h>
 
+#include "base/logging.h"
 #include "build/build_config.h"
+
+#if defined(COMPILER_MSVC)
+#include <stdlib.h>
+#endif
 
 namespace base {
 
 // Returns a value with all bytes in |x| swapped, i.e. reverses the endianness.
 inline uint16_t ByteSwap(uint16_t x) {
-  return ((x & 0x00ff) << 8) | ((x & 0xff00) >> 8);
+#if defined(COMPILER_MSVC)
+  return _byteswap_ushort(x);
+#else
+  return __builtin_bswap16(x);
+#endif
 }
 
 inline uint32_t ByteSwap(uint32_t x) {
-  return ((x & 0x000000fful) << 24) | ((x & 0x0000ff00ul) << 8) |
-      ((x & 0x00ff0000ul) >> 8) | ((x & 0xff000000ul) >> 24);
+#if defined(COMPILER_MSVC)
+  return _byteswap_ulong(x);
+#else
+  return __builtin_bswap32(x);
+#endif
 }
 
 inline uint64_t ByteSwap(uint64_t x) {
-  return ((x & 0x00000000000000ffull) << 56) |
-      ((x & 0x000000000000ff00ull) << 40) |
-      ((x & 0x0000000000ff0000ull) << 24) |
-      ((x & 0x00000000ff000000ull) << 8) |
-      ((x & 0x000000ff00000000ull) >> 8) |
-      ((x & 0x0000ff0000000000ull) >> 24) |
-      ((x & 0x00ff000000000000ull) >> 40) |
-      ((x & 0xff00000000000000ull) >> 56);
+#if defined(COMPILER_MSVC)
+  return _byteswap_uint64(x);
+#else
+  return __builtin_bswap64(x);
+#endif
+}
+
+inline uintptr_t ByteSwapUintPtrT(uintptr_t x) {
+  // We do it this way because some build configurations are ILP32 even when
+  // defined(ARCH_CPU_64_BITS). Unfortunately, we can't use sizeof in #ifs. But,
+  // because these conditionals are constexprs, the irrelevant branches will
+  // likely be optimized away, so this construction should not result in code
+  // bloat.
+  if (sizeof(uintptr_t) == 4) {
+    return ByteSwap(static_cast<uint32_t>(x));
+  } else if (sizeof(uintptr_t) == 8) {
+    return ByteSwap(static_cast<uint64_t>(x));
+  } else {
+    NOTREACHED();
+  }
 }
 
 // Converts the bytes in |x| from host order (endianness) to little endian, and

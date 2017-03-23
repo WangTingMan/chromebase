@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include "base/files/memory_mapped_file.h"
+#include "base/files/scoped_file.h"
 #include "base/memory/singleton.h"
 
 namespace base {
@@ -34,6 +35,10 @@ namespace base {
 // It maps from an abstract key to a descriptor. If independent modules each
 // need to define keys, then values should be chosen randomly so as not to
 // collide.
+//
+// Note that this class is deprecated and passing file descriptor should ideally
+// be done through the command line and using FileDescriptorStore.
+// See https://crbugs.com/detail?id=692619
 class BASE_EXPORT GlobalDescriptors {
  public:
   typedef uint32_t Key;
@@ -52,13 +57,7 @@ class BASE_EXPORT GlobalDescriptors {
 
   // Often we want a canonical descriptor for a given Key. In this case, we add
   // the following constant to the key value:
-#if !defined(OS_ANDROID)
   static const int kBaseDescriptor = 3;  // 0, 1, 2 are already taken.
-#else
-  // 3 used by __android_log_write().
-  // 4 used by... something important on Android M.
-  static const int kBaseDescriptor = 5;
-#endif
 
   // Return the singleton instance of GlobalDescriptors.
   static GlobalDescriptors* GetInstance();
@@ -68,6 +67,11 @@ class BASE_EXPORT GlobalDescriptors {
 
   // Get a descriptor given a key. Returns -1 on error.
   int MaybeGet(Key key) const;
+
+  // Returns a descriptor given a key and removes it from this class mappings.
+  // Also populates |region|.
+  // It is a fatal error if the key is not known.
+  base::ScopedFD TakeFD(Key key, base::MemoryMappedFile::Region* region);
 
   // Get a region given a key. It is a fatal error if the key is not known.
   base::MemoryMappedFile::Region GetRegion(Key key) const;

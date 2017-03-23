@@ -9,9 +9,8 @@ if (is_android) {
   import("//build/config/android/rules.gni")
 }
 
-source_set("test_config") {
-  # TODO http://crbug.com/412064 enable this flag all the time.
-  testonly = !is_component_build
+static_library("test_config") {
+  testonly = true
   sources = [
     "test_switches.cc",
     "test_switches.h",
@@ -23,11 +22,16 @@ source_set("test_config") {
   ]
 }
 
-# GYP: //base/base.gyp:test_support_base
-source_set("test_support") {
-  # TODO http://crbug.com/412064 enable this flag all the time.
-  testonly = !is_component_build
+static_library("test_support") {
+  testonly = true
   sources = [
+    "../trace_event/trace_config_memory_test_util.h",
+    "android/java_handler_thread_for_testing.cc",
+    "android/java_handler_thread_for_testing.h",
+    "android/test_system_message_handler_link_android.cc",
+    "android/test_system_message_handler_link_android.h",
+    "fuzzed_data_provider.cc",
+    "fuzzed_data_provider.h",
     "gtest_util.cc",
     "gtest_util.h",
     "gtest_xml_unittest_result_printer.cc",
@@ -36,12 +40,15 @@ source_set("test_support") {
     "gtest_xml_util.h",
     "histogram_tester.cc",
     "histogram_tester.h",
+    "icu_test_util.cc",
+    "icu_test_util.h",
     "ios/wait_util.h",
     "ios/wait_util.mm",
     "launcher/test_result.cc",
     "launcher/test_result.h",
     "launcher/test_results_tracker.h",
     "launcher/unit_test_launcher.h",
+    "mock_callback.h",
     "mock_chrome_application_mac.h",
     "mock_chrome_application_mac.mm",
     "mock_devices_changed_observer.cc",
@@ -50,7 +57,9 @@ source_set("test_support") {
     "mock_entropy_provider.h",
     "mock_log.cc",
     "mock_log.h",
+    "multiprocess_test.cc",
     "multiprocess_test.h",
+    "multiprocess_test_android.cc",
     "null_task_runner.cc",
     "null_task_runner.h",
     "opaque_ref_counted.cc",
@@ -63,12 +72,20 @@ source_set("test_support") {
     "perf_time_logger.h",
     "power_monitor_test_base.cc",
     "power_monitor_test_base.h",
+    "scoped_async_task_scheduler.cc",
+    "scoped_async_task_scheduler.h",
     "scoped_command_line.cc",
     "scoped_command_line.h",
+    "scoped_feature_list.cc",
+    "scoped_feature_list.h",
     "scoped_locale.cc",
     "scoped_locale.h",
+    "scoped_mock_time_message_loop_task_runner.cc",
+    "scoped_mock_time_message_loop_task_runner.h",
     "scoped_path_override.cc",
     "scoped_path_override.h",
+    "scoped_task_scheduler.cc",
+    "scoped_task_scheduler.h",
     "sequenced_task_runner_test_template.cc",
     "sequenced_task_runner_test_template.h",
     "sequenced_worker_pool_owner.cc",
@@ -130,10 +147,10 @@ source_set("test_support") {
     sources += [
       "launcher/test_launcher.cc",
       "launcher/test_launcher.h",
+      "launcher/test_launcher_tracer.cc",
+      "launcher/test_launcher_tracer.h",
       "launcher/test_results_tracker.cc",
       "launcher/unit_test_launcher.cc",
-      "multiprocess_test.cc",
-      "multiprocess_test_android.cc",
     ]
   }
 
@@ -177,7 +194,11 @@ source_set("test_support") {
   }
 
   if (is_android) {
-    deps += [ ":base_unittests_jni_headers" ]
+    deps += [
+      ":base_unittests_jni_headers",
+      ":test_support_jni_headers",
+    ]
+    public_deps += [ ":test_support_java" ]
   }
 
   if (is_nacl_nonsfi) {
@@ -190,6 +211,8 @@ source_set("test_support") {
     sources -= [
       "gtest_xml_util.cc",
       "gtest_xml_util.h",
+      "icu_test_util.cc",
+      "icu_test_util.h",
       "perf_test_suite.cc",
       "perf_test_suite.h",
       "scoped_path_override.cc",
@@ -216,6 +239,9 @@ config("perf_test_config") {
   defines = [ "PERF_TEST" ]
 }
 
+# This is a source set instead of a static library because it seems like some
+# linkers get confused when "main" is in a static library, and if you link to
+# this, you always want the object file anyway.
 source_set("test_support_perf") {
   testonly = true
   sources = [
@@ -230,7 +256,7 @@ source_set("test_support_perf") {
   public_configs = [ ":perf_test_config" ]
 }
 
-source_set("test_launcher_nacl_nonsfi") {
+static_library("test_launcher_nacl_nonsfi") {
   testonly = true
   sources = [
     "launcher/test_launcher_nacl_nonsfi.cc",
@@ -241,10 +267,45 @@ source_set("test_launcher_nacl_nonsfi") {
   ]
 }
 
-source_set("run_all_unittests") {
+static_library("run_all_unittests") {
   testonly = true
   sources = [
     "run_all_unittests.cc",
+  ]
+  deps = [
+    ":test_support",
+  ]
+}
+
+# These sources are linked into both the base_unittests binary and the test
+# shared library target below.
+source_set("native_library_test_utils") {
+  testonly = true
+  sources = [
+    "native_library_test_utils.cc",
+    "native_library_test_utils.h",
+  ]
+}
+
+# This shared library is dynamically loaded by NativeLibrary unittests.
+shared_library("test_shared_library") {
+  testonly = true
+  sources = [
+    "test_shared_library.cc",
+  ]
+
+  deps = [
+    ":native_library_test_utils",
+  ]
+}
+
+static_library("run_all_base_unittests") {
+  # Only targets in base should depend on this, targets outside base
+  # should depend on run_all_unittests above.
+  visibility = [ "//base/*" ]
+  testonly = true
+  sources = [
+    "run_all_base_unittests.cc",
   ]
   deps = [
     ":test_support",
@@ -268,8 +329,47 @@ if (is_android) {
   generate_jni("base_unittests_jni_headers") {
     sources = [
       "android/java/src/org/chromium/base/ContentUriTestUtils.java",
+      "android/java/src/org/chromium/base/TestSystemMessageHandler.java",
       "android/java/src/org/chromium/base/TestUiThread.java",
     ]
     jni_package = "base"
+  }
+
+  generate_jni("test_support_jni_headers") {
+    sources = [
+      "android/java/src/org/chromium/base/MainReturnCodeResult.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientLauncher.java",
+    ]
+    jni_package = "base"
+  }
+
+  android_library("test_support_java") {
+    testonly = true
+    deps = [
+      "//base:base_java",
+      "//testing/android/native_test:native_main_runner_java",
+      "//third_party/android_tools:android_support_annotations_java",
+      "//third_party/jsr-305:jsr_305_javalib",
+    ]
+    srcjar_deps = [ ":test_support_java_aidl" ]
+    java_files = [
+      "android/java/src/org/chromium/base/FileDescriptorInfo.java",
+      "android/java/src/org/chromium/base/MainReturnCodeResult.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientLauncher.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService0.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService1.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService2.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService3.java",
+      "android/java/src/org/chromium/base/MultiprocessTestClientService4.java",
+    ]
+  }
+
+  android_aidl("test_support_java_aidl") {
+    testonly = true
+    import_include = [ "android/java/src" ]
+    sources = [
+      "android/java/src/org/chromium/base/ITestClient.aidl",
+    ]
   }
 }

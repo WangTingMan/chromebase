@@ -10,7 +10,7 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/message_loop/message_loop.h"
-#include "base/metrics/histogram.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
 #include "base/task_runner_util.h"
@@ -459,8 +459,9 @@ void ObjectProxy::WaitForServiceToBeAvailableInternal() {
   }
 }
 
-DBusHandlerResult ObjectProxy::HandleMessage(DBusConnection*,
-                                             DBusMessage* raw_message) {
+DBusHandlerResult ObjectProxy::HandleMessage(
+    DBusConnection* connection,
+    DBusMessage* raw_message) {
   bus_->AssertOnDBusThread();
 
   if (dbus_message_get_type(raw_message) != DBUS_MESSAGE_TYPE_SIGNAL)

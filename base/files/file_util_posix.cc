@@ -22,6 +22,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "base/environment.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
 #include "base/files/scoped_file.h"
@@ -30,6 +31,7 @@
 #include "base/memory/singleton.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/stl_util.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/sys_string_conversions.h"
@@ -183,6 +185,19 @@ bool DetermineDevShmExecutable() {
 #endif  // defined(OS_LINUX)
 #endif  // !defined(OS_NACL_NONSFI)
 
+#if !defined(OS_MACOSX)
+// Appends |mode_char| to |mode| before the optional character set encoding; see
+// https://www.gnu.org/software/libc/manual/html_node/Opening-Streams.html for
+// details.
+std::string AppendModeCharacter(StringPiece mode, char mode_char) {
+  std::string result(mode.as_string());
+  size_t comma_pos = result.find(',');
+  result.insert(comma_pos == std::string::npos ? result.length() : comma_pos, 1,
+                mode_char);
+  return result;
+}
+#endif
+
 }  // namespace
 
 #if !defined(OS_NACL_NONSFI)
@@ -274,11 +289,8 @@ bool CopyDirectory(const FilePath& from_path,
   FilePath real_from_path = MakeAbsoluteFilePath(from_path);
   if (real_from_path.empty())
     return false;
-  if (real_to_path.value().size() >= real_from_path.value().size() &&
-      real_to_path.value().compare(0, real_from_path.value().size(),
-                                   real_from_path.value()) == 0) {
+  if (real_to_path == real_from_path || real_from_path.IsParent(real_to_path))
     return false;
-  }
 
   int traverse_type = FileEnumerator::FILES | FileEnumerator::SHOW_SYM_LINKS;
   if (recursive)
@@ -493,6 +505,25 @@ bool SetPosixFilePermissions(const FilePath& path,
   return true;
 }
 
+bool ExecutableExistsInPath(Environment* env,
+                            const FilePath::StringType& executable) {
+  std::string path;
+  if (!env->GetVar("PATH", &path)) {
+    LOG(ERROR) << "No $PATH variable. Assuming no " << executable << ".";
+    return false;
+  }
+
+  for (const StringPiece& cur_path :
+       SplitStringPiece(path, ":", KEEP_WHITESPACE, SPLIT_WANT_NONEMPTY)) {
+    FilePath file(cur_path);
+    int permissions;
+    if (GetPosixFilePermissions(file.Append(executable), &permissions) &&
+        (permissions & FILE_PERMISSION_EXECUTE_BY_USER))
+      return true;
+  }
+  return false;
+}
+
 #if !defined(OS_MACOSX)
 // This is implemented in file_util_mac.mm for Mac.
 bool GetTempDir(FilePath* path) {
@@ -694,11 +725,29 @@ bool GetFileInfo(const FilePath& file_path, File::Info* results) {
 #endif  // !defined(OS_NACL_NONSFI)
 
 FILE* OpenFile(const FilePath& filename, const char* mode) {
+  // 'e' is unconditionally added below, so be sure there is not one already
+  // present before a comma in |mode|.
+  DCHECK(
+      strchr(mode, 'e') == nullptr ||
+      (strchr(mode, ',') != nullptr && strchr(mode, 'e') > strchr(mode, ',')));
   ThreadRestrictions::AssertIOAllowed();
   FILE* result = NULL;
+#if defined(OS_MACOSX)
+  // macOS does not provide a mode character to set O_CLOEXEC; see
+  // https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man3/fopen.3.html.
+  const char* the_mode = mode;
+#else
+  std::string mode_with_e(AppendModeCharacter(mode, 'e'));
+  const char* the_mode = mode_with_e.c_str();
+#endif
   do {
-    result = fopen(filename.value().c_str(), mode);
+    result = fopen(filename.value().c_str(), the_mode);
   } while (!result && errno == EINTR);
+#if defined(OS_MACOSX)
+  // Mark the descriptor as close-on-exec.
+  if (result)
+    SetCloseOnExec(fileno(result));
+#endif
   return result;
 }
 

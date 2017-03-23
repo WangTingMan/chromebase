@@ -60,15 +60,13 @@ testing::AssertionResult RegistryDictEquals(const RegistryDict& a,
 void SetInteger(RegistryDict* dict,
                 const std::string& name,
                 int value) {
-  dict->SetValue(
-      name, base::WrapUnique<base::Value>(new base::FundamentalValue(value)));
+  dict->SetValue(name, base::WrapUnique<base::Value>(new base::Value(value)));
 }
 
 void SetString(RegistryDict* dict,
                const std::string& name,
                const std::string&  value) {
-  dict->SetValue(name,
-                 base::WrapUnique<base::Value>(new base::StringValue(value)));
+  dict->SetValue(name, base::WrapUnique<base::Value>(new base::Value(value)));
 }
 
 TEST(PRegParserTest, TestParseFile) {

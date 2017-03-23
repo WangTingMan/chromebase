@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/metrics/histogram_base.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/metrics/histogram_samples.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/persistent_memory_allocator.h"
@@ -48,7 +49,7 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
 
   void InitializeStatisticsRecorder() {
     DCHECK(!statistics_recorder_);
-    statistics_recorder_.reset(new StatisticsRecorder());
+    statistics_recorder_ = StatisticsRecorder::CreateTemporaryForTesting();
   }
 
   void UninitializeStatisticsRecorder() {

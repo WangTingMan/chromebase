@@ -71,8 +71,9 @@
 //     object_manager_->UnregisterInterface(kInterface);
 //   }
 //
-// The D-Bus thread manager takes care of issuing the necessary call to
-// GetManagedObjects() after the implementation classes have been set up.
+// This class calls GetManagedObjects() asynchronously after the remote service
+// becomes available and additionally refreshes managed objects after the
+// service stops or restarts.
 //
 // The object manager interface class has one abstract method that must be
 // implemented by the class to create Properties structures on demand. As well
@@ -166,8 +167,8 @@ public:
     // called on each interface implementation with differing values of
     // |interface_name| as appropriate. An implementation class will only
     // receive multiple calls if it has registered for multiple interfaces.
-    virtual void ObjectAdded(const ObjectPath& /*object_path*/,
-                             const std::string& /*interface_name*/) {}
+    virtual void ObjectAdded(const ObjectPath& object_path,
+                             const std::string& interface_name) { }
 
     // Called by ObjectManager to inform the implementation class than an
     // object with the path |object_path| has been removed. Ths D-Bus interface
@@ -178,8 +179,8 @@ public:
     // This method will be called before the Properties structure and the
     // ObjectProxy object for the given interface are cleaned up, it is safe
     // to retrieve them during removal to vary processing.
-    virtual void ObjectRemoved(const ObjectPath& /*object_path*/,
-                               const std::string& /*interface_name*/) {}
+    virtual void ObjectRemoved(const ObjectPath& object_path,
+                               const std::string& interface_name) { }
   };
 
   // Client code should use Bus::GetObjectManager() instead of this constructor.
@@ -238,17 +239,14 @@ public:
  private:
   friend class base::RefCountedThreadSafe<ObjectManager>;
 
-  // Connects the InterfacesAdded and InterfacesRemoved signals and calls
-  // GetManagedObjects. Called from OnSetupMatchRuleAndFilterComplete.
-  void InitializeObjects();
-
   // Called from the constructor to add a match rule for PropertiesChanged
-  // signals on the DBus thread and set up a corresponding filter function.
+  // signals on the D-Bus thread and set up a corresponding filter function.
   bool SetupMatchRuleAndFilter();
 
   // Called on the origin thread once the match rule and filter have been set
-  // up. |success| is false, if an error occurred during set up; it's true
-  // otherwise.
+  // up. Connects the InterfacesAdded and InterfacesRemoved signals and
+  // refreshes objects if the service is available. |success| is false if an
+  // error occurred during setup and true otherwise.
   void OnSetupMatchRuleAndFilterComplete(bool success);
 
   // Called by dbus:: when a message is received. This is used to filter

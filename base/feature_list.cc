@@ -10,7 +10,9 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
+#include "base/pickle.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 
@@ -22,6 +24,45 @@ namespace {
 // FeatureList::SetInstance(). Does not use base/memory/singleton.h in order to
 // have more control over initialization timing. Leaky.
 FeatureList* g_instance = nullptr;
+
+// Tracks whether the FeatureList instance was initialized via an accessor.
+bool g_initialized_from_accessor = false;
+
+// An allocator entry for a feature in shared memory. The FeatureEntry is
+// followed by a base::Pickle object that contains the feature and trial name.
+struct FeatureEntry {
+  // SHA1(FeatureEntry): Increment this if structure changes!
+  static constexpr uint32_t kPersistentTypeId = 0x06567CA6 + 1;
+
+  // Expected size for 32/64-bit check.
+  static constexpr size_t kExpectedInstanceSize = 8;
+
+  // Specifies whether a feature override enables or disables the feature. Same
+  // values as the OverrideState enum in feature_list.h
+  uint32_t override_state;
+
+  // Size of the pickled structure, NOT the total size of this entry.
+  uint32_t pickle_size;
+
+  // Reads the feature and trial name from the pickle. Calling this is only
+  // valid on an initialized entry that's in shared memory.
+  bool GetFeatureAndTrialName(StringPiece* feature_name,
+                              StringPiece* trial_name) const {
+    const char* src =
+        reinterpret_cast<const char*>(this) + sizeof(FeatureEntry);
+
+    Pickle pickle(src, pickle_size);
+    PickleIterator pickle_iter(pickle);
+
+    if (!pickle_iter.ReadStringPiece(feature_name))
+      return false;
+
+    // Return true because we are not guaranteed to have a trial name anyways.
+    auto sink = pickle_iter.ReadStringPiece(trial_name);
+    ALLOW_UNUSED_LOCAL(sink);
+    return true;
+  }
+};
 
 // Some characters are not allowed to appear in feature names or the associated
 // field trial names, as they are used as special characters for command-line
@@ -35,10 +76,7 @@ bool IsValidFeatureOrFieldTrialName(const std::string& name) {
 
 }  // namespace
 
-FeatureList::FeatureList()
-  : initialized_(false),
-    initialized_from_command_line_(false) {
-}
+FeatureList::FeatureList() {}
 
 FeatureList::~FeatureList() {}
 
@@ -53,6 +91,26 @@ void FeatureList::InitializeFromCommandLine(
   RegisterOverridesFromCommandLine(enable_features, OVERRIDE_ENABLE_FEATURE);
 
   initialized_from_command_line_ = true;
+}
+
+void FeatureList::InitializeFromSharedMemory(
+    PersistentMemoryAllocator* allocator) {
+  DCHECK(!initialized_);
+
+  PersistentMemoryAllocator::Iterator iter(allocator);
+  const FeatureEntry* entry;
+  while ((entry = iter.GetNextOfObject<FeatureEntry>()) != nullptr) {
+    OverrideState override_state =
+        static_cast<OverrideState>(entry->override_state);
+
+    StringPiece feature_name;
+    StringPiece trial_name;
+    if (!entry->GetFeatureAndTrialName(&feature_name, &trial_name))
+      continue;
+
+    FieldTrial* trial = FieldTrialList::Find(trial_name.as_string());
+    RegisterOverride(feature_name, override_state, trial);
+  }
 }
 
 bool FeatureList::IsFeatureOverriddenFromCommandLine(
@@ -97,6 +155,30 @@ void FeatureList::RegisterFieldTrialOverride(const std::string& feature_name,
   RegisterOverride(feature_name, override_state, field_trial);
 }
 
+void FeatureList::AddFeaturesToAllocator(PersistentMemoryAllocator* allocator) {
+  DCHECK(initialized_);
+
+  for (const auto& override : overrides_) {
+    Pickle pickle;
+    pickle.WriteString(override.first);
+    if (override.second.field_trial)
+      pickle.WriteString(override.second.field_trial->trial_name());
+
+    size_t total_size = sizeof(FeatureEntry) + pickle.size();
+    FeatureEntry* entry = allocator->New<FeatureEntry>(total_size);
+    if (!entry)
+      return;
+
+    entry->override_state = override.second.overridden_state;
+    entry->pickle_size = pickle.size();
+
+    char* dst = reinterpret_cast<char*>(entry) + sizeof(FeatureEntry);
+    memcpy(dst, pickle.data(), pickle.size());
+
+    allocator->MakeIterable(entry);
+  }
+}
+
 void FeatureList::GetFeatureOverrides(std::string* enable_overrides,
                                       std::string* disable_overrides) {
   DCHECK(initialized_);
@@ -133,7 +215,11 @@ void FeatureList::GetFeatureOverrides(std::string* enable_overrides,
 
 // static
 bool FeatureList::IsEnabled(const Feature& feature) {
-  return GetInstance()->IsFeatureEnabled(feature);
+  if (!g_instance) {
+    g_initialized_from_accessor = true;
+    return feature.default_state == FEATURE_ENABLED_BY_DEFAULT;
+  }
+  return g_instance->IsFeatureEnabled(feature);
 }
 
 // static
@@ -158,6 +244,10 @@ bool FeatureList::InitializeInstance(const std::string& enable_features,
   // For example, we initialize an instance in chrome/browser/
   // chrome_browser_main.cc and do not override it in content/browser/
   // browser_main_loop.cc.
+  // If the singleton was previously initialized from within an accessor, we
+  // want to prevent callers from reinitializing the singleton and masking the
+  // accessor call(s) which likely returned incorrect information.
+  CHECK(!g_initialized_from_accessor);
   bool instance_existed_before = false;
   if (g_instance) {
     if (g_instance->initialized_from_command_line_)
@@ -189,9 +279,19 @@ void FeatureList::SetInstance(std::unique_ptr<FeatureList> instance) {
 }
 
 // static
-void FeatureList::ClearInstanceForTesting() {
-  delete g_instance;
+std::unique_ptr<FeatureList> FeatureList::ClearInstanceForTesting() {
+  FeatureList* old_instance = g_instance;
   g_instance = nullptr;
+  g_initialized_from_accessor = false;
+  return base::WrapUnique(old_instance);
+}
+
+// static
+void FeatureList::RestoreInstanceForTesting(
+    std::unique_ptr<FeatureList> instance) {
+  DCHECK(!g_instance);
+  // Note: Intentional leak of global singleton.
+  g_instance = instance.release();
 }
 
 void FeatureList::FinalizeInitialization() {

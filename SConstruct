@@ -42,14 +42,19 @@ base_libs = [
                 callback_internal.cc
                 command_line.cc
                 cpu.cc
+                debug/activity_tracker.cc
                 debug/alias.cc
+                debug/crash_logging.cc
                 debug/debugger.cc
                 debug/debugger_posix.cc
+                debug/dump_without_crashing.cc
                 debug/stack_trace.cc
                 debug/stack_trace_posix.cc
                 debug/task_annotator.cc
                 environment.cc
+                feature_list.cc
                 files/file.cc
+                files/file_descriptor_watcher_posix.cc
                 files/file_enumerator.cc
                 files/file_enumerator_posix.cc
                 files/file_path.cc
@@ -82,7 +87,9 @@ base_libs = [
                 memory/aligned_memory.cc
                 memory/ref_counted.cc
                 memory/ref_counted_memory.cc
+                memory/shared_memory_helper.cc
                 memory/shared_memory_posix.cc
+                memory/shared_memory_tracker.cc
                 memory/singleton.cc
                 memory/weak_ptr.cc
                 message_loop/incoming_task_queue.cc
@@ -94,6 +101,7 @@ base_libs = [
                 message_loop/message_pump_libevent.cc
                 metrics/bucket_ranges.cc
                 metrics/field_trial.cc
+                metrics/field_trial_param_associator.cc
                 metrics/metrics_hashes.cc
                 metrics/histogram_base.cc
                 metrics/histogram.cc
@@ -117,6 +125,9 @@ base_libs = [
                 process/kill_posix.cc
                 process/launch.cc
                 process/launch_posix.cc
+                process/memory.cc
+                process/memory_linux.cc
+                process/process_handle.cc
                 process/process_handle_linux.cc
                 process/process_iterator.cc
                 process/process_iterator_linux.cc
@@ -133,7 +144,8 @@ base_libs = [
                 run_loop.cc
                 sequence_checker_impl.cc
                 sequenced_task_runner.cc
-                sha1_portable.cc
+                sequence_token.cc
+                sha1.cc
                 strings/pattern.cc
                 strings/safe_sprintf.cc
                 strings/string16.cc
@@ -146,10 +158,11 @@ base_libs = [
                 strings/sys_string_conversions_posix.cc
                 strings/utf_string_conversions.cc
                 strings/utf_string_conversion_utils.cc
-                synchronization/cancellation_flag.cc
+                synchronization/atomic_flag.cc
                 synchronization/condition_variable_posix.cc
                 synchronization/lock.cc
                 synchronization/lock_impl_posix.cc
+                synchronization/read_write_lock_posix.cc
                 synchronization/waitable_event_posix.cc
                 synchronization/waitable_event_watcher_posix.cc
                 sync_socket_posix.cc
@@ -160,10 +173,12 @@ base_libs = [
                 task_runner.cc
                 task/cancelable_task_tracker.cc
                 task_scheduler/scheduler_lock_impl.cc
+                task_scheduler/scoped_set_task_priority_for_current_thread.cc
                 task_scheduler/sequence.cc
                 task_scheduler/sequence_sort_key.cc
                 task_scheduler/task.cc
                 task_scheduler/task_traits.cc
+                third_party/dynamic_annotations/dynamic_annotations.c
                 third_party/icu/icu_utf.cc
                 third_party/nspr/prtime.cc
                 threading/non_thread_safe_impl.cc
@@ -178,7 +193,6 @@ base_libs = [
                 threading/thread_checker_impl.cc
                 threading/thread_collision_warner.cc
                 threading/thread_id_name_manager.cc
-                threading/thread_local_posix.cc
                 threading/thread_local_storage.cc
                 threading/thread_local_storage_posix.cc
                 threading/thread_restrictions.cc
@@ -193,11 +207,14 @@ base_libs = [
                 time/tick_clock.cc
                 time/time.cc
                 time/time_posix.cc
+                trace_event/category_registry.cc
+                trace_event/event_name_filter.cc
                 trace_event/malloc_dump_provider.cc
                 trace_event/heap_profiler_allocation_context.cc
                 trace_event/heap_profiler_allocation_context_tracker.cc
                 trace_event/heap_profiler_allocation_register.cc
                 trace_event/heap_profiler_allocation_register_posix.cc
+                trace_event/heap_profiler_event_filter.cc
                 trace_event/heap_profiler_heap_dump_writer.cc
                 trace_event/heap_profiler_stack_frame_deduplicator.cc
                 trace_event/heap_profiler_type_name_deduplicator.cc
@@ -205,19 +222,21 @@ base_libs = [
                 trace_event/memory_allocator_dump_guid.cc
                 trace_event/memory_dump_manager.cc
                 trace_event/memory_dump_request_args.cc
+                trace_event/memory_dump_scheduler.cc
                 trace_event/memory_dump_session_state.cc
+                trace_event/memory_infra_background_whitelist.cc
                 trace_event/process_memory_dump.cc
                 trace_event/process_memory_maps.cc
                 trace_event/process_memory_totals.cc
                 trace_event/trace_buffer.cc
                 trace_event/trace_config.cc
                 trace_event/trace_event_argument.cc
+                trace_event/trace_event_filter.cc
                 trace_event/trace_event_impl.cc
                 trace_event/trace_event_memory_overhead.cc
                 trace_event/trace_event_synthetic_delay.cc
                 trace_event/trace_log.cc
                 trace_event/trace_log_constants.cc
-                trace_event/trace_sampling_thread.cc
                 tracked_objects.cc
                 tracking_info.cc
                 values.cc
@@ -328,7 +347,6 @@ if USE_DBUS == '1':
                 bus.cc
                 dbus_statistics.cc
                 exported_object.cc
-                file_descriptor.cc
                 message.cc
                 object_manager.cc
                 object_path.cc

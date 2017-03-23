@@ -11,11 +11,34 @@
 
 #include "base/bind.h"
 #include "base/json/json_reader.h"
+#include "base/logging.h"
+#include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+namespace {
+
+// Class to make sure any manipulations we do to the min log level are
+// contained (i.e., do not affect other unit tests).
+class LogStateSaver {
+ public:
+  LogStateSaver() : old_min_log_level_(logging::GetMinLogLevel()) {}
+
+  ~LogStateSaver() {
+    logging::SetMinLogLevel(old_min_log_level_);
+    logging::SetLogAssertHandler(nullptr);
+  }
+
+ private:
+  int old_min_log_level_;
+
+  DISALLOW_COPY_AND_ASSIGN(LogStateSaver);
+};
+
+}  // namespace
 
 namespace base {
 
@@ -47,7 +70,7 @@ class StatisticsRecorderTest : public testing::TestWithParam<bool> {
   void InitializeStatisticsRecorder() {
     DCHECK(!statistics_recorder_);
     StatisticsRecorder::UninitializeForTesting();
-    statistics_recorder_.reset(new StatisticsRecorder());
+    statistics_recorder_ = StatisticsRecorder::CreateTemporaryForTesting();
   }
 
   void UninitializeStatisticsRecorder() {
@@ -78,12 +101,24 @@ class StatisticsRecorderTest : public testing::TestWithParam<bool> {
     return count;
   }
 
+  void InitLogOnShutdown() {
+    DCHECK(statistics_recorder_);
+    statistics_recorder_->InitLogOnShutdownWithoutLock();
+  }
+
+  bool VLogInitialized() {
+    DCHECK(statistics_recorder_);
+    return statistics_recorder_->vlog_initialized_;
+  }
+
   const bool use_persistent_histogram_allocator_;
 
   std::unique_ptr<StatisticsRecorder> statistics_recorder_;
   std::unique_ptr<GlobalHistogramAllocator> old_global_allocator_;
 
  private:
+  LogStateSaver log_state_saver_;
+
   DISALLOW_COPY_AND_ASSIGN(StatisticsRecorderTest);
 };
 
@@ -590,6 +625,106 @@ TEST_P(StatisticsRecorderTest, CallbackUsedBeforeHistogramCreatedTest) {
 
   EXPECT_TRUE(callback_wrapper.called);
   EXPECT_EQ(callback_wrapper.last_histogram_value, 1);
+}
+
+TEST_P(StatisticsRecorderTest, LogOnShutdownNotInitialized) {
+  UninitializeStatisticsRecorder();
+  logging::SetMinLogLevel(logging::LOG_WARNING);
+  InitializeStatisticsRecorder();
+  EXPECT_FALSE(VLOG_IS_ON(1));
+  EXPECT_FALSE(VLogInitialized());
+  InitLogOnShutdown();
+  EXPECT_FALSE(VLogInitialized());
+}
+
+TEST_P(StatisticsRecorderTest, LogOnShutdownInitializedExplicitly) {
+  UninitializeStatisticsRecorder();
+  logging::SetMinLogLevel(logging::LOG_WARNING);
+  InitializeStatisticsRecorder();
+  EXPECT_FALSE(VLOG_IS_ON(1));
+  EXPECT_FALSE(VLogInitialized());
+  logging::SetMinLogLevel(logging::LOG_VERBOSE);
+  EXPECT_TRUE(VLOG_IS_ON(1));
+  InitLogOnShutdown();
+  EXPECT_TRUE(VLogInitialized());
+}
+
+TEST_P(StatisticsRecorderTest, LogOnShutdownInitialized) {
+  UninitializeStatisticsRecorder();
+  logging::SetMinLogLevel(logging::LOG_VERBOSE);
+  InitializeStatisticsRecorder();
+  EXPECT_TRUE(VLOG_IS_ON(1));
+  EXPECT_TRUE(VLogInitialized());
+}
+
+class TestHistogramProvider : public StatisticsRecorder::HistogramProvider {
+ public:
+  TestHistogramProvider(std::unique_ptr<PersistentHistogramAllocator> allocator)
+      : allocator_(std::move(allocator)), weak_factory_(this) {
+    StatisticsRecorder::RegisterHistogramProvider(weak_factory_.GetWeakPtr());
+  }
+
+  void MergeHistogramDeltas() override {
+    PersistentHistogramAllocator::Iterator hist_iter(allocator_.get());
+    while (true) {
+      std::unique_ptr<base::HistogramBase> histogram = hist_iter.GetNext();
+      if (!histogram)
+        break;
+      allocator_->MergeHistogramDeltaToStatisticsRecorder(histogram.get());
+    }
+  }
+
+ private:
+  std::unique_ptr<PersistentHistogramAllocator> allocator_;
+  WeakPtrFactory<TestHistogramProvider> weak_factory_;
+
+  DISALLOW_COPY_AND_ASSIGN(TestHistogramProvider);
+};
+
+TEST_P(StatisticsRecorderTest, ImportHistogramsTest) {
+  // Create a second SR to create some histograms for later import.
+  std::unique_ptr<StatisticsRecorder> temp_sr =
+      StatisticsRecorder::CreateTemporaryForTesting();
+
+  // Extract any existing global allocator so a new one can be created.
+  std::unique_ptr<GlobalHistogramAllocator> old_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
+
+  // Create a histogram inside a new allocator for testing.
+  GlobalHistogramAllocator::CreateWithLocalMemory(kAllocatorMemorySize, 0, "");
+  HistogramBase* histogram = LinearHistogram::FactoryGet("Foo", 1, 10, 11, 0);
+  histogram->Add(3);
+
+  // Undo back to the starting point.
+  std::unique_ptr<GlobalHistogramAllocator> new_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
+  GlobalHistogramAllocator::Set(std::move(old_allocator));
+  temp_sr.reset();
+
+  // Create a provider that can supply histograms to the current SR.
+  TestHistogramProvider provider(std::move(new_allocator));
+
+  // Verify that the created histogram is no longer known.
+  ASSERT_FALSE(StatisticsRecorder::FindHistogram(histogram->histogram_name()));
+
+  // Now test that it merges.
+  StatisticsRecorder::ImportProvidedHistograms();
+  HistogramBase* found =
+      StatisticsRecorder::FindHistogram(histogram->histogram_name());
+  ASSERT_TRUE(found);
+  EXPECT_NE(histogram, found);
+  std::unique_ptr<HistogramSamples> snapshot = found->SnapshotSamples();
+  EXPECT_EQ(1, snapshot->TotalCount());
+  EXPECT_EQ(1, snapshot->GetCount(3));
+
+  // Finally, verify that updates can also be merged.
+  histogram->Add(3);
+  histogram->Add(5);
+  StatisticsRecorder::ImportProvidedHistograms();
+  snapshot = found->SnapshotSamples();
+  EXPECT_EQ(3, snapshot->TotalCount());
+  EXPECT_EQ(2, snapshot->GetCount(3));
+  EXPECT_EQ(1, snapshot->GetCount(5));
 }
 
 }  // namespace base

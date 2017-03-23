@@ -8,13 +8,10 @@
 #include <stddef.h>
 
 #include "base/base_export.h"
-#include "base/callback_forward.h"
+#include "base/callback.h"
+#include "base/location.h"
 #include "base/memory/ref_counted.h"
 #include "base/time/time.h"
-
-namespace tracked_objects {
-class Location;
-} // namespace tracked_objects
 
 namespace base {
 
@@ -126,8 +123,8 @@ class BASE_EXPORT TaskRunner
   //     and the reply will cancel itself safely because it is bound to a
   //     WeakPtr<>.
   bool PostTaskAndReply(const tracked_objects::Location& from_here,
-                        const Closure& task,
-                        const Closure& reply);
+                        Closure task,
+                        Closure reply);
 
  protected:
   friend struct TaskRunnerTraits;

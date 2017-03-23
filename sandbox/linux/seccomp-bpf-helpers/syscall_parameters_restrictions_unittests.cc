@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "base/bind.h"
+#include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/sys_info.h"
 #include "base/threading/thread.h"
@@ -157,12 +158,14 @@ void SchedGetParamThread(base::WaitableEvent* thread_run) {
 BPF_TEST_C(ParameterRestrictions,
            sched_getparam_allowed,
            RestrictSchedPolicy) {
-  base::WaitableEvent thread_run(true, false);
+  base::WaitableEvent thread_run(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
   // Run the actual test in a new thread so that the current pid and tid are
   // different.
   base::Thread getparam_thread("sched_getparam_thread");
   BPF_ASSERT(getparam_thread.Start());
-  getparam_thread.message_loop()->PostTask(
+  getparam_thread.task_runner()->PostTask(
       FROM_HERE, base::Bind(&SchedGetParamThread, &thread_run));
   BPF_ASSERT(thread_run.TimedWait(base::TimeDelta::FromMilliseconds(5000)));
   getparam_thread.Stop();

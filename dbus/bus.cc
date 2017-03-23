@@ -13,6 +13,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "dbus/exported_object.h"
 #include "dbus/message.h"
@@ -24,6 +25,11 @@
 namespace dbus {
 
 namespace {
+
+const char kDisconnectedSignal[] = "Disconnected";
+const char kDisconnectedMatchRule[] =
+    "type='signal', path='/org/freedesktop/DBus/Local',"
+    "interface='org.freedesktop.DBus.Local', member='Disconnected'";
 
 // The NameOwnerChanged member in org.freedesktop.DBus
 const char kNameOwnerChangedSignal[] = "NameOwnerChanged";
@@ -39,7 +45,7 @@ const char kServiceNameOwnerChangeMatchRule[] =
 class Watch : public base::MessagePumpLibevent::Watcher {
  public:
   explicit Watch(DBusWatch* watch)
-      : raw_watch_(watch) {
+      : raw_watch_(watch), file_descriptor_watcher_(FROM_HERE) {
     dbus_watch_set_data(raw_watch_, this, NULL);
   }
 
@@ -78,13 +84,13 @@ class Watch : public base::MessagePumpLibevent::Watcher {
 
  private:
   // Implement MessagePumpLibevent::Watcher.
-  void OnFileCanReadWithoutBlocking(int /*file_descriptor*/) override {
+  void OnFileCanReadWithoutBlocking(int file_descriptor) override {
     const bool success = dbus_watch_handle(raw_watch_, DBUS_WATCH_READABLE);
     CHECK(success) << "Unable to allocate memory";
   }
 
   // Implement MessagePumpLibevent::Watcher.
-  void OnFileCanWriteWithoutBlocking(int /*file_descriptor*/) override {
+  void OnFileCanWriteWithoutBlocking(int file_descriptor) override {
     const bool success = dbus_watch_handle(raw_watch_, DBUS_WATCH_WRITABLE);
     CHECK(success) << "Unable to allocate memory";
   }
@@ -184,7 +190,8 @@ Bus::Bus(const Options& options)
     : bus_type_(options.bus_type),
       connection_type_(options.connection_type),
       dbus_task_runner_(options.dbus_task_runner),
-      on_shutdown_(false /* manual_reset */, false /* initially_signaled */),
+      on_shutdown_(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                   base::WaitableEvent::InitialState::NOT_SIGNALED),
       connection_(NULL),
       origin_thread_id_(base::PlatformThread::CurrentId()),
       async_operations_set_up_(false),
@@ -196,8 +203,8 @@ Bus::Bus(const Options& options)
   dbus_threads_init_default();
   // The origin message loop is unnecessary if the client uses synchronous
   // functions only.
-  if (base::MessageLoop::current())
-    origin_task_runner_ = base::MessageLoop::current()->task_runner();
+  if (base::ThreadTaskRunnerHandle::IsSet())
+    origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
 }
 
 Bus::~Bus() {
@@ -393,13 +400,6 @@ void Bus::RemoveObjectManagerInternalHelper(
   callback.Run();
 }
 
-void Bus::GetManagedObjects() {
-  for (ObjectManagerTable::iterator iter = object_manager_table_.begin();
-       iter != object_manager_table_.end(); ++iter) {
-    iter->second->GetManagedObjects();
-  }
-}
-
 bool Bus::Connect() {
   // dbus_bus_get_private() and dbus_bus_get() are blocking calls.
   AssertOnDBusThread();
@@ -441,6 +441,12 @@ bool Bus::Connect() {
       return false;
     }
   }
+  // We shouldn't exit on the disconnected signal.
+  dbus_connection_set_exit_on_disconnect(connection_, false);
+
+  // Watch Disconnected signal.
+  AddFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
+  AddMatch(kDisconnectedMatchRule, error.get());
 
   return true;
 }
@@ -500,6 +506,8 @@ void Bus::ShutdownAndBlock() {
   if (connection_) {
     // Remove Disconnected watcher.
     ScopedDBusError error;
+    RemoveFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
+    RemoveMatch(kDisconnectedMatchRule, error.get());
 
     if (connection_type_ == PRIVATE)
       ClosePrivateConnection();
@@ -1082,7 +1090,7 @@ void Bus::OnToggleTimeout(DBusTimeout* raw_timeout) {
 }
 
 void Bus::OnDispatchStatusChanged(DBusConnection* connection,
-                                  DBusDispatchStatus /*status*/) {
+                                  DBusDispatchStatus status) {
   DCHECK_EQ(connection, connection_);
   AssertOnDBusThread();
 
@@ -1178,8 +1186,22 @@ void Bus::OnDispatchStatusChangedThunk(DBusConnection* connection,
 }
 
 // static
+DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
+    DBusConnection* connection,
+    DBusMessage* message,
+    void* data) {
+  if (dbus_message_is_signal(message,
+                             DBUS_INTERFACE_LOCAL,
+                             kDisconnectedSignal)) {
+    // Abort when the connection is lost.
+    LOG(FATAL) << "D-Bus connection was disconnected. Aborting.";
+  }
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+// static
 DBusHandlerResult Bus::OnServiceOwnerChangedFilter(
-    DBusConnection* /*connection*/,
+    DBusConnection* connection,
     DBusMessage* message,
     void* data) {
   if (dbus_message_is_signal(message,

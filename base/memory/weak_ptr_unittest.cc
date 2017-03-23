@@ -12,6 +12,7 @@
 #include "base/location.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/test/gtest_util.h"
 #include "base/threading/thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -69,7 +70,8 @@ class BackgroundThread : public Thread {
   ~BackgroundThread() override { Stop(); }
 
   void CreateArrowFromTarget(Arrow** arrow, Target* target) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE, base::Bind(&BackgroundThread::DoCreateArrowFromTarget, arrow,
                               target, &completion));
@@ -77,7 +79,8 @@ class BackgroundThread : public Thread {
   }
 
   void CreateArrowFromArrow(Arrow** arrow, const Arrow* other) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE, base::Bind(&BackgroundThread::DoCreateArrowFromArrow, arrow,
                               other, &completion));
@@ -85,7 +88,8 @@ class BackgroundThread : public Thread {
   }
 
   void DeleteTarget(Target* object) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&BackgroundThread::DoDeleteTarget, object, &completion));
@@ -93,7 +97,8 @@ class BackgroundThread : public Thread {
   }
 
   void CopyAndAssignArrow(Arrow* object) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE, base::Bind(&BackgroundThread::DoCopyAndAssignArrow, object,
                               &completion));
@@ -101,7 +106,8 @@ class BackgroundThread : public Thread {
   }
 
   void CopyAndAssignArrowBase(Arrow* object) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE, base::Bind(&BackgroundThread::DoCopyAndAssignArrowBase,
                               object, &completion));
@@ -109,7 +115,8 @@ class BackgroundThread : public Thread {
   }
 
   void DeleteArrow(Arrow* object) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&BackgroundThread::DoDeleteArrow, object, &completion));
@@ -117,7 +124,8 @@ class BackgroundThread : public Thread {
   }
 
   Target* DeRef(const Arrow* arrow) {
-    WaitableEvent completion(true, false);
+    WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
+                             WaitableEvent::InitialState::NOT_SIGNALED);
     Target* result = nullptr;
     task_runner()->PostTask(FROM_HERE, base::Bind(&BackgroundThread::DoDeRef,
                                                   arrow, &result, &completion));
@@ -194,6 +202,16 @@ TEST(WeakPtrFactoryTest, Comparison) {
   WeakPtr<int> ptr = factory.GetWeakPtr();
   WeakPtr<int> ptr2 = ptr;
   EXPECT_EQ(ptr.get(), ptr2.get());
+}
+
+TEST(WeakPtrFactoryTest, Move) {
+  int data;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  WeakPtr<int> ptr2 = factory.GetWeakPtr();
+  WeakPtr<int> ptr3 = std::move(ptr2);
+  EXPECT_NE(ptr.get(), ptr2.get());
+  EXPECT_EQ(ptr.get(), ptr3.get());
 }
 
 TEST(WeakPtrFactoryTest, OutOfScope) {
@@ -299,6 +317,19 @@ TEST(WeakPtrFactoryTest, BooleanTesting) {
   } else {
     ADD_FAILURE() << "Null pointer should result in !x being true.";
   }
+}
+
+TEST(WeakPtrFactoryTest, ComparisonToNull) {
+  int data;
+  WeakPtrFactory<int> factory(&data);
+
+  WeakPtr<int> ptr_to_an_instance = factory.GetWeakPtr();
+  EXPECT_NE(nullptr, ptr_to_an_instance);
+  EXPECT_NE(ptr_to_an_instance, nullptr);
+
+  WeakPtr<int> null_ptr;
+  EXPECT_EQ(null_ptr, nullptr);
+  EXPECT_EQ(nullptr, null_ptr);
 }
 
 TEST(WeakPtrTest, InvalidateWeakPtrs) {
@@ -533,8 +564,6 @@ TEST(WeakPtrTest, NonOwnerThreadCanDeleteWeakPtr) {
   background.DeleteArrow(arrow);
 }
 
-#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)) && GTEST_HAS_DEATH_TEST
-
 TEST(WeakPtrDeathTest, WeakPtrCopyDoesNotChangeThreadBinding) {
   // The default style "fast" does not support multi-threaded tests
   // (introduces deadlock on Linux).
@@ -558,7 +587,7 @@ TEST(WeakPtrDeathTest, WeakPtrCopyDoesNotChangeThreadBinding) {
 
   // Although background thread created the copy, it can not deref the copied
   // WeakPtr.
-  ASSERT_DEATH(background.DeRef(arrow_copy), "");
+  ASSERT_DCHECK_DEATH(background.DeRef(arrow_copy));
 
   background.DeleteArrow(arrow_copy);
 }
@@ -580,7 +609,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDereferencesWeakPtrAfterReference) {
   // Background thread tries to deref target, which violates thread ownership.
   BackgroundThread background;
   background.Start();
-  ASSERT_DEATH(background.DeRef(&arrow), "");
+  ASSERT_DCHECK_DEATH(background.DeRef(&arrow));
 }
 
 TEST(WeakPtrDeathTest, NonOwnerThreadDeletesWeakPtrAfterReference) {
@@ -600,7 +629,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDeletesWeakPtrAfterReference) {
   background.DeRef(&arrow);
 
   // Main thread deletes Target, violating thread binding.
-  ASSERT_DEATH(target.reset(), "");
+  ASSERT_DCHECK_DEATH(target.reset());
 
   // |target.reset()| died so |target| still holds the object, so we
   // must pass it to the background thread to teardown.
@@ -623,7 +652,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDeletesObjectAfterReference) {
   // Background thread tries to delete target, volating thread binding.
   BackgroundThread background;
   background.Start();
-  ASSERT_DEATH(background.DeleteTarget(target.release()), "");
+  ASSERT_DCHECK_DEATH(background.DeleteTarget(target.release()));
 }
 
 TEST(WeakPtrDeathTest, NonOwnerThreadReferencesObjectAfterDeletion) {
@@ -643,9 +672,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadReferencesObjectAfterDeletion) {
   background.DeleteTarget(target.release());
 
   // Main thread attempts to dereference the target, violating thread binding.
-  ASSERT_DEATH(arrow.target.get(), "");
+  ASSERT_DCHECK_DEATH(arrow.target.get());
 }
-
-#endif
 
 }  // namespace base

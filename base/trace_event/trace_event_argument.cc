@@ -244,36 +244,36 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
                                              const base::Value& value) {
   DCHECK_CURRENT_CONTAINER_IS(kStackTypeDict);
   switch (value.GetType()) {
-    case base::Value::TYPE_NULL:
-    case base::Value::TYPE_BINARY:
+    case base::Value::Type::NONE:
+    case base::Value::Type::BINARY:
       NOTREACHED();
       break;
 
-    case base::Value::TYPE_BOOLEAN: {
+    case base::Value::Type::BOOLEAN: {
       bool bool_value;
       value.GetAsBoolean(&bool_value);
       SetBooleanWithCopiedName(name, bool_value);
     } break;
 
-    case base::Value::TYPE_INTEGER: {
+    case base::Value::Type::INTEGER: {
       int int_value;
       value.GetAsInteger(&int_value);
       SetIntegerWithCopiedName(name, int_value);
     } break;
 
-    case base::Value::TYPE_DOUBLE: {
+    case base::Value::Type::DOUBLE: {
       double double_value;
       value.GetAsDouble(&double_value);
       SetDoubleWithCopiedName(name, double_value);
     } break;
 
-    case base::Value::TYPE_STRING: {
-      const StringValue* string_value;
+    case base::Value::Type::STRING: {
+      const Value* string_value;
       value.GetAsString(&string_value);
       SetStringWithCopiedName(name, string_value->GetString());
     } break;
 
-    case base::Value::TYPE_DICTIONARY: {
+    case base::Value::Type::DICTIONARY: {
       const DictionaryValue* dict_value;
       value.GetAsDictionary(&dict_value);
       BeginDictionaryWithCopiedName(name);
@@ -284,11 +284,11 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
       EndDictionary();
     } break;
 
-    case base::Value::TYPE_LIST: {
+    case base::Value::Type::LIST: {
       const ListValue* list_value;
       value.GetAsList(&list_value);
       BeginArrayWithCopiedName(name);
-      for (base::Value* base_value : *list_value)
+      for (const auto& base_value : *list_value)
         AppendBaseValue(*base_value);
       EndArray();
     } break;
@@ -298,36 +298,36 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
 void TracedValue::AppendBaseValue(const base::Value& value) {
   DCHECK_CURRENT_CONTAINER_IS(kStackTypeArray);
   switch (value.GetType()) {
-    case base::Value::TYPE_NULL:
-    case base::Value::TYPE_BINARY:
+    case base::Value::Type::NONE:
+    case base::Value::Type::BINARY:
       NOTREACHED();
       break;
 
-    case base::Value::TYPE_BOOLEAN: {
+    case base::Value::Type::BOOLEAN: {
       bool bool_value;
       value.GetAsBoolean(&bool_value);
       AppendBoolean(bool_value);
     } break;
 
-    case base::Value::TYPE_INTEGER: {
+    case base::Value::Type::INTEGER: {
       int int_value;
       value.GetAsInteger(&int_value);
       AppendInteger(int_value);
     } break;
 
-    case base::Value::TYPE_DOUBLE: {
+    case base::Value::Type::DOUBLE: {
       double double_value;
       value.GetAsDouble(&double_value);
       AppendDouble(double_value);
     } break;
 
-    case base::Value::TYPE_STRING: {
-      const StringValue* string_value;
+    case base::Value::Type::STRING: {
+      const Value* string_value;
       value.GetAsString(&string_value);
       AppendString(string_value->GetString());
     } break;
 
-    case base::Value::TYPE_DICTIONARY: {
+    case base::Value::Type::DICTIONARY: {
       const DictionaryValue* dict_value;
       value.GetAsDictionary(&dict_value);
       BeginDictionary();
@@ -338,11 +338,11 @@ void TracedValue::AppendBaseValue(const base::Value& value) {
       EndDictionary();
     } break;
 
-    case base::Value::TYPE_LIST: {
+    case base::Value::Type::LIST: {
       const ListValue* list_value;
       value.GetAsList(&list_value);
       BeginArray();
-      for (base::Value* base_value : *list_value)
+      for (const auto& base_value : *list_value)
         AppendBaseValue(*base_value);
       EndArray();
     } break;
@@ -361,7 +361,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
     DCHECK((cur_dict && !cur_list) || (cur_list && !cur_dict));
     switch (*type) {
       case kTypeStartDict: {
-        auto new_dict = new DictionaryValue();
+        auto* new_dict = new DictionaryValue();
         if (cur_dict) {
           cur_dict->SetWithoutPathExpansion(ReadKeyName(it),
                                             WrapUnique(new_dict));
@@ -386,7 +386,7 @@ std::unique_ptr<base::Value> TracedValue::ToBaseValue() const {
       } break;
 
       case kTypeStartArray: {
-        auto new_list = new ListValue();
+        auto* new_list = new ListValue();
         if (cur_dict) {
           cur_dict->SetWithoutPathExpansion(ReadKeyName(it),
                                             WrapUnique(new_list));

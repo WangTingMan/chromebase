@@ -38,6 +38,7 @@
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/native_library.h"
 #include "base/stl_util.h"
@@ -186,7 +187,7 @@ void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
 // singleton.
 class NSPRInitSingleton {
  private:
-  friend struct base::DefaultLazyInstanceTraits<NSPRInitSingleton>;
+ friend struct base::LazyInstanceTraitsBase<NSPRInitSingleton>;
 
   NSPRInitSingleton() {
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
@@ -360,8 +361,8 @@ class NSSInitSingleton {
     DCHECK(!initializing_tpm_token_);
     // If EnableTPMTokenForNSS hasn't been called, return false.
     if (!tpm_token_enabled_for_nss_) {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, false));
+      base::MessageLoop::current()->task_runner()->PostTask(
+          FROM_HERE, base::Bind(callback, false));
       return;
     }
 
@@ -369,8 +370,8 @@ class NSSInitSingleton {
     // Note that only |tpm_slot_| is checked, since |chaps_module_| could be
     // NULL in tests while |tpm_slot_| has been set to the test DB.
     if (tpm_slot_) {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, true));
+      base::MessageLoop::current()->task_runner()->
+          PostTask(FROM_HERE, base::Bind(callback, true));
       return;
     }
 
@@ -392,8 +393,8 @@ class NSSInitSingleton {
             )) {
       initializing_tpm_token_ = true;
     } else {
-      base::MessageLoop::current()->PostTask(FROM_HERE,
-                                             base::Bind(callback, false));
+      base::MessageLoop::current()->task_runner()->PostTask(
+          FROM_HERE, base::Bind(callback, false));
     }
   }
 
@@ -507,7 +508,7 @@ class NSSInitSingleton {
         "%s %s", kUserNSSDatabaseName, username_hash.c_str());
     ScopedPK11Slot public_slot(OpenPersistentNSSDBForPath(db_name, path));
     chromeos_user_map_[username_hash] =
-        new ChromeOSUserData(std::move(public_slot));
+        base::MakeUnique<ChromeOSUserData>(std::move(public_slot));
     return true;
   }
 
@@ -601,7 +602,7 @@ class NSSInitSingleton {
     if (username_hash.empty()) {
       DVLOG(2) << "empty username_hash";
       if (!callback.is_null()) {
-        base::MessageLoop::current()->PostTask(
+        base::MessageLoop::current()->task_runner()->PostTask(
             FROM_HERE, base::Bind(callback, base::Passed(ScopedPK11Slot())));
       }
       return ScopedPK11Slot();
@@ -616,7 +617,6 @@ class NSSInitSingleton {
     DCHECK(thread_checker_.CalledOnValidThread());
     ChromeOSUserMap::iterator i = chromeos_user_map_.find(username_hash);
     DCHECK(i != chromeos_user_map_.end());
-    delete i->second;
     chromeos_user_map_.erase(i);
   }
 
@@ -680,7 +680,7 @@ class NSSInitSingleton {
 #endif  // defined(USE_NSS_CERTS)
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<NSSInitSingleton>;
+  friend struct base::LazyInstanceTraitsBase<NSSInitSingleton>;
 
   NSSInitSingleton()
       : tpm_token_enabled_for_nss_(false),
@@ -788,7 +788,7 @@ class NSSInitSingleton {
   // down.
   ~NSSInitSingleton() {
 #if defined(OS_CHROMEOS)
-    STLDeleteValues(&chromeos_user_map_);
+    chromeos_user_map_.clear();
 #endif
     tpm_slot_.reset();
     if (root_) {
@@ -858,7 +858,7 @@ class NSSInitSingleton {
   crypto::ScopedPK11Slot tpm_slot_;
   SECMODModule* root_;
 #if defined(OS_CHROMEOS)
-  typedef std::map<std::string, ChromeOSUserData*> ChromeOSUserMap;
+  typedef std::map<std::string, std::unique_ptr<ChromeOSUserData>> ChromeOSUserMap;
   ChromeOSUserMap chromeos_user_map_;
   ScopedPK11Slot test_system_slot_;
 #endif

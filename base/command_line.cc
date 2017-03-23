@@ -149,7 +149,10 @@ string16 QuoteForCommandLineToArgvW(const string16& arg,
 
 }  // namespace
 
-CommandLine::CommandLine(NoProgram) : argv_(1), begin_args_(1) {}
+CommandLine::CommandLine(NoProgram /* no_program */)
+    : argv_(1),
+      begin_args_(1) {
+}
 
 CommandLine::CommandLine(const FilePath& program)
     : argv_(1),
@@ -193,6 +196,17 @@ void CommandLine::set_slash_is_not_a_switch() {
   // The last switch prefix should be slash, so adjust the size to skip it.
   DCHECK_EQ(wcscmp(kSwitchPrefixes[arraysize(kSwitchPrefixes) - 1], L"/"), 0);
   switch_prefix_count = arraysize(kSwitchPrefixes) - 1;
+}
+
+// static
+void CommandLine::InitUsingArgvForTesting(int argc, const char* const* argv) {
+  DCHECK(!current_process_commandline_);
+  current_process_commandline_ = new CommandLine(NO_PROGRAM);
+  // On Windows we need to convert the command line arguments to string16.
+  base::CommandLine::StringVector argv_vector;
+  for (int i = 0; i < argc; ++i)
+    argv_vector.push_back(UTF8ToUTF16(argv[i]));
+  current_process_commandline_->InitFromArgv(argv_vector);
 }
 #endif
 
@@ -441,9 +455,7 @@ CommandLine::StringType CommandLine::GetCommandLineStringInternal(
 
 CommandLine::StringType CommandLine::GetArgumentsStringInternal(
     bool quote_placeholders) const {
-#if !defined(OS_WIN)
-  (void)quote_placeholders;  // Avoid an unused warning.
-#endif
+  ALLOW_UNUSED_PARAM(quote_placeholders);
   StringType params;
   // Append switches and arguments.
   bool parse_switches = true;

@@ -10,7 +10,7 @@
 #include "base/macros.h"
 #include "base/rand_util.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/task_scheduler/test_utils.h"
+#include "base/test/gtest_util.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -56,8 +56,11 @@ class BasicLockAcquireAndWaitThread : public SimpleThread {
   explicit BasicLockAcquireAndWaitThread(SchedulerLock* lock)
       : SimpleThread("BasicLockAcquireAndWaitThread"),
         lock_(lock),
-        lock_acquire_event_(false, false),
-        main_thread_continue_event_(false, false) {}
+        lock_acquire_event_(WaitableEvent::ResetPolicy::AUTOMATIC,
+                            WaitableEvent::InitialState::NOT_SIGNALED),
+        main_thread_continue_event_(WaitableEvent::ResetPolicy::AUTOMATIC,
+                                    WaitableEvent::InitialState::NOT_SIGNALED) {
+  }
 
   void WaitForLockAcquisition() {
     lock_acquire_event_.Wait();
@@ -128,7 +131,7 @@ TEST(TaskSchedulerLock, AcquirePredecessorWrongOrder) {
   EXPECT_DCHECK_DEATH({
     lock.Acquire();
     predecessor.Acquire();
-  }, "");
+  });
 }
 
 TEST(TaskSchedulerLock, AcquireNonPredecessor) {
@@ -137,7 +140,7 @@ TEST(TaskSchedulerLock, AcquireNonPredecessor) {
   EXPECT_DCHECK_DEATH({
     lock1.Acquire();
     lock2.Acquire();
-  }, "");
+  });
 }
 
 TEST(TaskSchedulerLock, AcquireMultipleLocksInOrder) {
@@ -169,7 +172,7 @@ TEST(TaskSchedulerLock, AcquireMultipleLocksNoTransitivity) {
   EXPECT_DCHECK_DEATH({
     lock1.Acquire();
     lock3.Acquire();
-  }, "");
+  });
 }
 
 TEST(TaskSchedulerLock, AcquireLocksDifferentThreadsSafely) {
@@ -255,7 +258,7 @@ TEST(TaskSchedulerLock, SelfReferentialLock) {
     SchedulerLock lock;
   };
 
-  EXPECT_DCHECK_DEATH({ SelfReferentialLock lock; }, "");
+  EXPECT_DCHECK_DEATH({ SelfReferentialLock lock; });
 }
 
 TEST(TaskSchedulerLock, PredecessorCycle) {
@@ -266,7 +269,7 @@ TEST(TaskSchedulerLock, PredecessorCycle) {
     SchedulerLock lock2;
   };
 
-  EXPECT_DCHECK_DEATH({ LockCycle cycle; }, "");
+  EXPECT_DCHECK_DEATH({ LockCycle cycle; });
 }
 
 TEST(TaskSchedulerLock, PredecessorLongerCycle) {
@@ -285,7 +288,7 @@ TEST(TaskSchedulerLock, PredecessorLongerCycle) {
     SchedulerLock lock5;
   };
 
-  EXPECT_DCHECK_DEATH({ LockCycle cycle; }, "");
+  EXPECT_DCHECK_DEATH({ LockCycle cycle; });
 }
 
 }  // namespace

@@ -16,8 +16,8 @@ namespace base {
 
 MessagePumpDefault::MessagePumpDefault()
     : keep_running_(true),
-      event_(false, false) {
-}
+      event_(WaitableEvent::ResetPolicy::AUTOMATIC,
+             WaitableEvent::InitialState::NOT_SIGNALED) {}
 
 MessagePumpDefault::~MessagePumpDefault() {
 }
@@ -52,14 +52,11 @@ void MessagePumpDefault::Run(Delegate* delegate) {
     if (delayed_work_time_.is_null()) {
       event_.Wait();
     } else {
-      TimeDelta delay = delayed_work_time_ - TimeTicks::Now();
-      if (delay > TimeDelta()) {
-        event_.TimedWait(delay);
-      } else {
-        // It looks like delayed_work_time_ indicates a time in the past, so we
-        // need to call DoDelayedWork now.
-        delayed_work_time_ = TimeTicks();
-      }
+      // No need to handle already expired |delayed_work_time_| in any special
+      // way. When |delayed_work_time_| is in the past TimeWaitUntil returns
+      // promptly and |delayed_work_time_| will re-initialized on a next
+      // DoDelayedWork call which has to be called in order to get here again.
+      event_.TimedWaitUntil(delayed_work_time_);
     }
     // Since event_ is auto-reset, we don't need to do anything special here
     // other than service each delegate method.

@@ -11,8 +11,7 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "base/move.h"
-#include "base/stl_util.h"
+#include "base/macros.h"
 
 // ScopedVector wraps a vector deleting the elements from its
 // destructor.
@@ -21,8 +20,6 @@
 // we have support for moveable types inside containers).
 template <class T>
 class ScopedVector {
-  MOVE_ONLY_TYPE_FOR_CPP_03(ScopedVector)
-
  public:
   typedef typename std::vector<T*>::allocator_type allocator_type;
   typedef typename std::vector<T*>::size_type size_type;
@@ -90,8 +87,10 @@ class ScopedVector {
 
   // Resize, deleting elements in the disappearing range if we are shrinking.
   void resize(size_t new_size) {
-    if (v_.size() > new_size)
-      STLDeleteContainerPointers(v_.begin() + new_size, v_.end());
+    if (v_.size() > new_size) {
+      for (auto it = v_.begin() + new_size; it != v_.end(); ++it)
+        delete *it;
+    }
     v_.resize(new_size);
   }
 
@@ -100,7 +99,11 @@ class ScopedVector {
     v_.assign(begin, end);
   }
 
-  void clear() { STLDeleteElements(&v_); }
+  void clear() {
+    for (auto* item : *this)
+      delete item;
+    v_.clear();
+  }
 
   // Like |clear()|, but doesn't delete any elements.
   void weak_clear() { v_.clear(); }
@@ -126,7 +129,8 @@ class ScopedVector {
   }
 
   iterator erase(iterator first, iterator last) {
-    STLDeleteContainerPointers(first, last);
+    for (auto it = first; it != last; ++it)
+      delete *it;
     return v_.erase(first, last);
   }
 
@@ -142,6 +146,8 @@ class ScopedVector {
 
  private:
   std::vector<T*> v_;
+
+  DISALLOW_COPY_AND_ASSIGN(ScopedVector);
 };
 
 #endif  // BASE_MEMORY_SCOPED_VECTOR_H_

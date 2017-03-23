@@ -4,6 +4,7 @@
 
 import("//build/config/features.gni")
 import("//build/config/nacl/config.gni")
+import("//sandbox/features.gni")
 import("//testing/test.gni")
 
 if (is_android) {
@@ -41,10 +42,7 @@ group("sandbox") {
     public_deps += [ ":suid_sandbox_client" ]
   }
   if (use_seccomp_bpf || is_nacl_nonsfi) {
-    public_deps += [
-      ":seccomp_bpf",
-      ":seccomp_bpf_helpers",
-    ]
+    public_deps += [ ":seccomp_bpf" ]
   }
 }
 
@@ -192,7 +190,6 @@ action("bpf_dsl_golden") {
       rebase_path(outputs, root_build_dir) + rebase_path(inputs, root_build_dir)
 }
 
-
 test("sandbox_linux_unittests") {
   deps = [
     ":sandbox_linux_unittests_sources",
@@ -222,6 +219,14 @@ component("seccomp_bpf") {
     "bpf_dsl/syscall_set.cc",
     "bpf_dsl/syscall_set.h",
     "bpf_dsl/trap_registry.h",
+    "seccomp-bpf-helpers/baseline_policy.cc",
+    "seccomp-bpf-helpers/baseline_policy.h",
+    "seccomp-bpf-helpers/sigsys_handlers.cc",
+    "seccomp-bpf-helpers/sigsys_handlers.h",
+    "seccomp-bpf-helpers/syscall_parameters_restrictions.cc",
+    "seccomp-bpf-helpers/syscall_parameters_restrictions.h",
+    "seccomp-bpf-helpers/syscall_sets.cc",
+    "seccomp-bpf-helpers/syscall_sets.h",
     "seccomp-bpf/die.cc",
     "seccomp-bpf/die.h",
     "seccomp-bpf/sandbox_bpf.cc",
@@ -251,31 +256,6 @@ component("seccomp_bpf") {
       "bpf_dsl/linux_syscall_ranges.h",
       "bpf_dsl/seccomp_macros.h",
       "bpf_dsl/trap_registry.h",
-    ]
-  }
-}
-
-component("seccomp_bpf_helpers") {
-  sources = [
-    "seccomp-bpf-helpers/baseline_policy.cc",
-    "seccomp-bpf-helpers/baseline_policy.h",
-    "seccomp-bpf-helpers/sigsys_handlers.cc",
-    "seccomp-bpf-helpers/sigsys_handlers.h",
-    "seccomp-bpf-helpers/syscall_parameters_restrictions.cc",
-    "seccomp-bpf-helpers/syscall_parameters_restrictions.h",
-    "seccomp-bpf-helpers/syscall_sets.cc",
-    "seccomp-bpf-helpers/syscall_sets.h",
-  ]
-  defines = [ "SANDBOX_IMPLEMENTATION" ]
-
-  deps = [
-    ":sandbox_services",
-    ":seccomp_bpf",
-    "//base",
-  ]
-
-  if (is_nacl_nonsfi) {
-    sources -= [
       "seccomp-bpf-helpers/baseline_policy.cc",
       "seccomp-bpf-helpers/baseline_policy.h",
       "seccomp-bpf-helpers/syscall_sets.cc",
@@ -305,9 +285,24 @@ if (is_linux) {
       "-Wno-sign-compare",
     ]
 
-    deps = [
-      "//build/config/sanitizers:deps",
-    ]
+    import("//build/config/compiler/compiler.gni")
+    import("//build/config/sanitizers/sanitizers.gni")
+    if (is_component_build || using_sanitizer) {
+      # WARNING! We remove this config so that we don't accidentally
+      # pick up the //build/config:rpath_for_built_shared_libraries
+      # sub-config. However, this means that we need to duplicate any
+      # other flags that executable_config might have.
+      configs -= [ "//build/config:executable_config" ]
+      if (!use_gold) {
+        ldflags = [ "-Wl,--disable-new-dtags" ]
+      }
+    }
+
+    # We also do not want to pick up any of the other sanitizer
+    # flags (i.e. we do not want to build w/ the sanitizers at all).
+    # This is safe to delete unconditionally, because it is part of the
+    # default configs and empty when not using the sanitizers.
+    configs -= [ "//build/config/sanitizers:default_sanitizer_flags" ]
   }
 }
 

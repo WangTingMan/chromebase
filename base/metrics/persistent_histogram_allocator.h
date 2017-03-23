@@ -19,6 +19,8 @@
 
 namespace base {
 
+class BucketRanges;
+class FilePath;
 class PersistentSampleMapRecords;
 class PersistentSparseHistogramDataManager;
 
@@ -54,8 +56,8 @@ class BASE_EXPORT PersistentSparseHistogramDataManager {
   // Convenience method that gets the object for a given reference so callers
   // don't have to also keep their own pointer to the appropriate allocator.
   template <typename T>
-  T* GetAsObject(PersistentMemoryAllocator::Reference ref, uint32_t type_id) {
-    return allocator_->GetAsObject<T>(ref, type_id);
+  T* GetAsObject(PersistentMemoryAllocator::Reference ref) {
+    return allocator_->GetAsObject<T>(ref);
   }
 
  private:
@@ -129,8 +131,8 @@ class BASE_EXPORT PersistentSampleMapRecords {
   // cleanliness of the interface), a template is defined that will be
   // resolved when used inside that file.
   template <typename T>
-  T* GetAsObject(PersistentMemoryAllocator::Reference ref, uint32_t type_id) {
-    return data_manager_->GetAsObject<T>(ref, type_id);
+  T* GetAsObject(PersistentMemoryAllocator::Reference ref) {
+    return data_manager_->GetAsObject<T>(ref);
   }
 
  private:
@@ -248,6 +250,19 @@ class BASE_EXPORT PersistentHistogramAllocator {
   // True, forgetting it otherwise.
   void FinalizeHistogram(Reference ref, bool registered);
 
+  // Merges the data in a persistent histogram with one held globally by the
+  // StatisticsRecorder, updating the "logged" samples within the passed
+  // object so that repeated merges are allowed. Don't call this on a "global"
+  // allocator because histograms created there will already be in the SR.
+  void MergeHistogramDeltaToStatisticsRecorder(HistogramBase* histogram);
+
+  // As above but merge the "final" delta. No update of "logged" samples is
+  // done which means it can operate on read-only objects. It's essential,
+  // however, not to call this more than once or those final samples will
+  // get recorded again.
+  void MergeHistogramFinalDeltaToStatisticsRecorder(
+      const HistogramBase* histogram);
+
   // Returns the object that manages the persistent-sample-map records for a
   // given |id|. Only one |user| of this data is allowed at a time. This does
   // an automatic Acquire() on the records. The user must call Release() on
@@ -332,6 +347,12 @@ class BASE_EXPORT PersistentHistogramAllocator {
   std::unique_ptr<HistogramBase> CreateHistogram(
       PersistentHistogramData* histogram_data_ptr);
 
+  // Gets or creates an object in the global StatisticsRecorder matching
+  // the |histogram| passed. Null is returned if one was not found and
+  // one could not be created.
+  HistogramBase* GetOrCreateStatisticsRecorderHistogram(
+      const HistogramBase* histogram);
+
   // Record the result of a histogram creation.
   static void RecordCreateHistogramResult(CreateHistogramResultType result);
 
@@ -369,6 +390,46 @@ class BASE_EXPORT GlobalHistogramAllocator
   // Create a global allocator using an internal block of memory of the
   // specified |size| taken from the heap.
   static void CreateWithLocalMemory(size_t size, uint64_t id, StringPiece name);
+
+#if !defined(OS_NACL)
+  // Create a global allocator by memory-mapping a |file|. If the file does
+  // not exist, it will be created with the specified |size|. If the file does
+  // exist, the allocator will use and add to its contents, ignoring the passed
+  // size in favor of the existing size. Returns whether the global allocator
+  // was set.
+  static bool CreateWithFile(const FilePath& file_path,
+                             size_t size,
+                             uint64_t id,
+                             StringPiece name);
+
+  // Creates a new file at |active_path|. If it already exists, it will first be
+  // moved to |base_path|. In all cases, any old file at |base_path| will be
+  // removed. The file will be created using the given size, id, and name.
+  // Returns whether the global allocator was set.
+  static bool CreateWithActiveFile(const FilePath& base_path,
+                                   const FilePath& active_path,
+                                   size_t size,
+                                   uint64_t id,
+                                   StringPiece name);
+
+  // Uses ConstructBaseActivePairFilePaths() to build a pair of file names which
+  // are then used for CreateWithActiveFile(). |name| is used for both the
+  // internal name for the allocator and also for the name of the file inside
+  // |dir|.
+  static bool CreateWithActiveFileInDir(const FilePath& dir,
+                                        size_t size,
+                                        uint64_t id,
+                                        StringPiece name);
+
+  // Constructs a pair of names in |dir| based on name that can be used for a
+  // base + active persistent memory mapped location for CreateWithActiveFile().
+  // |name| will be used as the basename of the file inside |dir|.
+  // |out_base_path| or |out_active_path| may be null if not needed.
+  static void ConstructFilePaths(const FilePath& dir,
+                                 StringPiece name,
+                                 FilePath* out_base_path,
+                                 FilePath* out_active_path);
+#endif
 
   // Create a global allocator using a block of shared |memory| of the
   // specified |size|. The allocator takes ownership of the shared memory
@@ -408,11 +469,19 @@ class BASE_EXPORT GlobalHistogramAllocator
   // in order to persist the data for a later use.
   void SetPersistentLocation(const FilePath& location);
 
+  // Retrieves a previously set pathname to which the contents of this allocator
+  // are to be saved.
+  const FilePath& GetPersistentLocation() const;
+
   // Writes the internal data to a previously set location. This is generally
   // called when a process is exiting from a section of code that may not know
   // the filesystem. The data is written in an atomic manner. The return value
   // indicates success.
   bool WriteToPersistentLocation();
+
+  // If there is a global metrics file being updated on disk, mark it to be
+  // deleted when the process exits.
+  void DeletePersistentLocation();
 
  private:
   friend class StatisticsRecorder;

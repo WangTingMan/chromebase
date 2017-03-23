@@ -14,7 +14,10 @@ SequencedWorkerPoolOwner::SequencedWorkerPoolOwner(
     size_t max_threads,
     const std::string& thread_name_prefix)
     : constructor_message_loop_(MessageLoop::current()),
-      pool_(new SequencedWorkerPool(max_threads, thread_name_prefix, this)),
+      pool_(new SequencedWorkerPool(max_threads,
+                                    thread_name_prefix,
+                                    TaskPriority::USER_VISIBLE,
+                                    this)),
       has_work_call_count_(0) {}
 
 SequencedWorkerPoolOwner::~SequencedWorkerPoolOwner() {
@@ -25,7 +28,8 @@ SequencedWorkerPoolOwner::~SequencedWorkerPoolOwner() {
   exit_loop_.Run();
 }
 
-const scoped_refptr<SequencedWorkerPool>& SequencedWorkerPoolOwner::pool() {
+const scoped_refptr<SequencedWorkerPool>& SequencedWorkerPoolOwner::pool()
+    const {
   return pool_;
 }
 
@@ -54,7 +58,8 @@ void SequencedWorkerPoolOwner::WillWaitForShutdown() {
 }
 
 void SequencedWorkerPoolOwner::OnDestruct() {
-  constructor_message_loop_->PostTask(FROM_HERE, exit_loop_.QuitClosure());
+  constructor_message_loop_->task_runner()->PostTask(FROM_HERE,
+                                                     exit_loop_.QuitClosure());
 }
 
 }  // namespace base

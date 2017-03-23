@@ -18,27 +18,43 @@ namespace base {
 namespace trace_event {
 
 // Captures the reason why a memory dump is being requested. This is to allow
-// selective enabling of dumps, filtering and post-processing.
+// selective enabling of dumps, filtering and post-processing. Important: this
+// must be kept consistent with
+// services/resource_coordinator/public/cpp/memory/memory_infra_traits.cc.
 enum class MemoryDumpType {
-  TASK_BEGIN,         // Dumping memory at the beginning of a message-loop task.
-  TASK_END,           // Dumping memory at the ending of a message-loop task.
-  PERIODIC_INTERVAL,  // Dumping memory at periodic intervals.
+  PERIODIC_INTERVAL,     // Dumping memory at periodic intervals.
   EXPLICITLY_TRIGGERED,  // Non maskable dump request.
-  LAST = EXPLICITLY_TRIGGERED // For IPC macros.
+  PEAK_MEMORY_USAGE,     // Dumping memory at detected peak total memory usage.
+  LAST = PEAK_MEMORY_USAGE  // For IPC macros.
 };
 
 // Tells the MemoryDumpProvider(s) how much detailed their dumps should be.
-// MemoryDumpProvider instances must guarantee that level of detail does not
-// affect the total size reported in the root node, but only the granularity of
-// the child MemoryAllocatorDump(s).
-enum class MemoryDumpLevelOfDetail {
-  LIGHT,           // Few entries, typically a fixed number, per dump.
-  DETAILED,        // Unrestricted amount of entries per dump.
-  LAST = DETAILED  // For IPC Macros.
+// Important: this must be kept consistent with
+// services/resource_Coordinator/public/cpp/memory/memory_infra_traits.cc.
+enum class MemoryDumpLevelOfDetail : uint32_t {
+  FIRST,
+
+  // For background tracing mode. The dump time is quick, and typically just the
+  // totals are expected. Suballocations need not be specified. Dump name must
+  // contain only pre-defined strings and string arguments cannot be added.
+  BACKGROUND = FIRST,
+
+  // For the levels below, MemoryDumpProvider instances must guarantee that the
+  // total size reported in the root node is consistent. Only the granularity of
+  // the child MemoryAllocatorDump(s) differs with the levels.
+
+  // Few entries, typically a fixed number, per dump.
+  LIGHT,
+
+  // Unrestricted amount of entries per dump.
+  DETAILED,
+
+  LAST = DETAILED
 };
 
 // Initial request arguments for a global memory dump. (see
-// MemoryDumpManager::RequestGlobalMemoryDump()).
+// MemoryDumpManager::RequestGlobalMemoryDump()). Important: this must be kept
+// consistent with services/memory_infra/public/cpp/memory_infra_traits.cc.
 struct BASE_EXPORT MemoryDumpRequestArgs {
   // Globally unique identifier. In multi-process dumps, all processes issue a
   // local dump with the same guid. This allows the trace importers to
@@ -49,9 +65,18 @@ struct BASE_EXPORT MemoryDumpRequestArgs {
   MemoryDumpLevelOfDetail level_of_detail;
 };
 
+// Args for ProcessMemoryDump and passed to OnMemoryDump calls for memory dump
+// providers. Dump providers are expected to read the args for creating dumps.
+struct MemoryDumpArgs {
+  // Specifies how detailed the dumps should be.
+  MemoryDumpLevelOfDetail level_of_detail;
+};
+
 using MemoryDumpCallback = Callback<void(uint64_t dump_guid, bool success)>;
 
 BASE_EXPORT const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type);
+
+BASE_EXPORT MemoryDumpType StringToMemoryDumpType(const std::string& str);
 
 BASE_EXPORT const char* MemoryDumpLevelOfDetailToString(
     const MemoryDumpLevelOfDetail& level_of_detail);

@@ -8,10 +8,9 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
 
 namespace base {
-
-class SequencedTaskRunner;
 
 class BASE_EXPORT SequencedTaskRunnerHandle {
  public:
@@ -26,8 +25,9 @@ class BASE_EXPORT SequencedTaskRunnerHandle {
   //    instantiating a SequencedTaskRunnerHandle.
   // b) The current thread has a ThreadTaskRunnerHandle (which includes any
   //    thread that has a MessageLoop associated with it), or
-  // c) The current thread is a worker thread belonging to a
-  //    SequencedWorkerPool.
+  // c) The current thread is a worker thread belonging to a SequencedWorkerPool
+  //    *and* is currently running a sequenced task (note: not supporting
+  //    unsequenced tasks is intentional: https://crbug.com/618043#c4).
   static bool IsSet();
 
   // Binds |task_runner| to the current thread.

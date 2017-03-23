@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include <ostream>
+#include <utility>
 
 #include "base/bind.h"
 #include "base/callback.h"
@@ -20,6 +21,8 @@ namespace base {
 // end up with multiple AtExitManagers on the same process.  We don't protect
 // this for thread-safe access, since it will only be modified in testing.
 static AtExitManager* g_top_manager = NULL;
+
+static bool g_disable_managers = false;
 
 AtExitManager::AtExitManager()
     : processing_callbacks_(false), next_manager_(g_top_manager) {
@@ -38,7 +41,8 @@ AtExitManager::~AtExitManager() {
   }
   DCHECK_EQ(this, g_top_manager);
 
-  ProcessCallbacksNow();
+  if (!g_disable_managers)
+    ProcessCallbacksNow();
   g_top_manager = next_manager_;
 }
 
@@ -57,7 +61,7 @@ void AtExitManager::RegisterTask(base::Closure task) {
 
   AutoLock lock(g_top_manager->lock_);
   DCHECK(!g_top_manager->processing_callbacks_);
-  g_top_manager->stack_.push(task);
+  g_top_manager->stack_.push(std::move(task));
 }
 
 // static
@@ -85,6 +89,11 @@ void AtExitManager::ProcessCallbacksNow() {
 
   // Expect that all callbacks have been run.
   DCHECK(g_top_manager->stack_.empty());
+}
+
+void AtExitManager::DisableAllAtExitManagers() {
+  AutoLock lock(g_top_manager->lock_);
+  g_disable_managers = true;
 }
 
 AtExitManager::AtExitManager(bool shadow)

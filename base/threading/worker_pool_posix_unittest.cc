@@ -96,16 +96,11 @@ class PosixDynamicThreadPoolTest : public testing::Test {
         counter_(0),
         num_waiting_to_start_(0),
         num_waiting_to_start_cv_(&num_waiting_to_start_lock_),
-        start_(true, false) {}
+        start_(WaitableEvent::ResetPolicy::MANUAL,
+               WaitableEvent::InitialState::NOT_SIGNALED) {}
 
   void SetUp() override {
     peer_.set_num_idle_threads_cv(new ConditionVariable(peer_.lock()));
-  }
-
-  void TearDown() override {
-    // Wake up the idle threads so they can terminate.
-    if (pool_.get())
-      pool_->Terminate();
   }
 
   void WaitForTasksToStart(int num_tasks) {

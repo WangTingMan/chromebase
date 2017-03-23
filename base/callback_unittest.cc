@@ -14,57 +14,38 @@
 
 namespace base {
 
-namespace {
-
-struct FakeInvoker {
-  // MSVC 2013 doesn't support Type Alias of function types.
-  // Revisit this after we update it to newer version.
-  typedef void RunType(internal::BindStateBase*);
-  static void Run(internal::BindStateBase*) {
-  }
-};
-
-}  // namespace
-
-namespace internal {
+void NopInvokeFunc() {}
 
 // White-box testpoints to inject into a Callback<> object for checking
 // comparators and emptiness APIs.  Use a BindState that is specialized
 // based on a type we declared in the anonymous namespace above to remove any
 // chance of colliding with another instantiation and breaking the
 // one-definition-rule.
-template <>
-struct BindState<void(), void(), FakeInvoker>
-    : public BindStateBase {
- public:
-  BindState() : BindStateBase(&Destroy) {}
-  using InvokerType = FakeInvoker;
+struct FakeBindState1 : internal::BindStateBase {
+  FakeBindState1() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
  private:
-  ~BindState() {}
-  static void Destroy(BindStateBase* self) {
-    delete static_cast<BindState*>(self);
+  ~FakeBindState1() {}
+  static void Destroy(const internal::BindStateBase* self) {
+    delete static_cast<const FakeBindState1*>(self);
+  }
+  static bool IsCancelled(const internal::BindStateBase*) {
+    return false;
   }
 };
 
-template <>
-struct BindState<void(), void(), FakeInvoker, FakeInvoker>
-    : public BindStateBase {
- public:
-  BindState() : BindStateBase(&Destroy) {}
-  using InvokerType = FakeInvoker;
+struct FakeBindState2 : internal::BindStateBase {
+  FakeBindState2() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
  private:
-  ~BindState() {}
-  static void Destroy(BindStateBase* self) {
-    delete static_cast<BindState*>(self);
+  ~FakeBindState2() {}
+  static void Destroy(const internal::BindStateBase* self) {
+    delete static_cast<const FakeBindState2*>(self);
+  }
+  static bool IsCancelled(const internal::BindStateBase*) {
+    return false;
   }
 };
-}  // namespace internal
 
 namespace {
-
-using FakeBindState1 = internal::BindState<void(), void(), FakeInvoker>;
-using FakeBindState2 =
-    internal::BindState<void(), void(), FakeInvoker, FakeInvoker>;
 
 class CallbackTest : public ::testing::Test {
  public:
@@ -129,6 +110,17 @@ TEST_F(CallbackTest, Reset) {
   ASSERT_FALSE(callback_a_.Equals(null_callback_));
 
   callback_a_.Reset();
+
+  EXPECT_TRUE(callback_a_.is_null());
+  EXPECT_TRUE(callback_a_.Equals(null_callback_));
+}
+
+TEST_F(CallbackTest, Move) {
+  // Moving should reset the callback.
+  ASSERT_FALSE(callback_a_.is_null());
+  ASSERT_FALSE(callback_a_.Equals(null_callback_));
+
+  auto tmp = std::move(callback_a_);
 
   EXPECT_TRUE(callback_a_.is_null());
   EXPECT_TRUE(callback_a_.Equals(null_callback_));

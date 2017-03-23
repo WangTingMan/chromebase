@@ -17,6 +17,9 @@ namespace base {
 // This module provides some helper functions for logging actions tracked by
 // the user metrics system.
 
+// For best practices on deciding when to emit a user action, see
+// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/actions/README.md
+
 // Record that the user performed an action.
 // This function must be called after the task runner has been set with
 // SetRecordActionTaskRunner().
@@ -26,9 +29,9 @@ namespace base {
 //   not good: "SSLDialogShown", "PageLoaded", "DiskFull"
 // We use this to gather anonymized information about how users are
 // interacting with the browser.
-// WARNING: In calls to this function, UserMetricsAction and a
-// string literal parameter must be on the same line, e.g.
-//   RecordAction(UserMetricsAction("my extremely long action name"));
+// WARNING: In calls to this function, UserMetricsAction should be followed by a
+// string literal parameter and not a variable e.g.
+//   RecordAction(UserMetricsAction("my action name"));
 // This ensures that our processing scripts can associate this action's hash
 // with its metric name. Therefore, it will be possible to retrieve the metric
 // name from the hash later on.

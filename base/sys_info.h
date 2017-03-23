@@ -50,6 +50,10 @@ class BASE_EXPORT SysInfo {
   // or -1 on failure.
   static int64_t AmountOfFreeDiskSpace(const FilePath& path);
 
+  // Return the total disk space in bytes on the volume containing |path|, or -1
+  // on failure.
+  static int64_t AmountOfTotalDiskSpace(const FilePath& path);
+
   // Returns system uptime.
   static TimeDelta Uptime();
 
@@ -93,12 +97,6 @@ class BASE_EXPORT SysInfo {
   // allocate.
   static size_t VMAllocationGranularity();
 
-#if defined(OS_POSIX) && !defined(OS_MACOSX)
-  // Returns the maximum SysV shared memory segment size, or zero if there is no
-  // limit.
-  static uint64_t MaxSharedMemorySize();
-#endif  // defined(OS_POSIX) && !defined(OS_MACOSX)
-
 #if defined(OS_CHROMEOS)
   typedef std::map<std::string, std::string> LsbReleaseMap;
 
@@ -109,8 +107,18 @@ class BASE_EXPORT SysInfo {
   static bool GetLsbReleaseValue(const std::string& key, std::string* value);
 
   // Convenience function for GetLsbReleaseValue("CHROMEOS_RELEASE_BOARD",...).
-  // Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set.
+  // Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set. Otherwise returns
+  // the full name of the board. WARNING: the returned value often differs in
+  // developer built system compared to devices that use the official version.
+  // E.g. for developer built version, the function could return 'glimmer' while
+  // for officially used versions it would be like 'glimmer-signed-mp-v4keys'.
+  // Use GetStrippedReleaseBoard() function if you need only the short name of
+  // the board (would be 'glimmer' in the case described above).
   static std::string GetLsbReleaseBoard();
+
+  // Convenience function for GetLsbReleaseBoard() removing trailing "-signed-*"
+  // if present. Returns "unknown" if CHROMEOS_RELEASE_BOARD is not set.
+  static std::string GetStrippedReleaseBoard();
 
   // Returns the creation time of /etc/lsb-release. (Used to get the date and
   // time of the Chrome OS build).
