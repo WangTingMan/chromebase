@@ -26,6 +26,11 @@ namespace dbus {
 
 namespace {
 
+const char kDisconnectedSignal[] = "Disconnected";
+const char kDisconnectedMatchRule[] =
+    "type='signal', path='/org/freedesktop/DBus/Local',"
+    "interface='org.freedesktop.DBus.Local', member='Disconnected'";
+
 // The NameOwnerChanged member in org.freedesktop.DBus
 const char kNameOwnerChangedSignal[] = "NameOwnerChanged";
 
@@ -40,7 +45,7 @@ const char kServiceNameOwnerChangeMatchRule[] =
 class Watch : public base::MessagePumpLibevent::Watcher {
  public:
   explicit Watch(DBusWatch* watch)
-      : raw_watch_(watch) {
+      : raw_watch_(watch), file_descriptor_watcher_(FROM_HERE) {
     dbus_watch_set_data(raw_watch_, this, NULL);
   }
 
@@ -395,13 +400,6 @@ void Bus::RemoveObjectManagerInternalHelper(
   callback.Run();
 }
 
-void Bus::GetManagedObjects() {
-  for (ObjectManagerTable::iterator iter = object_manager_table_.begin();
-       iter != object_manager_table_.end(); ++iter) {
-    iter->second->GetManagedObjects();
-  }
-}
-
 bool Bus::Connect() {
   // dbus_bus_get_private() and dbus_bus_get() are blocking calls.
   AssertOnDBusThread();
@@ -443,6 +441,12 @@ bool Bus::Connect() {
       return false;
     }
   }
+  // We shouldn't exit on the disconnected signal.
+  dbus_connection_set_exit_on_disconnect(connection_, false);
+
+  // Watch Disconnected signal.
+  AddFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
+  AddMatch(kDisconnectedMatchRule, error.get());
 
   return true;
 }
@@ -502,6 +506,8 @@ void Bus::ShutdownAndBlock() {
   if (connection_) {
     // Remove Disconnected watcher.
     ScopedDBusError error;
+    RemoveFilterFunction(Bus::OnConnectionDisconnectedFilter, this);
+    RemoveMatch(kDisconnectedMatchRule, error.get());
 
     if (connection_type_ == PRIVATE)
       ClosePrivateConnection();
@@ -1177,6 +1183,20 @@ void Bus::OnDispatchStatusChangedThunk(DBusConnection* connection,
                                        void* data) {
   Bus* self = static_cast<Bus*>(data);
   self->OnDispatchStatusChanged(connection, status);
+}
+
+// static
+DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
+    DBusConnection* /*connection*/,
+    DBusMessage* message,
+    void* /*data*/) {
+  if (dbus_message_is_signal(message,
+                             DBUS_INTERFACE_LOCAL,
+                             kDisconnectedSignal)) {
+    // Abort when the connection is lost.
+    LOG(FATAL) << "D-Bus connection was disconnected. Aborting.";
+  }
+  return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
 // static

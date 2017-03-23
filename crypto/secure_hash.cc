@@ -27,7 +27,7 @@ class SecureHashSHA256 : public SecureHash {
     SHA256_Init(&ctx_);
   }
 
-  SecureHashSHA256(const SecureHashSHA256& other) : SecureHash() {
+  SecureHashSHA256(const SecureHashSHA256& other) {
     memcpy(&ctx_, &other.ctx_, sizeof(ctx_));
   }
 
