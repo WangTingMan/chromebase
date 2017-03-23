@@ -570,6 +570,7 @@ MULTIPROCESS_TEST_MAIN(ChildMain) {
 }  // namespace
 
 // ARC note: don't compile as SpawnMultiProcessTestChild brings in a lot of
+// extra dependency.
 #if !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
 TEST(ProcessMetricsTest, GetChildOpenFdCount) {
   ScopedTempDir temp_dir;
@@ -589,6 +590,7 @@ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
   ASSERT_TRUE(child.Terminate(0, true));
 }
 #endif  // !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
+
 #endif  // defined(OS_LINUX)
 
 #if defined(OS_ANDROID) || defined(OS_LINUX)

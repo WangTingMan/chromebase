@@ -51,6 +51,7 @@ class BASE_EXPORT StatisticsRecorder {
   // histograms from providers when necessary.
   class HistogramProvider {
    public:
+    virtual ~HistogramProvider() {}
     // Merges all histogram information into the global versions.
     virtual void MergeHistogramDeltas() = 0;
   };

@@ -32,6 +32,7 @@
 namespace brillo {
 class BaseMessageLoop;
 }
+
 namespace base {
 
 class ThreadTaskRunnerHandle;

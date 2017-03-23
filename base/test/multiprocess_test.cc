@@ -53,6 +53,7 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
 MultiProcessTest::MultiProcessTest() = default;
 
 // Don't compile on ARC.
+#if 0
 Process MultiProcessTest::SpawnChild(const std::string& procname) {
   LaunchOptions options;
 #if defined(OS_WIN)
@@ -65,6 +66,7 @@ Process MultiProcessTest::SpawnChildWithOptions(const std::string& procname,
                                                 const LaunchOptions& options) {
   return SpawnMultiProcessTestChild(procname, MakeCmdLine(procname), options);
 }
+#endif
 
 CommandLine MultiProcessTest::MakeCmdLine(const std::string& procname) {
   CommandLine command_line = GetMultiProcessTestChildBaseCommandLine();
