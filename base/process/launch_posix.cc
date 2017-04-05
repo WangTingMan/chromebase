@@ -33,18 +33,19 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/process/process.h"
 #include "base/process/process_metrics.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
-#include "base/third_party/valgrind/valgrind.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/time/time.h"
+#include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 #include <sys/prctl.h>
 #endif
 
@@ -67,6 +68,13 @@ extern char** environ;
 #endif
 
 namespace base {
+
+// Friend and derived class of ScopedAllowBaseSyncPrimitives which allows
+// GetAppOutputInternal() to join a process. GetAppOutputInternal() can't itself
+// be a friend of ScopedAllowBaseSyncPrimitives because it is in the anonymous
+// namespace.
+class GetAppOutputScopedAllowBaseSyncPrimitives
+    : public base::ScopedAllowBaseSyncPrimitives {};
 
 #if !defined(OS_NACL_NONSFI)
 
@@ -113,7 +121,7 @@ sigset_t SetSignalMask(const sigset_t& new_sigmask) {
   return old_sigmask;
 }
 
-#if !defined(OS_LINUX) || \
+#if (!defined(OS_LINUX) && !defined(OS_AIX)) || \
     (!defined(__i386__) && !defined(__x86_64__) && !defined(__arm__))
 void ResetChildSignalHandlersToDefaults() {
   // The previous signal handlers are likely to be meaningless in the child's
@@ -163,7 +171,7 @@ int sys_rt_sigaction(int sig, const struct kernel_sigaction* act,
 // See crbug.com/177956.
 void ResetChildSignalHandlersToDefaults(void) {
   for (int signum = 1; ; ++signum) {
-    struct kernel_sigaction act = {0};
+    struct kernel_sigaction act = {nullptr};
     int sigaction_get_ret = sys_rt_sigaction(signum, nullptr, &act);
     if (sigaction_get_ret && errno == EINVAL) {
 #if !defined(NDEBUG)
@@ -211,7 +219,7 @@ struct ScopedDIRClose {
 // Automatically closes |DIR*|s.
 typedef std::unique_ptr<DIR, ScopedDIRClose> ScopedDIR;
 
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 static const char kFDDir[] = "/proc/self/fd";
 #elif defined(OS_MACOSX)
 static const char kFDDir[] = "/dev/fd";
@@ -280,14 +288,8 @@ void CloseSuperfluousFds(const base::InjectiveMultimap& saved_mapping) {
     if (fd == dir_fd)
       continue;
 
-    // When running under Valgrind, Valgrind opens several FDs for its
-    // own use and will complain if we try to close them.  All of
-    // these FDs are >= |max_fds|, so we can check against that here
-    // before closing.  See https://bugs.kde.org/show_bug.cgi?id=191758
-    if (fd < static_cast<int>(max_fds)) {
-      int ret = IGNORE_EINTR(close(fd));
-      DPCHECK(ret == 0);
-    }
+    int ret = IGNORE_EINTR(close(fd));
+    DPCHECK(ret == 0);
   }
 }
 
@@ -298,6 +300,7 @@ Process LaunchProcess(const CommandLine& cmdline,
 
 Process LaunchProcess(const std::vector<std::string>& argv,
                       const LaunchOptions& options) {
+  TRACE_EVENT0("base", "LaunchProcess");
 #if defined(OS_MACOSX)
   if (FeatureList::IsEnabled(kMacLaunchProcessPosixSpawn)) {
     // TODO(rsesek): Do this unconditionally. There is one user for each of
@@ -307,21 +310,16 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   }
 #endif
 
-  size_t fd_shuffle_size = 0;
-  if (options.fds_to_remap) {
-    fd_shuffle_size = options.fds_to_remap->size();
-  }
-
   InjectiveMultimap fd_shuffle1;
   InjectiveMultimap fd_shuffle2;
-  fd_shuffle1.reserve(fd_shuffle_size);
-  fd_shuffle2.reserve(fd_shuffle_size);
+  fd_shuffle1.reserve(options.fds_to_remap.size());
+  fd_shuffle2.reserve(options.fds_to_remap.size());
 
-  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
-  for (size_t i = 0; i < argv.size(); i++) {
-    argv_cstr[i] = const_cast<char*>(argv[i].c_str());
-  }
-  argv_cstr[argv.size()] = nullptr;
+  std::vector<char*> argv_cstr;
+  argv_cstr.reserve(argv.size() + 1);
+  for (const auto& arg : argv)
+    argv_cstr.push_back(const_cast<char*>(arg.c_str()));
+  argv_cstr.push_back(nullptr);
 
   std::unique_ptr<char* []> new_environ;
   char* const empty_environ = nullptr;
@@ -341,7 +339,8 @@ Process LaunchProcess(const std::vector<std::string>& argv,
   }
 
   pid_t pid;
-#if defined(OS_LINUX)
+  base::TimeTicks before_fork = TimeTicks::Now();
+#if defined(OS_LINUX) || defined(OS_AIX)
   if (options.clone_flags) {
     // Signal handling in this function assumes the creation of a new
     // process, so we check that a thread is not being created by mistake
@@ -367,7 +366,11 @@ Process LaunchProcess(const std::vector<std::string>& argv,
 
   // Always restore the original signal mask in the parent.
   if (pid != 0) {
+    base::TimeTicks after_fork = TimeTicks::Now();
     SetSignalMask(orig_sigmask);
+
+    base::TimeDelta fork_time = after_fork - before_fork;
+    UMA_HISTOGRAM_TIMES("MPArch.ForkTime", fork_time);
   }
 
   if (pid < 0) {
@@ -455,14 +458,12 @@ Process LaunchProcess(const std::vector<std::string>& argv,
     }
 #endif  // defined(OS_CHROMEOS)
 
-    if (options.fds_to_remap) {
-      // Cannot use STL iterators here, since debug iterators use locks.
-      for (size_t i = 0; i < options.fds_to_remap->size(); ++i) {
-        const FileHandleMappingVector::value_type& value =
-            (*options.fds_to_remap)[i];
-        fd_shuffle1.push_back(InjectionArc(value.first, value.second, false));
-        fd_shuffle2.push_back(InjectionArc(value.first, value.second, false));
-      }
+    // Cannot use STL iterators here, since debug iterators use locks.
+    for (size_t i = 0; i < options.fds_to_remap.size(); ++i) {
+      const FileHandleMappingVector::value_type& value =
+          options.fds_to_remap[i];
+      fd_shuffle1.push_back(InjectionArc(value.first, value.second, false));
+      fd_shuffle2.push_back(InjectionArc(value.first, value.second, false));
     }
 
     if (!options.environ.empty() || options.clear_environ)
@@ -476,7 +477,7 @@ Process LaunchProcess(const std::vector<std::string>& argv,
 
     // Set NO_NEW_PRIVS by default. Since NO_NEW_PRIVS only exists in kernel
     // 3.5+, do not check the return value of prctl here.
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_AIX)
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
 #endif
@@ -506,7 +507,7 @@ Process LaunchProcess(const std::vector<std::string>& argv,
     const char* executable_path = !options.real_path.empty() ?
         options.real_path.value().c_str() : argv_cstr[0];
 
-    execvp(executable_path, argv_cstr.get());
+    execvp(executable_path, argv_cstr.data());
 
     RAW_LOG(ERROR, "LaunchProcess: failed to execvp:");
     RAW_LOG(ERROR, argv_cstr[0]);
@@ -516,8 +517,8 @@ Process LaunchProcess(const std::vector<std::string>& argv,
     if (options.wait) {
       // While this isn't strictly disk IO, waiting for another process to
       // finish is the sort of thing ThreadRestrictions is trying to prevent.
-      base::ThreadRestrictions::AssertIOAllowed();
-      pid_t ret = HANDLE_EINTR(waitpid(pid, 0, 0));
+      base::AssertBlockingAllowed();
+      pid_t ret = HANDLE_EINTR(waitpid(pid, nullptr, 0));
       DPCHECK(ret > 0);
     }
   }
@@ -547,17 +548,17 @@ static bool GetAppOutputInternal(
     std::string* output,
     bool do_search_path,
     int* exit_code) {
-  // Doing a blocking wait for another command to finish counts as IO.
-  base::ThreadRestrictions::AssertIOAllowed();
+  base::AssertBlockingAllowed();
   // exit_code must be supplied so calling function can determine success.
   DCHECK(exit_code);
   *exit_code = EXIT_FAILURE;
 
-  int pipe_fd[2];
-  pid_t pid;
-  InjectiveMultimap fd_shuffle1, fd_shuffle2;
-  std::unique_ptr<char* []> argv_cstr(new char*[argv.size() + 1]);
-
+  // Declare and call reserve() here before calling fork() because the child
+  // process cannot allocate memory.
+  std::vector<char*> argv_cstr;
+  argv_cstr.reserve(argv.size() + 1);
+  InjectiveMultimap fd_shuffle1;
+  InjectiveMultimap fd_shuffle2;
   fd_shuffle1.reserve(3);
   fd_shuffle2.reserve(3);
 
@@ -565,81 +566,90 @@ static bool GetAppOutputInternal(
   // both.
   DCHECK(!do_search_path ^ !envp);
 
+  int pipe_fd[2];
   if (pipe(pipe_fd) < 0)
     return false;
 
-  switch (pid = fork()) {
-    case -1:  // error
+  pid_t pid = fork();
+  switch (pid) {
+    case -1: {
+      // error
       close(pipe_fd[0]);
       close(pipe_fd[1]);
       return false;
-    case 0:  // child
-      {
-        // DANGER: no calls to malloc or locks are allowed from now on:
-        // http://crbug.com/36678
+    }
+    case 0: {
+      // child
+      //
+      // DANGER: no calls to malloc or locks are allowed from now on:
+      // http://crbug.com/36678
 
 #if defined(OS_MACOSX)
-        RestoreDefaultExceptionHandler();
+      RestoreDefaultExceptionHandler();
 #endif
 
-        // Obscure fork() rule: in the child, if you don't end up doing exec*(),
-        // you call _exit() instead of exit(). This is because _exit() does not
-        // call any previously-registered (in the parent) exit handlers, which
-        // might do things like block waiting for threads that don't even exist
-        // in the child.
-        int dev_null = open("/dev/null", O_WRONLY);
-        if (dev_null < 0)
-          _exit(127);
-
-        fd_shuffle1.push_back(InjectionArc(pipe_fd[1], STDOUT_FILENO, true));
-        fd_shuffle1.push_back(InjectionArc(
-            include_stderr ? pipe_fd[1] : dev_null,
-            STDERR_FILENO, true));
-        fd_shuffle1.push_back(InjectionArc(dev_null, STDIN_FILENO, true));
-        // Adding another element here? Remeber to increase the argument to
-        // reserve(), above.
-
-        for (size_t i = 0; i < fd_shuffle1.size(); ++i)
-          fd_shuffle2.push_back(fd_shuffle1[i]);
-
-        if (!ShuffleFileDescriptors(&fd_shuffle1))
-          _exit(127);
-
-        CloseSuperfluousFds(fd_shuffle2);
-
-        for (size_t i = 0; i < argv.size(); i++)
-          argv_cstr[i] = const_cast<char*>(argv[i].c_str());
-        argv_cstr[argv.size()] = nullptr;
-        if (do_search_path)
-          execvp(argv_cstr[0], argv_cstr.get());
-        else
-          execve(argv_cstr[0], argv_cstr.get(), envp);
+      // Obscure fork() rule: in the child, if you don't end up doing exec*(),
+      // you call _exit() instead of exit(). This is because _exit() does not
+      // call any previously-registered (in the parent) exit handlers, which
+      // might do things like block waiting for threads that don't even exist
+      // in the child.
+      int dev_null = open("/dev/null", O_WRONLY);
+      if (dev_null < 0)
         _exit(127);
+
+      fd_shuffle1.push_back(InjectionArc(pipe_fd[1], STDOUT_FILENO, true));
+      fd_shuffle1.push_back(InjectionArc(include_stderr ? pipe_fd[1] : dev_null,
+                                         STDERR_FILENO, true));
+      fd_shuffle1.push_back(InjectionArc(dev_null, STDIN_FILENO, true));
+      // Adding another element here? Remeber to increase the argument to
+      // reserve(), above.
+
+      for (size_t i = 0; i < fd_shuffle1.size(); ++i)
+        fd_shuffle2.push_back(fd_shuffle1[i]);
+
+      if (!ShuffleFileDescriptors(&fd_shuffle1))
+        _exit(127);
+
+      CloseSuperfluousFds(fd_shuffle2);
+
+      for (const auto& arg : argv)
+        argv_cstr.push_back(const_cast<char*>(arg.c_str()));
+      argv_cstr.push_back(nullptr);
+
+      if (do_search_path)
+        execvp(argv_cstr[0], argv_cstr.data());
+      else
+        execve(argv_cstr[0], argv_cstr.data(), envp);
+      _exit(127);
+    }
+    default: {
+      // parent
+      //
+      // Close our writing end of pipe now. Otherwise later read would not
+      // be able to detect end of child's output (in theory we could still
+      // write to the pipe).
+      close(pipe_fd[1]);
+
+      output->clear();
+
+      while (true) {
+        char buffer[256];
+        ssize_t bytes_read =
+            HANDLE_EINTR(read(pipe_fd[0], buffer, sizeof(buffer)));
+        if (bytes_read <= 0)
+          break;
+        output->append(buffer, bytes_read);
       }
-    default:  // parent
-      {
-        // Close our writing end of pipe now. Otherwise later read would not
-        // be able to detect end of child's output (in theory we could still
-        // write to the pipe).
-        close(pipe_fd[1]);
+      close(pipe_fd[0]);
 
-        output->clear();
-
-        while (true) {
-          char buffer[256];
-          ssize_t bytes_read =
-              HANDLE_EINTR(read(pipe_fd[0], buffer, sizeof(buffer)));
-          if (bytes_read <= 0)
-            break;
-          output->append(buffer, bytes_read);
-        }
-        close(pipe_fd[0]);
-
-        // Always wait for exit code (even if we know we'll declare
-        // GOT_MAX_OUTPUT).
-        Process process(pid);
-        return process.WaitForExit(exit_code);
-      }
+      // Always wait for exit code (even if we know we'll declare
+      // GOT_MAX_OUTPUT).
+      Process process(pid);
+      // A process launched with GetAppOutput*() usually doesn't wait on the
+      // process that launched it and thus chances of deadlock are low.
+      GetAppOutputScopedAllowBaseSyncPrimitives allow_base_sync_primitives;
+      return process.WaitForExit(exit_code);
+    }
   }
 }
 
@@ -681,12 +691,8 @@ bool GetAppOutputWithExitCode(const CommandLine& cl,
 
 #endif  // !defined(OS_NACL_NONSFI)
 
-#if defined(OS_LINUX) || defined(OS_NACL_NONSFI)
+#if defined(OS_LINUX) || defined(OS_NACL_NONSFI) || defined(OS_AIX)
 namespace {
-
-bool IsRunningOnValgrind() {
-  return RUNNING_ON_VALGRIND;
-}
 
 // This function runs on the stack specified on the clone call. It uses longjmp
 // to switch back to the original stack so the child can return from sys_clone.
@@ -719,9 +725,10 @@ NOINLINE pid_t CloneAndLongjmpInChild(unsigned long flags,
   // internal pid cache. The libc interface unfortunately requires
   // specifying a new stack, so we use setjmp/longjmp to emulate
   // fork-like behavior.
-  char stack_buf[PTHREAD_STACK_MIN] ALIGNAS(16);
-#if defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS_FAMILY)
+  alignas(16) char stack_buf[PTHREAD_STACK_MIN];
+#if defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY) ||   \
+    defined(ARCH_CPU_MIPS_FAMILY) || defined(ARCH_CPU_S390_FAMILY) || \
+    defined(ARCH_CPU_PPC64_FAMILY)
   // The stack grows downward.
   void* stack = stack_buf + sizeof(stack_buf);
 #else
@@ -743,24 +750,6 @@ pid_t ForkWithFlags(unsigned long flags, pid_t* ptid, pid_t* ctid) {
 
   if (clone_tls_used || invalid_ctid || invalid_ptid || clone_vm_used) {
     RAW_LOG(FATAL, "Invalid usage of ForkWithFlags");
-  }
-
-  // Valgrind's clone implementation does not support specifiying a child_stack
-  // without CLONE_VM, so we cannot use libc's clone wrapper when running under
-  // Valgrind. As a result, the libc pid cache may be incorrect under Valgrind.
-  // See crbug.com/442817 for more details.
-  if (IsRunningOnValgrind()) {
-    // See kernel/fork.c in Linux. There is different ordering of sys_clone
-    // parameters depending on CONFIG_CLONE_BACKWARDS* configuration options.
-#if defined(ARCH_CPU_X86_64)
-    return syscall(__NR_clone, flags, nullptr, ptid, ctid, nullptr);
-#elif defined(ARCH_CPU_X86) || defined(ARCH_CPU_ARM_FAMILY) || \
-    defined(ARCH_CPU_MIPS_FAMILY)
-    // CONFIG_CLONE_BACKWARDS defined.
-    return syscall(__NR_clone, flags, nullptr, ptid, nullptr, ctid);
-#else
-#error "Unsupported architecture"
-#endif
   }
 
   jmp_buf env;

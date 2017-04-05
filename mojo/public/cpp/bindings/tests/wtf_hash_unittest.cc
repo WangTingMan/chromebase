@@ -7,7 +7,7 @@
 #include "mojo/public/interfaces/bindings/tests/test_structs.mojom-blink.h"
 #include "mojo/public/interfaces/bindings/tests/test_wtf_types.mojom-blink.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "third_party/WebKit/Source/wtf/HashFunctions.h"
+#include "third_party/blink/renderer/platform/wtf/hash_functions.h"
 
 namespace mojo {
 namespace test {
@@ -25,33 +25,25 @@ TEST_F(WTFHashTest, NestedStruct) {
                 blink::SimpleNestedStruct::New(blink::ContainsOther::New(1))));
 }
 
-TEST_F(WTFHashTest, UnmappedNativeStruct) {
-  // Just check that this template instantiation compiles.
-  ASSERT_EQ(::mojo::internal::Hash(::mojo::internal::kHashSeed,
-                                   blink::UnmappedNativeStruct::New()),
-            ::mojo::internal::Hash(::mojo::internal::kHashSeed,
-                                   blink::UnmappedNativeStruct::New()));
-}
-
 TEST_F(WTFHashTest, Enum) {
   // Just check that this template instantiation compiles.
 
   // Top-level.
-  ASSERT_EQ(WTF::DefaultHash<blink::TopLevelEnum>::Hash().hash(
+  ASSERT_EQ(WTF::DefaultHash<blink::TopLevelEnum>::Hash().GetHash(
                 blink::TopLevelEnum::E0),
-            WTF::DefaultHash<blink::TopLevelEnum>::Hash().hash(
+            WTF::DefaultHash<blink::TopLevelEnum>::Hash().GetHash(
                 blink::TopLevelEnum::E0));
 
   // Nested in struct.
-  ASSERT_EQ(WTF::DefaultHash<blink::TestWTFStruct::NestedEnum>::Hash().hash(
+  ASSERT_EQ(WTF::DefaultHash<blink::TestWTFStruct::NestedEnum>::Hash().GetHash(
                 blink::TestWTFStruct::NestedEnum::E0),
-            WTF::DefaultHash<blink::TestWTFStruct::NestedEnum>::Hash().hash(
+            WTF::DefaultHash<blink::TestWTFStruct::NestedEnum>::Hash().GetHash(
                 blink::TestWTFStruct::NestedEnum::E0));
 
   // Nested in interface.
-  ASSERT_EQ(WTF::DefaultHash<blink::TestWTF::NestedEnum>::Hash().hash(
+  ASSERT_EQ(WTF::DefaultHash<blink::TestWTF::NestedEnum>::Hash().GetHash(
                 blink::TestWTF::NestedEnum::E0),
-            WTF::DefaultHash<blink::TestWTF::NestedEnum>::Hash().hash(
+            WTF::DefaultHash<blink::TestWTF::NestedEnum>::Hash().GetHash(
                 blink::TestWTF::NestedEnum::E0));
 }
 

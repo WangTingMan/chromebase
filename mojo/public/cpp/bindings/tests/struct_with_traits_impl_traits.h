@@ -20,12 +20,7 @@ namespace mojo {
 template <>
 struct StructTraits<test::NestedStructWithTraitsDataView,
                     test::NestedStructWithTraitsImpl> {
-  static void* SetUpContext(const test::NestedStructWithTraitsImpl& input);
-  static void TearDownContext(const test::NestedStructWithTraitsImpl& input,
-                              void* context);
-
-  static int32_t value(const test::NestedStructWithTraitsImpl& input,
-                       void* context);
+  static int32_t value(const test::NestedStructWithTraitsImpl& input);
 
   static bool Read(test::NestedStructWithTraitsDataView data,
                    test::NestedStructWithTraitsImpl* output);
@@ -95,6 +90,22 @@ struct StructTraits<test::StructWithTraitsDataView,
   static const std::map<std::string, test::NestedStructWithTraitsImpl>&
   f_struct_map(const test::StructWithTraitsImpl& value) {
     return value.get_struct_map();
+  }
+};
+
+template <>
+struct StructTraits<test::StructWithUnreachableTraitsDataView,
+                    test::StructWithUnreachableTraitsImpl> {
+ public:
+  static bool ignore_me(const test::StructWithUnreachableTraitsImpl& input) {
+    NOTREACHED();
+    return false;
+  }
+
+  static bool Read(test::StructWithUnreachableTraitsDataView data,
+                   test::StructWithUnreachableTraitsImpl* out) {
+    NOTREACHED();
+    return false;
   }
 };
 
@@ -188,6 +199,40 @@ struct UnionTraits<test::UnionWithTraitsDataView,
 
     NOTREACHED();
     return false;
+  }
+};
+
+template <>
+struct StructTraits<test::StructForceSerializeDataView,
+                    test::StructForceSerializeImpl> {
+  static int32_t value(const test::StructForceSerializeImpl& impl) {
+    impl.set_was_serialized();
+    return impl.value();
+  }
+
+  static bool Read(test::StructForceSerializeDataView data,
+                   test::StructForceSerializeImpl* out) {
+    out->set_value(data.value());
+    out->set_was_deserialized();
+    return true;
+  }
+};
+
+template <>
+struct StructTraits<test::StructNestedForceSerializeDataView,
+                    test::StructNestedForceSerializeImpl> {
+  static const test::StructForceSerializeImpl& force(
+      const test::StructNestedForceSerializeImpl& impl) {
+    impl.set_was_serialized();
+    return impl.force();
+  }
+
+  static bool Read(test::StructNestedForceSerializeDataView data,
+                   test::StructNestedForceSerializeImpl* out) {
+    if (!data.ReadForce(&out->force()))
+      return false;
+    out->set_was_deserialized();
+    return true;
   }
 };
 

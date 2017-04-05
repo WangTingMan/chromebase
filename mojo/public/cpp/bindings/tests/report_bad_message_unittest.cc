@@ -5,11 +5,11 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "mojo/edk/embedder/embedder.h"
+#include "mojo/core/embedder/embedder.h"
 #include "mojo/public/cpp/bindings/binding.h"
 #include "mojo/public/cpp/bindings/message.h"
+#include "mojo/public/cpp/bindings/tests/bindings_test_base.h"
 #include "mojo/public/interfaces/bindings/tests/test_bad_messages.mojom.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -26,7 +26,7 @@ class TestBadMessagesImpl : public TestBadMessages {
     binding_.Bind(std::move(request));
   }
 
-  const ReportBadMessageCallback& bad_message_callback() {
+  ReportBadMessageCallback& bad_message_callback() {
     return bad_message_callback_;
   }
 
@@ -57,21 +57,20 @@ class TestBadMessagesImpl : public TestBadMessages {
   DISALLOW_COPY_AND_ASSIGN(TestBadMessagesImpl);
 };
 
-class ReportBadMessageTest : public testing::Test {
+class ReportBadMessageTest : public BindingsTestBase {
  public:
   ReportBadMessageTest() {}
 
   void SetUp() override {
-    mojo::edk::SetDefaultProcessErrorCallback(
-        base::Bind(&ReportBadMessageTest::OnProcessError,
-                   base::Unretained(this)));
+    mojo::core::SetDefaultProcessErrorCallback(base::Bind(
+        &ReportBadMessageTest::OnProcessError, base::Unretained(this)));
 
     impl_.BindImpl(MakeRequest(&proxy_));
   }
 
   void TearDown() override {
-    mojo::edk::SetDefaultProcessErrorCallback(
-        mojo::edk::ProcessErrorCallback());
+    mojo::core::SetDefaultProcessErrorCallback(
+        mojo::core::ProcessErrorCallback());
   }
 
   TestBadMessages* proxy() { return proxy_.get(); }
@@ -91,10 +90,9 @@ class ReportBadMessageTest : public testing::Test {
   TestBadMessagesPtr proxy_;
   TestBadMessagesImpl impl_;
   base::Closure error_handler_;
-  base::MessageLoop message_loop;
 };
 
-TEST_F(ReportBadMessageTest, Request) {
+TEST_P(ReportBadMessageTest, Request) {
   // Verify that basic immediate error reporting works.
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
@@ -102,7 +100,7 @@ TEST_F(ReportBadMessageTest, Request) {
   EXPECT_TRUE(error);
 }
 
-TEST_F(ReportBadMessageTest, RequestAsync) {
+TEST_P(ReportBadMessageTest, RequestAsync) {
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
 
@@ -115,11 +113,11 @@ TEST_F(ReportBadMessageTest, RequestAsync) {
 
   // Now we can run the callback and it should trigger a bad message report.
   DCHECK(!impl()->bad_message_callback().is_null());
-  impl()->bad_message_callback().Run("bad!");
+  std::move(impl()->bad_message_callback()).Run("bad!");
   EXPECT_TRUE(error);
 }
 
-TEST_F(ReportBadMessageTest, Response) {
+TEST_P(ReportBadMessageTest, Response) {
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
 
@@ -137,7 +135,7 @@ TEST_F(ReportBadMessageTest, Response) {
   EXPECT_TRUE(error);
 }
 
-TEST_F(ReportBadMessageTest, ResponseAsync) {
+TEST_P(ReportBadMessageTest, ResponseAsync) {
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
 
@@ -157,11 +155,12 @@ TEST_F(ReportBadMessageTest, ResponseAsync) {
 
   // Invoking this callback should report a bad message and trigger the error
   // handler immediately.
-  bad_message_callback.Run("this message is bad and should feel bad");
+  std::move(bad_message_callback)
+      .Run("this message is bad and should feel bad");
   EXPECT_TRUE(error);
 }
 
-TEST_F(ReportBadMessageTest, ResponseSync) {
+TEST_P(ReportBadMessageTest, ResponseSync) {
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
 
@@ -173,7 +172,7 @@ TEST_F(ReportBadMessageTest, ResponseSync) {
   EXPECT_TRUE(error);
 }
 
-TEST_F(ReportBadMessageTest, ResponseSyncDeferred) {
+TEST_P(ReportBadMessageTest, ResponseSyncDeferred) {
   bool error = false;
   SetErrorHandler(base::Bind([] (bool* flag) { *flag = true; }, &error));
 
@@ -185,9 +184,11 @@ TEST_F(ReportBadMessageTest, ResponseSyncDeferred) {
   }
 
   EXPECT_FALSE(error);
-  bad_message_callback.Run("nope nope nope");
+  std::move(bad_message_callback).Run("nope nope nope");
   EXPECT_TRUE(error);
 }
+
+INSTANTIATE_MOJO_BINDINGS_TEST_CASE_P(ReportBadMessageTest);
 
 }  // namespace
 }  // namespace test

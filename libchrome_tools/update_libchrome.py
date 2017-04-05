@@ -48,8 +48,6 @@ _LIBCHROME_ROOT = os.path.dirname(_TOOLS_DIR)
 # Paths ends with '/' is interpreted as directory.
 _IMPORT_LIST = [
     'mojo/',
-    'third_party/catapult/LICENSE',
-    'third_party/catapult/devil/',
     'third_party/ply/',
     'third_party/markupsafe/',
     'third_party/jinja2/',
@@ -67,24 +65,32 @@ _IMPORT_BLACKLIST = [
     'SConstruct',
     'libmojo.pc.in',
     'testrunner.cc',
+    '*/DEPS',
 
     # No Chromium OWNERS should be imported.
     '*/OWNERS',
 
-    # libchrome_tools is out of the update target.
+    # libchrome_tools and soong are out of the update target.
     'libchrome_tools/*',
+    'soong/*',
 
-    # No internal directories.
+     # No internal directories.
     'mojo/internal/*',
 
     # Those files should be generated. Please see also buildflag_header.patch.
-    'base/allocator/features.h',
-    'base/debug/debugging_flags.h',
+    'base/allocator/buildflags.h',
+    'base/android/java/src/org/chromium/base/BuildConfig.java',
+    'base/cfi_buildflags.h',
+    'base/debug/debugging_buildflags.h',
+    'base/memory/protected_memory_buildflags.h',
+    'base/synchronization/synchronization_buildflags.h',
     'gen/*',
+    'ipc/ipc_buildflags.h',
 
     # Blacklist several third party libraries; system libraries should be used.
     'base/third_party/libevent/*',
     'base/third_party/symbolize/*',
+
     'testing/gmock/*',
     'testing/gtest/*',
     'third_party/ashmem/*',
@@ -138,7 +144,7 @@ def _clean_existing_dir(output_root):
   os.makedirs(output_root, mode=0o755, exist_ok=True)
   for path in os.listdir(output_root):
     target_path = os.path.join(output_root, path)
-    if (not os.path.isdir(target_path) or path in ('.git', 'libchrome_tools')):
+    if (not os.path.isdir(target_path) or path in ('.git', 'libchrome_tools', 'soong')):
       continue
     shutil.rmtree(target_path)
 

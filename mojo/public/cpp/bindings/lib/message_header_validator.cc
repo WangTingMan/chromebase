@@ -73,9 +73,10 @@ bool IsValidMessageHeader(const internal::MessageHeader* header,
   //   payload size).
   // - Validation of the payload contents will be done separately based on the
   //   payload type.
-  if (!header_v2->payload.is_null() &&
-      (!internal::ValidatePointer(header_v2->payload, validation_context) ||
-       !validation_context->ClaimMemory(header_v2->payload.Get(), 1))) {
+  if (!internal::ValidatePointerNonNullable(header_v2->payload, 5,
+                                            validation_context) ||
+      !internal::ValidatePointer(header_v2->payload, validation_context) ||
+      !validation_context->ClaimMemory(header_v2->payload.Get(), 1)) {
     return false;
   }
 
@@ -115,6 +116,10 @@ void MessageHeaderValidator::SetDescription(const std::string& description) {
 }
 
 bool MessageHeaderValidator::Accept(Message* message) {
+  // Don't bother validating unserialized message headers.
+  if (!message->is_serialized())
+    return true;
+
   // Pass 0 as number of handles and associated endpoint handles because we
   // don't expect any in the header, even if |message| contains handles.
   internal::ValidationContext validation_context(

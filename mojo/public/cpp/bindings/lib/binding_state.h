@@ -15,6 +15,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "mojo/public/cpp/bindings/bindings_export.h"
 #include "mojo/public/cpp/bindings/connection_error_callback.h"
@@ -50,15 +51,18 @@ class MOJO_CPP_BINDINGS_EXPORT BindingStateBase {
   void Close();
   void CloseWithReason(uint32_t custom_reason, const std::string& description);
 
-  void set_connection_error_handler(const base::Closure& error_handler) {
+  void RaiseError() { endpoint_client_->RaiseError(); }
+
+  void set_connection_error_handler(base::OnceClosure error_handler) {
     DCHECK(is_bound());
-    endpoint_client_->set_connection_error_handler(error_handler);
+    endpoint_client_->set_connection_error_handler(std::move(error_handler));
   }
 
   void set_connection_error_with_reason_handler(
-      const ConnectionErrorWithReasonCallback& error_handler) {
+      ConnectionErrorWithReasonCallback error_handler) {
     DCHECK(is_bound());
-    endpoint_client_->set_connection_error_with_reason_handler(error_handler);
+    endpoint_client_->set_connection_error_with_reason_handler(
+        std::move(error_handler));
   }
 
   bool is_bound() const { return !!router_; }
@@ -68,9 +72,13 @@ class MOJO_CPP_BINDINGS_EXPORT BindingStateBase {
     return router_->handle();
   }
 
+  ReportBadMessageCallback GetBadMessageCallback();
+
   void FlushForTesting();
 
   void EnableTestingMode();
+
+  scoped_refptr<internal::MultiplexRouter> RouterForTesting();
 
  protected:
   void BindInternal(ScopedMessagePipeHandle handle,
@@ -84,6 +92,8 @@ class MOJO_CPP_BINDINGS_EXPORT BindingStateBase {
 
   scoped_refptr<internal::MultiplexRouter> router_;
   std::unique_ptr<InterfaceEndpointClient> endpoint_client_;
+
+  base::WeakPtrFactory<BindingStateBase> weak_ptr_factory_;
 };
 
 template <typename Interface, typename ImplRefTraits>
@@ -101,20 +111,24 @@ class BindingState : public BindingStateBase {
             scoped_refptr<base::SingleThreadTaskRunner> runner) {
     BindingStateBase::BindInternal(
         std::move(handle), runner, Interface::Name_,
-        base::MakeUnique<typename Interface::RequestValidator_>(),
+        std::make_unique<typename Interface::RequestValidator_>(),
         Interface::PassesAssociatedKinds_, Interface::HasSyncMethods_, &stub_,
         Interface::Version_);
   }
 
   InterfaceRequest<Interface> Unbind() {
     endpoint_client_.reset();
-    InterfaceRequest<Interface> request =
-        MakeRequest<Interface>(router_->PassMessagePipe());
+    InterfaceRequest<Interface> request(router_->PassMessagePipe());
     router_ = nullptr;
     return request;
   }
 
   Interface* impl() { return ImplRefTraits::GetRawPointer(&stub_.sink()); }
+  ImplPointerType SwapImplForTesting(ImplPointerType new_impl) {
+    Interface* old_impl = impl();
+    stub_.set_sink(std::move(new_impl));
+    return old_impl;
+  }
 
  private:
   typename Interface::template Stub_<ImplRefTraits> stub_;

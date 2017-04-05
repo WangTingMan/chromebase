@@ -8,11 +8,11 @@
 
 namespace base {
 
-SimpleTestTickClock::SimpleTestTickClock() {}
+SimpleTestTickClock::SimpleTestTickClock() = default;
 
-SimpleTestTickClock::~SimpleTestTickClock() {}
+SimpleTestTickClock::~SimpleTestTickClock() = default;
 
-TimeTicks SimpleTestTickClock::NowTicks() {
+TimeTicks SimpleTestTickClock::NowTicks() const {
   AutoLock lock(lock_);
   return now_ticks_;
 }

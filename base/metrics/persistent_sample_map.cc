@@ -8,6 +8,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_histogram_allocator.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/stl_util.h"
 
 namespace base {
@@ -16,12 +17,6 @@ typedef HistogramBase::Count Count;
 typedef HistogramBase::Sample Sample;
 
 namespace {
-
-enum NegativeSampleReason {
-  PERSISTENT_SPARSE_HAVE_LOGGED_BUT_NOT_SAMPLE,
-  PERSISTENT_SPARSE_SAMPLE_LESS_THAN_LOGGED,
-  MAX_NEGATIVE_SAMPLE_REASONS
-};
 
 // An iterator for going through a PersistentSampleMap. The logic here is
 // identical to that of SampleMapIterator but with different data structures.
@@ -38,7 +33,7 @@ class PersistentSampleMapIterator : public SampleCountIterator {
   bool Done() const override;
   void Next() override;
   void Get(HistogramBase::Sample* min,
-           HistogramBase::Sample* max,
+           int64_t* max,
            HistogramBase::Count* count) const override;
 
  private:
@@ -55,7 +50,7 @@ PersistentSampleMapIterator::PersistentSampleMapIterator(
   SkipEmptyBuckets();
 }
 
-PersistentSampleMapIterator::~PersistentSampleMapIterator() {}
+PersistentSampleMapIterator::~PersistentSampleMapIterator() = default;
 
 bool PersistentSampleMapIterator::Done() const {
   return iter_ == end_;
@@ -68,13 +63,13 @@ void PersistentSampleMapIterator::Next() {
 }
 
 void PersistentSampleMapIterator::Get(Sample* min,
-                                      Sample* max,
+                                      int64_t* max,
                                       Count* count) const {
   DCHECK(!Done());
   if (min)
     *min = iter_->first;
   if (max)
-    *max = iter_->first + 1;
+    *max = strict_cast<int64_t>(iter_->first) + 1;
   if (count)
     *count = *iter_->second;
 }
@@ -114,9 +109,25 @@ PersistentSampleMap::~PersistentSampleMap() {
 }
 
 void PersistentSampleMap::Accumulate(Sample value, Count count) {
+#if 0  // TODO(bcwhite) Re-enable efficient version after crbug.com/682680.
   *GetOrCreateSampleCountStorage(value) += count;
-  IncreaseSum(static_cast<int64_t>(count) * value);
-  IncreaseRedundantCount(count);
+#else
+  Count* local_count_ptr = GetOrCreateSampleCountStorage(value);
+  if (count < 0) {
+    if (*local_count_ptr < -count)
+      RecordNegativeSample(SAMPLES_ACCUMULATE_WENT_NEGATIVE, -count);
+    else
+      RecordNegativeSample(SAMPLES_ACCUMULATE_NEGATIVE_COUNT, -count);
+    *local_count_ptr += count;
+  } else {
+    Sample old_value = *local_count_ptr;
+    Sample new_value = old_value + count;
+    *local_count_ptr = new_value;
+    if ((new_value >= 0) != (old_value >= 0))
+      RecordNegativeSample(SAMPLES_ACCUMULATE_OVERFLOW, count);
+  }
+#endif
+  IncreaseSumAndCount(strict_cast<int64_t>(count) * value, count);
 }
 
 Count PersistentSampleMap::GetCount(Sample value) const {
@@ -184,43 +195,16 @@ PersistentSampleMap::CreatePersistentRecord(
 bool PersistentSampleMap::AddSubtractImpl(SampleCountIterator* iter,
                                           Operator op) {
   Sample min;
-  Sample max;
+  int64_t max;
   Count count;
   for (; !iter->Done(); iter->Next()) {
     iter->Get(&min, &max, &count);
     if (count == 0)
       continue;
-    if (min + 1 != max)
+    if (strict_cast<int64_t>(min) + 1 != max)
       return false;  // SparseHistogram only supports bucket with size 1.
-
-#if 0  // TODO(bcwhite) Re-enable efficient version after crbug.com/682680.
     *GetOrCreateSampleCountStorage(min) +=
         (op == HistogramSamples::ADD) ? count : -count;
-#else
-    if (op == HistogramSamples::ADD) {
-      *GetOrCreateSampleCountStorage(min) += count;
-    } else {
-      // Subtract is used only for determining deltas when reporting which
-      // means that it's in the "logged" iterator. It should have an active
-      // sample record and thus there is no need to try to create one.
-      NegativeSampleReason reason = MAX_NEGATIVE_SAMPLE_REASONS;
-      Count* bucket = GetSampleCountStorage(min);
-      if (bucket == nullptr) {
-        reason = PERSISTENT_SPARSE_HAVE_LOGGED_BUT_NOT_SAMPLE;
-      } else {
-        if (*bucket < count) {
-          reason = PERSISTENT_SPARSE_SAMPLE_LESS_THAN_LOGGED;
-          *bucket = 0;
-        } else {
-          *bucket -= count;
-        }
-      }
-      if (reason != MAX_NEGATIVE_SAMPLE_REASONS) {
-        UMA_HISTOGRAM_ENUMERATION("UMA.NegativeSamples.Reason", reason,
-                                  MAX_NEGATIVE_SAMPLE_REASONS);
-      }
-    }
-#endif
   }
   return true;
 }

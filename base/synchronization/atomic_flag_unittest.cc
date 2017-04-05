@@ -68,10 +68,9 @@ TEST(AtomicFlagTest, ReadFromDifferentThread) {
 
   Thread thread("AtomicFlagTest.ReadFromDifferentThread");
   ASSERT_TRUE(thread.Start());
-  thread.task_runner()->PostTask(
-      FROM_HERE,
-      Bind(&BusyWaitUntilFlagIsSet, &tested_flag, &expected_after_flag,
-           &reset_flag));
+  thread.task_runner()->PostTask(FROM_HERE,
+                                 BindOnce(&BusyWaitUntilFlagIsSet, &tested_flag,
+                                          &expected_after_flag, &reset_flag));
 
   // To verify that IsSet() fetches the flag's value from memory every time it
   // is called (not just the first time that it is called on a thread), sleep
@@ -90,7 +89,8 @@ TEST(AtomicFlagTest, ReadFromDifferentThread) {
 
   // Use |reset_flag| to confirm that the above completed (which the rest of
   // this test assumes).
-  ASSERT_TRUE(reset_flag.IsSet());
+  while (!reset_flag.IsSet())
+    PlatformThread::YieldCurrentThread();
 
   tested_flag.UnsafeResetForTesting();
   EXPECT_FALSE(tested_flag.IsSet());
@@ -100,10 +100,9 @@ TEST(AtomicFlagTest, ReadFromDifferentThread) {
   // |thread| is guaranteed to be synchronized past the
   // |UnsafeResetForTesting()| call when the task runs per the implicit
   // synchronization in the post task mechanism.
-  thread.task_runner()->PostTask(
-      FROM_HERE,
-      Bind(&BusyWaitUntilFlagIsSet, &tested_flag, &expected_after_flag,
-           nullptr));
+  thread.task_runner()->PostTask(FROM_HERE,
+                                 BindOnce(&BusyWaitUntilFlagIsSet, &tested_flag,
+                                          &expected_after_flag, nullptr));
 
   PlatformThread::Sleep(TimeDelta::FromMilliseconds(20));
 
@@ -118,14 +117,19 @@ TEST(AtomicFlagTest, SetOnDifferentSequenceDeathTest) {
   // Checks that Set() can't be called from another sequence after being called
   // on this one. AtomicFlag should die on a DCHECK if Set() is called again
   // from another sequence.
+
+  // Note: flag must be declared before the Thread so that its destructor runs
+  // later. Otherwise there's a race between destructing flag and running
+  // ExpectSetFlagDeath.
+  AtomicFlag flag;
+
   ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   Thread t("AtomicFlagTest.SetOnDifferentThreadDeathTest");
   ASSERT_TRUE(t.Start());
   EXPECT_TRUE(t.WaitUntilThreadStarted());
 
-  AtomicFlag flag;
   flag.Set();
-  t.task_runner()->PostTask(FROM_HERE, Bind(&ExpectSetFlagDeath, &flag));
+  t.task_runner()->PostTask(FROM_HERE, BindOnce(&ExpectSetFlagDeath, &flag));
 }
 
 }  // namespace base

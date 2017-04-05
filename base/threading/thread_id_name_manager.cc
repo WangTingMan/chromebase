@@ -9,7 +9,9 @@
 
 #include "base/logging.h"
 #include "base/memory/singleton.h"
+#include "base/no_destructor.h"
 #include "base/strings/string_util.h"
+#include "base/threading/thread_local.h"
 // Unsupported in libchrome.
 // #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 
@@ -19,19 +21,21 @@ namespace {
 static const char kDefaultName[] = "";
 static std::string* g_default_name;
 
+ThreadLocalStorage::Slot& GetThreadNameTLS() {
+  static base::NoDestructor<base::ThreadLocalStorage::Slot> thread_name_tls;
+  return *thread_name_tls;
+}
 }
 
 ThreadIdNameManager::ThreadIdNameManager()
-    : main_process_name_(NULL),
-      main_process_id_(kInvalidThreadId) {
+    : main_process_name_(nullptr), main_process_id_(kInvalidThreadId) {
   g_default_name = new std::string(kDefaultName);
 
   AutoLock locked(lock_);
   name_to_interned_name_[kDefaultName] = g_default_name;
 }
 
-ThreadIdNameManager::~ThreadIdNameManager() {
-}
+ThreadIdNameManager::~ThreadIdNameManager() = default;
 
 ThreadIdNameManager* ThreadIdNameManager::GetInstance() {
   return Singleton<ThreadIdNameManager,
@@ -50,9 +54,14 @@ void ThreadIdNameManager::RegisterThread(PlatformThreadHandle::Handle handle,
       name_to_interned_name_[kDefaultName];
 }
 
-void ThreadIdNameManager::SetName(PlatformThreadId id,
-                                  const std::string& name) {
-  std::string* leaked_str = NULL;
+void ThreadIdNameManager::InstallSetNameCallback(SetNameCallback callback) {
+  AutoLock locked(lock_);
+  set_name_callback_ = std::move(callback);
+}
+
+void ThreadIdNameManager::SetName(const std::string& name) {
+  PlatformThreadId id = PlatformThread::CurrentId();
+  std::string* leaked_str = nullptr;
   {
     AutoLock locked(lock_);
     NameToInternedNameMap::iterator iter = name_to_interned_name_.find(name);
@@ -65,6 +74,11 @@ void ThreadIdNameManager::SetName(PlatformThreadId id,
 
     ThreadIdToHandleMap::iterator id_to_handle_iter =
         thread_id_to_handle_.find(id);
+
+    GetThreadNameTLS().Set(const_cast<char*>(leaked_str->c_str()));
+    if (set_name_callback_) {
+      set_name_callback_.Run(leaked_str->c_str());
+    }
 
     // The main thread of a process will not be created as a Thread object which
     // means there is no PlatformThreadHandler registered.
@@ -83,7 +97,7 @@ void ThreadIdNameManager::SetName(PlatformThreadId id,
   // ThreadIdNameManager itself when holding the lock.
   // Unsupported in libchrome.
   // trace_event::AllocationContextTracker::SetCurrentThreadName(
-  //     leaked_str->c_str());
+  //   leaked_str->c_str());
 }
 
 const char* ThreadIdNameManager::GetName(PlatformThreadId id) {
@@ -100,6 +114,11 @@ const char* ThreadIdNameManager::GetName(PlatformThreadId id) {
   ThreadHandleToInternedNameMap::iterator handle_to_name_iter =
       thread_handle_to_interned_name_.find(id_to_handle_iter->second);
   return handle_to_name_iter->second->c_str();
+}
+
+const char* ThreadIdNameManager::GetNameForCurrentThread() {
+  const char* name = reinterpret_cast<const char*>(GetThreadNameTLS().Get());
+  return name ? name : kDefaultName;
 }
 
 void ThreadIdNameManager::RemoveName(PlatformThreadHandle::Handle handle,

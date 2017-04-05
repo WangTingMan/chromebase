@@ -14,21 +14,54 @@
 
 namespace base {
 
+namespace {
+
+// A simple object to set an "active" flag and clear it upon destruction. It is
+// an error if the flag is already set.
+class MakeActive {
+ public:
+  MakeActive(std::atomic<bool>* is_active) : is_active_(is_active) {
+    bool was_active = is_active_->exchange(true, std::memory_order_relaxed);
+    CHECK(!was_active);
+  }
+  ~MakeActive() { is_active_->store(false, std::memory_order_relaxed); }
+
+ private:
+  std::atomic<bool>* is_active_;
+
+  DISALLOW_COPY_AND_ASSIGN(MakeActive);
+};
+
+}  // namespace
+
 HistogramSnapshotManager::HistogramSnapshotManager(
     HistogramFlattener* histogram_flattener)
     : histogram_flattener_(histogram_flattener) {
   DCHECK(histogram_flattener_);
+  is_active_.store(false, std::memory_order_relaxed);
 }
 
-HistogramSnapshotManager::~HistogramSnapshotManager() {
+HistogramSnapshotManager::~HistogramSnapshotManager() = default;
+
+void HistogramSnapshotManager::PrepareDeltas(
+    const std::vector<HistogramBase*>& histograms,
+    HistogramBase::Flags flags_to_set,
+    HistogramBase::Flags required_flags) {
+  for (HistogramBase* const histogram : histograms) {
+    histogram->SetFlags(flags_to_set);
+    if ((histogram->flags() & required_flags) == required_flags)
+      PrepareDelta(histogram);
+  }
 }
 
 void HistogramSnapshotManager::PrepareDelta(HistogramBase* histogram) {
+  histogram->ValidateHistogramContents();
   PrepareSamples(histogram, histogram->SnapshotDelta());
 }
 
 void HistogramSnapshotManager::PrepareFinalDelta(
     const HistogramBase* histogram) {
+  histogram->ValidateHistogramContents();
   PrepareSamples(histogram, histogram->SnapshotFinalDelta());
 }
 
@@ -36,6 +69,11 @@ void HistogramSnapshotManager::PrepareSamples(
     const HistogramBase* histogram,
     std::unique_ptr<HistogramSamples> samples) {
   DCHECK(histogram_flattener_);
+
+  // Ensure that there is no concurrent access going on while accessing the
+  // set of known histograms. The flag will be reset when this object goes
+  // out of scope.
+  MakeActive make_active(&is_active_);
 
   // Get information known about this histogram. If it did not previously
   // exist, one will be created and initialized.
@@ -49,23 +87,16 @@ void HistogramSnapshotManager::PrepareSamples(
     // Extract fields useful during debug.
     const BucketRanges* ranges =
         static_cast<const Histogram*>(histogram)->bucket_ranges();
-    std::vector<HistogramBase::Sample> ranges_copy;
-    for (size_t i = 0; i < ranges->size(); ++i)
-      ranges_copy.push_back(ranges->range(i));
-    HistogramBase::Sample* ranges_ptr = &ranges_copy[0];
     uint32_t ranges_checksum = ranges->checksum();
     uint32_t ranges_calc_checksum = ranges->CalculateChecksum();
-    const char* histogram_name = histogram->histogram_name().c_str();
     int32_t flags = histogram->flags();
     // The checksum should have caught this, so crash separately if it didn't.
     CHECK_NE(0U, HistogramBase::RANGE_CHECKSUM_ERROR & corruption);
     CHECK(false);  // Crash for the bucket order corruption.
     // Ensure that compiler keeps around pointers to |histogram| and its
     // internal |bucket_ranges_| for any minidumps.
-    base::debug::Alias(&ranges_ptr);
     base::debug::Alias(&ranges_checksum);
     base::debug::Alias(&ranges_calc_checksum);
-    base::debug::Alias(&histogram_name);
     base::debug::Alias(&flags);
   }
   // Checksum corruption might not have caused order corruption.
@@ -77,36 +108,16 @@ void HistogramSnapshotManager::PrepareSamples(
   if (corruption) {
     DLOG(ERROR) << "Histogram: \"" << histogram->histogram_name()
                 << "\" has data corruption: " << corruption;
-    histogram_flattener_->InconsistencyDetected(
-        static_cast<HistogramBase::Inconsistency>(corruption));
     // Don't record corrupt data to metrics services.
     const uint32_t old_corruption = sample_info->inconsistencies;
     if (old_corruption == (corruption | old_corruption))
       return;  // We've already seen this corruption for this histogram.
     sample_info->inconsistencies |= corruption;
-    histogram_flattener_->UniqueInconsistencyDetected(
-        static_cast<HistogramBase::Inconsistency>(corruption));
     return;
   }
 
   if (samples->TotalCount() > 0)
     histogram_flattener_->RecordDelta(*histogram, *samples);
-}
-
-void HistogramSnapshotManager::InspectLoggedSamplesInconsistency(
-      const HistogramSamples& new_snapshot,
-      HistogramSamples* logged_samples) {
-  HistogramBase::Count discrepancy =
-      logged_samples->TotalCount() - logged_samples->redundant_count();
-  if (!discrepancy)
-    return;
-
-  histogram_flattener_->InconsistencyDetectedInLoggedCount(discrepancy);
-  if (discrepancy > Histogram::kCommonRaceBasedCountMismatch) {
-    // Fix logged_samples.
-    logged_samples->Subtract(*logged_samples);
-    logged_samples->Add(new_snapshot);
-  }
 }
 
 }  // namespace base

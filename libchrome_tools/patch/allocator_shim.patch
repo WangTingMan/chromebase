@@ -2,7 +2,7 @@
 
 --- a/base/allocator/allocator_shim.cc
 +++ b/base/allocator/allocator_shim.cc
-@@ -299,7 +299,7 @@ ALWAYS_INLINE void ShimFreeDefiniteSize(
+@@ -285,7 +285,7 @@ ALWAYS_INLINE void ShimFreeDefiniteSize(void* ptr, size_t size, void* context) {
  #include "base/allocator/allocator_shim_override_cpp_symbols.h"
  #endif
  

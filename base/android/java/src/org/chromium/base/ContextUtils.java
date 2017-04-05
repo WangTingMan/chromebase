@@ -4,8 +4,12 @@
 
 package org.chromium.base;
 
+import android.app.Application;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.SharedPreferences;
+import android.content.res.AssetManager;
+import android.os.Process;
 import android.preference.PreferenceManager;
 
 import org.chromium.base.annotations.JNINamespace;
@@ -15,10 +19,11 @@ import org.chromium.base.annotations.MainDex;
  * This class provides Android application context related utility methods.
  */
 @JNINamespace("base::android")
-@MainDex
 public class ContextUtils {
     private static final String TAG = "ContextUtils";
     private static Context sApplicationContext;
+    // TODO(agrieve): Remove sProcessName caching when we stop supporting JB.
+    private static String sProcessName;
 
     /**
      * Initialization-on-demand holder. This exists for thread-safe lazy initialization.
@@ -52,6 +57,7 @@ public class ContextUtils {
      *
      * @param appContext The application context.
      */
+    @MainDex // TODO(agrieve): Could add to whole class if not for ApplicationStatus.initialize().
     public static void initApplicationContext(Context appContext) {
         // Conceding that occasionally in tests, native is loaded before the browser process is
         // started, in which case the browser process re-sets the application context.
@@ -59,16 +65,6 @@ public class ContextUtils {
             throw new RuntimeException("Attempting to set multiple global application contexts.");
         }
         initJavaSideApplicationContext(appContext);
-    }
-
-    /**
-     * Initialize the native Android application context to be the same as the java counter-part.
-     */
-    public static void initApplicationContextForNative() {
-        if (sApplicationContext == null) {
-            throw new RuntimeException("Cannot have native global application context be null.");
-        }
-        nativeInitNativeSideApplicationContext(sApplicationContext);
     }
 
     /**
@@ -100,6 +96,14 @@ public class ContextUtils {
      */
     @VisibleForTesting
     public static void initApplicationContextForTests(Context appContext) {
+        // ApplicationStatus.initialize should be called to setup activity tracking for tests
+        // that use Robolectric and set the application context manually. Instead of changing all
+        // tests that do so, the call was put here instead.
+        // TODO(mheikal): Require param to be of type Application
+        // Disabled on libchrome
+        // if (appContext instanceof Application) {
+        //     ApplicationStatus.initialize((Application) appContext);
+        // }
         initJavaSideApplicationContext(appContext);
         Holder.sSharedPreferences = fetchAppSharedPreferences();
     }
@@ -111,5 +115,62 @@ public class ContextUtils {
         sApplicationContext = appContext;
     }
 
-    private static native void nativeInitNativeSideApplicationContext(Context appContext);
+    /**
+     * In most cases, {@link Context#getAssets()} can be used directly. Modified resources are
+     * used downstream and are set up on application startup, and this method provides access to
+     * regular assets before that initialization is complete.
+     *
+     * This method should ONLY be used for accessing files within the assets folder.
+     *
+     * @return Application assets.
+     */
+    public static AssetManager getApplicationAssets() {
+        Context context = getApplicationContext();
+        while (context instanceof ContextWrapper) {
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return context.getAssets();
+    }
+
+    /**
+     * @return Whether the process is isolated.
+     */
+    public static boolean isIsolatedProcess() {
+        try {
+            return (Boolean) Process.class.getMethod("isIsolated").invoke(null);
+        } catch (Exception e) { // No multi-catch below API level 19 for reflection exceptions.
+            // If fallback logic is ever needed, refer to:
+            // https://chromium-review.googlesource.com/c/chromium/src/+/905563/1
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** @return The name of the current process. E.g. "org.chromium.chrome:privileged_process0". */
+    public static String getProcessName() {
+        // Once we drop support JB, this method can be simplified to not cache sProcessName and call
+        // ActivityThread.currentProcessName().
+        if (sProcessName != null) {
+            return sProcessName;
+        }
+        try {
+            // An even more convenient ActivityThread.currentProcessName() exists, but was not added
+            // until JB MR2.
+            Class<?> activityThreadClazz = Class.forName("android.app.ActivityThread");
+            Object activityThread =
+                    activityThreadClazz.getMethod("currentActivityThread").invoke(null);
+            // Before JB MR2, currentActivityThread() returns null when called on a non-UI thread.
+            // Cache the name to allow other threads to access it.
+            sProcessName =
+                    (String) activityThreadClazz.getMethod("getProcessName").invoke(activityThread);
+            return sProcessName;
+        } catch (Exception e) { // No multi-catch below API level 19 for reflection exceptions.
+            // If fallback logic is ever needed, refer to:
+            // https://chromium-review.googlesource.com/c/chromium/src/+/905563/1
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean isMainProcess() {
+        return !getProcessName().contains(":");
+    }
 }

@@ -77,7 +77,7 @@ const MojoHandle MOJO_HANDLE_INVALID = 0;
 //       the resource being invalidated.
 //   |MOJO_RESULT_SHOULD_WAIT| - The request cannot currently be completed
 //       (e.g., if the data requested is not yet available). The caller should
-//       wait for it to be feasible using a watcher.
+//       wait for it to be feasible using a trap.
 //
 // The codes from |MOJO_RESULT_OK| to |MOJO_RESULT_DATA_LOSS| come from
 // Google3's canonical error codes.
@@ -133,8 +133,32 @@ typedef uint64_t MojoDeadline;
 #ifdef __cplusplus
 const MojoDeadline MOJO_DEADLINE_INDEFINITE = static_cast<MojoDeadline>(-1);
 #else
-#define MOJO_DEADLINE_INDEFINITE ((MojoDeadline) - 1)
+#define MOJO_DEADLINE_INDEFINITE ((MojoDeadline)-1)
 #endif
+
+// Flags passed to |MojoInitialize()| via |MojoInitializeOptions|.
+typedef uint32_t MojoInitializeFlags;
+
+// No flags.
+#define MOJO_INITIALIZE_FLAG_NONE ((MojoInitializeFlags)0)
+
+// Options passed to |MojoInitialize()|.
+struct MOJO_ALIGNAS(8) MojoInitializeOptions {
+  // The size of this structure, used for versioning.
+  uint32_t struct_size;
+
+  // See |MojoInitializeFlags|.
+  MojoInitializeFlags flags;
+
+  // Address and length of the UTF8-encoded path of a mojo_core shared library
+  // to load. If the |mojo_core_path| is null then |mojo_core_path_length| is
+  // ignored and Mojo will fall back first onto the |MOJO_CORE_LIBRARY_PATH|
+  // environment variable, and then onto the current working directory.
+  MOJO_POINTER_FIELD(const char*, mojo_core_path);
+  uint32_t mojo_core_path_length;
+};
+MOJO_STATIC_ASSERT(sizeof(MojoInitializeOptions) == 24,
+                   "MojoInitializeOptions has wrong size");
 
 // |MojoHandleSignals|: Used to specify signals that can be watched for on a
 // handle (and which can be triggered), e.g., the ability to read or write to
@@ -149,6 +173,12 @@ const MojoDeadline MOJO_DEADLINE_INDEFINITE = static_cast<MojoDeadline>(-1);
 //       AND there is some nonzero quantity of new data available on the pipe
 //       since the last |MojoReadData()| or |MojoBeginReadData()| call on the
 //       handle.
+//   |MOJO_HANDLE_SIGNAL_PEER_REMOTE| - The peer handle exists in a remote
+//       execution context (e.g. in another process.) Note that this signal is
+//       maintained with best effort but may at any time be slightly out of sync
+//       with the actual location of the peer handle.
+//   |MOJO_HANDLE_SIGNAL_QUOTA_EXCEEDED| - One or more quotas set on the handle
+//       is currently exceeded.
 
 typedef uint32_t MojoHandleSignals;
 
@@ -158,12 +188,16 @@ const MojoHandleSignals MOJO_HANDLE_SIGNAL_READABLE = 1 << 0;
 const MojoHandleSignals MOJO_HANDLE_SIGNAL_WRITABLE = 1 << 1;
 const MojoHandleSignals MOJO_HANDLE_SIGNAL_PEER_CLOSED = 1 << 2;
 const MojoHandleSignals MOJO_HANDLE_SIGNAL_NEW_DATA_READABLE = 1 << 3;
+const MojoHandleSignals MOJO_HANDLE_SIGNAL_PEER_REMOTE = 1 << 4;
+const MojoHandleSignals MOJO_HANDLE_SIGNAL_QUOTA_EXCEEDED = 1 << 5;
 #else
 #define MOJO_HANDLE_SIGNAL_NONE ((MojoHandleSignals)0)
 #define MOJO_HANDLE_SIGNAL_READABLE ((MojoHandleSignals)1 << 0)
 #define MOJO_HANDLE_SIGNAL_WRITABLE ((MojoHandleSignals)1 << 1)
 #define MOJO_HANDLE_SIGNAL_PEER_CLOSED ((MojoHandleSignals)1 << 2)
 #define MOJO_HANDLE_SIGNAL_NEW_DATA_READABLE ((MojoHandleSignals)1 << 3);
+#define MOJO_HANDLE_SIGNAL_PEER_REMOTE ((MojoHandleSignals)1 << 4);
+#define MOJO_HANDLE_SIGNAL_QUOTA_EXCEEDED ((MojoHandleSignals)1 << 5);
 #endif
 
 // |MojoHandleSignalsState|: Returned by watch notification callbacks and
@@ -185,39 +219,9 @@ struct MOJO_ALIGNAS(4) MojoHandleSignalsState {
 MOJO_STATIC_ASSERT(sizeof(MojoHandleSignalsState) == 8,
                    "MojoHandleSignalsState has wrong size");
 
-// |MojoWatcherNotificationFlags|: Passed to a callback invoked by a watcher
-// when some observed signals are raised or a watched handle is closed. May take
-// on any combination of the following values:
-//
-//   |MOJO_WATCHER_NOTIFICATION_FLAG_FROM_SYSTEM| - The callback is being
-//       invoked as a result of a system-level event rather than a direct API
-//       call from user code. This may be used as an indication that user code
-//       is safe to call without fear of reentry.
-
-typedef uint32_t MojoWatcherNotificationFlags;
-
-#ifdef __cplusplus
-const MojoWatcherNotificationFlags MOJO_WATCHER_NOTIFICATION_FLAG_NONE = 0;
-const MojoWatcherNotificationFlags MOJO_WATCHER_NOTIFICATION_FLAG_FROM_SYSTEM =
-    1 << 0;
-#else
-#define MOJO_WATCHER_NOTIFICATION_FLAG_NONE ((MojoWatcherNotificationFlags)0)
-#define MOJO_WATCHER_NOTIFICATION_FLAG_FROM_SYSTEM \
-  ((MojoWatcherNotificationFlags)1 << 0);
-#endif
-
-// |MojoPropertyType|: Property types that can be passed to |MojoGetProperty()|
-// to retrieve system properties. May take the following values:
-//   |MOJO_PROPERTY_TYPE_SYNC_CALL_ALLOWED| - Whether making synchronous calls
-//       (i.e., blocking to wait for a response to an outbound message) is
-//       allowed. The property value is of boolean type. If the value is true,
-//       users should refrain from making sync calls.
-typedef uint32_t MojoPropertyType;
-
-#ifdef __cplusplus
-const MojoPropertyType MOJO_PROPERTY_TYPE_SYNC_CALL_ALLOWED = 0;
-#else
-#define MOJO_PROPERTY_TYPE_SYNC_CALL_ALLOWED ((MojoPropertyType)0)
-#endif
+// TODO(https://crbug.com/819046): Remove these aliases.
+#define MOJO_WATCH_CONDITION_SATISFIED MOJO_TRIGGER_CONDITION_SIGNALS_SATISFIED
+#define MOJO_WATCH_CONDITION_NOT_SATISFIED \
+  MOJO_TRIGGER_CONDITION_SIGNALS_UNSATISFIED
 
 #endif  // MOJO_PUBLIC_C_SYSTEM_TYPES_H_

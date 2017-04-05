@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -26,7 +27,7 @@
 #if !defined(USE_SYMBOLIZE)
 #include <cxxabi.h>
 #endif
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
 #include <execinfo.h>
 #endif
 
@@ -38,7 +39,9 @@
 #include "base/debug/proc_maps_linux.h"
 #endif
 
+#include "base/cfi_buildflags.h"
 #include "base/debug/debugger.h"
+#include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
@@ -58,6 +61,8 @@ namespace debug {
 namespace {
 
 volatile sig_atomic_t in_signal_handler = 0;
+
+bool (*try_handle_signal)(int, void*, void*) = nullptr;
 
 #if !defined(USE_SYMBOLIZE)
 // The prefix used for mangled symbols, per the Itanium C++ ABI:
@@ -80,8 +85,7 @@ void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
 
-#if !defined(__UCLIBC__)
-
+#if !defined(__UCLIBC__) && !defined(_AIX)
   std::string::size_type search_from = 0;
   while (search_from < text->size()) {
     // Look for the start of a mangled symbol, from search_from.
@@ -103,7 +107,7 @@ void DemangleSymbols(std::string* text) {
     // Try to demangle the mangled symbol candidate.
     int status = 0;
     std::unique_ptr<char, base::FreeDeleter> demangled_symbol(
-        abi::__cxa_demangle(mangled_symbol.c_str(), NULL, 0, &status));
+        abi::__cxa_demangle(mangled_symbol.c_str(), nullptr, 0, &status));
     if (status == 0) {  // Demangling is successful.
       // Remove the mangled symbol.
       text->erase(mangled_start, mangled_end - mangled_start);
@@ -116,7 +120,7 @@ void DemangleSymbols(std::string* text) {
       search_from = mangled_start + 2;
     }
   }
-#endif  // !defined(__UCLIBC__)
+#endif  // !defined(__UCLIBC__) && !defined(_AIX)
 }
 #endif  // !defined(USE_SYMBOLIZE)
 
@@ -125,10 +129,10 @@ class BacktraceOutputHandler {
   virtual void HandleOutput(const char* output) = 0;
 
  protected:
-  virtual ~BacktraceOutputHandler() {}
+  virtual ~BacktraceOutputHandler() = default;
 };
 
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
 void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
   // This should be more than enough to store a 64-bit number in hex:
   // 16 hex digits + 1 for null-terminator.
@@ -205,7 +209,7 @@ void ProcessBacktrace(void *const *trace,
   }
 #endif  // defined(USE_SYMBOLIZE)
 }
-#endif  // !defined(__UCLIBC__)
+#endif  // !defined(__UCLIBC__) && !defined(_AIX)
 
 void PrintToStderr(const char* output) {
   // NOTE: This code MUST be async-signal safe (it's used by in-process
@@ -217,9 +221,37 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   // NOTE: This code MUST be async-signal safe.
   // NO malloc or stdio is allowed here.
 
+  // Give a registered callback a chance to recover from this signal
+  //
+  // V8 uses guard regions to guarantee memory safety in WebAssembly. This means
+  // some signals might be expected if they originate from Wasm code while
+  // accessing the guard region. We give V8 the chance to handle and recover
+  // from these signals first.
+  if (try_handle_signal != nullptr &&
+      try_handle_signal(signal, info, void_context)) {
+    // The first chance handler took care of this. The SA_RESETHAND flag
+    // replaced this signal handler upon entry, but we want to stay
+    // installed. Thus, we reinstall ourselves before returning.
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_flags = SA_RESETHAND | SA_SIGINFO;
+    action.sa_sigaction = &StackDumpSignalHandler;
+    sigemptyset(&action.sa_mask);
+
+    sigaction(signal, &action, nullptr);
+    return;
+  }
+
+// Do not take the "in signal handler" code path on Mac in a DCHECK-enabled
+// build, as this prevents seeing a useful (symbolized) stack trace on a crash
+// or DCHECK() failure. While it may not be fully safe to run the stack symbol
+// printing code, in practice it's better to provide meaningful stack traces -
+// and the risk is low given we're likely crashing already.
+#if !defined(OS_MACOSX) || !DCHECK_IS_ON()
   // Record the fact that we are in the signal handler now, so that the rest
   // of StackTrace can behave in an async-signal-safe manner.
   in_signal_handler = 1;
+#endif
 
   if (BeingDebugged())
     BreakDebugger();
@@ -289,7 +321,7 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   }
   PrintToStderr("\n");
 
-#if defined(CFI_ENFORCEMENT)
+#if BUILDFLAG(CFI_ENFORCEMENT_TRAP)
   if (signal == SIGILL && info->si_code == ILL_ILLOPN) {
     PrintToStderr(
         "CFI: Most likely a control flow integrity violation; for more "
@@ -297,7 +329,7 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
     PrintToStderr(
         "https://www.chromium.org/developers/testing/control-flow-integrity\n");
   }
-#endif
+#endif  // BUILDFLAG(CFI_ENFORCEMENT_TRAP)
 
   debug::StackTrace().Print();
 
@@ -390,7 +422,7 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
 
 class PrintBacktraceOutputHandler : public BacktraceOutputHandler {
  public:
-  PrintBacktraceOutputHandler() {}
+  PrintBacktraceOutputHandler() = default;
 
   void HandleOutput(const char* output) override {
     // NOTE: This code MUST be async-signal safe (it's used by in-process
@@ -498,7 +530,7 @@ class SandboxSymbolizeHelper {
         if (strcmp((it->first).c_str(), file_path) == 0) {
           // POSIX.1-2004 requires an implementation to guarantee that dup()
           // is async-signal-safe.
-          fd = dup(it->second);
+          fd = HANDLE_EINTR(dup(it->second));
           break;
         }
       }
@@ -541,25 +573,10 @@ class SandboxSymbolizeHelper {
     // The assumption here is that iterating over
     // std::vector<MappedMemoryRegion> using a const_iterator does not allocate
     // dynamic memory, hence it is async-signal-safe.
-    std::vector<MappedMemoryRegion>::const_iterator it;
-    bool is_first = true;
-    for (it = instance->regions_.begin(); it != instance->regions_.end();
-         ++it, is_first = false) {
-      const MappedMemoryRegion& region = *it;
+    for (const MappedMemoryRegion& region : instance->regions_) {
       if (region.start <= pc && pc < region.end) {
         start_address = region.start;
-        // Don't subtract 'start_address' from the first entry:
-        // * If a binary is compiled w/o -pie, then the first entry in
-        //   process maps is likely the binary itself (all dynamic libs
-        //   are mapped higher in address space). For such a binary,
-        //   instruction offset in binary coincides with the actual
-        //   instruction address in virtual memory (as code section
-        //   is mapped to a fixed memory range).
-        // * If a binary is compiled with -pie, all the modules are
-        //   mapped high at address space (in particular, higher than
-        //   shadow memory of the tool), so the module can't be the
-        //   first entry.
-        base_address = (is_first ? 0U : start_address) - region.offset;
+        base_address = region.base;
         if (file_path && file_path_size > 0) {
           strncpy(file_path, region.path.c_str(), file_path_size);
           // Ensure null termination.
@@ -569,6 +586,60 @@ class SandboxSymbolizeHelper {
       }
     }
     return -1;
+  }
+
+  // Set the base address for each memory region by reading ELF headers in
+  // process memory.
+  void SetBaseAddressesForMemoryRegions() {
+    base::ScopedFD mem_fd(
+        HANDLE_EINTR(open("/proc/self/mem", O_RDONLY | O_CLOEXEC)));
+    if (!mem_fd.is_valid())
+      return;
+
+    auto safe_memcpy = [&mem_fd](void* dst, uintptr_t src, size_t size) {
+      return HANDLE_EINTR(pread(mem_fd.get(), dst, size, src)) == ssize_t(size);
+    };
+
+    uintptr_t cur_base = 0;
+    for (auto& r : regions_) {
+      ElfW(Ehdr) ehdr;
+      static_assert(SELFMAG <= sizeof(ElfW(Ehdr)), "SELFMAG too large");
+      if ((r.permissions & MappedMemoryRegion::READ) &&
+          safe_memcpy(&ehdr, r.start, sizeof(ElfW(Ehdr))) &&
+          memcmp(ehdr.e_ident, ELFMAG, SELFMAG) == 0) {
+        switch (ehdr.e_type) {
+          case ET_EXEC:
+            cur_base = 0;
+            break;
+          case ET_DYN:
+            // Find the segment containing file offset 0. This will correspond
+            // to the ELF header that we just read. Normally this will have
+            // virtual address 0, but this is not guaranteed. We must subtract
+            // the virtual address from the address where the ELF header was
+            // mapped to get the base address.
+            //
+            // If we fail to find a segment for file offset 0, use the address
+            // of the ELF header as the base address.
+            cur_base = r.start;
+            for (unsigned i = 0; i != ehdr.e_phnum; ++i) {
+              ElfW(Phdr) phdr;
+              if (safe_memcpy(&phdr, r.start + ehdr.e_phoff + i * sizeof(phdr),
+                              sizeof(phdr)) &&
+                  phdr.p_type == PT_LOAD && phdr.p_offset == 0) {
+                cur_base = r.start - phdr.p_vaddr;
+                break;
+              }
+            }
+            break;
+          default:
+            // ET_REL or ET_CORE. These aren't directly executable, so they
+            // don't affect the base address.
+            break;
+        }
+      }
+
+      r.base = cur_base;
+    }
   }
 
   // Parses /proc/self/maps in order to compile a list of all object file names
@@ -587,6 +658,8 @@ class SandboxSymbolizeHelper {
       LOG(ERROR) << "Failed to parse the contents of /proc/self/maps";
       return false;
     }
+
+    SetBaseAddressesForMemoryRegions();
 
     is_initialized_ = true;
     return true;
@@ -644,7 +717,7 @@ class SandboxSymbolizeHelper {
   // Unregister symbolization callback.
   void UnregisterCallback() {
     if (is_initialized_) {
-      google::InstallSymbolizeOpenObjectFileCallback(NULL);
+      google::InstallSymbolizeOpenObjectFileCallback(nullptr);
       is_initialized_ = false;
     }
   }
@@ -694,7 +767,7 @@ bool EnableInProcessStackDumping() {
   memset(&sigpipe_action, 0, sizeof(sigpipe_action));
   sigpipe_action.sa_handler = SIG_IGN;
   sigemptyset(&sigpipe_action.sa_mask);
-  bool success = (sigaction(SIGPIPE, &sigpipe_action, NULL) == 0);
+  bool success = (sigaction(SIGPIPE, &sigpipe_action, nullptr) == 0);
 
   // Avoid hangs during backtrace initialization, see above.
   WarmUpBacktrace();
@@ -705,24 +778,29 @@ bool EnableInProcessStackDumping() {
   action.sa_sigaction = &StackDumpSignalHandler;
   sigemptyset(&action.sa_mask);
 
-  success &= (sigaction(SIGILL, &action, NULL) == 0);
-  success &= (sigaction(SIGABRT, &action, NULL) == 0);
-  success &= (sigaction(SIGFPE, &action, NULL) == 0);
-  success &= (sigaction(SIGBUS, &action, NULL) == 0);
-  success &= (sigaction(SIGSEGV, &action, NULL) == 0);
+  success &= (sigaction(SIGILL, &action, nullptr) == 0);
+  success &= (sigaction(SIGABRT, &action, nullptr) == 0);
+  success &= (sigaction(SIGFPE, &action, nullptr) == 0);
+  success &= (sigaction(SIGBUS, &action, nullptr) == 0);
+  success &= (sigaction(SIGSEGV, &action, nullptr) == 0);
 // On Linux, SIGSYS is reserved by the kernel for seccomp-bpf sandboxing.
 #if !defined(OS_LINUX)
-  success &= (sigaction(SIGSYS, &action, NULL) == 0);
+  success &= (sigaction(SIGSYS, &action, nullptr) == 0);
 #endif  // !defined(OS_LINUX)
 
   return success;
+}
+
+void SetStackDumpFirstChanceCallback(bool (*handler)(int, void*, void*)) {
+  DCHECK(try_handle_signal == nullptr || handler == nullptr);
+  try_handle_signal = handler;
 }
 
 StackTrace::StackTrace(size_t count) {
 // NOTE: This code MUST be async-signal safe (it's used by in-process
 // stack dumping signal handler). NO malloc or stdio is allowed here.
 
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
   count = std::min(arraysize(trace_), count);
 
   // Though the backtrace API man page does not list any possible negative
@@ -737,13 +815,13 @@ void StackTrace::Print() const {
   // NOTE: This code MUST be async-signal safe (it's used by in-process
   // stack dumping signal handler). NO malloc or stdio is allowed here.
 
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
   PrintBacktraceOutputHandler handler;
   ProcessBacktrace(trace_, count_, &handler);
 #endif
 }
 
-#if !defined(__UCLIBC__)
+#if !defined(__UCLIBC__) && !defined(_AIX)
 void StackTrace::OutputToStream(std::ostream* os) const {
   StreamBacktraceOutputHandler handler(os);
   ProcessBacktrace(trace_, count_, &handler);
@@ -757,11 +835,11 @@ char* itoa_r(intptr_t i, char* buf, size_t sz, int base, size_t padding) {
   // Make sure we can write at least one NUL byte.
   size_t n = 1;
   if (n > sz)
-    return NULL;
+    return nullptr;
 
   if (base < 2 || base > 16) {
     buf[0] = '\000';
-    return NULL;
+    return nullptr;
   }
 
   char* start = buf;
@@ -776,7 +854,7 @@ char* itoa_r(intptr_t i, char* buf, size_t sz, int base, size_t padding) {
     // Make sure we can write the '-' character.
     if (++n > sz) {
       buf[0] = '\000';
-      return NULL;
+      return nullptr;
     }
     *start++ = '-';
   }
@@ -788,7 +866,7 @@ char* itoa_r(intptr_t i, char* buf, size_t sz, int base, size_t padding) {
     // Make sure there is still enough space left in our output buffer.
     if (++n > sz) {
       buf[0] = '\000';
-      return NULL;
+      return nullptr;
     }
 
     // Output the next digit.

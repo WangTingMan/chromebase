@@ -24,6 +24,7 @@
 
 #include <limits.h>
 
+#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_base.h"
@@ -39,7 +40,11 @@ class BASE_EXPORT BucketRanges {
 
   size_t size() const { return ranges_.size(); }
   HistogramBase::Sample range(size_t i) const { return ranges_[i]; }
-  void set_range(size_t i, HistogramBase::Sample value);
+  void set_range(size_t i, HistogramBase::Sample value) {
+    DCHECK_LT(i, ranges_.size());
+    DCHECK_GE(value, 0);
+    ranges_[i] = value;
+  }
   uint32_t checksum() const { return checksum_; }
   void set_checksum(uint32_t checksum) { checksum_ = checksum; }
 
@@ -58,6 +63,17 @@ class BASE_EXPORT BucketRanges {
   // Return true iff |other| object has same ranges_ as |this| object's ranges_.
   bool Equals(const BucketRanges* other) const;
 
+  // Set and get a reference into persistent memory where this bucket data
+  // can be found (and re-used). These calls are internally atomic with no
+  // safety against overwriting an existing value since though it is wasteful
+  // to have multiple identical persistent records, it is still safe.
+  void set_persistent_reference(uint32_t ref) const {
+    subtle::Release_Store(&persistent_reference_, ref);
+  }
+  uint32_t persistent_reference() const {
+    return subtle::Acquire_Load(&persistent_reference_);
+  }
+
  private:
   // A monotonically increasing list of values which determine which bucket to
   // put a sample into.  For each index, show the smallest sample that can be
@@ -70,6 +86,12 @@ class BASE_EXPORT BucketRanges {
   // TODO(kaiwang): Consider change this to uint64_t. Because we see a lot of
   // noise on UMA dashboard.
   uint32_t checksum_;
+
+  // A reference into a global PersistentMemoryAllocator where the ranges
+  // information is stored. This allows for the record to be created once and
+  // re-used simply by having all histograms with the same ranges use the
+  // same reference.
+  mutable subtle::Atomic32 persistent_reference_ = 0;
 
   DISALLOW_COPY_AND_ASSIGN(BucketRanges);
 };

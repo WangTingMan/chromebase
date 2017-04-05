@@ -133,19 +133,19 @@
    output += ")";
    return output;
  }
---- a/base/threading/thread_id_name_manager.cc
+---- a/base/threading/thread_id_name_manager.cc
 +++ b/base/threading/thread_id_name_manager.cc
-@@ -10,7 +10,8 @@
- #include "base/logging.h"
- #include "base/memory/singleton.h"
+@@ -12,7 +12,8 @@
+ #include "base/no_destructor.h"
  #include "base/strings/string_util.h"
+ #include "base/threading/thread_local.h"
 -#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 +// Unsupported in libchrome.
 +// #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
  
  namespace base {
  namespace {
-@@ -80,8 +81,9 @@ void ThreadIdNameManager::SetName(Platfo
+@@ -94,8 +95,9 @@ void ThreadIdNameManager::SetName(const std::string& name) {
    // call GetName(which holds a lock) during the first allocation because it can
    // cause a deadlock when the first allocation happens in the
    // ThreadIdNameManager itself when holding the lock.
@@ -153,15 +153,15 @@
 -      leaked_str->c_str());
 +  // Unsupported in libchrome.
 +  // trace_event::AllocationContextTracker::SetCurrentThreadName(
-+  //     leaked_str->c_str());
++  //   leaked_str->c_str());
  }
  
  const char* ThreadIdNameManager::GetName(PlatformThreadId id) {
 --- a/base/memory/shared_memory_posix.cc
 +++ b/base/memory/shared_memory_posix.cc
-@@ -15,7 +15,8 @@
- #include "base/files/scoped_file.h"
+@@ -16,7 +16,8 @@
  #include "base/logging.h"
+ #include "base/macros.h"
  #include "base/memory/shared_memory_helper.h"
 -#include "base/memory/shared_memory_tracker.h"
 +// Unsupported in libchrome.
@@ -169,7 +169,7 @@
  #include "base/posix/eintr_wrapper.h"
  #include "base/posix/safe_strerror.h"
  #include "base/process/process_metrics.h"
-@@ -288,7 +291,8 @@ bool SharedMemory::MapAt(off_t offset, s
+@@ -302,7 +305,8 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
      DCHECK_EQ(0U,
                reinterpret_cast<uintptr_t>(memory_) &
                    (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
@@ -177,15 +177,15 @@
 +    // Unsupported in libchrome.
 +    // SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
    } else {
-     memory_ = NULL;
+     memory_ = nullptr;
    }
-@@ -301,7 +305,8 @@ bool SharedMemory::Unmap() {
+@@ -314,7 +318,8 @@ bool SharedMemory::Unmap() {
+   if (!memory_)
      return false;
  
-   munmap(memory_, mapped_size_);
 -  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
 +  // Unsupported in libchrome.
 +  // SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
-   memory_ = NULL;
+   munmap(memory_, mapped_size_);
+   memory_ = nullptr;
    mapped_size_ = 0;
-   return true;

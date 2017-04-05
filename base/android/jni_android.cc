@@ -5,14 +5,13 @@
 #include "base/android/jni_android.h"
 
 #include <stddef.h>
+#include <sys/prctl.h>
 
 #include <map>
 
-#include "base/android/build_info.h"
+#include "base/android/java_exception_reporter.h"
 #include "base/android/jni_string.h"
-// Removed unused headers. TODO(hidehiko): Upstream.
-// #include "base/android/jni_utils.h"
-#include "base/debug/debugging_flags.h"
+#include "base/debug/debugging_buildflags.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/threading/thread_local.h"
@@ -22,37 +21,45 @@ using base::android::GetClass;
 using base::android::MethodID;
 using base::android::ScopedJavaLocalRef;
 
-base::android::JniRegistrationType g_jni_registration_type =
-    base::android::ALL_JNI_REGISTRATION;
-
 JavaVM* g_jvm = NULL;
 base::LazyInstance<base::android::ScopedJavaGlobalRef<jobject>>::Leaky
     g_class_loader = LAZY_INSTANCE_INITIALIZER;
 jmethodID g_class_loader_load_class_method_id = 0;
 
-#if BUILDFLAG(ENABLE_PROFILING) && HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 base::LazyInstance<base::ThreadLocalPointer<void>>::Leaky
     g_stack_frame_pointer = LAZY_INSTANCE_INITIALIZER;
 #endif
+
+bool g_fatal_exception_occurred = false;
 
 }  // namespace
 
 namespace base {
 namespace android {
 
-JniRegistrationType GetJniRegistrationType() {
-  return g_jni_registration_type;
-}
-
-void SetJniRegistrationType(JniRegistrationType jni_registration_type) {
-  g_jni_registration_type = jni_registration_type;
-}
-
 JNIEnv* AttachCurrentThread() {
   DCHECK(g_jvm);
-  JNIEnv* env = NULL;
-  jint ret = g_jvm->AttachCurrentThread(&env, NULL);
-  DCHECK_EQ(JNI_OK, ret);
+  JNIEnv* env = nullptr;
+  jint ret = g_jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_2);
+  if (ret == JNI_EDETACHED || !env) {
+    JavaVMAttachArgs args;
+    args.version = JNI_VERSION_1_2;
+    args.group = nullptr;
+
+    // 16 is the maximum size for thread names on Android.
+    char thread_name[16];
+    int err = prctl(PR_GET_NAME, thread_name);
+    if (err < 0) {
+      DPLOG(ERROR) << "prctl(PR_GET_NAME)";
+      args.name = nullptr;
+    } else {
+      args.name = thread_name;
+    }
+
+    ret = g_jvm->AttachCurrentThread(&env, &args);
+    DCHECK_EQ(JNI_OK, ret);
+  }
   return env;
 }
 
@@ -227,28 +234,28 @@ void CheckException(JNIEnv* env) {
   if (!HasException(env))
     return;
 
-  // Exception has been found, might as well tell breakpad about it.
   jthrowable java_throwable = env->ExceptionOccurred();
   if (java_throwable) {
     // Clear the pending exception, since a local reference is now held.
     env->ExceptionDescribe();
     env->ExceptionClear();
 
-    // Set the exception_string in BuildInfo so that breakpad can read it.
-    // RVO should avoid any extra copies of the exception string.
-    base::android::BuildInfo::GetInstance()->SetJavaExceptionInfo(
-        GetJavaExceptionInfo(env, java_throwable));
+    if (g_fatal_exception_occurred) {
+      // Another exception (probably OOM) occurred during GetJavaExceptionInfo.
+      base::android::SetJavaException(
+          "Java OOM'ed in exception handling, check logcat");
+    } else {
+      g_fatal_exception_occurred = true;
+      // RVO should avoid any extra copies of the exception string.
+      base::android::SetJavaException(
+          GetJavaExceptionInfo(env, java_throwable).c_str());
+    }
   }
 
   // Now, feel good about it and die.
   // TODO(lhchavez): Remove this hack. See b/28814913 for details.
-  // We're using BuildInfo's java_exception_info() instead of storing the
-  // exception info a few lines above to avoid extra copies. It will be
-  // truncated to 1024 bytes anyways.
-  const char* exception_string =
-      base::android::BuildInfo::GetInstance()->java_exception_info();
-  if (exception_string)
-    LOG(FATAL) << exception_string;
+  if (java_throwable)
+    LOG(FATAL) << GetJavaExceptionInfo(env, java_throwable);
   else
     LOG(FATAL) << "Unhandled exception";
 }
@@ -274,6 +281,7 @@ std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
   ScopedJavaLocalRef<jobject> bytearray_output_stream(env,
       env->NewObject(bytearray_output_stream_clazz.obj(),
                      bytearray_output_stream_constructor));
+  CheckException(env);
 
   // Create an instance of PrintStream.
   ScopedJavaLocalRef<jclass> printstream_clazz =
@@ -285,21 +293,24 @@ std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
   ScopedJavaLocalRef<jobject> printstream(env,
       env->NewObject(printstream_clazz.obj(), printstream_constructor,
                      bytearray_output_stream.obj()));
+  CheckException(env);
 
   // Call Throwable.printStackTrace(PrintStream)
   env->CallVoidMethod(java_throwable, throwable_printstacktrace,
       printstream.obj());
+  CheckException(env);
 
   // Call ByteArrayOutputStream.toString()
   ScopedJavaLocalRef<jstring> exception_string(
       env, static_cast<jstring>(
           env->CallObjectMethod(bytearray_output_stream.obj(),
                                 bytearray_output_stream_tostring)));
+  CheckException(env);
 
   return ConvertJavaStringToUTF8(exception_string);
 }
 
-#if BUILDFLAG(ENABLE_PROFILING) && HAVE_TRACE_STACK_FRAME_POINTERS
+#if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 JNIStackFrameSaver::JNIStackFrameSaver(void* current_fp) {
   previous_fp_ = g_stack_frame_pointer.Pointer()->Get();
@@ -314,7 +325,7 @@ void* JNIStackFrameSaver::SavedFrame() {
   return g_stack_frame_pointer.Pointer()->Get();
 }
 
-#endif  // ENABLE_PROFILING && HAVE_TRACE_STACK_FRAME_POINTERS
+#endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
 }  // namespace android
 }  // namespace base

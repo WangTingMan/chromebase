@@ -1,7 +1,17 @@
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+//
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEPRECATED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Please don't introduce new instances of LazyInstance<T>. Use a function-local
+// static of type base::NoDestructor<T> instead:
+//
+// Factory& Factory::GetInstance() {
+//   static base::NoDestructor<Factory> instance;
+//   return *instance;
+// }
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//
 // The LazyInstance<Type, Traits> class manages a single instance of Type,
 // which will be lazily created on the first time it's accessed.  This class is
 // useful for places you would normally use a function-level static, but you
@@ -38,28 +48,21 @@
 #include <new>  // For placement new.
 
 #include "base/atomicops.h"
-#include "base/base_export.h"
 #include "base/debug/leak_annotations.h"
+#include "base/lazy_instance_helpers.h"
 #include "base/logging.h"
-#include "base/memory/aligned_memory.h"
 #include "base/threading/thread_restrictions.h"
 
 // LazyInstance uses its own struct initializer-list style static
-// initialization, as base's LINKER_INITIALIZED requires a constructor and on
-// some compilers (notably gcc 4.4) this still ends up needing runtime
-// initialization.
-#ifdef __clang__
-  #define LAZY_INSTANCE_INITIALIZER {}
-#else
-  #define LAZY_INSTANCE_INITIALIZER {0, 0}
-#endif
+// initialization, which does not require a constructor.
+#define LAZY_INSTANCE_INITIALIZER {}
 
 namespace base {
 
 template <typename Type>
 struct LazyInstanceTraitsBase {
   static Type* New(void* instance) {
-    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (ALIGNOF(Type) - 1), 0u);
+    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (alignof(Type) - 1), 0u);
     // Use placement new to initialize our instance in our preallocated space.
     // The parenthesis is very important here to force POD type initialization.
     return new (instance) Type();
@@ -120,22 +123,6 @@ struct LeakyLazyInstanceTraits {
 template <typename Type>
 struct ErrorMustSelectLazyOrDestructorAtExitForLazyInstance {};
 
-// Our AtomicWord doubles as a spinlock, where a value of
-// kLazyInstanceStateCreating means the spinlock is being held for creation.
-static const subtle::AtomicWord kLazyInstanceStateCreating = 1;
-
-// Check if instance needs to be created. If so return true otherwise
-// if another thread has beat us, wait for instance to be created and
-// return false.
-BASE_EXPORT bool NeedsLazyInstance(subtle::AtomicWord* state);
-
-// After creating an instance, call this to register the dtor to be called
-// at program exit and to update the atomic state to hold the |new_instance|
-BASE_EXPORT void CompleteLazyInstance(subtle::AtomicWord* state,
-                                      subtle::AtomicWord new_instance,
-                                      void* lazy_instance,
-                                      void (*dtor)(void*));
-
 }  // namespace internal
 
 template <
@@ -163,52 +150,44 @@ class LazyInstance {
 
   Type* Pointer() {
 #if DCHECK_IS_ON()
-    // Avoid making TLS lookup on release builds.
     if (!Traits::kAllowedToAccessOnNonjoinableThread)
       ThreadRestrictions::AssertSingletonAllowed();
 #endif
-    // If any bit in the created mask is true, the instance has already been
-    // fully constructed.
-    static const subtle::AtomicWord kLazyInstanceCreatedMask =
-        ~internal::kLazyInstanceStateCreating;
 
-    // We will hopefully have fast access when the instance is already created.
-    // Since a thread sees private_instance_ == 0 or kLazyInstanceStateCreating
-    // at most once, the load is taken out of NeedsInstance() as a fast-path.
-    // The load has acquire memory ordering as a thread which sees
-    // private_instance_ > creating needs to acquire visibility over
-    // the associated data (private_buf_). Pairing Release_Store is in
-    // CompleteLazyInstance().
-    subtle::AtomicWord value = subtle::Acquire_Load(&private_instance_);
-    if (!(value & kLazyInstanceCreatedMask) &&
-        internal::NeedsLazyInstance(&private_instance_)) {
-      // Create the instance in the space provided by |private_buf_|.
-      value = reinterpret_cast<subtle::AtomicWord>(
-          Traits::New(private_buf_.void_data()));
-      internal::CompleteLazyInstance(&private_instance_, value, this,
-                                     Traits::kRegisterOnExit ? OnExit : NULL);
-    }
-    return instance();
+    return subtle::GetOrCreateLazyPointer(
+        &private_instance_, &Traits::New, private_buf_,
+        Traits::kRegisterOnExit ? OnExit : nullptr, this);
   }
 
-  bool operator==(Type* p) {
-    switch (subtle::NoBarrier_Load(&private_instance_)) {
-      case 0:
-        return p == NULL;
-      case internal::kLazyInstanceStateCreating:
-        return static_cast<void*>(p) == private_buf_.void_data();
-      default:
-        return p == instance();
-    }
+  // Returns true if the lazy instance has been created.  Unlike Get() and
+  // Pointer(), calling IsCreated() will not instantiate the object of Type.
+  bool IsCreated() {
+    // Return true (i.e. "created") if |private_instance_| is either being
+    // created right now (i.e. |private_instance_| has value of
+    // internal::kLazyInstanceStateCreating) or was already created (i.e.
+    // |private_instance_| has any other non-zero value).
+    return 0 != subtle::NoBarrier_Load(&private_instance_);
   }
+
+  // MSVC gives a warning that the alignment expands the size of the
+  // LazyInstance struct to make the size a multiple of the alignment. This
+  // is expected in this case.
+#if defined(OS_WIN)
+#pragma warning(push)
+#pragma warning(disable: 4324)
+#endif
 
   // Effectively private: member data is only public to allow the linker to
   // statically initialize it and to maintain a POD class. DO NOT USE FROM
   // OUTSIDE THIS CLASS.
-
   subtle::AtomicWord private_instance_;
+
   // Preallocated space for the Type instance.
-  base::AlignedMemory<sizeof(Type), ALIGNOF(Type)> private_buf_;
+  alignas(Type) char private_buf_[sizeof(Type)];
+
+#if defined(OS_WIN)
+#pragma warning(pop)
+#endif
 
  private:
   Type* instance() {

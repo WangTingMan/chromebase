@@ -8,14 +8,16 @@
 #include <string>
 
 #include "base/metrics/histogram_base.h"
-#include "base/metrics/histogram_macros.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_samples.h"
+#include "base/metrics/metrics_hashes.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/persistent_memory_allocator.h"
 #include "base/metrics/sample_map.h"
 #include "base/metrics/statistics_recorder.h"
 #include "base/pickle.h"
 #include "base/strings/stringprintf.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -57,11 +59,6 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
   }
 
   void CreatePersistentMemoryAllocator() {
-    // By getting the results-histogram before any persistent allocator
-    // is attached, that histogram is guaranteed not to be stored in
-    // any persistent memory segment (which simplifies some tests).
-    GlobalHistogramAllocator::GetCreateHistogramResultHistogram();
-
     GlobalHistogramAllocator::CreateWithLocalMemory(
         kAllocatorMemorySize, 0, "SparseHistogramAllocatorTest");
     allocator_ = GlobalHistogramAllocator::Get()->memory_allocator();
@@ -72,7 +69,9 @@ class SparseHistogramTest : public testing::TestWithParam<bool> {
     GlobalHistogramAllocator::ReleaseForTesting();
   }
 
-  std::unique_ptr<SparseHistogram> NewSparseHistogram(const std::string& name) {
+  std::unique_ptr<SparseHistogram> NewSparseHistogram(const char* name) {
+    // std::make_unique can't access protected ctor so do it manually. This
+    // test class is a friend so can access it.
     return std::unique_ptr<SparseHistogram>(new SparseHistogram(name));
   }
 
@@ -149,19 +148,38 @@ TEST_P(SparseHistogramTest, AddCount_LargeValuesDontOverflow) {
   EXPECT_EQ(55250000000LL, snapshot2->sum());
 }
 
+// Make sure that counts returned by Histogram::SnapshotDelta do not overflow
+// even when a total count (returned by Histogram::SnapshotSample) does.
+TEST_P(SparseHistogramTest, AddCount_LargeCountsDontOverflow) {
+  std::unique_ptr<SparseHistogram> histogram(NewSparseHistogram("Sparse"));
+  std::unique_ptr<HistogramSamples> snapshot(histogram->SnapshotSamples());
+  EXPECT_EQ(0, snapshot->TotalCount());
+  EXPECT_EQ(0, snapshot->sum());
+
+  const int count = (1 << 30) - 1;
+
+  // Repeat N times to make sure that there is no internal value overflow.
+  for (int i = 0; i < 10; ++i) {
+    histogram->AddCount(42, count);
+    std::unique_ptr<HistogramSamples> samples = histogram->SnapshotDelta();
+    EXPECT_EQ(count, samples->TotalCount());
+    EXPECT_EQ(count, samples->GetCount(42));
+  }
+}
+
 TEST_P(SparseHistogramTest, MacroBasicTest) {
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Sparse", 100);
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Sparse", 200);
-  UMA_HISTOGRAM_SPARSE_SLOWLY("Sparse", 100);
+  UmaHistogramSparse("Sparse", 100);
+  UmaHistogramSparse("Sparse", 200);
+  UmaHistogramSparse("Sparse", 100);
 
-  StatisticsRecorder::Histograms histograms;
-  StatisticsRecorder::GetHistograms(&histograms);
+  const StatisticsRecorder::Histograms histograms =
+      StatisticsRecorder::GetHistograms();
 
-  ASSERT_EQ(1U, histograms.size());
-  HistogramBase* sparse_histogram = histograms[0];
+  ASSERT_THAT(histograms, testing::SizeIs(1));
+  const HistogramBase* const sparse_histogram = histograms[0];
 
   EXPECT_EQ(SPARSE_HISTOGRAM, sparse_histogram->GetHistogramType());
-  EXPECT_EQ("Sparse", sparse_histogram->histogram_name());
+  EXPECT_EQ("Sparse", StringPiece(sparse_histogram->histogram_name()));
   EXPECT_EQ(
       HistogramBase::kUmaTargetedHistogramFlag |
           (use_persistent_histogram_allocator_ ? HistogramBase::kIsPersistent
@@ -179,18 +197,14 @@ TEST_P(SparseHistogramTest, MacroInLoopTest) {
   // Unlike the macros in histogram.h, SparseHistogram macros can have a
   // variable as histogram name.
   for (int i = 0; i < 2; i++) {
-    std::string name = StringPrintf("Sparse%d", i + 1);
-    UMA_HISTOGRAM_SPARSE_SLOWLY(name, 100);
+    UmaHistogramSparse(StringPrintf("Sparse%d", i), 100);
   }
 
-  StatisticsRecorder::Histograms histograms;
-  StatisticsRecorder::GetHistograms(&histograms);
-  ASSERT_EQ(2U, histograms.size());
-
-  std::string name1 = histograms[0]->histogram_name();
-  std::string name2 = histograms[1]->histogram_name();
-  EXPECT_TRUE(("Sparse1" == name1 && "Sparse2" == name2) ||
-              ("Sparse2" == name1 && "Sparse1" == name2));
+  const StatisticsRecorder::Histograms histograms =
+      StatisticsRecorder::Sort(StatisticsRecorder::GetHistograms());
+  ASSERT_THAT(histograms, testing::SizeIs(2));
+  EXPECT_STREQ(histograms[0]->histogram_name(), "Sparse0");
+  EXPECT_STREQ(histograms[1]->histogram_name(), "Sparse1");
 }
 
 TEST_P(SparseHistogramTest, Serialize) {
@@ -325,6 +339,50 @@ TEST_P(SparseHistogramTest, FactoryTime) {
           << "ms or about "
           << (add_ms * 1000000) / kTestAddCount
           << "ns each.";
+}
+
+TEST_P(SparseHistogramTest, ExtremeValues) {
+  static const struct {
+    Histogram::Sample sample;
+    int64_t expected_max;
+  } cases[] = {
+      // Note: We use -2147483647 - 1 rather than -2147483648 because the later
+      // is interpreted as - operator applied to 2147483648 and the latter can't
+      // be represented as an int32 and causes a warning.
+      {-2147483647 - 1, -2147483647LL},
+      {0, 1},
+      {2147483647, 2147483648LL},
+  };
+
+  for (size_t i = 0; i < arraysize(cases); ++i) {
+    HistogramBase* histogram =
+        SparseHistogram::FactoryGet(StringPrintf("ExtremeValues_%zu", i),
+                                    HistogramBase::kUmaTargetedHistogramFlag);
+    histogram->Add(cases[i].sample);
+
+    std::unique_ptr<HistogramSamples> snapshot = histogram->SnapshotSamples();
+    std::unique_ptr<SampleCountIterator> it = snapshot->Iterator();
+    ASSERT_FALSE(it->Done());
+
+    base::Histogram::Sample min;
+    int64_t max;
+    base::Histogram::Count count;
+    it->Get(&min, &max, &count);
+
+    EXPECT_EQ(1, count);
+    EXPECT_EQ(cases[i].sample, min);
+    EXPECT_EQ(cases[i].expected_max, max);
+
+    it->Next();
+    EXPECT_TRUE(it->Done());
+  }
+}
+
+TEST_P(SparseHistogramTest, HistogramNameHash) {
+  const char kName[] = "TestName";
+  HistogramBase* histogram = SparseHistogram::FactoryGet(
+      kName, HistogramBase::kUmaTargetedHistogramFlag);
+  EXPECT_EQ(histogram->name_hash(), HashMetricName(kName));
 }
 
 }  // namespace base

@@ -1,0 +1,299 @@
+diff --git a/mojo/core/core.cc b/mojo/core/core.cc
+index 8422ec2..3ffa640 100644
+--- a/mojo/core/core.cc
++++ b/mojo/core/core.cc
+@@ -21,7 +21,7 @@
+ #include "base/strings/string_piece.h"
+ #include "base/threading/thread_task_runner_handle.h"
+ #include "base/time/time.h"
+-#include "base/trace_event/memory_dump_manager.h"
++// #include "base/trace_event/memory_dump_manager.h"
+ #include "build/build_config.h"
+ #include "mojo/core/channel.h"
+ #include "mojo/core/configuration.h"
+@@ -127,8 +127,8 @@ void RunMojoProcessErrorHandler(ProcessDisconnectHandler* disconnect_handler,
+ 
+ Core::Core() {
+   handles_.reset(new HandleTable);
+-  base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
+-      handles_.get(), "MojoHandleTable", nullptr);
++  // base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
++  //     handles_.get(), "MojoHandleTable", nullptr);
+ }
+ 
+ Core::~Core() {
+@@ -142,8 +142,8 @@ Core::~Core() {
+                              base::BindOnce(&Core::PassNodeControllerToIOThread,
+                                             base::Passed(&node_controller_)));
+   }
+-  base::trace_event::MemoryDumpManager::GetInstance()
+-      ->UnregisterAndDeleteDumpProviderSoon(std::move(handles_));
++  // base::trace_event::MemoryDumpManager::GetInstance()
++  //     ->UnregisterAndDeleteDumpProviderSoon(std::move(handles_));
+ }
+ 
+ void Core::SetIOTaskRunner(scoped_refptr<base::TaskRunner> io_task_runner) {
+diff --git a/mojo/core/user_message_impl.cc b/mojo/core/user_message_impl.cc
+index d4a4da1..9cb8284 100644
+--- a/mojo/core/user_message_impl.cc
++++ b/mojo/core/user_message_impl.cc
+@@ -13,10 +13,10 @@
+ #include "base/no_destructor.h"
+ #include "base/numerics/safe_conversions.h"
+ #include "base/numerics/safe_math.h"
+-#include "base/trace_event/memory_allocator_dump.h"
+-#include "base/trace_event/memory_dump_manager.h"
+-#include "base/trace_event/memory_dump_provider.h"
+-#include "base/trace_event/trace_event.h"
++// #include "base/trace_event/memory_allocator_dump.h"
++// #include "base/trace_event/memory_dump_manager.h"
++// #include "base/trace_event/memory_dump_provider.h"
++// #include "base/trace_event/trace_event.h"
+ #include "mojo/core/core.h"
+ #include "mojo/core/node_channel.h"
+ #include "mojo/core/node_controller.h"
+@@ -271,36 +271,36 @@ void DecrementMessageCount() {
+   base::subtle::NoBarrier_AtomicIncrement(&g_message_count, -1);
+ }
+ 
+-class MessageMemoryDumpProvider : public base::trace_event::MemoryDumpProvider {
+- public:
+-  MessageMemoryDumpProvider() {
+-    base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
+-        this, "MojoMessages", nullptr);
+-  }
+-
+-  ~MessageMemoryDumpProvider() override {
+-    base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
+-        this);
+-  }
+-
+- private:
+-  // base::trace_event::MemoryDumpProvider:
+-  bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
+-                    base::trace_event::ProcessMemoryDump* pmd) override {
+-    auto* dump = pmd->CreateAllocatorDump("mojo/messages");
+-    dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+-                    base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+-                    base::subtle::NoBarrier_Load(&g_message_count));
+-    return true;
+-  }
+-
+-  DISALLOW_COPY_AND_ASSIGN(MessageMemoryDumpProvider);
+-};
+-
+-void EnsureMemoryDumpProviderExists() {
+-  static base::NoDestructor<MessageMemoryDumpProvider> provider;
+-  ALLOW_UNUSED_LOCAL(provider);
+-}
++// class MessageMemoryDumpProvider : public base::trace_event::MemoryDumpProvider {
++//  public:
++//   MessageMemoryDumpProvider() {
++//     base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
++//         this, "MojoMessages", nullptr);
++//   }
++
++//   ~MessageMemoryDumpProvider() override {
++//     base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
++//         this);
++//   }
++
++//  private:
++//   // base::trace_event::MemoryDumpProvider:
++//   bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
++//                     base::trace_event::ProcessMemoryDump* pmd) override {
++//     auto* dump = pmd->CreateAllocatorDump("mojo/messages");
++//     dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
++//                     base::trace_event::MemoryAllocatorDump::kUnitsObjects,
++//                     base::subtle::NoBarrier_Load(&g_message_count));
++//     return true;
++//   }
++
++//   DISALLOW_COPY_AND_ASSIGN(MessageMemoryDumpProvider);
++// };
++
++// void EnsureMemoryDumpProviderExists() {
++//   static base::NoDestructor<MessageMemoryDumpProvider> provider;
++//   ALLOW_UNUSED_LOCAL(provider);
++// }
+ 
+ }  // namespace
+ 
+@@ -648,7 +648,7 @@ void UserMessageImpl::FailHandleSerializationForTesting(bool fail) {
+ 
+ UserMessageImpl::UserMessageImpl(ports::UserMessageEvent* message_event)
+     : ports::UserMessage(&kUserMessageTypeInfo), message_event_(message_event) {
+-  EnsureMemoryDumpProviderExists();
++  // EnsureMemoryDumpProviderExists();
+   IncrementMessageCount();
+ }
+ 
+@@ -667,7 +667,7 @@ UserMessageImpl::UserMessageImpl(ports::UserMessageEvent* message_event,
+       header_size_(header_size),
+       user_payload_(user_payload),
+       user_payload_size_(user_payload_size) {
+-  EnsureMemoryDumpProviderExists();
++  // EnsureMemoryDumpProviderExists();
+   IncrementMessageCount();
+ }
+ 
+diff --git a/mojo/public/cpp/bindings/lib/message_dumper.cc b/mojo/public/cpp/bindings/lib/message_dumper.cc
+index f187e45..35696bb 100644
+--- a/mojo/public/cpp/bindings/lib/message_dumper.cc
++++ b/mojo/public/cpp/bindings/lib/message_dumper.cc
+@@ -22,33 +22,33 @@ base::FilePath& DumpDirectory() {
+   return *dump_directory;
+ }
+ 
+-void WriteMessage(uint32_t identifier,
+-                  const mojo::MessageDumper::MessageEntry& entry) {
+-  static uint64_t num = 0;
+-
+-  if (!entry.interface_name)
+-    return;
+-
+-  base::FilePath message_directory =
+-      DumpDirectory()
+-          .AppendASCII(entry.interface_name)
+-          .AppendASCII(base::NumberToString(identifier));
+-
+-  if (!base::DirectoryExists(message_directory) &&
+-      !base::CreateDirectory(message_directory)) {
+-    LOG(ERROR) << "Failed to create" << message_directory.value();
+-    return;
+-  }
+-
+-  std::string filename =
+-      base::NumberToString(num++) + "." + entry.method_name + ".mojomsg";
+-  base::FilePath path = message_directory.AppendASCII(filename);
+-  base::File file(path,
+-                  base::File::FLAG_WRITE | base::File::FLAG_CREATE_ALWAYS);
+-
+-  file.WriteAtCurrentPos(reinterpret_cast<const char*>(entry.data_bytes.data()),
+-                         static_cast<int>(entry.data_bytes.size()));
+-}
++// void WriteMessage(uint32_t identifier,
++//                   const mojo::MessageDumper::MessageEntry& entry) {
++//   static uint64_t num = 0;
++
++//   if (!entry.interface_name)
++//     return;
++
++//   base::FilePath message_directory =
++//       DumpDirectory()
++//           .AppendASCII(entry.interface_name)
++//           .AppendASCII(base::NumberToString(identifier));
++
++//   if (!base::DirectoryExists(message_directory) &&
++//       !base::CreateDirectory(message_directory)) {
++//     LOG(ERROR) << "Failed to create" << message_directory.value();
++//     return;
++//   }
++
++//   std::string filename =
++//       base::NumberToString(num++) + "." + entry.method_name + ".mojomsg";
++//   base::FilePath path = message_directory.AppendASCII(filename);
++//   base::File file(path,
++//                   base::File::FLAG_WRITE | base::File::FLAG_CREATE_ALWAYS);
++
++//   file.WriteAtCurrentPos(reinterpret_cast<const char*>(entry.data_bytes.data()),
++//                          static_cast<int>(entry.data_bytes.size()));
++// }
+ 
+ }  // namespace
+ 
+@@ -71,17 +71,17 @@ MessageDumper::MessageDumper() : identifier_(base::RandUint64()) {}
+ MessageDumper::~MessageDumper() {}
+ 
+ bool MessageDumper::Accept(mojo::Message* message) {
+-  MessageEntry entry(message->data(), message->data_num_bytes(),
+-                     message->interface_name(), message->method_name());
++  // MessageEntry entry(message->data(), message->data_num_bytes(),
++  //                    "unknown interface", "unknown name");
+ 
+-  static base::NoDestructor<scoped_refptr<base::TaskRunner>> task_runner(
+-      base::CreateSequencedTaskRunnerWithTraits(
+-          {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
+-           base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN}));
++  // static base::NoDestructor<scoped_refptr<base::TaskRunner>> task_runner(
++  //     base::CreateSequencedTaskRunnerWithTraits(
++  //         {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
++  //          base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN}));
+ 
+-  (*task_runner)
+-      ->PostTask(FROM_HERE,
+-                 base::BindOnce(&WriteMessage, identifier_, std::move(entry)));
++  // (*task_runner)
++  //     ->PostTask(FROM_HERE,
++  //                base::BindOnce(&WriteMessage, identifier_, std::move(entry)));
+   return true;
+ }
+ 
+diff --git a/mojo/public/cpp/system/file_data_pipe_producer.cc b/mojo/public/cpp/system/file_data_pipe_producer.cc
+index 842fe8f..6038bbe 100644
+--- a/mojo/public/cpp/system/file_data_pipe_producer.cc
++++ b/mojo/public/cpp/system/file_data_pipe_producer.cc
+@@ -266,13 +266,15 @@ void FileDataPipeProducer::WriteFromPath(const base::FilePath& path,
+ 
+ void FileDataPipeProducer::InitializeNewRequest(CompletionCallback callback) {
+   DCHECK(!file_sequence_state_);
+-  auto file_task_runner = base::CreateSequencedTaskRunnerWithTraits(
+-      {base::MayBlock(), base::TaskPriority::BACKGROUND});
+-  file_sequence_state_ = new FileSequenceState(
+-      std::move(producer_), file_task_runner,
+-      base::BindOnce(&FileDataPipeProducer::OnWriteComplete,
+-                     weak_factory_.GetWeakPtr(), std::move(callback)),
+-      base::SequencedTaskRunnerHandle::Get(), std::move(observer_));
++
++  LOG(FATAL) << "unsupported in libchrome";
++  // auto file_task_runner = base::CreateSequencedTaskRunnerWithTraits(
++  //     {base::MayBlock(), base::TaskPriority::BACKGROUND});
++  // file_sequence_state_ = new FileSequenceState(
++  //     std::move(producer_), file_task_runner,
++  //     base::BindOnce(&FileDataPipeProducer::OnWriteComplete,
++  //                    weak_factory_.GetWeakPtr(), std::move(callback)),
++  //     base::SequencedTaskRunnerHandle::Get(), std::move(observer_));
+ }
+ 
+ void FileDataPipeProducer::OnWriteComplete(
+diff --git a/mojo/public/tools/bindings/mojom_bindings_generator.py b/mojo/public/tools/bindings/mojom_bindings_generator.py
+index affbe79..57a8031 100755
+--- a/mojo/public/tools/bindings/mojom_bindings_generator.py
++++ b/mojo/public/tools/bindings/mojom_bindings_generator.py
+@@ -174,7 +174,8 @@ class MojomProcessor(object):
+           MakeImportStackMessage(imported_filename_stack + [rel_filename.path])
+       sys.exit(1)
+ 
+-    tree = _UnpickleAST(_GetPicklePath(rel_filename, args.output_dir))
++    tree = _UnpickleAST(_FindPicklePath(rel_filename, args.gen_directories +
++                                        [args.output_dir]))
+     dirname = os.path.dirname(rel_filename.path)
+ 
+     # Process all our imports first and collect the module object for each.
+@@ -256,6 +257,16 @@ def _Generate(args, remaining_args):
+   return 0
+ 
+ 
++def _FindPicklePath(rel_filename, search_dirs):
++  filename, _ = os.path.splitext(rel_filename.relative_path())
++  pickle_path = filename + '.p'
++  for search_dir in search_dirs:
++    path = os.path.join(search_dir, pickle_path)
++    if os.path.isfile(path):
++      return path
++  raise Exception("%s: Error: Could not find file in %r" % (pickle_path, search_dirs))
++
++
+ def _GetPicklePath(rel_filename, output_dir):
+   filename, _ = os.path.splitext(rel_filename.relative_path())
+   pickle_path = filename + '.p'
+@@ -402,6 +413,9 @@ def main():
+                                metavar="GENERATORS",
+                                default="c++,javascript,java",
+                                help="comma-separated list of generators")
++  generate_parser.add_argument(
++      "--gen_dir", dest="gen_directories", action="append", metavar="directory",
++      default=[], help="add a directory to be searched for the syntax trees.")
+   generate_parser.add_argument(
+       "-I", dest="import_directories", action="append", metavar="directory",
+       default=[],

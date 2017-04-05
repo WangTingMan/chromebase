@@ -287,9 +287,6 @@ class BASE_EXPORT PersistentHistogramAllocator {
   // operation without that optimization.
   void ClearLastCreatedReferenceForTesting();
 
-  // Histogram containing creation results. Visible for testing.
-  static HistogramBase* GetCreateHistogramResultHistogram();
-
  protected:
   // The structure used to hold histogram data in persistent memory. It is
   // defined and used entirely within the .cc file.
@@ -307,42 +304,6 @@ class BASE_EXPORT PersistentHistogramAllocator {
                                                             Reference ignore);
 
  private:
-  // Enumerate possible creation results for reporting.
-  enum CreateHistogramResultType {
-    // Everything was fine.
-    CREATE_HISTOGRAM_SUCCESS = 0,
-
-    // Pointer to metadata was not valid.
-    CREATE_HISTOGRAM_INVALID_METADATA_POINTER,
-
-    // Histogram metadata was not valid.
-    CREATE_HISTOGRAM_INVALID_METADATA,
-
-    // Ranges information was not valid.
-    CREATE_HISTOGRAM_INVALID_RANGES_ARRAY,
-
-    // Counts information was not valid.
-    CREATE_HISTOGRAM_INVALID_COUNTS_ARRAY,
-
-    // Could not allocate histogram memory due to corruption.
-    CREATE_HISTOGRAM_ALLOCATOR_CORRUPT,
-
-    // Could not allocate histogram memory due to lack of space.
-    CREATE_HISTOGRAM_ALLOCATOR_FULL,
-
-    // Could not allocate histogram memory due to unknown error.
-    CREATE_HISTOGRAM_ALLOCATOR_ERROR,
-
-    // Histogram was of unknown type.
-    CREATE_HISTOGRAM_UNKNOWN_TYPE,
-
-    // Instance has detected a corrupt allocator (recorded only once).
-    CREATE_HISTOGRAM_ALLOCATOR_NEWLY_CORRUPT,
-
-    // Always keep this at the end.
-    CREATE_HISTOGRAM_MAX
-  };
-
   // Create a histogram based on saved (persistent) information about it.
   std::unique_ptr<HistogramBase> CreateHistogram(
       PersistentHistogramData* histogram_data_ptr);
@@ -352,9 +313,6 @@ class BASE_EXPORT PersistentHistogramAllocator {
   // one could not be created.
   HistogramBase* GetOrCreateStatisticsRecorderHistogram(
       const HistogramBase* histogram);
-
-  // Record the result of a histogram creation.
-  static void RecordCreateHistogramResult(CreateHistogramResultType result);
 
   // The memory allocator that provides the actual histogram storage.
   std::unique_ptr<PersistentMemoryAllocator> memory_allocator_;
@@ -404,10 +362,12 @@ class BASE_EXPORT GlobalHistogramAllocator
 
   // Creates a new file at |active_path|. If it already exists, it will first be
   // moved to |base_path|. In all cases, any old file at |base_path| will be
-  // removed. The file will be created using the given size, id, and name.
-  // Returns whether the global allocator was set.
+  // removed. If |spare_path| is non-empty and exists, that will be renamed and
+  // used as the active file. Otherwise, the file will be created using the
+  // given size, id, and name. Returns whether the global allocator was set.
   static bool CreateWithActiveFile(const FilePath& base_path,
                                    const FilePath& active_path,
+                                   const FilePath& spare_path,
                                    size_t size,
                                    uint64_t id,
                                    StringPiece name);
@@ -421,14 +381,52 @@ class BASE_EXPORT GlobalHistogramAllocator
                                         uint64_t id,
                                         StringPiece name);
 
-  // Constructs a pair of names in |dir| based on name that can be used for a
+  // Constructs a filename using a name.
+  static FilePath ConstructFilePath(const FilePath& dir, StringPiece name);
+
+  // Like above but with timestamp and pid for use in upload directories.
+  static FilePath ConstructFilePathForUploadDir(const FilePath& dir,
+                                                StringPiece name,
+                                                base::Time stamp,
+                                                ProcessId pid);
+
+  // Parses a filename to extract name, timestamp, and pid.
+  static bool ParseFilePath(const FilePath& path,
+                            std::string* out_name,
+                            Time* out_stamp,
+                            ProcessId* out_pid);
+
+  // Constructs a set of names in |dir| based on name that can be used for a
   // base + active persistent memory mapped location for CreateWithActiveFile().
-  // |name| will be used as the basename of the file inside |dir|.
-  // |out_base_path| or |out_active_path| may be null if not needed.
+  // The spare path is a file that can be pre-created and moved to be active
+  // without any startup penalty that comes from constructing the file. |name|
+  // will be used as the basename of the file inside |dir|. |out_base_path|,
+  // |out_active_path|, or |out_spare_path| may be null if not needed.
   static void ConstructFilePaths(const FilePath& dir,
                                  StringPiece name,
                                  FilePath* out_base_path,
-                                 FilePath* out_active_path);
+                                 FilePath* out_active_path,
+                                 FilePath* out_spare_path);
+
+  // As above but puts the base files in a different "upload" directory. This
+  // is useful when moving all completed files into a single directory for easy
+  // upload management.
+  static void ConstructFilePathsForUploadDir(const FilePath& active_dir,
+                                             const FilePath& upload_dir,
+                                             const std::string& name,
+                                             FilePath* out_upload_path,
+                                             FilePath* out_active_path,
+                                             FilePath* out_spare_path);
+
+  // Create a "spare" file that can later be made the "active" file. This
+  // should be done on a background thread if possible.
+  static bool CreateSpareFile(const FilePath& spare_path, size_t size);
+
+  // Same as above but uses standard names. |name| is the name of the allocator
+  // and is also used to create the correct filename.
+  static bool CreateSpareFileInDir(const FilePath& dir_path,
+                                   size_t size,
+                                   StringPiece name);
 #endif
 
   // Create a global allocator using a block of shared memory accessed
@@ -488,6 +486,9 @@ class BASE_EXPORT GlobalHistogramAllocator
   // this method resumes from the last entry it saw; it costs nothing if
   // nothing new has been added.
   void ImportHistogramsToStatisticsRecorder();
+
+  // Builds a FilePath for a metrics file.
+  static FilePath MakeMetricsFilePath(const FilePath& dir, StringPiece name);
 
   // Import always continues from where it left off, making use of a single
   // iterator to continue the work.

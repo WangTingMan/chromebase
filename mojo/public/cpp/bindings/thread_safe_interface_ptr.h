@@ -13,7 +13,7 @@
 #include "base/stl_util.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task_runner.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "mojo/public/cpp/bindings/associated_group.h"
 #include "mojo/public/cpp/bindings/associated_interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
@@ -22,22 +22,22 @@
 #include "mojo/public/cpp/bindings/sync_event_watcher.h"
 
 // ThreadSafeInterfacePtr wraps a non-thread-safe InterfacePtr and proxies
-// messages to it. Async calls are posted to the thread that the InteracePtr is
-// bound to, and the responses are posted back. Sync calls are dispatched
-// directly if the call is made on the thread that the wrapped InterfacePtr is
+// messages to it. Async calls are posted to the sequence that the InteracePtr
+// is bound to, and the responses are posted back. Sync calls are dispatched
+// directly if the call is made on the sequence that the wrapped InterfacePtr is
 // bound to, or posted otherwise. It's important to be aware that sync calls
-// block both the calling thread and the InterfacePtr thread. That means that
-// you cannot make sync calls through a ThreadSafeInterfacePtr if the
-// underlying InterfacePtr is bound to a thread that cannot block, like the IO
+// block both the calling sequence and the InterfacePtr sequence. That means
+// that you cannot make sync calls through a ThreadSafeInterfacePtr if the
+// underlying InterfacePtr is bound to a sequence that cannot block, like the IO
 // thread.
 
 namespace mojo {
 
-// Instances of this class may be used from any thread to serialize |Interface|
-// messages and forward them elsewhere. In general you should use one of the
-// ThreadSafeInterfacePtrBase helper aliases defined below, but this type may be
-// useful if you need/want to manually manage the lifetime of the underlying
-// proxy object which will be used to ultimately send messages.
+// Instances of this class may be used from any sequence to serialize
+// |Interface| messages and forward them elsewhere. In general you should use
+// one of the ThreadSafeInterfacePtrBase helper aliases defined below, but this
+// type may be useful if you need/want to manually manage the lifetime of the
+// underlying proxy object which will be used to ultimately send messages.
 template <typename Interface>
 class ThreadSafeForwarder : public MessageReceiverWithResponder {
  public:
@@ -50,9 +50,10 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
   // |forward| or |forward_with_responder| by posting to |task_runner|.
   //
   // Any message sent through this forwarding interface will dispatch its reply,
-  // if any, back to the thread which called the corresponding interface method.
+  // if any, back to the sequence which called the corresponding interface
+  // method.
   ThreadSafeForwarder(
-      const scoped_refptr<base::SingleThreadTaskRunner>& task_runner,
+      const scoped_refptr<base::SequencedTaskRunner>& task_runner,
       const ForwardMessageCallback& forward,
       const ForwardMessageWithResponderCallback& forward_with_responder,
       const AssociatedGroup& associated_group)
@@ -74,6 +75,13 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
 
  private:
   // MessageReceiverWithResponder implementation:
+  bool PrefersSerializedMessages() override {
+    // TSIP is primarily used because it emulates legacy IPC threading behavior.
+    // In practice this means it's only for cross-process messaging and we can
+    // just always assume messages should be serialized.
+    return true;
+  }
+
   bool Accept(Message* message) override {
     if (!message->associated_endpoint_handles()->empty()) {
       // If this DCHECK fails, it is likely because:
@@ -104,10 +112,10 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
     }
 
     // Async messages are always posted (even if |task_runner_| runs tasks on
-    // this thread) to guarantee that two async calls can't be reordered.
+    // this sequence) to guarantee that two async calls can't be reordered.
     if (!message->has_flag(Message::kFlagIsSync)) {
       auto reply_forwarder =
-          base::MakeUnique<ForwardToCallingThread>(std::move(responder));
+          std::make_unique<ForwardToCallingThread>(std::move(responder));
       task_runner_->PostTask(
           FROM_HERE, base::Bind(forward_with_responder_, base::Passed(message),
                                 base::Passed(&reply_forwarder)));
@@ -116,17 +124,17 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
 
     SyncCallRestrictions::AssertSyncCallAllowed();
 
-    // If the InterfacePtr is bound to this thread, dispatch it directly.
-    if (task_runner_->RunsTasksOnCurrentThread()) {
+    // If the InterfacePtr is bound to this sequence, dispatch it directly.
+    if (task_runner_->RunsTasksInCurrentSequence()) {
       forward_with_responder_.Run(std::move(*message), std::move(responder));
       return true;
     }
 
-    // If the InterfacePtr is bound on another thread, post the call.
-    // TODO(yzshen, watk): We block both this thread and the InterfacePtr
-    // thread. Ideally only this thread would block.
-    auto response = make_scoped_refptr(new SyncResponseInfo());
-    auto response_signaler = base::MakeUnique<SyncResponseSignaler>(response);
+    // If the InterfacePtr is bound on another sequence, post the call.
+    // TODO(yzshen, watk): We block both this sequence and the InterfacePtr
+    // sequence. Ideally only this sequence would block.
+    auto response = base::MakeRefCounted<SyncResponseInfo>();
+    auto response_signaler = std::make_unique<SyncResponseSignaler>(response);
     task_runner_->PostTask(
         FROM_HERE, base::Bind(forward_with_responder_, base::Passed(message),
                               base::Passed(&response_signaler)));
@@ -144,7 +152,8 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
     bool event_signaled = false;
     SyncEventWatcher watcher(&response->event,
                              base::Bind(assign_true, &event_signaled));
-    watcher.SyncWatch(&event_signaled);
+    const bool* stop_flags[] = {&event_signaled};
+    watcher.SyncWatch(stop_flags, 1);
 
     {
       base::AutoLock l(sync_calls->lock);
@@ -157,7 +166,7 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
     return true;
   }
 
-  // Data that we need to share between the threads involved in a sync call.
+  // Data that we need to share between the sequences involved in a sync call.
   struct SyncResponseInfo
       : public base::RefCountedThreadSafe<SyncResponseInfo> {
     Message message;
@@ -183,7 +192,7 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
         response_->event.Signal();
     }
 
-    bool Accept(Message* message) {
+    bool Accept(Message* message) override {
       response_->message = std::move(*message);
       response_->received = true;
       response_->event.Signal();
@@ -208,10 +217,13 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
    public:
     explicit ForwardToCallingThread(std::unique_ptr<MessageReceiver> responder)
         : responder_(std::move(responder)),
-          caller_task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
+          caller_task_runner_(base::SequencedTaskRunnerHandle::Get()) {}
+    ~ForwardToCallingThread() override {
+      caller_task_runner_->DeleteSoon(FROM_HERE, std::move(responder_));
+    }
 
    private:
-    bool Accept(Message* message) {
+    bool Accept(Message* message) override {
       // The current instance will be deleted when this method returns, so we
       // have to relinquish the responder's ownership so it does not get
       // deleted.
@@ -230,11 +242,11 @@ class ThreadSafeForwarder : public MessageReceiverWithResponder {
     }
 
     std::unique_ptr<MessageReceiver> responder_;
-    scoped_refptr<base::SingleThreadTaskRunner> caller_task_runner_;
+    scoped_refptr<base::SequencedTaskRunner> caller_task_runner_;
   };
 
   ProxyType proxy_;
-  const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  const scoped_refptr<base::SequencedTaskRunner> task_runner_;
   const ForwardMessageCallback forward_;
   const ForwardMessageWithResponderCallback forward_with_responder_;
   AssociatedGroup associated_group_;
@@ -256,9 +268,9 @@ class ThreadSafeInterfacePtrBase
       : forwarder_(std::move(forwarder)) {}
 
   // Creates a ThreadSafeInterfacePtrBase wrapping an underlying non-thread-safe
-  // InterfacePtrType which is bound to the calling thread. All messages sent
+  // InterfacePtrType which is bound to the calling sequence. All messages sent
   // via this thread-safe proxy will internally be sent by first posting to this
-  // (the calling) thread's TaskRunner.
+  // (the calling) sequence's TaskRunner.
   static scoped_refptr<ThreadSafeInterfacePtrBase> Create(
       InterfacePtrType interface_ptr) {
     scoped_refptr<PtrWrapper> wrapper =
@@ -272,7 +284,7 @@ class ThreadSafeInterfacePtrBase
   // that TaskRunner.
   static scoped_refptr<ThreadSafeInterfacePtrBase> Create(
       PtrInfoType ptr_info,
-      const scoped_refptr<base::SingleThreadTaskRunner>& bind_task_runner) {
+      const scoped_refptr<base::SequencedTaskRunner>& bind_task_runner) {
     scoped_refptr<PtrWrapper> wrapper = new PtrWrapper(bind_task_runner);
     wrapper->BindOnTaskRunner(std::move(ptr_info));
     return new ThreadSafeInterfacePtrBase(wrapper->CreateForwarder());
@@ -289,19 +301,19 @@ class ThreadSafeInterfacePtrBase
   struct PtrWrapperDeleter;
 
   // Helper class which owns an |InterfacePtrType| instance on an appropriate
-  // thread. This is kept alive as long its bound within some
+  // sequence. This is kept alive as long its bound within some
   // ThreadSafeForwarder's callbacks.
   class PtrWrapper
       : public base::RefCountedThreadSafe<PtrWrapper, PtrWrapperDeleter> {
    public:
     explicit PtrWrapper(InterfacePtrType ptr)
-        : PtrWrapper(base::ThreadTaskRunnerHandle::Get()) {
+        : PtrWrapper(base::SequencedTaskRunnerHandle::Get()) {
       ptr_ = std::move(ptr);
       associated_group_ = *ptr_.internal_state()->associated_group();
     }
 
     explicit PtrWrapper(
-        const scoped_refptr<base::SingleThreadTaskRunner>& task_runner)
+        const scoped_refptr<base::SequencedTaskRunner>& task_runner)
         : task_runner_(task_runner) {}
 
     void BindOnTaskRunner(AssociatedInterfacePtrInfo<InterfaceType> ptr_info) {
@@ -316,14 +328,14 @@ class ThreadSafeInterfacePtrBase
       // endpoints on this interface (at least not immediately). In order to fix
       // this, we need to create a MultiplexRouter immediately and bind it to
       // the interface pointer on the |task_runner_|. Therefore, MultiplexRouter
-      // should be able to be created on a thread different than the one that it
-      // is supposed to listen on. crbug.com/682334
+      // should be able to be created on a sequence different than the one that
+      // it is supposed to listen on. crbug.com/682334
       task_runner_->PostTask(FROM_HERE, base::Bind(&PtrWrapper::Bind, this,
                                                    base::Passed(&ptr_info)));
     }
 
     std::unique_ptr<ThreadSafeForwarder<InterfaceType>> CreateForwarder() {
-      return base::MakeUnique<ThreadSafeForwarder<InterfaceType>>(
+      return std::make_unique<ThreadSafeForwarder<InterfaceType>>(
           task_runner_, base::Bind(&PtrWrapper::Accept, this),
           base::Bind(&PtrWrapper::AcceptWithResponder, this),
           associated_group_);
@@ -335,7 +347,7 @@ class ThreadSafeInterfacePtrBase
     ~PtrWrapper() {}
 
     void Bind(PtrInfoType ptr_info) {
-      DCHECK(task_runner_->RunsTasksOnCurrentThread());
+      DCHECK(task_runner_->RunsTasksInCurrentSequence());
       ptr_.Bind(std::move(ptr_info));
     }
 
@@ -350,7 +362,7 @@ class ThreadSafeInterfacePtrBase
     }
 
     void DeleteOnCorrectThread() const {
-      if (!task_runner_->RunsTasksOnCurrentThread()) {
+      if (!task_runner_->RunsTasksInCurrentSequence()) {
         // NOTE: This is only called when there are no more references to
         // |this|, so binding it unretained is both safe and necessary.
         task_runner_->PostTask(FROM_HERE,
@@ -362,7 +374,7 @@ class ThreadSafeInterfacePtrBase
     }
 
     InterfacePtrType ptr_;
-    const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+    const scoped_refptr<base::SequencedTaskRunner> task_runner_;
     AssociatedGroup associated_group_;
 
     DISALLOW_COPY_AND_ASSIGN(PtrWrapper);

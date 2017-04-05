@@ -12,7 +12,6 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "mojo/public/cpp/bindings/connection_error_callback.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/interface_ptr_info.h"
@@ -28,7 +27,10 @@ class MessageReceiver;
 // Represents the binding of an interface implementation to a message pipe.
 // When the |Binding| object is destroyed, the binding between the message pipe
 // and the interface is torn down and the message pipe is closed, leaving the
-// interface implementation in an unbound state.
+// interface implementation in an unbound state. Once the |Binding| object is
+// destroyed, it is guaranteed that no more method calls are dispatched to the
+// implementation and the connection error handler (if registered) won't be
+// called.
 //
 // Example:
 //
@@ -55,17 +57,17 @@ class MessageReceiver;
 //   };
 //
 // This class is thread hostile while bound to a message pipe. All calls to this
-// class must be from the thread that bound it. The interface implementation's
-// methods will be called from the thread that bound this. If a Binding is not
-// bound to a message pipe, it may be bound or destroyed on any thread.
+// class must be from the sequence that bound it. The interface implementation's
+// methods will be called from the sequence that bound this. If a Binding is not
+// bound to a message pipe, it may be bound or destroyed on any sequence.
 //
 // When you bind this class to a message pipe, optionally you can specify a
 // base::SingleThreadTaskRunner. This task runner must belong to the same
 // thread. It will be used to dispatch incoming method calls and connection
 // error notification. It is useful when you attach multiple task runners to a
-// single thread for the purposes of task scheduling. Please note that incoming
-// synchrounous method calls may not be run from this task runner, when they
-// reenter outgoing synchrounous calls on the same thread.
+// single thread for the purposes of task scheduling. Please note that
+// incoming synchrounous method calls may not be run from this task runner, when
+// they reenter outgoing synchrounous calls on the same thread.
 template <typename Interface,
           typename ImplRefTraits = RawPtrImplRefTraits<Interface>>
 class Binding {
@@ -77,85 +79,26 @@ class Binding {
   // Does not take ownership of |impl|, which must outlive the binding.
   explicit Binding(ImplPointerType impl) : internal_state_(std::move(impl)) {}
 
-  // Constructs a completed binding of message pipe |handle| to implementation
-  // |impl|. Does not take ownership of |impl|, which must outlive the binding.
-  Binding(ImplPointerType impl,
-          ScopedMessagePipeHandle handle,
-          scoped_refptr<base::SingleThreadTaskRunner> runner =
-              base::ThreadTaskRunnerHandle::Get())
-      : Binding(std::move(impl)) {
-    Bind(std::move(handle), std::move(runner));
-  }
-
-  // Constructs a completed binding of |impl| to a new message pipe, passing the
-  // client end to |ptr|, which takes ownership of it. The caller is expected to
-  // pass |ptr| on to the client of the service. Does not take ownership of any
-  // of the parameters. |impl| must outlive the binding. |ptr| only needs to
-  // last until the constructor returns.
-  Binding(ImplPointerType impl,
-          InterfacePtr<Interface>* ptr,
-          scoped_refptr<base::SingleThreadTaskRunner> runner =
-              base::ThreadTaskRunnerHandle::Get())
-      : Binding(std::move(impl)) {
-    Bind(ptr, std::move(runner));
-  }
-
   // Constructs a completed binding of |impl| to the message pipe endpoint in
   // |request|, taking ownership of the endpoint. Does not take ownership of
   // |impl|, which must outlive the binding.
   Binding(ImplPointerType impl,
           InterfaceRequest<Interface> request,
-          scoped_refptr<base::SingleThreadTaskRunner> runner =
-              base::ThreadTaskRunnerHandle::Get())
+          scoped_refptr<base::SingleThreadTaskRunner> runner = nullptr)
       : Binding(std::move(impl)) {
-    Bind(request.PassMessagePipe(), std::move(runner));
+    Bind(std::move(request), std::move(runner));
   }
 
   // Tears down the binding, closing the message pipe and leaving the interface
   // implementation unbound.
   ~Binding() {}
 
-  // Returns an InterfacePtr bound to one end of a pipe whose other end is
-  // bound to |this|.
-  InterfacePtr<Interface> CreateInterfacePtrAndBind(
-      scoped_refptr<base::SingleThreadTaskRunner> runner =
-          base::ThreadTaskRunnerHandle::Get()) {
-    InterfacePtr<Interface> interface_ptr;
-    Bind(&interface_ptr, std::move(runner));
-    return interface_ptr;
-  }
-
-  // Completes a binding that was constructed with only an interface
-  // implementation. Takes ownership of |handle| and binds it to the previously
-  // specified implementation.
-  void Bind(ScopedMessagePipeHandle handle,
-            scoped_refptr<base::SingleThreadTaskRunner> runner =
-                base::ThreadTaskRunnerHandle::Get()) {
-    internal_state_.Bind(std::move(handle), std::move(runner));
-  }
-
-  // Completes a binding that was constructed with only an interface
-  // implementation by creating a new message pipe, binding one end of it to the
-  // previously specified implementation, and passing the other to |ptr|, which
-  // takes ownership of it. The caller is expected to pass |ptr| on to the
-  // eventual client of the service. Does not take ownership of |ptr|.
-  void Bind(InterfacePtr<Interface>* ptr,
-            scoped_refptr<base::SingleThreadTaskRunner> runner =
-                base::ThreadTaskRunnerHandle::Get()) {
-    MessagePipe pipe;
-    ptr->Bind(InterfacePtrInfo<Interface>(std::move(pipe.handle0),
-                                          Interface::Version_),
-              runner);
-    Bind(std::move(pipe.handle1), std::move(runner));
-  }
-
   // Completes a binding that was constructed with only an interface
   // implementation by removing the message pipe endpoint from |request| and
   // binding it to the previously specified implementation.
   void Bind(InterfaceRequest<Interface> request,
-            scoped_refptr<base::SingleThreadTaskRunner> runner =
-                base::ThreadTaskRunnerHandle::Get()) {
-    Bind(request.PassMessagePipe(), std::move(runner));
+            scoped_refptr<base::SingleThreadTaskRunner> runner = nullptr) {
+    internal_state_.Bind(request.PassMessagePipe(), std::move(runner));
   }
 
   // Adds a message filter to be notified of each incoming message before
@@ -187,7 +130,7 @@ class Binding {
     internal_state_.ResumeIncomingMethodCallProcessing();
   }
 
-  // Blocks the calling thread until either a call arrives on the previously
+  // Blocks the calling sequence until either a call arrives on the previously
   // bound message pipe, the deadline is exceeded, or an error occurs. Returns
   // true if a method was successfully read and dispatched.
   //
@@ -209,7 +152,7 @@ class Binding {
   }
 
   // Unbinds the underlying pipe from this binding and returns it so it can be
-  // used in another context, such as on another thread or with a different
+  // used in another context, such as on another sequence or with a different
   // implementation. Put this object into a state where it can be rebound to a
   // new pipe.
   //
@@ -231,15 +174,16 @@ class Binding {
   // This method may only be called after this Binding has been bound to a
   // message pipe. The error handler will be reset when this Binding is unbound
   // or closed.
-  void set_connection_error_handler(const base::Closure& error_handler) {
+  void set_connection_error_handler(base::OnceClosure error_handler) {
     DCHECK(is_bound());
-    internal_state_.set_connection_error_handler(error_handler);
+    internal_state_.set_connection_error_handler(std::move(error_handler));
   }
 
   void set_connection_error_with_reason_handler(
-      const ConnectionErrorWithReasonCallback& error_handler) {
+      ConnectionErrorWithReasonCallback error_handler) {
     DCHECK(is_bound());
-    internal_state_.set_connection_error_with_reason_handler(error_handler);
+    internal_state_.set_connection_error_with_reason_handler(
+        std::move(error_handler));
   }
 
   // Returns the interface implementation that was previously specified. Caller
@@ -250,11 +194,32 @@ class Binding {
   // pipe has been bound to the implementation).
   bool is_bound() const { return internal_state_.is_bound(); }
 
+  explicit operator bool() const { return internal_state_.is_bound(); }
+
   // Returns the value of the handle currently bound to this Binding which can
   // be used to make explicit Wait/WaitMany calls. Requires that the Binding be
   // bound. Ownership of the handle is retained by the Binding, it is not
   // transferred to the caller.
   MessagePipeHandle handle() const { return internal_state_.handle(); }
+
+  // Reports the currently dispatching Message as bad and closes this binding.
+  // Note that this is only legal to call from directly within the stack frame
+  // of a message dispatch. If you need to do asynchronous work before you can
+  // determine the legitimacy of a message, use GetBadMessageCallback() and
+  // retain its result until you're ready to invoke or discard it.
+  void ReportBadMessage(const std::string& error) {
+    GetBadMessageCallback().Run(error);
+  }
+
+  // Acquires a callback which may be run to report the currently dispatching
+  // Message as bad and close this binding. Note that this is only legal to call
+  // from directly within the stack frame of a message dispatch, but the
+  // returned callback may be called exactly once any time thereafter to report
+  // the message as bad. This may only be called once per message. The returned
+  // callback must be called on the Binding's own sequence.
+  ReportBadMessageCallback GetBadMessageCallback() {
+    return internal_state_.GetBadMessageCallback();
+  }
 
   // Sends a no-op message on the underlying message pipe and runs the current
   // message loop until its response is received. This can be used in tests to
@@ -264,6 +229,20 @@ class Binding {
 
   // Exposed for testing, should not generally be used.
   void EnableTestingMode() { internal_state_.EnableTestingMode(); }
+
+  scoped_refptr<internal::MultiplexRouter> RouterForTesting() {
+    return internal_state_.RouterForTesting();
+  }
+
+  // Allows test code to swap the interface implementation.
+  ImplPointerType SwapImplForTesting(ImplPointerType new_impl) {
+    return internal_state_.SwapImplForTesting(new_impl);
+  }
+
+  // DO NOT USE. Exposed only for internal use and for testing.
+  internal::BindingState<Interface, ImplRefTraits>* internal_state() {
+    return &internal_state_;
+  }
 
  private:
   internal::BindingState<Interface, ImplRefTraits> internal_state_;

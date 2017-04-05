@@ -31,15 +31,16 @@
  }
 --- a/base/files/file_util_posix.cc
 +++ b/base/files/file_util_posix.cc
-@@ -533,6 +533,8 @@ bool GetTempDir(FilePath* path) {
-   } else {
+@@ -594,6 +594,9 @@ bool GetTempDir(FilePath* path) {
+ 
  #if defined(OS_ANDROID)
-     return PathService::Get(base::DIR_CACHE, path);
+   return PathService::Get(DIR_CACHE, path);
 +#elif defined(__ANDROID__)
-+    *path = FilePath("/data/local/tmp");
++  *path = FilePath("/data/local/tmp");
++  return true;
  #else
-     *path = FilePath("/tmp");
- #endif
+   *path = FilePath("/tmp");
+   return true;
 --- a/base/json/json_reader_unittest.cc
 +++ b/base/json/json_reader_unittest.cc
 @@ -567,7 +567,7 @@ TEST(JSONReaderTest, Reading) {

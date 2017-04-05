@@ -28,6 +28,9 @@ namespace base {
 class MessagePump;
 class RunLoop;
 
+// IMPORTANT: Instead of creating a base::Thread, consider using
+// base::Create(Sequenced|SingleThread)TaskRunnerWithTraits().
+//
 // A simple thread abstraction that establishes a MessageLoop on a new thread.
 // The consumer uses the MessageLoop of the thread to cause code to execute on
 // the thread.  When this object is destroyed the thread is terminated.  All
@@ -40,7 +43,7 @@ class RunLoop;
 //
 //  (1) Thread::CleanUp()
 //  (2) MessageLoop::~MessageLoop
-//  (3.b)    MessageLoop::DestructionObserver::WillDestroyCurrentMessageLoop
+//  (3.b) MessageLoopCurrent::DestructionObserver::WillDestroyCurrentMessageLoop
 //
 // This API is not thread-safe: unless indicated otherwise its methods are only
 // valid from the owning sequence (which is the one from which Start() is
@@ -242,6 +245,15 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // This method is thread-safe.
   PlatformThreadId GetThreadId() const;
 
+  // Returns the current thread handle. If called before Start*() returns or
+  // after Stop() returns, an empty thread handle will be returned.
+  //
+  // This method is thread-safe.
+  //
+  // TODO(robliao): Remove this when it no longer needs to be temporarily
+  // exposed for http://crbug.com/717380.
+  PlatformThreadHandle GetThreadHandle() const;
+
   // Returns true if the thread has been started, and not yet stopped.
   bool IsRunning() const;
 
@@ -259,6 +271,9 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   static bool GetThreadWasQuitProperly();
 
   // Bind this Thread to an existing MessageLoop instead of starting a new one.
+  // TODO(gab): Remove this after ios/ has undergone the same surgery as
+  // BrowserThreadImpl (ref.
+  // https://chromium-review.googlesource.com/c/chromium/src/+/969104).
   void SetMessageLoop(MessageLoop* message_loop);
 
   bool using_external_message_loop() const {
