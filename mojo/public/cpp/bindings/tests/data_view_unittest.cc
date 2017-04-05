@@ -26,22 +26,18 @@ class DataViewTest : public testing::Test {
 
 struct DataViewHolder {
   std::unique_ptr<TestStructDataView> data_view;
-  std::unique_ptr<mojo::internal::FixedBufferForTesting> buf;
+  mojo::Message message;
   mojo::internal::SerializationContext context;
 };
 
 std::unique_ptr<DataViewHolder> SerializeTestStruct(TestStructPtr input) {
-  std::unique_ptr<DataViewHolder> result(new DataViewHolder);
-
-  size_t size = mojo::internal::PrepareToSerialize<TestStructDataView>(
-      input, &result->context);
-
-  result->buf.reset(new mojo::internal::FixedBufferForTesting(size));
-  internal::TestStruct_Data* data = nullptr;
-  mojo::internal::Serialize<TestStructDataView>(input, result->buf.get(), &data,
-                                                &result->context);
-
-  result->data_view.reset(new TestStructDataView(data, &result->context));
+  auto result = std::make_unique<DataViewHolder>();
+  result->message = Message(0, 0, 0, 0, nullptr);
+  internal::TestStruct_Data::BufferWriter writer;
+  mojo::internal::Serialize<TestStructDataView>(
+      input, result->message.payload_buffer(), &writer, &result->context);
+  result->data_view =
+      std::make_unique<TestStructDataView>(writer.data(), &result->context);
   return result;
 }
 
@@ -94,21 +90,24 @@ TEST_F(DataViewTest, NestedStruct) {
 
 TEST_F(DataViewTest, NativeStruct) {
   TestStructPtr obj(TestStruct::New());
-  obj->f_native_struct = NativeStruct::New();
+  obj->f_native_struct = native::NativeStruct::New();
   obj->f_native_struct->data = std::vector<uint8_t>({3, 2, 1});
 
   auto data_view_holder = SerializeTestStruct(std::move(obj));
   auto& data_view = *data_view_holder->data_view;
 
-  NativeStructDataView struct_data_view;
+  native::NativeStructDataView struct_data_view;
   data_view.GetFNativeStructDataView(&struct_data_view);
 
-  ASSERT_FALSE(struct_data_view.is_null());
-  ASSERT_EQ(3u, struct_data_view.size());
-  EXPECT_EQ(3, struct_data_view[0]);
-  EXPECT_EQ(2, struct_data_view[1]);
-  EXPECT_EQ(1, struct_data_view[2]);
-  EXPECT_EQ(3, *struct_data_view.data());
+  ArrayDataView<uint8_t> data_data_view;
+  struct_data_view.GetDataDataView(&data_data_view);
+
+  ASSERT_FALSE(data_data_view.is_null());
+  ASSERT_EQ(3u, data_data_view.size());
+  EXPECT_EQ(3, data_data_view[0]);
+  EXPECT_EQ(2, data_data_view[1]);
+  EXPECT_EQ(1, data_data_view[2]);
+  EXPECT_EQ(3, *data_data_view.data());
 }
 
 TEST_F(DataViewTest, BoolArray) {
@@ -166,11 +165,11 @@ TEST_F(DataViewTest, EnumArray) {
 }
 
 TEST_F(DataViewTest, InterfaceArray) {
-  TestInterfacePtr ptr;
-  TestInterfaceImpl impl(MakeRequest(&ptr));
+  TestInterfacePtrInfo ptr_info;
+  TestInterfaceImpl impl(MakeRequest(&ptr_info));
 
   TestStructPtr obj(TestStruct::New());
-  obj->f_interface_array.push_back(std::move(ptr));
+  obj->f_interface_array.push_back(std::move(ptr_info));
 
   auto data_view_holder = SerializeTestStruct(std::move(obj));
   auto& data_view = *data_view_holder->data_view;

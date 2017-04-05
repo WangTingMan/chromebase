@@ -30,17 +30,25 @@ enum FeatureState {
 // The Feature struct is used to define the default state for a feature. See
 // comment below for more details. There must only ever be one struct instance
 // for a given feature name - generally defined as a constant global variable or
-// file static.
+// file static. It should never be used as a constexpr as it breaks
+// pointer-based identity lookup.
 struct BASE_EXPORT Feature {
-  constexpr Feature(const char* name, FeatureState default_state)
-      : name(name), default_state(default_state) {}
   // The name of the feature. This should be unique to each feature and is used
   // for enabling/disabling features via command line flags and experiments.
+  // It is strongly recommended to use CamelCase style for feature names, e.g.
+  // "MyGreatFeature".
   const char* const name;
 
   // The default state (i.e. enabled or disabled) for this feature.
   const FeatureState default_state;
 };
+
+#if DCHECK_IS_CONFIGURABLE
+// DCHECKs have been built-in, and are configurable at run-time to be fatal, or
+// not, via a DcheckIsFatal feature. We define the Feature here since it is
+// checked in FeatureList::SetInstance(). See https://crbug.com/596231.
+extern BASE_EXPORT const Feature kDCheckIsFatalFeature;
+#endif  // DCHECK_IS_CONFIGURABLE
 
 // The FeatureList class is used to determine whether a given feature is on or
 // off. It provides an authoritative answer, taking into account command-line
@@ -69,6 +77,10 @@ struct BASE_EXPORT Feature {
 //
 //   --enable-features=Feature5,Feature7
 //   --disable-features=Feature1,Feature2,Feature3
+//
+// To enable/disable features in a test, do NOT append --enable-features or
+// --disable-features to the command-line directly. Instead, use
+// ScopedFeatureList. See base/test/scoped_feature_list.h for details.
 //
 // After initialization (which should be done single-threaded), the FeatureList
 // API is thread safe.
@@ -145,6 +157,11 @@ class BASE_EXPORT FeatureList {
   // only after the instance has been initialized and registered.
   void GetFeatureOverrides(std::string* enable_overrides,
                            std::string* disable_overrides);
+
+  // Like GetFeatureOverrides(), but only returns overrides that were specified
+  // explicitly on the command-line, omitting the ones from field trials.
+  void GetCommandLineFeatureOverrides(std::string* enable_overrides,
+                                      std::string* disable_overrides);
 
   // Returns whether the given |feature| is enabled. Must only be called after
   // the singleton instance has been registered via SetInstance(). Additionally,
@@ -253,6 +270,13 @@ class BASE_EXPORT FeatureList {
   void RegisterOverride(StringPiece feature_name,
                         OverrideState overridden_state,
                         FieldTrial* field_trial);
+
+  // Implementation of GetFeatureOverrides() with a parameter that specifies
+  // whether only command-line enabled overrides should be emitted. See that
+  // function's comments for more details.
+  void GetFeatureOverridesImpl(std::string* enable_overrides,
+                               std::string* disable_overrides,
+                               bool command_line_only);
 
   // Verifies that there's only a single definition of a Feature struct for a
   // given feature name. Keeps track of the first seen Feature struct for each

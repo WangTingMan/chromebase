@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "base/threading/thread_checker.h"
+
 #include <memory>
 
 #include "base/bind.h"
@@ -9,9 +11,9 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequence_token.h"
+#include "base/test/gtest_util.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/simple_thread.h"
-#include "base/threading/thread_checker_impl.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -61,7 +63,7 @@ void ExpectNotCalledOnValidThreadWithSequenceTokenAndThreadTaskRunnerHandle(
     ThreadCheckerImpl* thread_checker,
     SequenceToken sequence_token) {
   ThreadTaskRunnerHandle thread_task_runner_handle(
-      make_scoped_refptr(new TestSimpleTaskRunner));
+      MakeRefCounted<TestSimpleTaskRunner>());
   ScopedSetSequenceTokenForCurrentThread
       scoped_set_sequence_token_for_current_thread(sequence_token);
   ExpectNotCalledOnValidThread(thread_checker);
@@ -77,7 +79,7 @@ TEST(ThreadCheckerTest, AllowedSameThreadNoSequenceToken) {
 TEST(ThreadCheckerTest,
      AllowedSameThreadAndSequenceDifferentTasksWithThreadTaskRunnerHandle) {
   ThreadTaskRunnerHandle thread_task_runner_handle(
-      make_scoped_refptr(new TestSimpleTaskRunner));
+      MakeRefCounted<TestSimpleTaskRunner>());
 
   std::unique_ptr<ThreadCheckerImpl> thread_checker;
   const SequenceToken sequence_token = SequenceToken::Create();
@@ -128,7 +130,7 @@ TEST(ThreadCheckerTest, DisallowedDifferentThreadsNoSequenceToken) {
 
 TEST(ThreadCheckerTest, DisallowedDifferentThreadsSameSequence) {
   ThreadTaskRunnerHandle thread_task_runner_handle(
-      make_scoped_refptr(new TestSimpleTaskRunner));
+      MakeRefCounted<TestSimpleTaskRunner>());
   const SequenceToken sequence_token(SequenceToken::Create());
 
   ScopedSetSequenceTokenForCurrentThread
@@ -145,7 +147,7 @@ TEST(ThreadCheckerTest, DisallowedSameThreadDifferentSequence) {
   std::unique_ptr<ThreadCheckerImpl> thread_checker;
 
   ThreadTaskRunnerHandle thread_task_runner_handle(
-      make_scoped_refptr(new TestSimpleTaskRunner));
+      MakeRefCounted<TestSimpleTaskRunner>());
 
   {
     ScopedSetSequenceTokenForCurrentThread
@@ -178,7 +180,7 @@ TEST(ThreadCheckerTest, DetachFromThread) {
 
 TEST(ThreadCheckerTest, DetachFromThreadWithSequenceToken) {
   ThreadTaskRunnerHandle thread_task_runner_handle(
-      make_scoped_refptr(new TestSimpleTaskRunner));
+      MakeRefCounted<TestSimpleTaskRunner>());
   ScopedSetSequenceTokenForCurrentThread
       scoped_set_sequence_token_for_current_thread(SequenceToken::Create());
   ThreadCheckerImpl thread_checker;
@@ -190,6 +192,54 @@ TEST(ThreadCheckerTest, DetachFromThreadWithSequenceToken) {
       Bind(&ExpectCalledOnValidThread, Unretained(&thread_checker)));
 
   EXPECT_FALSE(thread_checker.CalledOnValidThread());
+}
+
+namespace {
+
+// This fixture is a helper for unit testing the thread checker macros as it is
+// not possible to inline ExpectDeathOnOtherThread() and
+// ExpectNoDeathOnOtherThreadAfterDetach() as lambdas since binding
+// |Unretained(&my_sequence_checker)| wouldn't compile on non-dcheck builds
+// where it won't be defined.
+class ThreadCheckerMacroTest : public testing::Test {
+ public:
+  ThreadCheckerMacroTest() = default;
+
+  void ExpectDeathOnOtherThread() {
+#if DCHECK_IS_ON()
+    EXPECT_DCHECK_DEATH({ DCHECK_CALLED_ON_VALID_THREAD(my_thread_checker_); });
+#else
+    // Happily no-ops on non-dcheck builds.
+    DCHECK_CALLED_ON_VALID_THREAD(my_thread_checker_);
+#endif
+  }
+
+  void ExpectNoDeathOnOtherThreadAfterDetach() {
+    DCHECK_CALLED_ON_VALID_THREAD(my_thread_checker_);
+    DCHECK_CALLED_ON_VALID_THREAD(my_thread_checker_)
+        << "Make sure it compiles when DCHECK is off";
+  }
+
+ protected:
+  THREAD_CHECKER(my_thread_checker_);
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(ThreadCheckerMacroTest);
+};
+
+}  // namespace
+
+TEST_F(ThreadCheckerMacroTest, Macros) {
+  THREAD_CHECKER(my_thread_checker);
+
+  RunCallbackOnNewThreadSynchronously(Bind(
+      &ThreadCheckerMacroTest::ExpectDeathOnOtherThread, Unretained(this)));
+
+  DETACH_FROM_THREAD(my_thread_checker_);
+
+  RunCallbackOnNewThreadSynchronously(
+      Bind(&ThreadCheckerMacroTest::ExpectNoDeathOnOtherThreadAfterDetach,
+           Unretained(this)));
 }
 
 }  // namespace base

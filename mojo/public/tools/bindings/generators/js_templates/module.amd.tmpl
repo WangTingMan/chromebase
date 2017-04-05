@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-{%- if use_new_js_bindings %}
-
 'use strict';
 
 (function() {
@@ -14,57 +12,23 @@
   }
   mojo.internal.markMojomLoaded(mojomId);
 
-  // TODO(yzshen): Define these aliases to minimize the differences between the
-  // old/new modes. Remove them when the old mode goes away.
+{#- TODO(crbug.com/795977): Change the media router extension to not mess with
+    the mojo namespace, so that we can refer to mojo directly. #}
   var bindings = mojo;
+  var associatedBindings = mojo;
   var codec = mojo.internal;
   var validator = mojo.internal;
 
-{%-   for import in imports %}
+  var exports = mojo.internal.exposeNamespace('{{module.namespace}}');
+
+{%- for import in imports %}
   var {{import.unique_name}} =
-      mojo.internal.exposeNamespace('{{import.module.namespace}}');
+      mojo.internal.exposeNamespace('{{import.namespace}}');
   if (mojo.config.autoLoadMojomDeps) {
     mojo.internal.loadMojomIfNecessary(
-        '{{import.module.path}}',
-        new URL(
-            '{{import.module|get_relative_path(module)}}.js',
-            document.currentScript.src).href);
+        '{{import.path}}', '{{import|get_relative_url(module)}}.js');
   }
-{%-   endfor %}
+{%- endfor %}
 
 {% include "module_definition.tmpl" %}
 })();
-
-{%- else %}
-
-define("{{module.path}}", [
-{%- if module.path !=
-         "mojo/public/interfaces/bindings/interface_control_messages.mojom" and
-       module.path !=
-         "mojo/public/interfaces/bindings/pipe_control_messages.mojom" %}
-    "mojo/public/js/bindings",
-{%-   endif %}
-    "mojo/public/js/codec",
-    "mojo/public/js/core",
-    "mojo/public/js/validator",
-{%-   for import in imports %}
-    "{{import.module.path}}",
-{%-   endfor %}
-], function(
-{%- if module.path !=
-         "mojo/public/interfaces/bindings/interface_control_messages.mojom" and
-       module.path !=
-         "mojo/public/interfaces/bindings/pipe_control_messages.mojom" -%}
-bindings, {% endif -%}
-codec, core, validator
-{%-   for import in imports -%}
-    , {{import.unique_name}}
-{%-   endfor -%}
-) {
-
-{%- include "module_definition.tmpl" %}
-
-  return exports;
-});
-
-{%- endif %}

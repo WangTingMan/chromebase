@@ -14,10 +14,13 @@
 #include "base/metrics/histogram.h"
 #include "base/rand_util.h"
 #include "base/strings/safe_sprintf.h"
+#include "base/strings/stringprintf.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/simple_thread.h"
 #include "testing/gmock/include/gmock/gmock.h"
+
+namespace base {
 
 namespace {
 
@@ -26,9 +29,19 @@ const uint32_t TEST_MEMORY_PAGE = 64 << 10;  // 64 KiB
 const uint32_t TEST_ID = 12345;
 const char TEST_NAME[] = "TestAllocator";
 
-}  // namespace
+void SetFileLength(const base::FilePath& path, size_t length) {
+  {
+    File file(path, File::FLAG_OPEN | File::FLAG_READ | File::FLAG_WRITE);
+    DCHECK(file.IsValid());
+    ASSERT_TRUE(file.SetLength(static_cast<int64_t>(length)));
+  }
 
-namespace base {
+  int64_t actual_length;
+  DCHECK(GetFileSize(path, &actual_length));
+  DCHECK_EQ(length, static_cast<size_t>(actual_length));
+}
+
+}  // namespace
 
 typedef PersistentMemoryAllocator::Reference Reference;
 
@@ -472,6 +485,47 @@ TEST_F(PersistentMemoryAllocatorTest, IteratorParallelismTest) {
 #endif
 }
 
+TEST_F(PersistentMemoryAllocatorTest, DelayedAllocationTest) {
+  std::atomic<Reference> ref1, ref2;
+  ref1.store(0, std::memory_order_relaxed);
+  ref2.store(0, std::memory_order_relaxed);
+  DelayedPersistentAllocation da1(allocator_.get(), &ref1, 1001, 100, true);
+  DelayedPersistentAllocation da2a(allocator_.get(), &ref2, 2002, 200, 0, true);
+  DelayedPersistentAllocation da2b(allocator_.get(), &ref2, 2002, 200, 5, true);
+
+  // Nothing should yet have been allocated.
+  uint32_t type;
+  PersistentMemoryAllocator::Iterator iter(allocator_.get());
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Do first delayed allocation and check that a new persistent object exists.
+  EXPECT_EQ(0U, da1.reference());
+  void* mem1 = da1.Get();
+  ASSERT_TRUE(mem1);
+  EXPECT_NE(0U, da1.reference());
+  EXPECT_EQ(allocator_->GetAsReference(mem1, 1001),
+            ref1.load(std::memory_order_relaxed));
+  EXPECT_NE(0U, iter.GetNext(&type));
+  EXPECT_EQ(1001U, type);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Do second delayed allocation and check.
+  void* mem2a = da2a.Get();
+  ASSERT_TRUE(mem2a);
+  EXPECT_EQ(allocator_->GetAsReference(mem2a, 2002),
+            ref2.load(std::memory_order_relaxed));
+  EXPECT_NE(0U, iter.GetNext(&type));
+  EXPECT_EQ(2002U, type);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+
+  // Third allocation should just return offset into second allocation.
+  void* mem2b = da2b.Get();
+  ASSERT_TRUE(mem2b);
+  EXPECT_EQ(0U, iter.GetNext(&type));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(mem2a) + 5,
+            reinterpret_cast<uintptr_t>(mem2b));
+}
+
 // This test doesn't verify anything other than it doesn't crash. Its goal
 // is to find coding errors that aren't otherwise tested for, much like a
 // "fuzzer" would.
@@ -579,10 +633,10 @@ TEST(SharedPersistentMemoryAllocatorTest, CreationTest) {
     EXPECT_FALSE(local.IsFull());
     EXPECT_FALSE(local.IsCorrupt());
 
-    ASSERT_TRUE(local.shared_memory()->ShareToProcess(GetCurrentProcessHandle(),
-                                                      &shared_handle_1));
-    ASSERT_TRUE(local.shared_memory()->ShareToProcess(GetCurrentProcessHandle(),
-                                                      &shared_handle_2));
+    shared_handle_1 = local.shared_memory()->handle().Duplicate();
+    ASSERT_TRUE(shared_handle_1.IsValid());
+    shared_handle_2 = local.shared_memory()->handle().Duplicate();
+    ASSERT_TRUE(shared_handle_2.IsValid());
   }
 
   // Read-only test.
@@ -873,6 +927,75 @@ TEST(FilePersistentMemoryAllocatorTest, AcceptableTest) {
     }
   }
 }
+
+TEST_F(PersistentMemoryAllocatorTest, TruncateTest) {
+  ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("truncate_test");
+
+  // Start with a small but valid file of persistent data. Keep the "used"
+  // amount for both allocations.
+  Reference a1_ref;
+  Reference a2_ref;
+  size_t a1_used;
+  size_t a2_used;
+  ASSERT_FALSE(PathExists(file_path));
+  {
+    LocalPersistentMemoryAllocator allocator(TEST_MEMORY_SIZE, TEST_ID, "");
+    a1_ref = allocator.Allocate(100 << 10, 1);
+    allocator.MakeIterable(a1_ref);
+    a1_used = allocator.used();
+    a2_ref = allocator.Allocate(200 << 10, 11);
+    allocator.MakeIterable(a2_ref);
+    a2_used = allocator.used();
+
+    File writer(file_path, File::FLAG_CREATE | File::FLAG_WRITE);
+    ASSERT_TRUE(writer.IsValid());
+    writer.Write(0, static_cast<const char*>(allocator.data()),
+                 allocator.size());
+  }
+  ASSERT_TRUE(PathExists(file_path));
+  EXPECT_LE(a1_used, a2_ref);
+
+  // Truncate the file to include everything and make sure it can be read, both
+  // with read-write and read-only access.
+  for (size_t file_length : {a2_used, a1_used, a1_used / 2}) {
+    SCOPED_TRACE(StringPrintf("file_length=%zu", file_length));
+    SetFileLength(file_path, file_length);
+
+    for (bool read_only : {false, true}) {
+      SCOPED_TRACE(StringPrintf("read_only=%s", read_only ? "true" : "false"));
+
+      std::unique_ptr<MemoryMappedFile> mmfile(new MemoryMappedFile());
+      mmfile->Initialize(
+          File(file_path, File::FLAG_OPEN |
+                              (read_only ? File::FLAG_READ
+                                         : File::FLAG_READ | File::FLAG_WRITE)),
+          read_only ? MemoryMappedFile::READ_ONLY
+                    : MemoryMappedFile::READ_WRITE);
+      ASSERT_TRUE(
+          FilePersistentMemoryAllocator::IsFileAcceptable(*mmfile, read_only));
+
+      FilePersistentMemoryAllocator allocator(std::move(mmfile), 0, 0, "",
+                                              read_only);
+
+      PersistentMemoryAllocator::Iterator iter(&allocator);
+      uint32_t type_id;
+      EXPECT_EQ(file_length >= a1_used ? a1_ref : 0U, iter.GetNext(&type_id));
+      EXPECT_EQ(file_length >= a2_used ? a2_ref : 0U, iter.GetNext(&type_id));
+      EXPECT_EQ(0U, iter.GetNext(&type_id));
+
+      // Ensure that short files are detected as corrupt and full files are not.
+      EXPECT_EQ(file_length < a2_used, allocator.IsCorrupt());
+    }
+
+    // Ensure that file length was not adjusted.
+    int64_t actual_length;
+    ASSERT_TRUE(GetFileSize(file_path, &actual_length));
+    EXPECT_EQ(file_length, static_cast<size_t>(actual_length));
+  }
+}
+
 #endif  // !defined(OS_NACL)
 
 }  // namespace base

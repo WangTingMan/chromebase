@@ -35,7 +35,7 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
   // live longer than the created sparse histogram.
   static std::unique_ptr<HistogramBase> PersistentCreate(
       PersistentHistogramAllocator* allocator,
-      const std::string& name,
+      const char* name,
       HistogramSamples::Metadata* meta,
       HistogramSamples::Metadata* logged_meta);
 
@@ -59,14 +59,14 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
 
  protected:
   // HistogramBase implementation:
-  bool SerializeInfoImpl(base::Pickle* pickle) const override;
+  void SerializeInfoImpl(base::Pickle* pickle) const override;
 
  private:
   // Clients should always use FactoryGet to create SparseHistogram.
-  explicit SparseHistogram(const std::string& name);
+  explicit SparseHistogram(const char* name);
 
   SparseHistogram(PersistentHistogramAllocator* allocator,
-                  const std::string& name,
+                  const char* name,
                   HistogramSamples::Metadata* meta,
                   HistogramSamples::Metadata* logged_meta);
 
@@ -97,7 +97,7 @@ class BASE_EXPORT SparseHistogram : public HistogramBase {
   // Flag to indicate if PrepareFinalDelta has been previously called.
   mutable bool final_delta_created_ = false;
 
-  std::unique_ptr<HistogramSamples> samples_;
+  std::unique_ptr<HistogramSamples> unlogged_samples_;
   std::unique_ptr<HistogramSamples> logged_samples_;
 
   DISALLOW_COPY_AND_ASSIGN(SparseHistogram);

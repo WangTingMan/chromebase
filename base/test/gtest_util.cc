@@ -16,8 +16,7 @@
 
 namespace base {
 
-TestIdentifier::TestIdentifier() {
-}
+TestIdentifier::TestIdentifier() = default;
 
 TestIdentifier::TestIdentifier(const TestIdentifier& other) = default;
 
@@ -85,7 +84,7 @@ bool ReadTestNamesFromFile(const FilePath& path,
   std::vector<base::TestIdentifier> result;
   for (base::ListValue::iterator i = tests->begin(); i != tests->end(); ++i) {
     base::DictionaryValue* test = nullptr;
-    if (!(*i)->GetAsDictionary(&test))
+    if (!i->GetAsDictionary(&test))
       return false;
 
     TestIdentifier test_data;

@@ -14,6 +14,7 @@
 #include <limits>
 #include <memory>
 
+#include "base/allocator/buildflags.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/memory/free_deleter.h"
@@ -44,29 +45,13 @@ NOINLINE Type HideValueFromCompiler(volatile Type value) {
   return value;
 }
 
-// Tcmalloc and Windows allocator shim support setting malloc limits.
+// TCmalloc, currently supported only by Linux/CrOS, supports malloc limits.
 // - NO_TCMALLOC (should be defined if compiled with use_allocator!="tcmalloc")
-// - ADDRESS_SANITIZER and SYZYASAN because they have their own memory allocator
-// - IOS does not use tcmalloc
-// - OS_MACOSX does not use tcmalloc
-// - Windows allocator shim defines ALLOCATOR_SHIM
-#if (!defined(NO_TCMALLOC) || defined(ALLOCATOR_SHIM)) &&                     \
-    !defined(ADDRESS_SANITIZER) && !defined(OS_IOS) && !defined(OS_MACOSX) && \
-    !defined(SYZYASAN)
+// - ADDRESS_SANITIZER it has its own memory allocator
+#if defined(OS_LINUX) && !defined(NO_TCMALLOC) && !defined(ADDRESS_SANITIZER)
 #define MALLOC_OVERFLOW_TEST(function) function
 #else
 #define MALLOC_OVERFLOW_TEST(function) DISABLED_##function
-#endif
-
-#if defined(OS_LINUX) && defined(__x86_64__)
-// Detect runtime TCMalloc bypasses.
-bool IsTcMallocBypassed() {
-  // This should detect a TCMalloc bypass from Valgrind.
-  char* g_slice = getenv("G_SLICE");
-  if (g_slice && !strcmp(g_slice, "always-malloc"))
-    return true;
-  return false;
-}
 #endif
 
 // There are platforms where these tests are known to fail. We would like to
@@ -87,7 +72,7 @@ void OverflowTestsSoftExpectTrue(bool overflow_detected) {
   }
 }
 
-#if defined(OS_IOS) || defined(ADDRESS_SANITIZER) || \
+#if defined(OS_IOS) || defined(OS_FUCHSIA) || defined(ADDRESS_SANITIZER) || \
     defined(THREAD_SANITIZER) || defined(MEMORY_SANITIZER)
 #define MAYBE_NewOverflow DISABLED_NewOverflow
 #else
@@ -95,6 +80,8 @@ void OverflowTestsSoftExpectTrue(bool overflow_detected) {
 #endif
 // Test array[TooBig][X] and array[X][TooBig] allocations for int overflows.
 // IOS doesn't honor nothrow, so disable the test there.
+// TODO(https://crbug.com/828229): Fuchsia SDK exports an incorrect new[] that
+// gets picked up in Debug/component builds, breaking this test.
 // Disabled under XSan because asan aborts when new returns nullptr,
 // https://bugs.chromium.org/p/chromium/issues/detail?id=690271#c15
 TEST(SecurityTest, MAYBE_NewOverflow) {
@@ -137,8 +124,6 @@ bool ArePointersToSameArea(void* ptr1, void* ptr2, size_t size) {
 
 // Check if TCMalloc uses an underlying random memory allocator.
 TEST(SecurityTest, MALLOC_OVERFLOW_TEST(RandomMemoryAllocations)) {
-  if (IsTcMallocBypassed())
-    return;
   size_t kPageSize = 4096;  // We support x86_64 only.
   // Check that malloc() returns an address that is neither the kernel's
   // un-hinted mmap area, nor the current brk() area. The first malloc() may
@@ -146,20 +131,20 @@ TEST(SecurityTest, MALLOC_OVERFLOW_TEST(RandomMemoryAllocations)) {
   // that it has allocated early on, before starting the sophisticated
   // allocators.
   void* default_mmap_heap_address =
-      mmap(0, kPageSize, PROT_READ|PROT_WRITE,
-           MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+      mmap(nullptr, kPageSize, PROT_READ | PROT_WRITE,
+           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   ASSERT_NE(default_mmap_heap_address,
             static_cast<void*>(MAP_FAILED));
   ASSERT_EQ(munmap(default_mmap_heap_address, kPageSize), 0);
   void* brk_heap_address = sbrk(0);
   ASSERT_NE(brk_heap_address, reinterpret_cast<void*>(-1));
-  ASSERT_TRUE(brk_heap_address != NULL);
+  ASSERT_TRUE(brk_heap_address != nullptr);
   // 1 MB should get us past what TCMalloc pre-allocated before initializing
   // the sophisticated allocators.
   size_t kAllocSize = 1<<20;
   std::unique_ptr<char, base::FreeDeleter> ptr(
       static_cast<char*>(malloc(kAllocSize)));
-  ASSERT_TRUE(ptr != NULL);
+  ASSERT_TRUE(ptr != nullptr);
   // If two pointers are separated by less than 512MB, they are considered
   // to be in the same area.
   // Our random pointer could be anywhere within 0x3fffffffffff (46bits),

@@ -10,6 +10,7 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "mojo/public/c/system/trap.h"
 #include "mojo/public/c/system/types.h"
 #include "mojo/public/cpp/system/handle.h"
 #include "mojo/public/cpp/system/system_export.h"
@@ -20,7 +21,7 @@ class WaitableEvent;
 
 namespace mojo {
 
-// WaitSet provides an efficient means of blocking a thread on any number of
+// WaitSet provides an efficient means of blocking a sequence on any number of
 // events and Mojo handle state changes.
 //
 // Unlike WaitMany(), which incurs some extra setup cost for every call, a
@@ -98,7 +99,7 @@ class MOJO_CPP_SYSTEM_EXPORT WaitSet {
   //   |MOJO_RESULT_FAILED_PRECONDITION| all of the signals for the handle have
   //       become permanently unsatisfiable.
   //   |MOJO_RESULT_CANCELLED| if the handle has been closed from another
-  //       thread. NOTE: It is important to recognize that this means the
+  //       sequence. NOTE: It is important to recognize that this means the
   //       corresponding value in |ready_handles| is either invalid, or valid
   //       but referring to a different handle (i.e. has already been reused) by
   //       the time Wait() returns. The handle in question is automatically

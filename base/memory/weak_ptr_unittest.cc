@@ -32,7 +32,8 @@ class OffThreadObjectCreator {
       Thread creator_thread("creator_thread");
       creator_thread.Start();
       creator_thread.task_runner()->PostTask(
-          FROM_HERE, base::Bind(OffThreadObjectCreator::CreateObject, &result));
+          FROM_HERE,
+          base::BindOnce(OffThreadObjectCreator::CreateObject, &result));
     }
     DCHECK(result);  // We synchronized on thread destruction above.
     return result;
@@ -50,9 +51,29 @@ struct Derived : public Base {};
 
 struct TargetBase {};
 struct Target : public TargetBase, public SupportsWeakPtr<Target> {
-  virtual ~Target() {}
+  virtual ~Target() = default;
 };
+
 struct DerivedTarget : public Target {};
+
+// A class inheriting from Target and defining a nested type called 'Base'.
+// To guard against strange compilation errors.
+struct DerivedTargetWithNestedBase : public Target {
+  using Base = void;
+};
+
+// A struct with a virtual destructor.
+struct VirtualDestructor {
+  virtual ~VirtualDestructor() = default;
+};
+
+// A class inheriting from Target where Target is not the first base, and where
+// the first base has a virtual method table. This creates a structure where the
+// Target base is not positioned at the beginning of
+// DerivedTargetMultipleInheritance.
+struct DerivedTargetMultipleInheritance : public VirtualDestructor,
+                                          public Target {};
+
 struct Arrow {
   WeakPtr<Target> target;
 };
@@ -73,8 +94,8 @@ class BackgroundThread : public Thread {
     WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
-        FROM_HERE, base::Bind(&BackgroundThread::DoCreateArrowFromTarget, arrow,
-                              target, &completion));
+        FROM_HERE, base::BindOnce(&BackgroundThread::DoCreateArrowFromTarget,
+                                  arrow, target, &completion));
     completion.Wait();
   }
 
@@ -82,8 +103,8 @@ class BackgroundThread : public Thread {
     WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
-        FROM_HERE, base::Bind(&BackgroundThread::DoCreateArrowFromArrow, arrow,
-                              other, &completion));
+        FROM_HERE, base::BindOnce(&BackgroundThread::DoCreateArrowFromArrow,
+                                  arrow, other, &completion));
     completion.Wait();
   }
 
@@ -92,7 +113,7 @@ class BackgroundThread : public Thread {
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE,
-        base::Bind(&BackgroundThread::DoDeleteTarget, object, &completion));
+        base::BindOnce(&BackgroundThread::DoDeleteTarget, object, &completion));
     completion.Wait();
   }
 
@@ -100,8 +121,8 @@ class BackgroundThread : public Thread {
     WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
-        FROM_HERE, base::Bind(&BackgroundThread::DoCopyAndAssignArrow, object,
-                              &completion));
+        FROM_HERE, base::BindOnce(&BackgroundThread::DoCopyAndAssignArrow,
+                                  object, &completion));
     completion.Wait();
   }
 
@@ -109,8 +130,8 @@ class BackgroundThread : public Thread {
     WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
-        FROM_HERE, base::Bind(&BackgroundThread::DoCopyAndAssignArrowBase,
-                              object, &completion));
+        FROM_HERE, base::BindOnce(&BackgroundThread::DoCopyAndAssignArrowBase,
+                                  object, &completion));
     completion.Wait();
   }
 
@@ -119,7 +140,7 @@ class BackgroundThread : public Thread {
                              WaitableEvent::InitialState::NOT_SIGNALED);
     task_runner()->PostTask(
         FROM_HERE,
-        base::Bind(&BackgroundThread::DoDeleteArrow, object, &completion));
+        base::BindOnce(&BackgroundThread::DoDeleteArrow, object, &completion));
     completion.Wait();
   }
 
@@ -127,8 +148,9 @@ class BackgroundThread : public Thread {
     WaitableEvent completion(WaitableEvent::ResetPolicy::MANUAL,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     Target* result = nullptr;
-    task_runner()->PostTask(FROM_HERE, base::Bind(&BackgroundThread::DoDeRef,
-                                                  arrow, &result, &completion));
+    task_runner()->PostTask(
+        FROM_HERE, base::BindOnce(&BackgroundThread::DoDeRef, arrow, &result,
+                                  &completion));
     completion.Wait();
     return result;
   }
@@ -286,6 +308,22 @@ TEST(WeakPtrTest, DerivedTarget) {
   DerivedTarget target;
   WeakPtr<DerivedTarget> ptr = AsWeakPtr(&target);
   EXPECT_EQ(&target, ptr.get());
+}
+
+TEST(WeakPtrTest, DerivedTargetWithNestedBase) {
+  DerivedTargetWithNestedBase target;
+  WeakPtr<DerivedTargetWithNestedBase> ptr = AsWeakPtr(&target);
+  EXPECT_EQ(&target, ptr.get());
+}
+
+TEST(WeakPtrTest, DerivedTargetMultipleInheritance) {
+  DerivedTargetMultipleInheritance d;
+  Target& b = d;
+  EXPECT_NE(static_cast<void*>(&d), static_cast<void*>(&b));
+  const WeakPtr<Target> pb = AsWeakPtr(&b);
+  EXPECT_EQ(pb.get(), &b);
+  const WeakPtr<DerivedTargetMultipleInheritance> pd = AsWeakPtr(&d);
+  EXPECT_EQ(pd.get(), &d);
 }
 
 TEST(WeakPtrFactoryTest, BooleanTesting) {

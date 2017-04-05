@@ -2,27 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-define("mojo/public/js/lib/interface_endpoint_client", [
-  "console",
-  "mojo/public/js/codec",
-  "mojo/public/js/lib/control_message_handler",
-  "mojo/public/js/lib/control_message_proxy",
-  "mojo/public/js/lib/interface_endpoint_handle",
-  "mojo/public/js/validator",
-  "timer",
-], function(console,
-            codec,
-            controlMessageHandler,
-            controlMessageProxy,
-            interfaceEndpointHandle,
-            validator,
-            timer) {
-
-  var ControlMessageHandler = controlMessageHandler.ControlMessageHandler;
-  var ControlMessageProxy = controlMessageProxy.ControlMessageProxy;
-  var MessageReader = codec.MessageReader;
-  var Validator = validator.Validator;
-  var InterfaceEndpointHandle = interfaceEndpointHandle.InterfaceEndpointHandle;
+(function() {
+  var internal = mojo.internal;
 
   function InterfaceEndpointClient(interfaceEndpointHandle, receiver,
       interfaceVersion) {
@@ -32,10 +13,10 @@ define("mojo/public/js/lib/interface_endpoint_client", [
     this.incomingReceiver_ = receiver;
 
     if (interfaceVersion !== undefined) {
-      this.controlMessageHandler_ = new ControlMessageHandler(
+      this.controlMessageHandler_ = new internal.ControlMessageHandler(
           interfaceVersion);
     } else {
-      this.controlMessageProxy_ = new ControlMessageProxy(this);
+      this.controlMessageProxy_ = new internal.ControlMessageProxy(this);
     }
 
     this.nextRequestID_ = 0;
@@ -62,20 +43,18 @@ define("mojo/public/js/lib/interface_endpoint_client", [
 
   InterfaceEndpointClient.prototype.onAssociationEvent = function(
       associationEvent) {
-    if (associationEvent ===
-        InterfaceEndpointHandle.AssociationEvent.ASSOCIATED) {
+    if (associationEvent === internal.AssociationEvent.ASSOCIATED) {
       this.initControllerIfNecessary_();
     } else if (associationEvent ===
-        InterfaceEndpointHandle.AssociationEvent
-                               .PEER_CLOSED_BEFORE_ASSOCIATION) {
-      timer.createOneShot(0, this.notifyError.bind(this,
-          this.handle_.disconnectReason()));
+          internal.AssociationEvent.PEER_CLOSED_BEFORE_ASSOCIATION) {
+      setTimeout(this.notifyError.bind(this, this.handle_.disconnectReason()),
+                 0);
     }
   };
 
   InterfaceEndpointClient.prototype.passHandle = function() {
     if (!this.handle_.isValid()) {
-      return new InterfaceEndpointHandle();
+      return new internal.InterfaceEndpointHandle();
     }
 
     // Used to clear the previously set callback.
@@ -96,6 +75,11 @@ define("mojo/public/js/lib/interface_endpoint_client", [
   };
 
   InterfaceEndpointClient.prototype.accept = function(message) {
+    if (message.associatedEndpointHandles.length > 0) {
+      message.serializeAssociatedEndpointHandles(
+          this.handle_.groupController());
+    }
+
     if (this.encounteredError_) {
       return false;
     }
@@ -106,6 +90,11 @@ define("mojo/public/js/lib/interface_endpoint_client", [
 
   InterfaceEndpointClient.prototype.acceptAndExpectResponse = function(
       message) {
+    if (message.associatedEndpointHandles.length > 0) {
+      message.serializeAssociatedEndpointHandles(
+          this.handle_.groupController());
+    }
+
     if (this.encounteredError_) {
       return Promise.reject();
     }
@@ -144,10 +133,9 @@ define("mojo/public/js/lib/interface_endpoint_client", [
     this.connectionErrorHandler_ = handler;
   };
 
-  InterfaceEndpointClient.prototype.handleIncomingMessage_ = function(
-      message) {
-    var noError = validator.validationError.NONE;
-    var messageValidator = new Validator(message);
+  InterfaceEndpointClient.prototype.handleIncomingMessage = function(message,
+      messageValidator) {
+    var noError = internal.validationError.NONE;
     var err = noError;
     for (var i = 0; err === noError && i < this.payloadValidators_.length; ++i)
       err = this.payloadValidators_[i](messageValidator);
@@ -155,14 +143,14 @@ define("mojo/public/js/lib/interface_endpoint_client", [
     if (err == noError) {
       return this.handleValidIncomingMessage_(message);
     } else {
-      validator.reportValidationError(err);
+      internal.reportValidationError(err);
       return false;
     }
   };
 
   InterfaceEndpointClient.prototype.handleValidIncomingMessage_ = function(
       message) {
-    if (validator.isTestingMode()) {
+    if (internal.isTestingMode()) {
       return true;
     }
 
@@ -173,14 +161,14 @@ define("mojo/public/js/lib/interface_endpoint_client", [
     var ok = false;
 
     if (message.expectsResponse()) {
-      if (controlMessageHandler.isControlMessage(message) &&
+      if (internal.isInterfaceControlMessage(message) &&
           this.controlMessageHandler_) {
         ok = this.controlMessageHandler_.acceptWithResponder(message, this);
       } else if (this.incomingReceiver_) {
         ok = this.incomingReceiver_.acceptWithResponder(message, this);
       }
     } else if (message.isResponse()) {
-      var reader = new MessageReader(message);
+      var reader = new internal.MessageReader(message);
       var requestID = reader.requestID;
       var completer = this.completers_.get(requestID);
       if (completer) {
@@ -191,7 +179,7 @@ define("mojo/public/js/lib/interface_endpoint_client", [
         console.log("Unexpected response with request ID: " + requestID);
       }
     } else {
-      if (controlMessageHandler.isControlMessage(message) &&
+      if (internal.isInterfaceControlMessage(message) &&
           this.controlMessageHandler_) {
         ok = this.controlMessageHandler_.accept(message);
       } else if (this.incomingReceiver_) {
@@ -225,8 +213,9 @@ define("mojo/public/js/lib/interface_endpoint_client", [
     this.controlMessageProxy_.requireVersion(version);
   };
 
-  var exports = {};
-  exports.InterfaceEndpointClient = InterfaceEndpointClient;
+  InterfaceEndpointClient.prototype.getEncounteredError = function() {
+    return this.encounteredError_;
+  };
 
-  return exports;
-});
+  internal.InterfaceEndpointClient = InterfaceEndpointClient;
+})();

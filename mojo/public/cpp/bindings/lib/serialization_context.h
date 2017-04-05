@@ -8,67 +8,88 @@
 #include <stddef.h>
 
 #include <memory>
-#include <queue>
 #include <vector>
 
+#include "base/component_export.h"
+#include "base/containers/stack_container.h"
 #include "base/macros.h"
-#include "mojo/public/cpp/bindings/bindings_export.h"
 #include "mojo/public/cpp/bindings/lib/bindings_internal.h"
 #include "mojo/public/cpp/bindings/scoped_interface_endpoint_handle.h"
 #include "mojo/public/cpp/system/handle.h"
 
 namespace mojo {
+
+class Message;
+
 namespace internal {
 
-// A container for handles during serialization/deserialization.
-class MOJO_CPP_BINDINGS_EXPORT SerializedHandleVector {
+// Context information for serialization/deserialization routines.
+class COMPONENT_EXPORT(MOJO_CPP_BINDINGS_BASE) SerializationContext {
  public:
-  SerializedHandleVector();
-  ~SerializedHandleVector();
+  SerializationContext();
+  ~SerializationContext();
 
-  size_t size() const { return handles_.size(); }
+  // Adds a handle to the handle list and outputs its serialized form in
+  // |*out_data|.
+  void AddHandle(mojo::ScopedHandle handle, Handle_Data* out_data);
 
-  // Adds a handle to the handle list and returns its index for encoding.
-  Handle_Data AddHandle(mojo::Handle handle);
+  // Adds an interface info to the handle list and outputs its serialized form
+  // in |*out_data|.
+  void AddInterfaceInfo(mojo::ScopedMessagePipeHandle handle,
+                        uint32_t version,
+                        Interface_Data* out_data);
+
+  // Adds an associated interface endpoint (for e.g. an
+  // AssociatedInterfaceRequest) to this context and outputs its serialized form
+  // in |*out_data|.
+  void AddAssociatedEndpoint(ScopedInterfaceEndpointHandle handle,
+                             AssociatedEndpointHandle_Data* out_data);
+
+  // Adds an associated interface info to associated endpoint handle and version
+  // data lists and outputs its serialized form in |*out_data|.
+  void AddAssociatedInterfaceInfo(ScopedInterfaceEndpointHandle handle,
+                                  uint32_t version,
+                                  AssociatedInterface_Data* out_data);
+
+  const std::vector<mojo::ScopedHandle>* handles() { return &handles_; }
+  std::vector<mojo::ScopedHandle>* mutable_handles() { return &handles_; }
+
+  const std::vector<ScopedInterfaceEndpointHandle>*
+  associated_endpoint_handles() const {
+    return &associated_endpoint_handles_;
+  }
+  std::vector<ScopedInterfaceEndpointHandle>*
+  mutable_associated_endpoint_handles() {
+    return &associated_endpoint_handles_;
+  }
+
+  // Takes handles from a received Message object and assumes ownership of them.
+  // Individual handles can be extracted using Take* methods below.
+  void TakeHandlesFromMessage(Message* message);
 
   // Takes a handle from the list of serialized handle data.
-  mojo::Handle TakeHandle(const Handle_Data& encoded_handle);
+  mojo::ScopedHandle TakeHandle(const Handle_Data& encoded_handle);
 
   // Takes a handle from the list of serialized handle data and returns it in
   // |*out_handle| as a specific scoped handle type.
   template <typename T>
   ScopedHandleBase<T> TakeHandleAs(const Handle_Data& encoded_handle) {
-    return MakeScopedHandle(T(TakeHandle(encoded_handle).value()));
+    return ScopedHandleBase<T>::From(TakeHandle(encoded_handle));
   }
 
-  // Swaps all owned handles out with another Handle vector.
-  void Swap(std::vector<mojo::Handle>* other);
+  mojo::ScopedInterfaceEndpointHandle TakeAssociatedEndpointHandle(
+      const AssociatedEndpointHandle_Data& encoded_handle);
 
  private:
-  // Handles are owned by this object.
-  std::vector<mojo::Handle> handles_;
-
-  DISALLOW_COPY_AND_ASSIGN(SerializedHandleVector);
-};
-
-// Context information for serialization/deserialization routines.
-struct MOJO_CPP_BINDINGS_EXPORT SerializationContext {
-  SerializationContext();
-
-  ~SerializationContext();
-
-  // Opaque context pointers returned by StringTraits::SetUpContext().
-  std::unique_ptr<std::queue<void*>> custom_contexts;
-
-  // Stashes handles encoded in a message by index.
-  SerializedHandleVector handles;
-
-  // The number of ScopedInterfaceEndpointHandles that need to be serialized.
-  // It is calculated by PrepareToSerialize().
-  uint32_t associated_endpoint_count = 0;
+  // Handles owned by this object. Used during serialization to hold onto
+  // handles accumulated during pre-serialization, and used during
+  // deserialization to hold onto handles extracted from a message.
+  std::vector<mojo::ScopedHandle> handles_;
 
   // Stashes ScopedInterfaceEndpointHandles encoded in a message by index.
-  std::vector<ScopedInterfaceEndpointHandle> associated_endpoint_handles;
+  std::vector<ScopedInterfaceEndpointHandle> associated_endpoint_handles_;
+
+  DISALLOW_COPY_AND_ASSIGN(SerializationContext);
 };
 
 }  // namespace internal

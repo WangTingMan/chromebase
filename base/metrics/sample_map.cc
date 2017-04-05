@@ -6,6 +6,7 @@
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/stl_util.h"
 
 namespace base {
@@ -30,7 +31,7 @@ class SampleMapIterator : public SampleCountIterator {
   bool Done() const override;
   void Next() override;
   void Get(HistogramBase::Sample* min,
-           HistogramBase::Sample* max,
+           int64_t* max,
            HistogramBase::Count* count) const override;
 
  private:
@@ -46,7 +47,7 @@ SampleMapIterator::SampleMapIterator(const SampleToCountMap& sample_counts)
   SkipEmptyBuckets();
 }
 
-SampleMapIterator::~SampleMapIterator() {}
+SampleMapIterator::~SampleMapIterator() = default;
 
 bool SampleMapIterator::Done() const {
   return iter_ == end_;
@@ -58,12 +59,12 @@ void SampleMapIterator::Next() {
   SkipEmptyBuckets();
 }
 
-void SampleMapIterator::Get(Sample* min, Sample* max, Count* count) const {
+void SampleMapIterator::Get(Sample* min, int64_t* max, Count* count) const {
   DCHECK(!Done());
   if (min)
     *min = iter_->first;
   if (max)
-    *max = iter_->first + 1;
+    *max = strict_cast<int64_t>(iter_->first) + 1;
   if (count)
     *count = iter_->second;
 }
@@ -78,14 +79,15 @@ void SampleMapIterator::SkipEmptyBuckets() {
 
 SampleMap::SampleMap() : SampleMap(0) {}
 
-SampleMap::SampleMap(uint64_t id) : HistogramSamples(id) {}
+SampleMap::SampleMap(uint64_t id) : HistogramSamples(id, new LocalMetadata()) {}
 
-SampleMap::~SampleMap() {}
+SampleMap::~SampleMap() {
+  delete static_cast<LocalMetadata*>(meta());
+}
 
 void SampleMap::Accumulate(Sample value, Count count) {
   sample_counts_[value] += count;
-  IncreaseSum(static_cast<int64_t>(count) * value);
-  IncreaseRedundantCount(count);
+  IncreaseSumAndCount(strict_cast<int64_t>(count) * value, count);
 }
 
 Count SampleMap::GetCount(Sample value) const {
@@ -109,11 +111,11 @@ std::unique_ptr<SampleCountIterator> SampleMap::Iterator() const {
 
 bool SampleMap::AddSubtractImpl(SampleCountIterator* iter, Operator op) {
   Sample min;
-  Sample max;
+  int64_t max;
   Count count;
   for (; !iter->Done(); iter->Next()) {
     iter->Get(&min, &max, &count);
-    if (min + 1 != max)
+    if (strict_cast<int64_t>(min) + 1 != max)
       return false;  // SparseHistogram only supports bucket with size 1.
 
     sample_counts_[min] += (op == HistogramSamples::ADD) ? count : -count;

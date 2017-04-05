@@ -10,6 +10,7 @@
 #include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/stl_util.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
@@ -23,7 +24,7 @@
 
 namespace base {
 
-CommandLine* CommandLine::current_process_commandline_ = NULL;
+CommandLine* CommandLine::current_process_commandline_ = nullptr;
 
 namespace {
 
@@ -37,7 +38,7 @@ const CommandLine::CharType kSwitchValueSeparator[] = FILE_PATH_LITERAL("=");
 // value by changing the value of switch_prefix_count to be one less than
 // the array size.
 const CommandLine::CharType* const kSwitchPrefixes[] = {L"--", L"-", L"/"};
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 // Unixes don't use slash as a switch.
 const CommandLine::CharType* const kSwitchPrefixes[] = {"--", "-"};
 #endif
@@ -78,7 +79,7 @@ void AppendSwitchesAndArguments(CommandLine* command_line,
     CommandLine::StringType arg = argv[i];
 #if defined(OS_WIN)
     TrimWhitespace(arg, TRIM_ALL, &arg);
-#else
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
     TrimWhitespaceASCII(arg, TRIM_ALL, &arg);
 #endif
 
@@ -89,8 +90,10 @@ void AppendSwitchesAndArguments(CommandLine* command_line,
 #if defined(OS_WIN)
       command_line->AppendSwitchNative(UTF16ToASCII(switch_string),
                                        switch_value);
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
       command_line->AppendSwitchNative(switch_string, switch_value);
+#else
+#error Unsupported platform
 #endif
     } else {
       command_line->AppendArgNative(arg);
@@ -173,23 +176,11 @@ CommandLine::CommandLine(const StringVector& argv)
   InitFromArgv(argv);
 }
 
-CommandLine::CommandLine(const CommandLine& other)
-    : argv_(other.argv_),
-      switches_(other.switches_),
-      begin_args_(other.begin_args_) {
-  ResetStringPieces();
-}
+CommandLine::CommandLine(const CommandLine& other) = default;
 
-CommandLine& CommandLine::operator=(const CommandLine& other) {
-  argv_ = other.argv_;
-  switches_ = other.switches_;
-  begin_args_ = other.begin_args_;
-  ResetStringPieces();
-  return *this;
-}
+CommandLine& CommandLine::operator=(const CommandLine& other) = default;
 
-CommandLine::~CommandLine() {
-}
+CommandLine::~CommandLine() = default;
 
 #if defined(OS_WIN)
 // static
@@ -223,8 +214,10 @@ bool CommandLine::Init(int argc, const char* const* argv) {
   current_process_commandline_ = new CommandLine(NO_PROGRAM);
 #if defined(OS_WIN)
   current_process_commandline_->ParseFromString(::GetCommandLineW());
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   current_process_commandline_->InitFromArgv(argc, argv);
+#else
+#error Unsupported platform
 #endif
 
   return true;
@@ -234,7 +227,7 @@ bool CommandLine::Init(int argc, const char* const* argv) {
 void CommandLine::Reset() {
   DCHECK(current_process_commandline_);
   delete current_process_commandline_;
-  current_process_commandline_ = NULL;
+  current_process_commandline_ = nullptr;
 }
 
 // static
@@ -268,7 +261,6 @@ void CommandLine::InitFromArgv(int argc,
 void CommandLine::InitFromArgv(const StringVector& argv) {
   argv_ = StringVector(1);
   switches_.clear();
-  switches_by_stringpiece_.clear();
   begin_args_ = 1;
   SetProgram(argv.empty() ? FilePath() : FilePath(argv[0]));
   AppendSwitchesAndArguments(this, argv);
@@ -281,15 +273,16 @@ FilePath CommandLine::GetProgram() const {
 void CommandLine::SetProgram(const FilePath& program) {
 #if defined(OS_WIN)
   TrimWhitespace(program.value(), TRIM_ALL, &argv_[0]);
-#else
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   TrimWhitespaceASCII(program.value(), TRIM_ALL, &argv_[0]);
+#else
+#error Unsupported platform
 #endif
 }
 
 bool CommandLine::HasSwitch(const base::StringPiece& switch_string) const {
   DCHECK_EQ(ToLowerASCII(switch_string), switch_string);
-  return switches_by_stringpiece_.find(switch_string) !=
-         switches_by_stringpiece_.end();
+  return ContainsKey(switches_, switch_string);
 }
 
 bool CommandLine::HasSwitch(const char switch_constant[]) const {
@@ -305,7 +298,7 @@ std::string CommandLine::GetSwitchValueASCII(
   }
 #if defined(OS_WIN)
   return UTF16ToASCII(value);
-#else
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   return value;
 #endif
 }
@@ -318,9 +311,8 @@ FilePath CommandLine::GetSwitchValuePath(
 CommandLine::StringType CommandLine::GetSwitchValueNative(
     const base::StringPiece& switch_string) const {
   DCHECK_EQ(ToLowerASCII(switch_string), switch_string);
-  auto result = switches_by_stringpiece_.find(switch_string);
-  return result == switches_by_stringpiece_.end() ? StringType()
-                                                  : *(result->second);
+  auto result = switches_.find(switch_string);
+  return result == switches_.end() ? StringType() : result->second;
 }
 
 void CommandLine::AppendSwitch(const std::string& switch_string) {
@@ -337,7 +329,7 @@ void CommandLine::AppendSwitchNative(const std::string& switch_string,
 #if defined(OS_WIN)
   const std::string switch_key = ToLowerASCII(switch_string);
   StringType combined_switch_string(ASCIIToUTF16(switch_key));
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   const std::string& switch_key = switch_string;
   StringType combined_switch_string(switch_key);
 #endif
@@ -346,7 +338,6 @@ void CommandLine::AppendSwitchNative(const std::string& switch_string,
       switches_.insert(make_pair(switch_key.substr(prefix_length), value));
   if (!insertion.second)
     insertion.first->second = value;
-  switches_by_stringpiece_[insertion.first->first] = &(insertion.first->second);
   // Preserve existing switch prefixes in |argv_|; only append one if necessary.
   if (prefix_length == 0)
     combined_switch_string = kSwitchPrefixes[0] + combined_switch_string;
@@ -360,8 +351,10 @@ void CommandLine::AppendSwitchASCII(const std::string& switch_string,
                                     const std::string& value_string) {
 #if defined(OS_WIN)
   AppendSwitchNative(switch_string, ASCIIToUTF16(value_string));
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   AppendSwitchNative(switch_string, value_string);
+#else
+#error Unsupported platform
 #endif
 }
 
@@ -389,8 +382,10 @@ void CommandLine::AppendArg(const std::string& value) {
 #if defined(OS_WIN)
   DCHECK(IsStringUTF8(value));
   AppendArgNative(UTF8ToWide(value));
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   AppendArgNative(value);
+#else
+#error Unsupported platform
 #endif
 }
 
@@ -487,12 +482,6 @@ CommandLine::StringType CommandLine::GetArgumentsStringInternal(
     }
   }
   return params;
-}
-
-void CommandLine::ResetStringPieces() {
-  switches_by_stringpiece_.clear();
-  for (const auto& entry : switches_)
-    switches_by_stringpiece_[entry.first] = &(entry.second);
 }
 
 }  // namespace base

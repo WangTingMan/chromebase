@@ -1,5 +1,5 @@
-# ![Mojo Graphic](https://goo.gl/6CdlbH) Mojo Java Bindings API
-This document is a subset of the [Mojo documentation](/mojo).
+# Mojo Java Bindings API
+This document is a subset of the [Mojo documentation](/mojo/README.md).
 
 [TOC]
 

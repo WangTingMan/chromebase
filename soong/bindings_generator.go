@@ -85,8 +85,30 @@ func (m *mojomPickles) DepsMutator(ctx android.BottomUpMutatorContext) {
 
 func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	m.outDir = android.PathForModuleGen(ctx, "")
-	// TODO(lhchavez): Actually make this generate files once libchrome
-	// roll progresses.
+
+	packagePath := android.PathForModuleSrc(ctx, "")
+
+	for _, in := range ctx.ExpandSources(m.properties.Srcs, nil) {
+		if !strings.HasSuffix(in.Rel(), ".mojom") {
+			ctx.PropertyErrorf("srcs", "Source is not a .mojom file: %s", in.Rel())
+			continue
+		}
+		relStem := strings.TrimSuffix(in.Rel(), ".mojom")
+
+		out := android.PathForModuleGen(ctx, relStem+".p")
+		m.generatedSrcs = append(m.generatedSrcs, out)
+
+		ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+			Rule:   generateMojomPicklesRule,
+			Input:  in,
+			Output: out,
+			Args: map[string]string{
+				"package": packagePath.Rel(),
+				"outDir":  m.outDir.String(),
+				"flags":   fmt.Sprintf("-I=%s:%s", packagePath, packagePath),
+			},
+		})
+	}
 }
 
 func (m *mojomPickles) GeneratedHeaderDirs() android.Paths {

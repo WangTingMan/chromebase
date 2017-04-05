@@ -1,0 +1,28 @@
+From c7ce19d52a7e6f3e69e66107650992765da559b7 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Mon, 06 Aug 2018 03:06:46 +0000
+Subject: [PATCH] Make LAZY_INSTANCE_INITIALIZER -Wmissing-field-initializers friendly
+
+If libbase is compiled with -Wmissing-field-initializers this is causing
+warning to be generated.
+
+Change-Id: I446160d4c94bb59dd23f2f151004a8bfaeae832d
+Reviewed-on: https://chromium-review.googlesource.com/1161927
+Reviewed-by: Gabriel Charette <gab@chromium.org>
+Commit-Queue: Luis Hector Chavez <lhchavez@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#580794}
+---
+
+diff --git a/base/lazy_instance.h b/base/lazy_instance.h
+index 36d3158..4449373 100644
+--- a/base/lazy_instance.h
++++ b/base/lazy_instance.h
+@@ -55,7 +55,7 @@
+ 
+ // LazyInstance uses its own struct initializer-list style static
+ // initialization, which does not require a constructor.
+-#define LAZY_INSTANCE_INITIALIZER {0}
++#define LAZY_INSTANCE_INITIALIZER {}
+ 
+ namespace base {
+ 

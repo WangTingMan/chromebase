@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include "base/logging.h"
-#include "base/metrics/histogram_macros.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
@@ -30,21 +30,22 @@ static_assert(File::FROM_BEGIN == SEEK_SET && File::FROM_CURRENT == SEEK_CUR &&
 
 namespace {
 
-#if defined(OS_BSD) || defined(OS_MACOSX) || defined(OS_NACL)
+#if defined(OS_BSD) || defined(OS_MACOSX) || defined(OS_NACL) || \
+  defined(OS_FUCHSIA) || (defined(OS_ANDROID) && __ANDROID_API__ < 21)
 int CallFstat(int fd, stat_wrapper_t *sb) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   return fstat(fd, sb);
 }
 #else
 int CallFstat(int fd, stat_wrapper_t *sb) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   return fstat64(fd, sb);
 }
 #endif
 
 // NaCl doesn't provide the following system calls, so either simulate them or
 // wrap them in order to minimize the number of #ifdef's in this file.
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_AIX)
 bool IsOpenAppend(PlatformFile file) {
   return (fcntl(file, F_GETFL) & O_APPEND) != 0;
 }
@@ -70,6 +71,7 @@ int CallFutimes(PlatformFile file, const struct timeval times[2]) {
 #endif
 }
 
+#if !defined(OS_FUCHSIA)
 File::Error CallFcntlFlock(PlatformFile file, bool do_lock) {
   struct flock lock;
   lock.l_type = do_lock ? F_WRLCK : F_UNLCK;
@@ -77,10 +79,12 @@ File::Error CallFcntlFlock(PlatformFile file, bool do_lock) {
   lock.l_start = 0;
   lock.l_len = 0;  // Lock entire file.
   if (HANDLE_EINTR(fcntl(file, F_SETLK, &lock)) == -1)
-    return File::OSErrorToFileError(errno);
+    return File::GetLastFileError();
   return File::FILE_OK;
 }
-#else  // defined(OS_NACL)
+#endif
+
+#else   // defined(OS_NACL) && !defined(OS_AIX)
 
 bool IsOpenAppend(PlatformFile file) {
   // NaCl doesn't implement fcntl. Since NaCl's write conforms to the POSIX
@@ -175,12 +179,12 @@ void File::Close() {
     return;
 
   SCOPED_FILE_TRACE("Close");
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   file_.reset();
 }
 
 int64_t File::Seek(Whence whence, int64_t offset) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
 
   SCOPED_FILE_TRACE_WITH_SIZE("Seek", offset);
@@ -199,7 +203,7 @@ int64_t File::Seek(Whence whence, int64_t offset) {
 }
 
 int File::Read(int64_t offset, char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   if (size < 0)
     return -1;
@@ -221,7 +225,7 @@ int File::Read(int64_t offset, char* data, int size) {
 }
 
 int File::ReadAtCurrentPos(char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   if (size < 0)
     return -1;
@@ -242,14 +246,14 @@ int File::ReadAtCurrentPos(char* data, int size) {
 }
 
 int File::ReadNoBestEffort(int64_t offset, char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   SCOPED_FILE_TRACE_WITH_SIZE("ReadNoBestEffort", size);
   return HANDLE_EINTR(pread(file_.get(), data, size, offset));
 }
 
 int File::ReadAtCurrentPosNoBestEffort(char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   if (size < 0)
     return -1;
@@ -259,7 +263,7 @@ int File::ReadAtCurrentPosNoBestEffort(char* data, int size) {
 }
 
 int File::Write(int64_t offset, const char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
 
   if (IsOpenAppend(file_.get()))
     return WriteAtCurrentPos(data, size);
@@ -273,8 +277,17 @@ int File::Write(int64_t offset, const char* data, int size) {
   int bytes_written = 0;
   int rv;
   do {
+#if _FILE_OFFSET_BITS != 64 || defined(__BIONIC__)
+    // In case __USE_FILE_OFFSET64 is not used, we need to call pwrite64()
+    // instead of pwrite().
+    static_assert(sizeof(int64_t) == sizeof(off64_t),
+                  "off64_t must be 64 bits");
+    rv = HANDLE_EINTR(pwrite64(file_.get(), data + bytes_written,
+                               size - bytes_written, offset + bytes_written));
+#else
     rv = HANDLE_EINTR(pwrite(file_.get(), data + bytes_written,
                              size - bytes_written, offset + bytes_written));
+#endif
     if (rv <= 0)
       break;
 
@@ -285,7 +298,7 @@ int File::Write(int64_t offset, const char* data, int size) {
 }
 
 int File::WriteAtCurrentPos(const char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   if (size < 0)
     return -1;
@@ -307,7 +320,7 @@ int File::WriteAtCurrentPos(const char* data, int size) {
 }
 
 int File::WriteAtCurrentPosNoBestEffort(const char* data, int size) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   if (size < 0)
     return -1;
@@ -329,7 +342,7 @@ int64_t File::GetLength() {
 }
 
 bool File::SetLength(int64_t length) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
 
   SCOPED_FILE_TRACE_WITH_SIZE("SetLength", length);
@@ -337,7 +350,7 @@ bool File::SetLength(int64_t length) {
 }
 
 bool File::SetTimes(Time last_access_time, Time last_modified_time) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
 
   SCOPED_FILE_TRACE("SetTimes");
@@ -362,6 +375,7 @@ bool File::GetInfo(Info* info) {
   return true;
 }
 
+#if !defined(OS_FUCHSIA)
 File::Error File::Lock() {
   SCOPED_FILE_TRACE("Lock");
   return CallFcntlFlock(file_.get(), true);
@@ -371,6 +385,7 @@ File::Error File::Unlock() {
   SCOPED_FILE_TRACE("Unlock");
   return CallFcntlFlock(file_.get(), false);
 }
+#endif
 
 File File::Duplicate() const {
   if (!IsValid())
@@ -378,14 +393,11 @@ File File::Duplicate() const {
 
   SCOPED_FILE_TRACE("Duplicate");
 
-  PlatformFile other_fd = dup(GetPlatformFile());
+  PlatformFile other_fd = HANDLE_EINTR(dup(GetPlatformFile()));
   if (other_fd == -1)
-    return File(OSErrorToFileError(errno));
+    return File(File::GetLastFileError());
 
-  File other(other_fd);
-  if (async())
-    other.async_ = true;
-  return other;
+  return File(other_fd, async());
 }
 
 // Static.
@@ -407,6 +419,7 @@ File::Error File::OSErrorToFileError(int saved_errno) {
       return FILE_ERROR_IO;
     case ENOENT:
       return FILE_ERROR_NOT_FOUND;
+    case ENFILE:  // fallthrough
     case EMFILE:
       return FILE_ERROR_TOO_MANY_OPENED;
     case ENOMEM:
@@ -417,9 +430,10 @@ File::Error File::OSErrorToFileError(int saved_errno) {
       return FILE_ERROR_NOT_A_DIRECTORY;
     default:
 #if !defined(OS_NACL)  // NaCl build has no metrics code.
-      UMA_HISTOGRAM_SPARSE_SLOWLY("PlatformFile.UnknownErrors.Posix",
-                                  saved_errno);
+      UmaHistogramSparse("PlatformFile.UnknownErrors.Posix", saved_errno);
 #endif
+      // This function should only be called for errors.
+      DCHECK_NE(0, saved_errno);
       return FILE_ERROR_FAILED;
   }
 }
@@ -428,7 +442,7 @@ File::Error File::OSErrorToFileError(int saved_errno) {
 #if !defined(OS_NACL)
 // TODO(erikkay): does it make sense to support FLAG_EXCLUSIVE_* here?
 void File::DoInitialize(const FilePath& path, uint32_t flags) {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(!IsValid());
 
   int open_flags = 0;
@@ -497,7 +511,7 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
   }
 
   if (descriptor < 0) {
-    error_details_ = File::OSErrorToFileError(errno);
+    error_details_ = File::GetLastFileError();
     return;
   }
 
@@ -514,7 +528,7 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
 #endif  // !defined(OS_NACL)
 
 bool File::Flush() {
-  ThreadRestrictions::AssertIOAllowed();
+  AssertBlockingAllowed();
   DCHECK(IsValid());
   SCOPED_FILE_TRACE("Flush");
 
@@ -531,6 +545,11 @@ bool File::Flush() {
 void File::SetPlatformFile(PlatformFile file) {
   DCHECK(!file_.is_valid());
   file_.reset(file);
+}
+
+// static
+File::Error File::GetLastFileError() {
+  return base::File::OSErrorToFileError(errno);
 }
 
 }  // namespace base

@@ -38,8 +38,8 @@ class MessageLoopTaskRunnerTest : public testing::Test {
 
     // Allow us to pause the |task_thread_|'s MessageLoop.
     task_thread_.task_runner()->PostTask(
-        FROM_HERE, Bind(&MessageLoopTaskRunnerTest::BlockTaskThreadHelper,
-                        Unretained(this)));
+        FROM_HERE, BindOnce(&MessageLoopTaskRunnerTest::BlockTaskThreadHelper,
+                            Unretained(this)));
   }
 
   void TearDown() override {
@@ -82,14 +82,14 @@ class MessageLoopTaskRunnerTest : public testing::Test {
 
   static void RecordLoopAndQuit(scoped_refptr<LoopRecorder> recorder) {
     recorder->RecordRun();
-    MessageLoop::current()->QuitWhenIdle();
+    RunLoop::QuitCurrentWhenIdleDeprecated();
   }
 
   void UnblockTaskThread() { thread_sync_.Signal(); }
 
   void BlockTaskThreadHelper() { thread_sync_.Wait(); }
 
-  static StaticAtomicSequenceNumber g_order;
+  static AtomicSequenceNumber g_order;
 
   std::unique_ptr<MessageLoop> current_loop_;
   Thread task_thread_;
@@ -98,14 +98,14 @@ class MessageLoopTaskRunnerTest : public testing::Test {
   base::WaitableEvent thread_sync_;
 };
 
-StaticAtomicSequenceNumber MessageLoopTaskRunnerTest::g_order;
+AtomicSequenceNumber MessageLoopTaskRunnerTest::g_order;
 
 TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_Basic) {
-  MessageLoop* task_run_on = NULL;
-  MessageLoop* task_deleted_on = NULL;
+  MessageLoop* task_run_on = nullptr;
+  MessageLoop* task_deleted_on = nullptr;
   int task_delete_order = -1;
-  MessageLoop* reply_run_on = NULL;
-  MessageLoop* reply_deleted_on = NULL;
+  MessageLoop* reply_run_on = nullptr;
+  MessageLoop* reply_deleted_on = nullptr;
   int reply_delete_order = -1;
 
   scoped_refptr<LoopRecorder> task_recorder =
@@ -114,12 +114,12 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_Basic) {
       new LoopRecorder(&reply_run_on, &reply_deleted_on, &reply_delete_order);
 
   ASSERT_TRUE(task_thread_.task_runner()->PostTaskAndReply(
-      FROM_HERE, Bind(&RecordLoop, task_recorder),
-      Bind(&RecordLoopAndQuit, reply_recorder)));
+      FROM_HERE, BindOnce(&RecordLoop, task_recorder),
+      BindOnce(&RecordLoopAndQuit, reply_recorder)));
 
   // Die if base::Bind doesn't retain a reference to the recorders.
-  task_recorder = NULL;
-  reply_recorder = NULL;
+  task_recorder = nullptr;
+  reply_recorder = nullptr;
   ASSERT_FALSE(task_deleted_on);
   ASSERT_FALSE(reply_deleted_on);
 
@@ -134,11 +134,11 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_Basic) {
 }
 
 TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReplyOnDeletedThreadDoesNotLeak) {
-  MessageLoop* task_run_on = NULL;
-  MessageLoop* task_deleted_on = NULL;
+  MessageLoop* task_run_on = nullptr;
+  MessageLoop* task_deleted_on = nullptr;
   int task_delete_order = -1;
-  MessageLoop* reply_run_on = NULL;
-  MessageLoop* reply_deleted_on = NULL;
+  MessageLoop* reply_run_on = nullptr;
+  MessageLoop* reply_deleted_on = nullptr;
   int reply_delete_order = -1;
 
   scoped_refptr<LoopRecorder> task_recorder =
@@ -152,9 +152,9 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReplyOnDeletedThreadDoesNotLeak) {
   UnblockTaskThread();
   task_thread_.Stop();
 
-  ASSERT_FALSE(
-      task_runner->PostTaskAndReply(FROM_HERE, Bind(&RecordLoop, task_recorder),
-                                    Bind(&RecordLoopAndQuit, reply_recorder)));
+  ASSERT_FALSE(task_runner->PostTaskAndReply(
+      FROM_HERE, BindOnce(&RecordLoop, task_recorder),
+      BindOnce(&RecordLoopAndQuit, reply_recorder)));
 
   // The relay should have properly deleted its resources leaving us as the only
   // reference.
@@ -168,11 +168,11 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReplyOnDeletedThreadDoesNotLeak) {
 }
 
 TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_SameLoop) {
-  MessageLoop* task_run_on = NULL;
-  MessageLoop* task_deleted_on = NULL;
+  MessageLoop* task_run_on = nullptr;
+  MessageLoop* task_deleted_on = nullptr;
   int task_delete_order = -1;
-  MessageLoop* reply_run_on = NULL;
-  MessageLoop* reply_deleted_on = NULL;
+  MessageLoop* reply_run_on = nullptr;
+  MessageLoop* reply_deleted_on = nullptr;
   int reply_delete_order = -1;
 
   scoped_refptr<LoopRecorder> task_recorder =
@@ -182,12 +182,12 @@ TEST_F(MessageLoopTaskRunnerTest, PostTaskAndReply_SameLoop) {
 
   // Enqueue the relay.
   ASSERT_TRUE(current_loop_->task_runner()->PostTaskAndReply(
-      FROM_HERE, Bind(&RecordLoop, task_recorder),
-      Bind(&RecordLoopAndQuit, reply_recorder)));
+      FROM_HERE, BindOnce(&RecordLoop, task_recorder),
+      BindOnce(&RecordLoopAndQuit, reply_recorder)));
 
   // Die if base::Bind doesn't retain a reference to the recorders.
-  task_recorder = NULL;
-  reply_recorder = NULL;
+  task_recorder = nullptr;
+  reply_recorder = nullptr;
   ASSERT_FALSE(task_deleted_on);
   ASSERT_FALSE(reply_deleted_on);
 
@@ -204,11 +204,11 @@ TEST_F(MessageLoopTaskRunnerTest,
        PostTaskAndReply_DeadReplyTaskRunnerBehavior) {
   // Annotate the scope as having memory leaks to suppress heapchecker reports.
   ANNOTATE_SCOPED_MEMORY_LEAK;
-  MessageLoop* task_run_on = NULL;
-  MessageLoop* task_deleted_on = NULL;
+  MessageLoop* task_run_on = nullptr;
+  MessageLoop* task_deleted_on = nullptr;
   int task_delete_order = -1;
-  MessageLoop* reply_run_on = NULL;
-  MessageLoop* reply_deleted_on = NULL;
+  MessageLoop* reply_run_on = nullptr;
+  MessageLoop* reply_deleted_on = nullptr;
   int reply_delete_order = -1;
 
   scoped_refptr<LoopRecorder> task_recorder =
@@ -218,12 +218,12 @@ TEST_F(MessageLoopTaskRunnerTest,
 
   // Enqueue the relay.
   task_thread_.task_runner()->PostTaskAndReply(
-      FROM_HERE, Bind(&RecordLoop, task_recorder),
-      Bind(&RecordLoopAndQuit, reply_recorder));
+      FROM_HERE, BindOnce(&RecordLoop, task_recorder),
+      BindOnce(&RecordLoopAndQuit, reply_recorder));
 
   // Die if base::Bind doesn't retain a reference to the recorders.
-  task_recorder = NULL;
-  reply_recorder = NULL;
+  task_recorder = nullptr;
+  reply_recorder = nullptr;
   ASSERT_FALSE(task_deleted_on);
   ASSERT_FALSE(reply_deleted_on);
 
@@ -262,8 +262,8 @@ class MessageLoopTaskRunnerThreadingTest : public testing::Test {
   }
 
   void Quit() const {
-    loop_.task_runner()->PostTask(FROM_HERE,
-                                  MessageLoop::QuitWhenIdleClosure());
+    loop_.task_runner()->PostTask(
+        FROM_HERE, RunLoop::QuitCurrentWhenIdleClosureDeprecated());
   }
 
   void AssertOnIOThread() const {
@@ -331,8 +331,8 @@ TEST_F(MessageLoopTaskRunnerThreadingTest, Delete) {
 
 TEST_F(MessageLoopTaskRunnerThreadingTest, PostTask) {
   EXPECT_TRUE(file_thread_->task_runner()->PostTask(
-      FROM_HERE, Bind(&MessageLoopTaskRunnerThreadingTest::BasicFunction,
-                      Unretained(this))));
+      FROM_HERE, BindOnce(&MessageLoopTaskRunnerThreadingTest::BasicFunction,
+                          Unretained(this))));
   RunLoop().Run();
 }
 
@@ -345,7 +345,7 @@ TEST_F(MessageLoopTaskRunnerThreadingTest, PostTaskAfterThreadExits) {
   test_thread->Stop();
 
   bool ret = task_runner->PostTask(
-      FROM_HERE, Bind(&MessageLoopTaskRunnerThreadingTest::AssertNotRun));
+      FROM_HERE, BindOnce(&MessageLoopTaskRunnerThreadingTest::AssertNotRun));
   EXPECT_FALSE(ret);
 }
 
@@ -358,7 +358,7 @@ TEST_F(MessageLoopTaskRunnerThreadingTest, PostTaskAfterThreadIsDeleted) {
     task_runner = test_thread->task_runner();
   }
   bool ret = task_runner->PostTask(
-      FROM_HERE, Bind(&MessageLoopTaskRunnerThreadingTest::AssertNotRun));
+      FROM_HERE, BindOnce(&MessageLoopTaskRunnerThreadingTest::AssertNotRun));
   EXPECT_FALSE(ret);
 }
 

@@ -11,10 +11,11 @@
 #include "base/callback.h"
 #include "base/callback_helpers.h"
 #include "base/memory/ptr_util.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/test/scoped_task_environment.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -95,7 +96,8 @@ class IntegerSenderConnectionImpl : public IntegerSenderConnection {
 
 class AssociatedInterfaceTest : public testing::Test {
  public:
-  AssociatedInterfaceTest() {}
+  AssociatedInterfaceTest()
+      : main_runner_(base::ThreadTaskRunnerHandle::Get()) {}
   ~AssociatedInterfaceTest() override { base::RunLoop().RunUntilIdle(); }
 
   void PumpMessages() { base::RunLoop().RunUntilIdle(); }
@@ -117,10 +119,10 @@ class AssociatedInterfaceTest : public testing::Test {
     MessagePipe pipe;
     *router0 = new MultiplexRouter(std::move(pipe.handle0),
                                    MultiplexRouter::MULTI_INTERFACE, true,
-                                   base::ThreadTaskRunnerHandle::Get());
+                                   main_runner_);
     *router1 = new MultiplexRouter(std::move(pipe.handle1),
                                    MultiplexRouter::MULTI_INTERFACE, false,
-                                   base::ThreadTaskRunnerHandle::Get());
+                                   main_runner_);
   }
 
   void CreateIntegerSenderWithExistingRouters(
@@ -143,10 +145,10 @@ class AssociatedInterfaceTest : public testing::Test {
 
   // Okay to call from any thread.
   void QuitRunLoop(base::RunLoop* run_loop) {
-    if (loop_.task_runner()->BelongsToCurrentThread()) {
+    if (main_runner_->RunsTasksInCurrentSequence()) {
       run_loop->Quit();
     } else {
-      loop_.task_runner()->PostTask(
+      main_runner_->PostTask(
           FROM_HERE,
           base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
                      base::Unretained(this), base::Unretained(run_loop)));
@@ -154,7 +156,8 @@ class AssociatedInterfaceTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop loop_;
+  base::test::ScopedTaskEnvironment task_environment;
+  scoped_refptr<base::SequencedTaskRunner> main_runner_;
 };
 
 void DoSetFlagAndRunClosure(bool* flag, const base::Closure& closure) {
@@ -244,17 +247,15 @@ TEST_F(AssociatedInterfaceTest, InterfacesAtBothEnds) {
 class TestSender {
  public:
   TestSender()
-      : sender_thread_("TestSender"),
+      : task_runner_(base::CreateSequencedTaskRunnerWithTraits({})),
         next_sender_(nullptr),
-        max_value_to_send_(-1) {
-    sender_thread_.Start();
-  }
+        max_value_to_send_(-1) {}
 
   // The following three methods are called on the corresponding sender thread.
   void SetUp(IntegerSenderAssociatedPtrInfo ptr_info,
              TestSender* next_sender,
              int32_t max_value_to_send) {
-    CHECK(sender_thread_.task_runner()->BelongsToCurrentThread());
+    CHECK(task_runner()->RunsTasksInCurrentSequence());
 
     ptr_.Bind(std::move(ptr_info));
     next_sender_ = next_sender ? next_sender : this;
@@ -262,28 +263,28 @@ class TestSender {
   }
 
   void Send(int32_t value) {
-    CHECK(sender_thread_.task_runner()->BelongsToCurrentThread());
+    CHECK(task_runner()->RunsTasksInCurrentSequence());
 
     if (value > max_value_to_send_)
       return;
 
     ptr_->Send(value);
 
-    next_sender_->sender_thread()->task_runner()->PostTask(
+    next_sender_->task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&TestSender::Send, base::Unretained(next_sender_), ++value));
   }
 
   void TearDown() {
-    CHECK(sender_thread_.task_runner()->BelongsToCurrentThread());
+    CHECK(task_runner()->RunsTasksInCurrentSequence());
 
     ptr_.reset();
   }
 
-  base::Thread* sender_thread() { return &sender_thread_; }
+  base::SequencedTaskRunner* task_runner() { return task_runner_.get(); }
 
  private:
-  base::Thread sender_thread_;
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
   TestSender* next_sender_;
   int32_t max_value_to_send_;
 
@@ -292,15 +293,15 @@ class TestSender {
 
 class TestReceiver {
  public:
-  TestReceiver() : receiver_thread_("TestReceiver"), expected_calls_(0) {
-    receiver_thread_.Start();
-  }
+  TestReceiver()
+      : task_runner_(base::CreateSequencedTaskRunnerWithTraits({})),
+        expected_calls_(0) {}
 
   void SetUp(AssociatedInterfaceRequest<IntegerSender> request0,
              AssociatedInterfaceRequest<IntegerSender> request1,
              size_t expected_calls,
              const base::Closure& notify_finish) {
-    CHECK(receiver_thread_.task_runner()->BelongsToCurrentThread());
+    CHECK(task_runner()->RunsTasksInCurrentSequence());
 
     impl0_.reset(new IntegerSenderImpl(std::move(request0)));
     impl0_->set_notify_send_method_called(
@@ -314,13 +315,13 @@ class TestReceiver {
   }
 
   void TearDown() {
-    CHECK(receiver_thread_.task_runner()->BelongsToCurrentThread());
+    CHECK(task_runner()->RunsTasksInCurrentSequence());
 
     impl0_.reset();
     impl1_.reset();
   }
 
-  base::Thread* receiver_thread() { return &receiver_thread_; }
+  base::SequencedTaskRunner* task_runner() { return task_runner_.get(); }
   const std::vector<int32_t>& values() const { return values_; }
 
  private:
@@ -331,7 +332,7 @@ class TestReceiver {
       notify_finish_.Run();
   }
 
-  base::Thread receiver_thread_;
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
   size_t expected_calls_;
 
   std::unique_ptr<IntegerSenderImpl> impl0_;
@@ -392,7 +393,7 @@ TEST_F(AssociatedInterfaceTest, MultiThreadAccess) {
 
   TestSender senders[4];
   for (size_t i = 0; i < 4; ++i) {
-    senders[i].sender_thread()->task_runner()->PostTask(
+    senders[i].task_runner()->PostTask(
         FROM_HERE, base::Bind(&TestSender::SetUp, base::Unretained(&senders[i]),
                               base::Passed(&ptr_infos[i]), nullptr,
                               kMaxValue * (i + 1) / 4));
@@ -404,7 +405,7 @@ TEST_F(AssociatedInterfaceTest, MultiThreadAccess) {
       2, base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
                     base::Unretained(this), base::Unretained(&run_loop)));
   for (size_t i = 0; i < 2; ++i) {
-    receivers[i].receiver_thread()->task_runner()->PostTask(
+    receivers[i].task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&TestReceiver::SetUp, base::Unretained(&receivers[i]),
                    base::Passed(&requests[2 * i]),
@@ -415,7 +416,7 @@ TEST_F(AssociatedInterfaceTest, MultiThreadAccess) {
   }
 
   for (size_t i = 0; i < 4; ++i) {
-    senders[i].sender_thread()->task_runner()->PostTask(
+    senders[i].task_runner()->PostTask(
         FROM_HERE, base::Bind(&TestSender::Send, base::Unretained(&senders[i]),
                               kMaxValue * i / 4 + 1));
   }
@@ -424,7 +425,7 @@ TEST_F(AssociatedInterfaceTest, MultiThreadAccess) {
 
   for (size_t i = 0; i < 4; ++i) {
     base::RunLoop run_loop;
-    senders[i].sender_thread()->task_runner()->PostTaskAndReply(
+    senders[i].task_runner()->PostTaskAndReply(
         FROM_HERE,
         base::Bind(&TestSender::TearDown, base::Unretained(&senders[i])),
         base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
@@ -434,7 +435,7 @@ TEST_F(AssociatedInterfaceTest, MultiThreadAccess) {
 
   for (size_t i = 0; i < 2; ++i) {
     base::RunLoop run_loop;
-    receivers[i].receiver_thread()->task_runner()->PostTaskAndReply(
+    receivers[i].task_runner()->PostTaskAndReply(
         FROM_HERE,
         base::Bind(&TestReceiver::TearDown, base::Unretained(&receivers[i])),
         base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
@@ -477,7 +478,7 @@ TEST_F(AssociatedInterfaceTest, FIFO) {
 
   TestSender senders[4];
   for (size_t i = 0; i < 4; ++i) {
-    senders[i].sender_thread()->task_runner()->PostTask(
+    senders[i].task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&TestSender::SetUp, base::Unretained(&senders[i]),
                    base::Passed(&ptr_infos[i]),
@@ -490,7 +491,7 @@ TEST_F(AssociatedInterfaceTest, FIFO) {
       2, base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
                     base::Unretained(this), base::Unretained(&run_loop)));
   for (size_t i = 0; i < 2; ++i) {
-    receivers[i].receiver_thread()->task_runner()->PostTask(
+    receivers[i].task_runner()->PostTask(
         FROM_HERE,
         base::Bind(&TestReceiver::SetUp, base::Unretained(&receivers[i]),
                    base::Passed(&requests[2 * i]),
@@ -500,7 +501,7 @@ TEST_F(AssociatedInterfaceTest, FIFO) {
                               base::Unretained(&counter))));
   }
 
-  senders[0].sender_thread()->task_runner()->PostTask(
+  senders[0].task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&TestSender::Send, base::Unretained(&senders[0]), 1));
 
@@ -508,7 +509,7 @@ TEST_F(AssociatedInterfaceTest, FIFO) {
 
   for (size_t i = 0; i < 4; ++i) {
     base::RunLoop run_loop;
-    senders[i].sender_thread()->task_runner()->PostTaskAndReply(
+    senders[i].task_runner()->PostTaskAndReply(
         FROM_HERE,
         base::Bind(&TestSender::TearDown, base::Unretained(&senders[i])),
         base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
@@ -518,7 +519,7 @@ TEST_F(AssociatedInterfaceTest, FIFO) {
 
   for (size_t i = 0; i < 2; ++i) {
     base::RunLoop run_loop;
-    receivers[i].receiver_thread()->task_runner()->PostTaskAndReply(
+    receivers[i].task_runner()->PostTaskAndReply(
         FROM_HERE,
         base::Bind(&TestReceiver::TearDown, base::Unretained(&receivers[i])),
         base::Bind(&AssociatedInterfaceTest::QuitRunLoop,
@@ -669,7 +670,7 @@ class CallbackFilter : public MessageReceiver {
   ~CallbackFilter() override {}
 
   static std::unique_ptr<CallbackFilter> Wrap(const base::Closure& callback) {
-    return base::MakeUnique<CallbackFilter>(callback);
+    return std::make_unique<CallbackFilter>(callback);
   }
 
   // MessageReceiver:
@@ -760,8 +761,8 @@ TEST_F(AssociatedInterfaceTest, AssociatedPtrFlushForTesting) {
   ptr0.set_connection_error_handler(base::Bind(&Fail));
 
   bool ptr0_callback_run = false;
-  ptr0->Echo(123, ExpectValueSetFlagAndRunClosure(
-                      123, &ptr0_callback_run, base::Bind(&base::DoNothing)));
+  ptr0->Echo(123, ExpectValueSetFlagAndRunClosure(123, &ptr0_callback_run,
+                                                  base::DoNothing()));
   ptr0.FlushForTesting();
   EXPECT_TRUE(ptr0_callback_run);
 }
@@ -802,8 +803,8 @@ TEST_F(AssociatedInterfaceTest, AssociatedBindingFlushForTesting) {
   ptr0.Bind(std::move(ptr_info));
 
   bool ptr0_callback_run = false;
-  ptr0->Echo(123, ExpectValueSetFlagAndRunClosure(
-                      123, &ptr0_callback_run, base::Bind(&base::DoNothing)));
+  ptr0->Echo(123, ExpectValueSetFlagAndRunClosure(123, &ptr0_callback_run,
+                                                  base::DoNothing()));
   // Because the flush is sent from the binding, it only guarantees that the
   // request has been received, not the response. The second flush waits for the
   // response to be received.
@@ -864,7 +865,7 @@ TEST_F(AssociatedInterfaceTest, BindingFlushForTestingWithClosedPeer) {
 TEST_F(AssociatedInterfaceTest, StrongBindingFlushForTesting) {
   IntegerSenderConnectionPtr ptr;
   auto binding =
-      MakeStrongBinding(base::MakeUnique<IntegerSenderConnectionImpl>(
+      MakeStrongBinding(std::make_unique<IntegerSenderConnectionImpl>(
                             IntegerSenderConnectionRequest{}),
                         MakeRequest(&ptr));
   bool called = false;
@@ -886,7 +887,7 @@ TEST_F(AssociatedInterfaceTest, StrongBindingFlushForTestingWithClosedPeer) {
   IntegerSenderConnectionPtr ptr;
   bool called = false;
   auto binding =
-      MakeStrongBinding(base::MakeUnique<IntegerSenderConnectionImpl>(
+      MakeStrongBinding(std::make_unique<IntegerSenderConnectionImpl>(
                             IntegerSenderConnectionRequest{}),
                         MakeRequest(&ptr));
   binding->set_connection_error_handler(base::Bind(&SetBool, &called));
@@ -1060,8 +1061,6 @@ TEST_F(AssociatedInterfaceTest, ThreadSafeAssociatedInterfacePtr) {
 
   // Test the thread safe pointer can be used from another thread.
   base::RunLoop run_loop;
-  base::Thread other_thread("service test thread");
-  other_thread.Start();
 
   auto run_method = base::Bind(
       [](const scoped_refptr<base::TaskRunner>& main_task_runner,
@@ -1071,21 +1070,24 @@ TEST_F(AssociatedInterfaceTest, ThreadSafeAssociatedInterfacePtr) {
         auto done_callback = base::Bind(
             [](const scoped_refptr<base::TaskRunner>& main_task_runner,
                const base::Closure& quit_closure,
-               base::PlatformThreadId thread_id, int32_t result) {
+               scoped_refptr<base::SequencedTaskRunner> sender_sequence_runner,
+               int32_t result) {
               EXPECT_EQ(123, result);
-              // Validate the callback is invoked on the calling thread.
-              EXPECT_EQ(thread_id, base::PlatformThread::CurrentId());
+              // Validate the callback is invoked on the calling sequence.
+              EXPECT_TRUE(sender_sequence_runner->RunsTasksInCurrentSequence());
               // Notify the run_loop to quit.
               main_task_runner->PostTask(FROM_HERE, quit_closure);
             });
+        scoped_refptr<base::SequencedTaskRunner> current_sequence_runner =
+            base::SequencedTaskRunnerHandle::Get();
         (*thread_safe_sender)
-            ->Echo(123,
-                   base::Bind(done_callback, main_task_runner, quit_closure,
-                              base::PlatformThread::CurrentId()));
+            ->Echo(123, base::Bind(done_callback, main_task_runner,
+                                   quit_closure, current_sequence_runner));
       },
       base::SequencedTaskRunnerHandle::Get(), run_loop.QuitClosure(),
       thread_safe_sender);
-  other_thread.message_loop()->task_runner()->PostTask(FROM_HERE, run_method);
+  base::CreateSequencedTaskRunnerWithTraits({})->PostTask(FROM_HERE,
+                                                          run_method);
 
   // Block until the method callback is called on the background thread.
   run_loop.Run();
@@ -1099,11 +1101,8 @@ struct ForwarderTestContext {
 
 TEST_F(AssociatedInterfaceTest,
        ThreadSafeAssociatedInterfacePtrWithTaskRunner) {
-  // Start the thread from where we'll bind the interface pointer.
-  base::Thread other_thread("service test thread");
-  other_thread.Start();
-  const scoped_refptr<base::SingleThreadTaskRunner>& other_thread_task_runner =
-      other_thread.message_loop()->task_runner();
+  const scoped_refptr<base::SequencedTaskRunner> other_thread_task_runner =
+      base::CreateSequencedTaskRunnerWithTraits({});
 
   ForwarderTestContext* context = new ForwarderTestContext();
   IntegerSenderAssociatedPtrInfo sender_info;
@@ -1113,7 +1112,7 @@ TEST_F(AssociatedInterfaceTest,
   auto setup = [](base::WaitableEvent* sender_info_bound_event,
                   IntegerSenderAssociatedPtrInfo* sender_info,
                   ForwarderTestContext* context) {
-    context->interface_impl = base::MakeUnique<IntegerSenderConnectionImpl>(
+    context->interface_impl = std::make_unique<IntegerSenderConnectionImpl>(
         MakeRequest(&context->connection_ptr));
 
     auto sender_request = MakeRequest(sender_info);
@@ -1168,7 +1167,8 @@ TEST_F(AssociatedInterfaceTest, CloseWithoutBindingAssociatedRequest) {
   DiscardingAssociatedPingProviderProvider ping_provider_provider;
   mojo::Binding<AssociatedPingProviderProvider> binding(
       &ping_provider_provider);
-  auto provider_provider = binding.CreateInterfacePtrAndBind();
+  AssociatedPingProviderProviderPtr provider_provider;
+  binding.Bind(mojo::MakeRequest(&provider_provider));
   AssociatedPingProviderAssociatedPtr provider;
   provider_provider->GetPingProvider(mojo::MakeRequest(&provider));
   PingServiceAssociatedPtr ping;
@@ -1178,9 +1178,9 @@ TEST_F(AssociatedInterfaceTest, CloseWithoutBindingAssociatedRequest) {
   run_loop.Run();
 }
 
-TEST_F(AssociatedInterfaceTest, GetIsolatedInterface) {
+TEST_F(AssociatedInterfaceTest, AssociateWithDisconnectedPipe) {
   IntegerSenderAssociatedPtr sender;
-  GetIsolatedInterface(MakeRequest(&sender).PassHandle());
+  AssociateWithDisconnectedPipe(MakeRequest(&sender).PassHandle());
   sender->Send(42);
 }
 
