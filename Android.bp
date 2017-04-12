@@ -291,6 +291,7 @@ libchromeMacSrc = [
 cc_library {
     name: "libchrome",
     host_supported: true,
+    vendor_available: true,
     defaults: ["libchrome-defaults"],
     srcs: libchromeCommonSrc,
 
