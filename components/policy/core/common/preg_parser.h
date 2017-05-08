@@ -22,7 +22,7 @@ class FilePath;
 
 namespace policy {
 
-class PolicyLoadStatusSample;
+class PolicyLoadStatusSampler;
 class RegistryDict;
 
 namespace preg_parser {
@@ -36,7 +36,7 @@ POLICY_EXPORT extern const char kPRegFileHeader[8];
 POLICY_EXPORT bool ReadFile(const base::FilePath& file_path,
                             const base::string16& root,
                             RegistryDict* dict,
-                            PolicyLoadStatusSample* status);
+                            PolicyLoadStatusSampler* status);
 
 }  // namespace preg_parser
 }  // namespace policy

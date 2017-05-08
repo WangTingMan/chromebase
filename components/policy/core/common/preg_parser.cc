@@ -216,8 +216,8 @@ void HandleRecord(const base::string16& key_name,
     return;
   }
 
-  std::string action_trigger(base::ToLowerASCII(value_name.substr(
-      arraysize(kActionTriggerPrefix) - 1)));
+  std::string action_trigger(base::ToLowerASCII(
+      value_name.substr(arraysize(kActionTriggerPrefix) - 1)));
   if (action_trigger == kActionTriggerDeleteValues) {
     for (const std::string& value :
          base::SplitString(DecodePRegStringValue(data), ";",
@@ -231,9 +231,8 @@ void HandleRecord(const base::string16& key_name,
       dict->RemoveKey(key);
   } else if (base::StartsWith(action_trigger, kActionTriggerDel,
                               base::CompareCase::SENSITIVE)) {
-  dict->RemoveValue(
-        value_name.substr(arraysize(kActionTriggerPrefix) - 1 +
-                          arraysize(kActionTriggerDel) - 1));
+    dict->RemoveValue(value_name.substr(arraysize(kActionTriggerPrefix) - 1 +
+                                        arraysize(kActionTriggerDel) - 1));
   } else if (base::StartsWith(action_trigger, kActionTriggerDelVals,
                               base::CompareCase::SENSITIVE)) {
     // Delete all values.
@@ -253,13 +252,13 @@ void HandleRecord(const base::string16& key_name,
 namespace policy {
 namespace preg_parser {
 
-const char kPRegFileHeader[8] =
-    { 'P', 'R', 'e', 'g', '\x01', '\x00', '\x00', '\x00' };
+const char kPRegFileHeader[8] = {'P',    'R',    'e',    'g',
+                                 '\x01', '\x00', '\x00', '\x00'};
 
 bool ReadFile(const base::FilePath& file_path,
               const base::string16& root,
               RegistryDict* dict,
-              PolicyLoadStatusSample* status) {
+              PolicyLoadStatusSampler* status) {
   base::MemoryMappedFile mapped_file;
   if (!mapped_file.Initialize(file_path) || !mapped_file.IsValid()) {
     PLOG(ERROR) << "Failed to map " << file_path.value();
@@ -268,8 +267,8 @@ bool ReadFile(const base::FilePath& file_path,
   }
 
   if (mapped_file.length() > kMaxPRegFileSize) {
-    LOG(ERROR) << "PReg file " << file_path.value() << " too large: "
-               << mapped_file.length();
+    LOG(ERROR) << "PReg file " << file_path.value()
+               << " too large: " << mapped_file.length();
     status->Add(POLICY_LOAD_STATUS_TOO_BIG);
     return false;
   }

@@ -30,12 +30,11 @@ testing::AssertionResult RegistryDictEquals(const RegistryDict& a,
   for (; iter_key_a != a.keys().end() && iter_key_b != b.keys().end();
        ++iter_key_a, ++iter_key_b) {
     if (iter_key_a->first != iter_key_b->first) {
-      return testing::AssertionFailure()
-          << "Key mismatch " << iter_key_a->first
-          << " vs. " << iter_key_b->first;
+      return testing::AssertionFailure() << "Key mismatch " << iter_key_a->first
+                                         << " vs. " << iter_key_b->first;
     }
-    testing::AssertionResult result = RegistryDictEquals(*iter_key_a->second,
-                                                         *iter_key_b->second);
+    testing::AssertionResult result =
+        RegistryDictEquals(*iter_key_a->second, *iter_key_b->second);
     if (!result)
       return result;
   }
@@ -57,15 +56,13 @@ testing::AssertionResult RegistryDictEquals(const RegistryDict& a,
   return testing::AssertionSuccess();
 }
 
-void SetInteger(RegistryDict* dict,
-                const std::string& name,
-                int value) {
+void SetInteger(RegistryDict* dict, const std::string& name, int value) {
   dict->SetValue(name, base::WrapUnique<base::Value>(new base::Value(value)));
 }
 
 void SetString(RegistryDict* dict,
                const std::string& name,
-               const std::string&  value) {
+               const std::string& value) {
   dict->SetValue(name, base::WrapUnique<base::Value>(new base::Value(value)));
 }
 
@@ -92,10 +89,10 @@ TEST(PRegParserTest, TestParseFile) {
   // Run the parser.
   base::FilePath test_file(
       test_data_dir.AppendASCII("chrome/test/data/policy/registry.pol"));
-  PolicyLoadStatusSample status;
+  PolicyLoadStatusUmaReporter status;
   ASSERT_TRUE(preg_parser::ReadFile(
-      test_file, base::ASCIIToUTF16("SOFTWARE\\Policies\\Chromium"),
-      &dict, &status));
+      test_file, base::ASCIIToUTF16("SOFTWARE\\Policies\\Chromium"), &dict,
+      &status));
 
   // Build the expected output dictionary.
   RegistryDict expected;
@@ -114,6 +111,24 @@ TEST(PRegParserTest, TestParseFile) {
   SetString(&expected, "Empty", "");
 
   EXPECT_TRUE(RegistryDictEquals(dict, expected));
+}
+
+TEST_F(PRegParserTest, LoadStatusSampling) {
+  base::FilePath test_data_dir;
+  ASSERT_TRUE(PathService::Get(base::DIR_SOURCE_ROOT, &test_data_dir));
+
+  base::FilePath test_file(test_data_dir.AppendASCII("does_not_exist.pol"));
+  PolicyLoadStatusUmaReporter status;
+  RegistryDict dict;
+  ASSERT_FALSE(preg_parser::ReadFile(
+      test_file, base::ASCIIToUTF16("SOFTWARE\\Policies\\Chromium"), &dict,
+      &status));
+
+  // Tests load status sampling.
+  PolicyLoadStatusSampler::StatusSet expected_status_set;
+  expected_status_set[POLICY_LOAD_STATUS_STARTED] = true;
+  expected_status_set[POLICY_LOAD_STATUS_READ_ERROR] = true;
+  EXPECT_EQ(expected_status_set, status.GetStatusSet());
 }
 
 }  // namespace
