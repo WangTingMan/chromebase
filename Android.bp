@@ -182,6 +182,7 @@ libchromeCommonSrc = [
     "base/task_scheduler/sequence_sort_key.cc",
     "base/task_scheduler/task.cc",
     "base/task_scheduler/task_traits.cc",
+    "base/test/trace_event_analyzer.cc",
     "base/third_party/icu/icu_utf.cc",
     "base/third_party/nspr/prtime.cc",
     "base/threading/non_thread_safe_impl.cc",
@@ -355,6 +356,7 @@ cc_library_static {
     name: "libchrome_test_helpers",
     defaults: ["libchrome-test-defaults"],
     shared_libs: ["libchrome"],
+    host_supported: true,
 
     srcs: [
         "base/test/simple_test_clock.cc",
@@ -364,7 +366,11 @@ cc_library_static {
         "base/test/test_switches.cc",
         "base/test/test_timeouts.cc",
     ],
-
+    target: {
+        darwin: {
+            enabled: false,
+        },
+    },
 }
 
 // Helpers needed for unit tests (for host).
