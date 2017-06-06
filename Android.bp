@@ -59,6 +59,11 @@ cc_defaults {
         "-Wno-unused-function",
         "-Wno-missing-field-initializers",
     ],
+
+    clang_cflags: [
+        // Temporarily suppress the warnings http://b/38232827
+        "-Wno-error=unused-lambda-capture",
+    ],
 }
 
 libchromeCommonSrc = [
