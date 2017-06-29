@@ -343,6 +343,8 @@ if (use.crypto) {
         "crypto/symmetric_key_nss.cc",
         "crypto/third_party/nss/rsawrapr.c",
         "crypto/third_party/nss/sha512.cc",
+        # Added to libchrome only (not upstream) to support OpenSSL 1.1 API
+        "crypto/libcrypto-compat.c",
       ]
     }
   ]

@@ -20,6 +20,9 @@
 
 #include <memory>
 
+// TODO(crbug.com/984789): Remove once all of Chrome OS uses OpenSSL 1.1.
+#include "crypto/libcrypto-compat.h"
+
 namespace crypto {
 
 // Simplistic helper that wraps a call to a deleter function. In a C++11 world,
@@ -48,7 +51,7 @@ using ScopedECDSA_SIG = ScopedOpenSSL<ECDSA_SIG, ECDSA_SIG_free>;
 using ScopedEC_GROUP = ScopedOpenSSL<EC_GROUP, EC_GROUP_free>;
 using ScopedEC_KEY = ScopedOpenSSL<EC_KEY, EC_KEY_free>;
 using ScopedEC_POINT = ScopedOpenSSL<EC_POINT, EC_POINT_free>;
-using ScopedEVP_MD_CTX = ScopedOpenSSL<EVP_MD_CTX, EVP_MD_CTX_destroy>;
+using ScopedEVP_MD_CTX = ScopedOpenSSL<EVP_MD_CTX, EVP_MD_CTX_free>;
 using ScopedEVP_PKEY = ScopedOpenSSL<EVP_PKEY, EVP_PKEY_free>;
 using ScopedEVP_PKEY_CTX = ScopedOpenSSL<EVP_PKEY_CTX, EVP_PKEY_CTX_free>;
 using ScopedNETSCAPE_SPKI = ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free>;
