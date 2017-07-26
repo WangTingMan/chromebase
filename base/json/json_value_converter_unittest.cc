@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/json/json_reader.h"
+#include "base/memory/scoped_vector.h"
 #include "base/strings/string_piece.h"
 #include "base/values.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -26,8 +27,8 @@ struct SimpleMessage {
   bool baz;
   bool bstruct;
   SimpleEnum simple_enum;
-  std::vector<std::unique_ptr<int>> ints;
-  std::vector<std::unique_ptr<std::string>> string_values;
+  ScopedVector<int> ints;
+  ScopedVector<std::string> string_values;
   SimpleMessage() : foo(0), baz(false), bstruct(false), simple_enum(FOO) {}
 
   static bool ParseSimpleEnum(const StringPiece& value, SimpleEnum* field) {
@@ -79,7 +80,7 @@ struct SimpleMessage {
 struct NestedMessage {
   double foo;
   SimpleMessage child;
-  std::vector<std::unique_ptr<SimpleMessage>> children;
+  ScopedVector<SimpleMessage> children;
 
   NestedMessage() : foo(0) {}
 
@@ -162,7 +163,7 @@ TEST(JSONValueConverterTest, ParseNestedMessage) {
   EXPECT_EQ("value_2", *message.child.string_values[1]);
 
   EXPECT_EQ(2, static_cast<int>(message.children.size()));
-  const SimpleMessage* first_child = message.children[0].get();
+  const SimpleMessage* first_child = message.children[0];
   ASSERT_TRUE(first_child);
   EXPECT_EQ(2, first_child->foo);
   EXPECT_EQ("foobar", first_child->bar);
@@ -171,7 +172,7 @@ TEST(JSONValueConverterTest, ParseNestedMessage) {
   ASSERT_EQ(1U, first_child->string_values.size());
   EXPECT_EQ("value_1", *first_child->string_values[0]);
 
-  const SimpleMessage* second_child = message.children[1].get();
+  const SimpleMessage* second_child = message.children[1];
   ASSERT_TRUE(second_child);
   EXPECT_EQ(3, second_child->foo);
   EXPECT_EQ("barbaz", second_child->bar);

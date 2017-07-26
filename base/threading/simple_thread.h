@@ -48,7 +48,6 @@
 
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
-#include "base/macros.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/platform_thread.h"
@@ -59,26 +58,25 @@ namespace base {
 // virtual Run method, or you can use the DelegateSimpleThread interface.
 class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
  public:
-  struct BASE_EXPORT Options {
+  class BASE_EXPORT Options {
    public:
-    Options() = default;
-    explicit Options(ThreadPriority priority_in) : priority(priority_in) {}
-    ~Options() = default;
+    Options() : stack_size_(0), priority_(ThreadPriority::NORMAL) {}
+    explicit Options(ThreadPriority priority)
+        : stack_size_(0), priority_(priority) {}
+    ~Options() {}
 
-    // Allow copies.
-    Options(const Options& other) = default;
-    Options& operator=(const Options& other) = default;
+    // We use the standard compiler-supplied copy constructor.
 
     // A custom stack size, or 0 for the system default.
-    size_t stack_size = 0;
+    void set_stack_size(size_t size) { stack_size_ = size; }
+    size_t stack_size() const { return stack_size_; }
 
-    ThreadPriority priority = ThreadPriority::NORMAL;
-
-    // If false, the underlying thread's PlatformThreadHandle will not be kept
-    // around and as such the SimpleThread instance will not be Join()able and
-    // must not be deleted before Run() is invoked. After that, it's up to
-    // the subclass to determine when it is safe to delete itself.
-    bool joinable = true;
+    // A custom thread priority.
+    void set_priority(ThreadPriority priority) { priority_ = priority; }
+    ThreadPriority priority() const { return priority_; }
+   private:
+    size_t stack_size_;
+    ThreadPriority priority_;
   };
 
   // Create a SimpleThread.  |options| should be used to manage any specific
@@ -96,13 +94,19 @@ class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
   // Subclasses should override the Run method.
   virtual void Run() = 0;
 
+  // Return the thread name prefix, or "unnamed" if none was supplied.
+  std::string name_prefix() { return name_prefix_; }
+
+  // Return the completed name including TID, only valid after Start().
+  std::string name() { return name_; }
+
   // Return the thread id, only valid after Start().
   PlatformThreadId tid() { return tid_; }
 
   // Return True if Start() has ever been called.
   bool HasBeenStarted();
 
-  // Return True if Join() has ever been called.
+  // Return True if Join() has evern been called.
   bool HasBeenJoined() { return joined_; }
 
   // Overridden from PlatformThread::Delegate:
@@ -112,24 +116,18 @@ class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
   const std::string name_prefix_;
   std::string name_;
   const Options options_;
-  PlatformThreadHandle thread_;  // PlatformThread handle, reset after Join.
+  PlatformThreadHandle thread_;  // PlatformThread handle, invalid after Join!
   WaitableEvent event_;          // Signaled if Start() was ever called.
-  PlatformThreadId tid_ = kInvalidThreadId;  // The backing thread's id.
-  bool joined_ = false;                      // True if Join has been called.
-
-  DISALLOW_COPY_AND_ASSIGN(SimpleThread);
+  PlatformThreadId tid_;         // The backing thread's id.
+  bool joined_;                  // True if Join has been called.
 };
 
-// A SimpleThread which delegates Run() to its Delegate. Non-joinable
-// DelegateSimpleThread are safe to delete after Run() was invoked, their
-// Delegates are also safe to delete after that point from this class' point of
-// view (although implementations must of course make sure that Run() will not
-// use their Delegate's member state after its deletion).
 class BASE_EXPORT DelegateSimpleThread : public SimpleThread {
  public:
   class BASE_EXPORT Delegate {
    public:
-    virtual ~Delegate() = default;
+    Delegate() { }
+    virtual ~Delegate() { }
     virtual void Run() = 0;
   };
 
@@ -144,8 +142,6 @@ class BASE_EXPORT DelegateSimpleThread : public SimpleThread {
 
  private:
   Delegate* delegate_;
-
-  DISALLOW_COPY_AND_ASSIGN(DelegateSimpleThread);
 };
 
 // DelegateSimpleThreadPool allows you to start up a fixed number of threads,
@@ -190,8 +186,6 @@ class BASE_EXPORT DelegateSimpleThreadPool
   std::queue<Delegate*> delegates_;
   base::Lock lock_;            // Locks delegates_
   WaitableEvent dry_;    // Not signaled when there is no work to do.
-
-  DISALLOW_COPY_AND_ASSIGN(DelegateSimpleThreadPool);
 };
 
 }  // namespace base

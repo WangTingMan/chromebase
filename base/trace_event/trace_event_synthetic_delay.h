@@ -62,6 +62,9 @@
     trace_event_internal::GetOrCreateDelay(name, &impl_ptr)->End();   \
   } while (false)
 
+template <typename Type>
+struct DefaultSingletonTraits;
+
 namespace base {
 namespace trace_event {
 

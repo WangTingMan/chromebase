@@ -38,6 +38,8 @@
 #include "base/threading/platform_thread.h"
 #include "base/tracked_objects.h"
 
+class Task;
+
 namespace base {
 
 class BASE_EXPORT PosixDynamicThreadPool
@@ -49,6 +51,10 @@ class BASE_EXPORT PosixDynamicThreadPool
   // |idle_seconds_before_exit|.
   PosixDynamicThreadPool(const std::string& name_prefix,
                          int idle_seconds_before_exit);
+
+  // Indicates that the thread pool is going away.  Stops handing out tasks to
+  // worker threads.  Wakes up all the idle threads to let them exit.
+  void Terminate();
 
   // Adds |task| to the thread pool.
   void PostTask(const tracked_objects::Location& from_here,
@@ -79,6 +85,7 @@ class BASE_EXPORT PosixDynamicThreadPool
   ConditionVariable pending_tasks_available_cv_;
   int num_idle_threads_;
   TaskQueue pending_tasks_;
+  bool terminated_;
   // Only used for tests to ensure correct thread ordering.  It will always be
   // NULL in non-test code.
   std::unique_ptr<ConditionVariable> num_idle_threads_cv_;

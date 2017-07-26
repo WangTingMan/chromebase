@@ -6,12 +6,11 @@
 #define BASE_TRACE_EVENT_MEMORY_DUMP_SESSION_STATE_H_
 
 #include <memory>
-#include <set>
 
 #include "base/base_export.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
-#include "base/trace_event/memory_dump_request_args.h"
+#include "base/trace_event/trace_config.h"
 
 namespace base {
 namespace trace_event {
@@ -41,18 +40,11 @@ class BASE_EXPORT MemoryDumpSessionState
   void SetTypeNameDeduplicator(
       std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator);
 
-  void SetAllowedDumpModes(
-      std::set<MemoryDumpLevelOfDetail> allowed_dump_modes);
-
-  bool IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode) const;
-
-  void set_heap_profiler_breakdown_threshold_bytes(uint32_t value) {
-    heap_profiler_breakdown_threshold_bytes_ = value;
+  const TraceConfig::MemoryDumpConfig& memory_dump_config() const {
+    return memory_dump_config_;
   }
 
-  uint32_t heap_profiler_breakdown_threshold_bytes() const {
-    return heap_profiler_breakdown_threshold_bytes_;
-  }
+  void SetMemoryDumpConfig(const TraceConfig::MemoryDumpConfig& config);
 
  private:
   friend class RefCountedThreadSafe<MemoryDumpSessionState>;
@@ -66,9 +58,9 @@ class BASE_EXPORT MemoryDumpSessionState
   // trace is finalized.
   std::unique_ptr<TypeNameDeduplicator> type_name_deduplicator_;
 
-  std::set<MemoryDumpLevelOfDetail> allowed_dump_modes_;
-
-  uint32_t heap_profiler_breakdown_threshold_bytes_;
+  // The memory dump config, copied at the time when the tracing session was
+  // started.
+  TraceConfig::MemoryDumpConfig memory_dump_config_;
 };
 
 }  // namespace trace_event

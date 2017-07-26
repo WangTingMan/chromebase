@@ -49,14 +49,9 @@ class BASE_EXPORT PowerMonitorSource {
   // false otherwise.
   virtual bool IsOnBatteryPowerImpl() = 0;
 
-  // Sets the initial state for |on_battery_power_|, which defaults to false
-  // since not all implementations can provide the value at construction. May
-  // only be called before a base::PowerMonitor has been created.
-  void SetInitialOnBatteryPowerState(bool on_battery_power);
-
  private:
-  bool on_battery_power_ = false;
-  bool suspended_ = false;
+  bool on_battery_power_;
+  bool suspended_;
 
   // This lock guards access to on_battery_power_, to ensure that
   // IsOnBatteryPower can be called from any thread.

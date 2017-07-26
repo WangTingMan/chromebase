@@ -48,9 +48,8 @@ class BASE_EXPORT JSONFileValueSerializer : public base::ValueSerializer {
 class BASE_EXPORT JSONFileValueDeserializer : public base::ValueDeserializer {
  public:
   // |json_file_path_| is the path of a file that will be source of the
-  // deserialization. |options| is a bitmask of JSONParserOptions.
-  explicit JSONFileValueDeserializer(const base::FilePath& json_file_path,
-                                     int options = 0);
+  // deserialization.
+  explicit JSONFileValueDeserializer(const base::FilePath& json_file_path);
 
   ~JSONFileValueDeserializer() override;
 
@@ -83,6 +82,10 @@ class BASE_EXPORT JSONFileValueDeserializer : public base::ValueDeserializer {
   // be a JsonFileError.
   static const char* GetErrorMessageForCode(int error_code);
 
+  void set_allow_trailing_comma(bool new_value) {
+    allow_trailing_comma_ = new_value;
+  }
+
   // Returns the size (in bytes) of JSON string read from disk in the last
   // successful |Deserialize()| call.
   size_t get_last_read_size() const { return last_read_size_; }
@@ -93,7 +96,7 @@ class BASE_EXPORT JSONFileValueDeserializer : public base::ValueDeserializer {
   int ReadFileToString(std::string* json_string);
 
   const base::FilePath json_file_path_;
-  const int options_;
+  bool allow_trailing_comma_;
   size_t last_read_size_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(JSONFileValueDeserializer);

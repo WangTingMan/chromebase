@@ -11,7 +11,6 @@
 #include <stddef.h>
 
 #include <memory>
-#include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
@@ -21,6 +20,7 @@
 namespace crypto {
 
 // Simplify the interface and reduce includes by abstracting out the internals.
+struct HMACPlatformData;
 class SymmetricKey;
 
 class CRYPTO_EXPORT HMAC {
@@ -86,8 +86,7 @@ class CRYPTO_EXPORT HMAC {
 
  private:
   HashAlgorithm hash_alg_;
-  bool initialized_;
-  std::vector<unsigned char> key_;
+  std::unique_ptr<HMACPlatformData> plat_;
 
   DISALLOW_COPY_AND_ASSIGN(HMAC);
 };

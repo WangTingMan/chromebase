@@ -11,29 +11,15 @@ namespace base {
 
 class OpaqueRefCounted : public RefCounted<OpaqueRefCounted> {
  public:
-  OpaqueRefCounted() = default;
+  OpaqueRefCounted() {}
 
   int Return42() { return 42; }
 
  private:
-  friend class RefCounted<OpaqueRefCounted>;
-  ~OpaqueRefCounted() = default;
+  virtual ~OpaqueRefCounted() {}
 
+  friend RefCounted<OpaqueRefCounted>;
   DISALLOW_COPY_AND_ASSIGN(OpaqueRefCounted);
-};
-
-class OpaqueRefCountedThreadSafe
-    : public RefCounted<OpaqueRefCountedThreadSafe> {
- public:
-  OpaqueRefCountedThreadSafe() = default;
-
-  int Return42() { return 42; }
-
- private:
-  friend class RefCounted<OpaqueRefCountedThreadSafe>;
-  ~OpaqueRefCountedThreadSafe() = default;
-
-  DISALLOW_COPY_AND_ASSIGN(OpaqueRefCountedThreadSafe);
 };
 
 scoped_refptr<OpaqueRefCounted> MakeOpaqueRefCounted() {
@@ -44,16 +30,6 @@ void TestOpaqueRefCounted(scoped_refptr<OpaqueRefCounted> p) {
   EXPECT_EQ(42, p->Return42());
 }
 
-scoped_refptr<OpaqueRefCountedThreadSafe> MakeOpaqueRefCountedThreadSafe() {
-  return new OpaqueRefCountedThreadSafe();
-}
-
-void TestOpaqueRefCountedThreadSafe(
-    scoped_refptr<OpaqueRefCountedThreadSafe> p) {
-  EXPECT_EQ(42, p->Return42());
-}
-
 }  // namespace base
 
 template class scoped_refptr<base::OpaqueRefCounted>;
-template class scoped_refptr<base::OpaqueRefCountedThreadSafe>;
