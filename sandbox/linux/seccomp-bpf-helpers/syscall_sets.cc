@@ -120,9 +120,7 @@ bool SyscallSets::IsFileSystem(int sysno) {
 #if defined(__i386__) || defined(__arm__) || defined(__mips__)
     case __NR_lstat64:
 #endif
-#if defined(__i386__) || defined(__arm__) || defined(__x86_64__)
     case __NR_memfd_create:
-#endif
     case __NR_mkdirat:
     case __NR_mknodat:
 #if defined(__i386__)
@@ -414,6 +412,7 @@ bool SyscallSets::IsAllowedEpoll(int sysno) {
     case __NR_epoll_create:
     case __NR_epoll_wait:
 #endif
+    case __NR_epoll_pwait:
     case __NR_epoll_create1:
     case __NR_epoll_ctl:
       return true;
@@ -421,7 +420,6 @@ bool SyscallSets::IsAllowedEpoll(int sysno) {
 #if defined(__x86_64__)
     case __NR_epoll_ctl_old:
 #endif
-    case __NR_epoll_pwait:
 #if defined(__x86_64__)
     case __NR_epoll_wait_old:
 #endif
@@ -550,7 +548,7 @@ bool SyscallSets::IsAllowedGeneralIo(int sysno) {
 #if defined(__i386__) || defined(__arm__) || defined(__mips__)
     case __NR__newselect:
 #endif
-#if defined(__arm__)
+#if defined(__arm__) || defined(__mips__)
     case __NR_send:
 #endif
 #if defined(__x86_64__) || defined(__arm__) || defined(__mips__) || \

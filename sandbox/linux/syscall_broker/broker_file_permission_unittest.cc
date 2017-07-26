@@ -46,10 +46,19 @@ SANDBOX_TEST(BrokerFilePermission, CreateGoodRecursive) {
   BrokerFilePermission perm = BrokerFilePermission::ReadOnlyRecursive(kPath);
 }
 
+// In official builds, CHECK(x) causes a SIGTRAP on the architectures where the
+// sanbox is enabled (that are x86, x86_64, arm64 and 32-bit arm processes
+// running on a arm64 kernel).
+#if defined(OFFICIAL_BUILD)
+#define DEATH_BY_CHECK(msg) DEATH_BY_SIGNAL(SIGTRAP)
+#else
+#define DEATH_BY_CHECK(msg) DEATH_MESSAGE(msg)
+#endif
+
 SANDBOX_DEATH_TEST(
     BrokerFilePermission,
     CreateBad,
-    DEATH_MESSAGE(BrokerFilePermissionTester::GetErrorMessage())) {
+    DEATH_BY_CHECK(BrokerFilePermissionTester::GetErrorMessage())) {
   const char kPath[] = "/tmp/bad/";
   BrokerFilePermission perm = BrokerFilePermission::ReadOnly(kPath);
 }
@@ -57,7 +66,7 @@ SANDBOX_DEATH_TEST(
 SANDBOX_DEATH_TEST(
     BrokerFilePermission,
     CreateBadRecursive,
-    DEATH_MESSAGE(BrokerFilePermissionTester::GetErrorMessage())) {
+    DEATH_BY_CHECK(BrokerFilePermissionTester::GetErrorMessage())) {
   const char kPath[] = "/tmp/bad";
   BrokerFilePermission perm = BrokerFilePermission::ReadOnlyRecursive(kPath);
 }
@@ -65,7 +74,7 @@ SANDBOX_DEATH_TEST(
 SANDBOX_DEATH_TEST(
     BrokerFilePermission,
     CreateBadNotAbs,
-    DEATH_MESSAGE(BrokerFilePermissionTester::GetErrorMessage())) {
+    DEATH_BY_CHECK(BrokerFilePermissionTester::GetErrorMessage())) {
   const char kPath[] = "tmp/bad";
   BrokerFilePermission perm = BrokerFilePermission::ReadOnly(kPath);
 }
@@ -73,7 +82,7 @@ SANDBOX_DEATH_TEST(
 SANDBOX_DEATH_TEST(
     BrokerFilePermission,
     CreateBadEmpty,
-    DEATH_MESSAGE(BrokerFilePermissionTester::GetErrorMessage())) {
+    DEATH_BY_CHECK(BrokerFilePermissionTester::GetErrorMessage())) {
   const char kPath[] = "";
   BrokerFilePermission perm = BrokerFilePermission::ReadOnly(kPath);
 }
