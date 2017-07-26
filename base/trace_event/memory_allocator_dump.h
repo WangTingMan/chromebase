@@ -19,6 +19,7 @@
 namespace base {
 namespace trace_event {
 
+class MemoryDumpManager;
 class ProcessMemoryDump;
 class TracedValue;
 
@@ -68,6 +69,11 @@ class BASE_EXPORT MemoryAllocatorDump {
 
   // Called at trace generation time to populate the TracedValue.
   void AsValueInto(TracedValue* value) const;
+
+  // Get the ProcessMemoryDump instance that owns this.
+  ProcessMemoryDump* process_memory_dump() const {
+    return process_memory_dump_;
+  }
 
   // Use enum Flags to set values.
   void set_flags(int flags) { flags_ |= flags; }

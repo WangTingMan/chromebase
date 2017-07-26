@@ -31,6 +31,7 @@
 namespace base {
 namespace trace_event {
 
+class MemoryDumpManager;
 class MemoryDumpSessionState;
 class TracedValue;
 

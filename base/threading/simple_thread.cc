@@ -12,55 +12,62 @@
 namespace base {
 
 SimpleThread::SimpleThread(const std::string& name_prefix)
-    : SimpleThread(name_prefix, Options()) {}
+    : name_prefix_(name_prefix),
+      name_(name_prefix),
+      thread_(),
+      event_(WaitableEvent::ResetPolicy::MANUAL,
+             WaitableEvent::InitialState::NOT_SIGNALED),
+      tid_(0),
+      joined_(false) {}
 
 SimpleThread::SimpleThread(const std::string& name_prefix,
                            const Options& options)
     : name_prefix_(name_prefix),
+      name_(name_prefix),
       options_(options),
+      thread_(),
       event_(WaitableEvent::ResetPolicy::MANUAL,
-             WaitableEvent::InitialState::NOT_SIGNALED) {}
+             WaitableEvent::InitialState::NOT_SIGNALED),
+      tid_(0),
+      joined_(false) {}
 
 SimpleThread::~SimpleThread() {
   DCHECK(HasBeenStarted()) << "SimpleThread was never started.";
-  DCHECK(!options_.joinable || HasBeenJoined())
-      << "Joinable SimpleThread destroyed without being Join()ed.";
+  DCHECK(HasBeenJoined()) << "SimpleThread destroyed without being Join()ed.";
 }
 
 void SimpleThread::Start() {
   DCHECK(!HasBeenStarted()) << "Tried to Start a thread multiple times.";
-  bool success =
-      options_.joinable
-          ? PlatformThread::CreateWithPriority(options_.stack_size, this,
-                                               &thread_, options_.priority)
-          : PlatformThread::CreateNonJoinableWithPriority(
-                options_.stack_size, this, options_.priority);
+  bool success;
+  if (options_.priority() == ThreadPriority::NORMAL) {
+    success = PlatformThread::Create(options_.stack_size(), this, &thread_);
+  } else {
+    success = PlatformThread::CreateWithPriority(options_.stack_size(), this,
+                                                 &thread_, options_.priority());
+  }
   DCHECK(success);
-  ThreadRestrictions::ScopedAllowWait allow_wait;
+  base::ThreadRestrictions::ScopedAllowWait allow_wait;
   event_.Wait();  // Wait for the thread to complete initialization.
 }
 
 void SimpleThread::Join() {
-  DCHECK(options_.joinable) << "A non-joinable thread can't be joined.";
   DCHECK(HasBeenStarted()) << "Tried to Join a never-started thread.";
   DCHECK(!HasBeenJoined()) << "Tried to Join a thread multiple times.";
   PlatformThread::Join(thread_);
-  thread_ = PlatformThreadHandle();
   joined_ = true;
 }
 
 bool SimpleThread::HasBeenStarted() {
-  ThreadRestrictions::ScopedAllowWait allow_wait;
+  base::ThreadRestrictions::ScopedAllowWait allow_wait;
   return event_.IsSignaled();
 }
 
 void SimpleThread::ThreadMain() {
   tid_ = PlatformThread::CurrentId();
   // Construct our full name of the form "name_prefix_/TID".
-  std::string name(name_prefix_);
-  name.push_back('/');
-  name.append(IntToString(tid_));
-  PlatformThread::SetName(name);
+  name_.push_back('/');
+  name_.append(IntToString(tid_));
+  PlatformThread::SetName(name_);
 
   // We've initialized our new thread, signal that we're done to Start().
   event_.Signal();
@@ -70,26 +77,24 @@ void SimpleThread::ThreadMain() {
 
 DelegateSimpleThread::DelegateSimpleThread(Delegate* delegate,
                                            const std::string& name_prefix)
-    : DelegateSimpleThread(delegate, name_prefix, Options()) {}
+    : SimpleThread(name_prefix),
+      delegate_(delegate) {
+}
 
 DelegateSimpleThread::DelegateSimpleThread(Delegate* delegate,
                                            const std::string& name_prefix,
                                            const Options& options)
     : SimpleThread(name_prefix, options),
       delegate_(delegate) {
-  DCHECK(delegate_);
 }
 
-DelegateSimpleThread::~DelegateSimpleThread() = default;
+DelegateSimpleThread::~DelegateSimpleThread() {
+}
 
 void DelegateSimpleThread::Run() {
   DCHECK(delegate_) << "Tried to call Run without a delegate (called twice?)";
-
-  // Non-joinable DelegateSimpleThreads are allowed to be deleted during Run().
-  // Member state must not be accessed after invoking Run().
-  Delegate* delegate = delegate_;
-  delegate_ = nullptr;
-  delegate->Run();
+  delegate_->Run();
+  delegate_ = NULL;
 }
 
 DelegateSimpleThreadPool::DelegateSimpleThreadPool(

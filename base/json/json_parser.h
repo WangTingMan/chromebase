@@ -16,7 +16,6 @@
 #include "base/gtest_prod_util.h"
 #include "base/json/json_reader.h"
 #include "base/macros.h"
-#include "base/memory/manual_constructor.h"
 #include "base/strings/string_piece.h"
 
 namespace base {
@@ -31,7 +30,7 @@ class JSONParserTest;
 // to be used directly; it encapsulates logic that need not be exposed publicly.
 //
 // This parser guarantees O(n) time through the input string. It also optimizes
-// base::Value by using StringPiece where possible when returning Value
+// base::StringValue by using StringPiece where possible when returning Value
 // objects by using "hidden roots," discussed in the implementation.
 //
 // Iteration happens on the byte level, with the functions CanConsume and
@@ -94,7 +93,7 @@ class BASE_EXPORT JSONParser {
   // This class centralizes that logic.
   class StringBuilder {
    public:
-    // Empty constructor. Used for creating a builder with which to assign to.
+    // Empty constructor. Used for creating a builder with which to Swap().
     StringBuilder();
 
     // |pos| is the beginning of an input string, excluding the |"|.
@@ -102,7 +101,8 @@ class BASE_EXPORT JSONParser {
 
     ~StringBuilder();
 
-    void operator=(StringBuilder&& other);
+    // Swaps the contents of |other| with this.
+    void Swap(StringBuilder* other);
 
     // Either increases the |length_| of the string or copies the character if
     // the StringBuilder has been converted. |c| must be in the basic ASCII
@@ -111,23 +111,22 @@ class BASE_EXPORT JSONParser {
     void Append(const char& c);
 
     // Appends a string to the std::string. Must be Convert()ed to use.
-    void AppendString(const char* str, size_t len);
+    void AppendString(const std::string& str);
 
     // Converts the builder from its default StringPiece to a full std::string,
     // performing a copy. Once a builder is converted, it cannot be made a
     // StringPiece again.
     void Convert();
 
-    // Returns the builder as a StringPiece.
+    // Returns whether the builder can be converted to a StringPiece.
+    bool CanBeStringPiece() const;
+
+    // Returns the StringPiece representation. Returns an empty piece if it
+    // cannot be converted.
     StringPiece AsStringPiece();
 
     // Returns the builder as a std::string.
     const std::string& AsString();
-
-    // Returns the builder as a string, invalidating all state. This allows
-    // the internal string buffer representation to be destructively moved
-    // in cases where the builder will not be needed any more.
-    std::string DestructiveAsString();
 
    private:
     // The beginning of the input string.
@@ -136,10 +135,9 @@ class BASE_EXPORT JSONParser {
     // Number of bytes in |pos_| that make up the string being built.
     size_t length_;
 
-    // The copied string representation. Will be uninitialized until Convert()
-    // is called, which will set has_string_ to true.
-    bool has_string_;
-    base::ManualConstructor<std::string> string_;
+    // The copied string representation. NULL until Convert() is called.
+    // Strong. std::unique_ptr<T> has too much of an overhead here.
+    std::string* string_;
   };
 
   // Quick check that the stream has capacity to consume |length| more bytes.
@@ -163,27 +161,28 @@ class BASE_EXPORT JSONParser {
   // currently wound to a '/'.
   bool EatComment();
 
-  // Calls GetNextToken() and then ParseToken().
-  std::unique_ptr<Value> ParseNextToken();
+  // Calls GetNextToken() and then ParseToken(). Caller owns the result.
+  Value* ParseNextToken();
 
   // Takes a token that represents the start of a Value ("a structural token"
-  // in RFC terms) and consumes it, returning the result as a Value.
-  std::unique_ptr<Value> ParseToken(Token token);
+  // in RFC terms) and consumes it, returning the result as an object the
+  // caller owns.
+  Value* ParseToken(Token token);
 
   // Assuming that the parser is currently wound to '{', this parses a JSON
   // object into a DictionaryValue.
-  std::unique_ptr<Value> ConsumeDictionary();
+  Value* ConsumeDictionary();
 
   // Assuming that the parser is wound to '[', this parses a JSON list into a
-  // std::unique_ptr<ListValue>.
-  std::unique_ptr<Value> ConsumeList();
+  // ListValue.
+  Value* ConsumeList();
 
   // Calls through ConsumeStringRaw and wraps it in a value.
-  std::unique_ptr<Value> ConsumeString();
+  Value* ConsumeString();
 
   // Assuming that the parser is wound to a double quote, this parses a string,
   // decoding any escape sequences and converts UTF-16 to UTF-8. Returns true on
-  // success and places result into |out|. Returns false on failure with
+  // success and Swap()s the result into |out|. Returns false on failure with
   // error information set.
   bool ConsumeStringRaw(StringBuilder* out);
   // Helper function for ConsumeStringRaw() that consumes the next four or 10
@@ -199,14 +198,14 @@ class BASE_EXPORT JSONParser {
 
   // Assuming that the parser is wound to the start of a valid JSON number,
   // this parses and converts it to either an int or double value.
-  std::unique_ptr<Value> ConsumeNumber();
+  Value* ConsumeNumber();
   // Helper that reads characters that are ints. Returns true if a number was
   // read and false on error.
   bool ReadInt(bool allow_leading_zeros);
 
   // Consumes the literal values of |true|, |false|, and |null|, assuming the
   // parser is wound to the first character of any of those.
-  std::unique_ptr<Value> ConsumeLiteral();
+  Value* ConsumeLiteral();
 
   // Compares two string buffers of a given length.
   static bool StringsAreEqual(const char* left, const char* right, size_t len);
@@ -259,13 +258,9 @@ class BASE_EXPORT JSONParser {
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ConsumeLiterals);
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ConsumeNumbers);
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ErrorMessages);
-  FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ReplaceInvalidCharacters);
 
   DISALLOW_COPY_AND_ASSIGN(JSONParser);
 };
-
-// Used when decoding and an invalid utf-8 sequence is encountered.
-BASE_EXPORT extern const char kUnicodeReplacementString[];
 
 }  // namespace internal
 }  // namespace base
