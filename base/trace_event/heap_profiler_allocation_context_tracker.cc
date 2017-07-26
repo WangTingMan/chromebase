@@ -29,6 +29,7 @@ const size_t kMaxStackDepth = 128u;
 const size_t kMaxTaskDepth = 16u;
 AllocationContextTracker* const kInitializingSentinel =
     reinterpret_cast<AllocationContextTracker*>(-1);
+const char kTracingOverhead[] = "tracing_overhead";
 
 ThreadLocalStorage::StaticSlot g_tls_alloc_ctx_tracker = TLS_INITIALIZER;
 
@@ -107,17 +108,17 @@ void AllocationContextTracker::SetCaptureMode(CaptureMode mode) {
 }
 
 void AllocationContextTracker::PushPseudoStackFrame(
-    AllocationContextTracker::PseudoStackFrame stack_frame) {
+    const char* trace_event_name) {
   // Impose a limit on the height to verify that every push is popped, because
   // in practice the pseudo stack never grows higher than ~20 frames.
   if (pseudo_stack_.size() < kMaxStackDepth)
-    pseudo_stack_.push_back(stack_frame);
+    pseudo_stack_.push_back(trace_event_name);
   else
     NOTREACHED();
 }
 
 void AllocationContextTracker::PopPseudoStackFrame(
-    AllocationContextTracker::PseudoStackFrame stack_frame) {
+    const char* trace_event_name) {
   // Guard for stack underflow. If tracing was started with a TRACE_EVENT in
   // scope, the frame was never pushed, so it is possible that pop is called
   // on an empty stack.
@@ -127,10 +128,8 @@ void AllocationContextTracker::PopPseudoStackFrame(
   // Assert that pushes and pops are nested correctly. This DCHECK can be
   // hit if some TRACE_EVENT macro is unbalanced (a TRACE_EVENT_END* call
   // without a corresponding TRACE_EVENT_BEGIN).
-  DCHECK(stack_frame == pseudo_stack_.back())
-      << "Encountered an unmatched TRACE_EVENT_END: "
-      << stack_frame.trace_event_name
-      << " vs event in stack: " << pseudo_stack_.back().trace_event_name;
+  DCHECK_EQ(trace_event_name, pseudo_stack_.back())
+      << "Encountered an unmatched TRACE_EVENT_END";
 
   pseudo_stack_.pop_back();
 }
@@ -156,15 +155,21 @@ void AllocationContextTracker::PopCurrentTaskContext(const char* context) {
 }
 
 // static
-bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
-  if (ignore_scope_depth_)
-    return false;
+AllocationContext AllocationContextTracker::GetContextSnapshot() {
+  AllocationContext ctx;
+
+  if (ignore_scope_depth_) {
+    ctx.backtrace.frames[0] = StackFrame::FromTraceEventName(kTracingOverhead);
+    ctx.type_name = kTracingOverhead;
+    ctx.backtrace.frame_count = 1;
+    return ctx;
+  }
 
   CaptureMode mode = static_cast<CaptureMode>(
       subtle::NoBarrier_Load(&capture_mode_));
 
-  auto* backtrace = std::begin(ctx->backtrace.frames);
-  auto* backtrace_end = std::end(ctx->backtrace.frames);
+  auto* backtrace = std::begin(ctx.backtrace.frames);
+  auto* backtrace_end = std::end(ctx.backtrace.frames);
 
   if (!thread_name_) {
     // Ignore the string allocation made by GetAndLeakThreadName to avoid
@@ -188,12 +193,11 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
       }
     case CaptureMode::PSEUDO_STACK:
       {
-        for (const PseudoStackFrame& stack_frame : pseudo_stack_) {
+        for (const char* event_name: pseudo_stack_) {
           if (backtrace == backtrace_end) {
             break;
           }
-          *backtrace++ =
-              StackFrame::FromTraceEventName(stack_frame.trace_event_name);
+          *backtrace++ = StackFrame::FromTraceEventName(event_name);
         }
         break;
       }
@@ -218,32 +222,24 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
 
         // Copy frames backwards
         size_t backtrace_capacity = backtrace_end - backtrace;
-        int32_t top_frame_index = (backtrace_capacity >= frame_count)
-                                      ? 0
-                                      : frame_count - backtrace_capacity;
-        for (int32_t i = frame_count - 1; i >= top_frame_index; --i) {
-          const void* frame = frames[i];
+        size_t top_frame_index = (backtrace_capacity >= frame_count) ?
+            0 :
+            frame_count - backtrace_capacity;
+        for (size_t i = frame_count; i > top_frame_index;) {
+          const void* frame = frames[--i];
           *backtrace++ = StackFrame::FromProgramCounter(frame);
         }
         break;
       }
   }
 
-  ctx->backtrace.frame_count = backtrace - std::begin(ctx->backtrace.frames);
+  ctx.backtrace.frame_count = backtrace - std::begin(ctx.backtrace.frames);
 
   // TODO(ssid): Fix crbug.com/594803 to add file name as 3rd dimension
   // (component name) in the heap profiler and not piggy back on the type name.
-  if (!task_contexts_.empty()) {
-    ctx->type_name = task_contexts_.back();
-  } else if (!pseudo_stack_.empty()) {
-    // If task context was unavailable, then the category names are taken from
-    // trace events.
-    ctx->type_name = pseudo_stack_.back().trace_event_category;
-  } else {
-    ctx->type_name = nullptr;
-  }
+  ctx.type_name = task_contexts_.empty() ? nullptr : task_contexts_.back();
 
-  return true;
+  return ctx;
 }
 
 }  // namespace trace_event

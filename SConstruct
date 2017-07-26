@@ -270,6 +270,7 @@ base_libs = [
     'name' : 'crypto',
     'sources' : """
                 hmac.cc
+                hmac_nss.cc
                 nss_key_util.cc
                 nss_util.cc
                 openssl_util.cc
@@ -282,9 +283,9 @@ base_libs = [
                 secure_hash.cc
                 secure_util.cc
                 sha2.cc
-                signature_creator.cc
-                signature_verifier.cc
-                symmetric_key.cc
+                signature_creator_nss.cc
+                signature_verifier_nss.cc
+                symmetric_key_nss.cc
                 third_party/nss/rsawrapr.c
                 third_party/nss/sha512.cc
                 """,
@@ -308,7 +309,7 @@ base_libs = [
                 linux/seccomp-bpf/trap.cc
 
                 linux/seccomp-bpf-helpers/baseline_policy.cc
-    linux/seccomp-bpf-helpers/sigsys_handlers.cc
+                linux/seccomp-bpf-helpers/sigsys_handlers.cc
                 linux/seccomp-bpf-helpers/syscall_parameters_restrictions.cc
                 linux/seccomp-bpf-helpers/syscall_sets.cc
 

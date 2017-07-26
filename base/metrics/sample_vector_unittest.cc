@@ -12,7 +12,6 @@
 
 #include "base/metrics/bucket_ranges.h"
 #include "base/metrics/histogram.h"
-#include "base/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {

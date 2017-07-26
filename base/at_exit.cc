@@ -22,8 +22,6 @@ namespace base {
 // this for thread-safe access, since it will only be modified in testing.
 static AtExitManager* g_top_manager = NULL;
 
-static bool g_disable_managers = false;
-
 AtExitManager::AtExitManager()
     : processing_callbacks_(false), next_manager_(g_top_manager) {
 // If multiple modules instantiate AtExitManagers they'll end up living in this
@@ -41,8 +39,7 @@ AtExitManager::~AtExitManager() {
   }
   DCHECK_EQ(this, g_top_manager);
 
-  if (!g_disable_managers)
-    ProcessCallbacksNow();
+  ProcessCallbacksNow();
   g_top_manager = next_manager_;
 }
 
@@ -89,11 +86,6 @@ void AtExitManager::ProcessCallbacksNow() {
 
   // Expect that all callbacks have been run.
   DCHECK(g_top_manager->stack_.empty());
-}
-
-void AtExitManager::DisableAllAtExitManagers() {
-  AutoLock lock(g_top_manager->lock_);
-  g_disable_managers = true;
 }
 
 AtExitManager::AtExitManager(bool shadow)

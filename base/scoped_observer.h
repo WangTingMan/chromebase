@@ -47,7 +47,7 @@ class ScopedObserver {
   }
 
   bool IsObserving(Source* source) const {
-    return base::ContainsValue(sources_, source);
+    return ContainsValue(sources_, source);
   }
 
   bool IsObservingSources() const { return !sources_.empty(); }

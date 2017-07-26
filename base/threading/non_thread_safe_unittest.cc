@@ -8,7 +8,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/test/gtest_util.h"
 #include "base/threading/simple_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -107,6 +106,8 @@ TEST(NonThreadSafeTest, DetachThenDestructOnDifferentThread) {
   delete_on_thread.Join();
 }
 
+#if GTEST_HAS_DEATH_TEST || !ENABLE_NON_THREAD_SAFE
+
 void NonThreadSafeClass::MethodOnDifferentThreadImpl() {
   std::unique_ptr<NonThreadSafeClass> non_thread_safe_class(
       new NonThreadSafeClass);
@@ -119,15 +120,17 @@ void NonThreadSafeClass::MethodOnDifferentThreadImpl() {
   call_on_thread.Join();
 }
 
-#if DCHECK_IS_ON()
+#if ENABLE_NON_THREAD_SAFE
 TEST(NonThreadSafeDeathTest, MethodNotAllowedOnDifferentThreadInDebug) {
-  ASSERT_DCHECK_DEATH({ NonThreadSafeClass::MethodOnDifferentThreadImpl(); });
+  ASSERT_DEATH({
+      NonThreadSafeClass::MethodOnDifferentThreadImpl();
+    }, "");
 }
 #else
 TEST(NonThreadSafeTest, MethodAllowedOnDifferentThreadInRelease) {
   NonThreadSafeClass::MethodOnDifferentThreadImpl();
 }
-#endif  // DCHECK_IS_ON()
+#endif  // ENABLE_NON_THREAD_SAFE
 
 void NonThreadSafeClass::DestructorOnDifferentThreadImpl() {
   std::unique_ptr<NonThreadSafeClass> non_thread_safe_class(
@@ -142,15 +145,21 @@ void NonThreadSafeClass::DestructorOnDifferentThreadImpl() {
   delete_on_thread.Join();
 }
 
-#if DCHECK_IS_ON()
+#if ENABLE_NON_THREAD_SAFE
 TEST(NonThreadSafeDeathTest, DestructorNotAllowedOnDifferentThreadInDebug) {
-  ASSERT_DCHECK_DEATH(
-      { NonThreadSafeClass::DestructorOnDifferentThreadImpl(); });
+  ASSERT_DEATH({
+      NonThreadSafeClass::DestructorOnDifferentThreadImpl();
+    }, "");
 }
 #else
 TEST(NonThreadSafeTest, DestructorAllowedOnDifferentThreadInRelease) {
   NonThreadSafeClass::DestructorOnDifferentThreadImpl();
 }
-#endif  // DCHECK_IS_ON()
+#endif  // ENABLE_NON_THREAD_SAFE
+
+#endif  // GTEST_HAS_DEATH_TEST || !ENABLE_NON_THREAD_SAFE
+
+// Just in case we ever get lumped together with other compilation units.
+#undef ENABLE_NON_THREAD_SAFE
 
 }  // namespace base

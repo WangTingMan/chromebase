@@ -4,8 +4,6 @@
 
 #include "base/task_runner.h"
 
-#include <utility>
-
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/threading/post_task_and_reply_impl.h"
@@ -47,11 +45,12 @@ bool TaskRunner::PostTask(const tracked_objects::Location& from_here,
   return PostDelayedTask(from_here, task, base::TimeDelta());
 }
 
-bool TaskRunner::PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  Closure task,
-                                  Closure reply) {
+bool TaskRunner::PostTaskAndReply(
+    const tracked_objects::Location& from_here,
+    const Closure& task,
+    const Closure& reply) {
   return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(
-      from_here, std::move(task), std::move(reply));
+      from_here, task, reply);
 }
 
 TaskRunner::TaskRunner() {}
