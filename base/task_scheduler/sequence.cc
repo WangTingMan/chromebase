@@ -26,24 +26,30 @@ bool Sequence::PushTask(std::unique_ptr<Task> task) {
   return queue_.size() == 1;
 }
 
-const Task* Sequence::PeekTask() const {
-  AutoSchedulerLock auto_lock(lock_);
-
-  if (queue_.empty())
-    return nullptr;
-
-  return queue_.front().get();
-}
-
-bool Sequence::PopTask() {
+std::unique_ptr<Task> Sequence::TakeTask() {
   AutoSchedulerLock auto_lock(lock_);
   DCHECK(!queue_.empty());
+  DCHECK(queue_.front());
 
   const int priority_index =
       static_cast<int>(queue_.front()->traits.priority());
   DCHECK_GT(num_tasks_per_priority_[priority_index], 0U);
   --num_tasks_per_priority_[priority_index];
 
+  return std::move(queue_.front());
+}
+
+TaskTraits Sequence::PeekTaskTraits() const {
+  AutoSchedulerLock auto_lock(lock_);
+  DCHECK(!queue_.empty());
+  DCHECK(queue_.front());
+  return queue_.front()->traits;
+}
+
+bool Sequence::Pop() {
+  AutoSchedulerLock auto_lock(lock_);
+  DCHECK(!queue_.empty());
+  DCHECK(!queue_.front());
   queue_.pop();
   return queue_.empty();
 }

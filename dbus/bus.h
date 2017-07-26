@@ -28,10 +28,6 @@ class SingleThreadTaskRunner;
 class TaskRunner;
 }
 
-namespace tracked_objects {
-class Location;
-}
-
 namespace dbus {
 
 class ExportedObject;
@@ -359,12 +355,6 @@ class CHROME_DBUS_EXPORT Bus : public base::RefCountedThreadSafe<Bus> {
   virtual bool RemoveObjectManager(const std::string& service_name,
                                    const ObjectPath& object_path,
                                    const base::Closure& callback);
-
-  // Instructs all registered object managers to retrieve their set of managed
-  // objects from their respective remote objects. There is no need to call this
-  // manually, this is called automatically by the D-Bus thread manager once
-  // implementation classes are registered.
-  virtual void GetManagedObjects();
 
   // Shuts down the bus and blocks until it's done. More specifically, this
   // function does the following:

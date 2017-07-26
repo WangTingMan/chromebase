@@ -163,7 +163,7 @@ class ChromeOSVersionInfo {
   bool is_running_on_chromeos_;
 };
 
-static LazyInstance<ChromeOSVersionInfo>
+static LazyInstance<ChromeOSVersionInfo>::Leaky
     g_chrome_os_version_info = LAZY_INSTANCE_INITIALIZER;
 
 ChromeOSVersionInfo& GetChromeOSVersionInfo() {
@@ -197,6 +197,16 @@ std::string SysInfo::GetLsbReleaseBoard() {
   if (!GetLsbReleaseValue(kMachineInfoBoard, &board))
     board = "unknown";
   return board;
+}
+
+// static
+std::string SysInfo::GetStrippedReleaseBoard() {
+  std::string board = GetLsbReleaseBoard();
+  const size_t index = board.find("-signed-");
+  if (index != std::string::npos)
+    board.resize(index);
+
+  return base::ToLowerASCII(board);
 }
 
 // static

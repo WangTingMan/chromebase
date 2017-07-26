@@ -8,7 +8,6 @@
 #include <type_traits>
 
 #include "base/logging.h"
-#include "base/memory/aligned_memory.h"
 #include "base/template_util.h"
 
 namespace base {
@@ -35,28 +34,70 @@ namespace internal {
 
 template <typename T, bool = base::is_trivially_destructible<T>::value>
 struct OptionalStorage {
+  // Initializing |empty_| here instead of using default member initializing
+  // to avoid errors in g++ 4.8.
+  constexpr OptionalStorage() : empty_('\0') {}
+
+  constexpr explicit OptionalStorage(const T& value)
+      : is_null_(false), value_(value) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  explicit OptionalStorage(T&& value)
+      : is_null_(false), value_(std::move(value)) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
+  template <class... Args>
+  explicit OptionalStorage(base::in_place_t, Args&&... args)
+      : is_null_(false), value_(std::forward<Args>(args)...) {}
+
   // When T is not trivially destructible we must call its
   // destructor before deallocating its memory.
   ~OptionalStorage() {
     if (!is_null_)
-      buffer_.template data_as<T>()->~T();
+      value_.~T();
   }
 
   bool is_null_ = true;
-  base::AlignedMemory<sizeof(T), ALIGNOF(T)> buffer_;
+  union {
+    // |empty_| exists so that the union will always be initialized, even when
+    // it doesn't contain a value. Union members must be initialized for the
+    // constructor to be 'constexpr'.
+    char empty_;
+    T value_;
+  };
 };
 
 template <typename T>
 struct OptionalStorage<T, true> {
-  // When T is trivially destructible (i.e. its destructor does nothing)
-  // there is no need to call it.
-  // Since |base::AlignedMemory| is just an array its destructor
-  // is trivial. Explicitly defaulting the destructor means it's not
-  // user-provided. All of this together make this destructor trivial.
+  // Initializing |empty_| here instead of using default member initializing
+  // to avoid errors in g++ 4.8.
+  constexpr OptionalStorage() : empty_('\0') {}
+
+  constexpr explicit OptionalStorage(const T& value)
+      : is_null_(false), value_(value) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  explicit OptionalStorage(T&& value)
+      : is_null_(false), value_(std::move(value)) {}
+
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
+  template <class... Args>
+  explicit OptionalStorage(base::in_place_t, Args&&... args)
+      : is_null_(false), value_(std::forward<Args>(args)...) {}
+
+  // When T is trivially destructible (i.e. its destructor does nothing) there
+  // is no need to call it. Explicitly defaulting the destructor means it's not
+  // user-provided. Those two together make this destructor trivial.
   ~OptionalStorage() = default;
 
   bool is_null_ = true;
-  base::AlignedMemory<sizeof(T), ALIGNOF(T)> buffer_;
+  union {
+    // |empty_| exists so that the union will always be initialized, even when
+    // it doesn't contain a value. Union members must be initialized for the
+    // constructor to be 'constexpr'.
+    char empty_;
+    T value_;
+  };
 };
 
 }  // namespace internal
@@ -79,8 +120,9 @@ class Optional {
  public:
   using value_type = T;
 
-  constexpr Optional() = default;
-  Optional(base::nullopt_t) : Optional() {}
+  constexpr Optional() {}
+
+  constexpr Optional(base::nullopt_t) {}
 
   Optional(const Optional& other) {
     if (!other.storage_.is_null_)
@@ -92,14 +134,15 @@ class Optional {
       Init(std::move(other.value()));
   }
 
-  Optional(const T& value) { Init(value); }
+  constexpr Optional(const T& value) : storage_(value) {}
 
-  Optional(T&& value) { Init(std::move(value)); }
+  // TODO(alshabalin): Can't use 'constexpr' with std::move until C++14.
+  Optional(T&& value) : storage_(std::move(value)) {}
 
+  // TODO(alshabalin): Can't use 'constexpr' with std::forward until C++14.
   template <class... Args>
-  explicit Optional(base::in_place_t, Args&&... args) {
-    emplace(std::forward<Args>(args)...);
-  }
+  explicit Optional(base::in_place_t, Args&&... args)
+      : storage_(base::in_place, std::forward<Args>(args)...) {}
 
   ~Optional() = default;
 
@@ -163,30 +206,32 @@ class Optional {
 
   constexpr explicit operator bool() const { return !storage_.is_null_; }
 
+  constexpr bool has_value() const { return !storage_.is_null_; }
+
   // TODO(mlamouri): using 'constexpr' here breaks compiler that assume it was
   // meant to be 'constexpr const'.
   T& value() & {
     DCHECK(!storage_.is_null_);
-    return *storage_.buffer_.template data_as<T>();
+    return storage_.value_;
   }
 
   // TODO(mlamouri): can't use 'constexpr' with DCHECK.
   const T& value() const& {
     DCHECK(!storage_.is_null_);
-    return *storage_.buffer_.template data_as<T>();
+    return storage_.value_;
   }
 
   // TODO(mlamouri): using 'constexpr' here breaks compiler that assume it was
   // meant to be 'constexpr const'.
   T&& value() && {
     DCHECK(!storage_.is_null_);
-    return std::move(*storage_.buffer_.template data_as<T>());
+    return std::move(storage_.value_);
   }
 
   // TODO(mlamouri): can't use 'constexpr' with DCHECK.
   const T&& value() const&& {
     DCHECK(!storage_.is_null_);
-    return std::move(*storage_.buffer_.template data_as<T>());
+    return std::move(storage_.value_);
   }
 
   template <class U>
@@ -217,10 +262,10 @@ class Optional {
 
     if (storage_.is_null_ != other.storage_.is_null_) {
       if (storage_.is_null_) {
-        Init(std::move(*other.storage_.buffer_.template data_as<T>()));
+        Init(std::move(other.storage_.value_));
         other.FreeIfNeeded();
       } else {
-        other.Init(std::move(*storage_.buffer_.template data_as<T>()));
+        other.Init(std::move(storage_.value_));
         FreeIfNeeded();
       }
       return;
@@ -229,6 +274,10 @@ class Optional {
     DCHECK(!storage_.is_null_ && !other.storage_.is_null_);
     using std::swap;
     swap(**this, *other);
+  }
+
+  void reset() {
+    FreeIfNeeded();
   }
 
   template <class... Args>
@@ -240,20 +289,20 @@ class Optional {
  private:
   void Init(const T& value) {
     DCHECK(storage_.is_null_);
-    new (storage_.buffer_.void_data()) T(value);
+    new (&storage_.value_) T(value);
     storage_.is_null_ = false;
   }
 
   void Init(T&& value) {
     DCHECK(storage_.is_null_);
-    new (storage_.buffer_.void_data()) T(std::move(value));
+    new (&storage_.value_) T(std::move(value));
     storage_.is_null_ = false;
   }
 
   template <class... Args>
   void Init(Args&&... args) {
     DCHECK(storage_.is_null_);
-    new (storage_.buffer_.void_data()) T(std::forward<Args>(args)...);
+    new (&storage_.value_) T(std::forward<Args>(args)...);
     storage_.is_null_ = false;
   }
 
@@ -261,20 +310,20 @@ class Optional {
     if (storage_.is_null_)
       Init(value);
     else
-      *storage_.buffer_.template data_as<T>() = value;
+      storage_.value_ = value;
   }
 
   void InitOrAssign(T&& value) {
     if (storage_.is_null_)
       Init(std::move(value));
     else
-      *storage_.buffer_.template data_as<T>() = std::move(value);
+      storage_.value_ = std::move(value);
   }
 
   void FreeIfNeeded() {
     if (storage_.is_null_)
       return;
-    storage_.buffer_.template data_as<T>()->~T();
+    storage_.value_.~T();
     storage_.is_null_ = true;
   }
 
