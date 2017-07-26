@@ -60,8 +60,6 @@
 #if defined(OS_MACOSX)
 #include <crt_externs.h>
 #include <sys/event.h>
-
-#include "base/feature_list.h"
 #else
 extern char** environ;
 #endif
@@ -71,11 +69,6 @@ namespace base {
 #if !defined(OS_NACL_NONSFI)
 
 namespace {
-
-#if defined(OS_MACOSX)
-const Feature kMacLaunchProcessPosixSpawn{"MacLaunchProcessPosixSpawn",
-                                          FEATURE_ENABLED_BY_DEFAULT};
-#endif
 
 // Get the process's "environment" (i.e. the thing that setenv/getenv
 // work with).
@@ -303,15 +296,6 @@ Process LaunchProcess(const CommandLine& cmdline,
 
 Process LaunchProcess(const std::vector<std::string>& argv,
                       const LaunchOptions& options) {
-#if defined(OS_MACOSX)
-  if (FeatureList::IsEnabled(kMacLaunchProcessPosixSpawn)) {
-    // TODO(rsesek): Do this unconditionally. There is one user for each of
-    // these two options. https://crbug.com/179923.
-    if (!options.pre_exec_delegate && options.current_directory.empty())
-      return LaunchProcessPosixSpawn(argv, options);
-  }
-#endif
-
   size_t fd_shuffle_size = 0;
   if (options.fds_to_remap) {
     fd_shuffle_size = options.fds_to_remap->size();
@@ -508,10 +492,7 @@ Process LaunchProcess(const std::vector<std::string>& argv,
       options.pre_exec_delegate->RunAsyncSafe();
     }
 
-    const char* executable_path = !options.real_path.empty() ?
-        options.real_path.value().c_str() : argv_cstr[0];
-
-    execvp(executable_path, argv_cstr.get());
+    execvp(argv_cstr[0], argv_cstr.get());
 
     RAW_LOG(ERROR, "LaunchProcess: failed to execvp:");
     RAW_LOG(ERROR, argv_cstr[0]);

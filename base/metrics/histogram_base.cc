@@ -97,7 +97,8 @@ bool HistogramBase::SerializeInfo(Pickle* pickle) const {
   return SerializeInfoImpl(pickle);
 }
 
-uint32_t HistogramBase::FindCorruption(const HistogramSamples& /* samples */) const {
+uint32_t HistogramBase::FindCorruption(
+    const HistogramSamples& /*samples*/) const {
   // Not supported by default.
   return NO_INCONSISTENCIES;
 }
@@ -118,16 +119,14 @@ void HistogramBase::WriteJSON(std::string* output) const {
   root.SetInteger("flags", flags());
   root.Set("params", std::move(parameters));
   root.Set("buckets", std::move(buckets));
-  root.SetInteger("pid", GetUniqueIdForProcess());
+  root.SetInteger("pid", GetCurrentProcId());
   serializer.Serialize(root);
 }
 
 // static
 void HistogramBase::EnableActivityReportHistogram(
     const std::string& process_type) {
-  if (report_histogram_)
-    return;
-
+  DCHECK(!report_histogram_);
   size_t existing = StatisticsRecorder::GetHistogramCount();
   if (existing != 0) {
     DVLOG(1) << existing
@@ -175,7 +174,12 @@ void HistogramBase::WriteAsciiBucketGraph(double current_size,
 
 const std::string HistogramBase::GetSimpleAsciiBucketRange(
     Sample sample) const {
-  return StringPrintf("%d", sample);
+  std::string result;
+  if (kHexRangePrintingFlag & flags())
+    StringAppendF(&result, "%#x", sample);
+  else
+    StringAppendF(&result, "%d", sample);
+  return result;
 }
 
 void HistogramBase::WriteAsciiBucketValue(Count current,

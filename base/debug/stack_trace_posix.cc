@@ -16,14 +16,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
 
-#if !defined(USE_SYMBOLIZE)
+#if defined(__GLIBCXX__)
 #include <cxxabi.h>
 #endif
 #if !defined(__UCLIBC__)
@@ -34,11 +33,8 @@
 #include <AvailabilityMacros.h>
 #endif
 
-#if defined(OS_LINUX)
-#include "base/debug/proc_maps_linux.h"
-#endif
-
 #include "base/debug/debugger.h"
+#include "base/debug/proc_maps_linux.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
@@ -70,18 +66,16 @@ const char kSymbolCharacters[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 #endif  // !defined(USE_SYMBOLIZE) && defined(__GLIBCXX__)
 
-#if !defined(USE_SYMBOLIZE) && !defined(__UCLIBC__)
+#if !defined(USE_SYMBOLIZE)
 // Demangles C++ symbols in the given text. Example:
 //
 // "out/Debug/base_unittests(_ZN10StackTraceC1Ev+0x20) [0x817778c]"
 // =>
 // "out/Debug/base_unittests(StackTrace::StackTrace()+0x20) [0x817778c]"
+#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
 void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
-  ALLOW_UNUSED_PARAM(text);
-#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
-
   std::string::size_type search_from = 0;
   while (search_from < text->size()) {
     // Look for the start of a mangled symbol, from search_from.
@@ -116,8 +110,11 @@ void DemangleSymbols(std::string* text) {
       search_from = mangled_start + 2;
     }
   }
-#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
 }
+#elif !defined(__UCLIBC__)
+void DemangleSymbols(std::string* /* text */) {}
+#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
+
 #endif  // !defined(USE_SYMBOLIZE)
 
 class BacktraceOutputHandler {
@@ -128,7 +125,7 @@ class BacktraceOutputHandler {
   virtual ~BacktraceOutputHandler() {}
 };
 
-#if !defined(__UCLIBC__)
+#if defined(USE_SYMBOLIZE) || !defined(__UCLIBC__)
 void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
   // This should be more than enough to store a 64-bit number in hex:
   // 16 hex digits + 1 for null-terminator.
@@ -138,6 +135,7 @@ void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
                    buf, sizeof(buf), 16, 12);
   handler->HandleOutput(buf);
 }
+#endif  // defined(USE_SYMBOLIZE) ||  !defined(__UCLIBC__)
 
 #if defined(USE_SYMBOLIZE)
 void OutputFrameId(intptr_t frame_id, BacktraceOutputHandler* handler) {
@@ -151,9 +149,13 @@ void OutputFrameId(intptr_t frame_id, BacktraceOutputHandler* handler) {
 }
 #endif  // defined(USE_SYMBOLIZE)
 
-void ProcessBacktrace(void *const *trace,
+#if !defined(__UCLIBC__)
+void ProcessBacktrace(void *const * trace,
                       size_t size,
                       BacktraceOutputHandler* handler) {
+  (void)trace;  // unused based on build context below.
+  (void)size;  // unusud based on build context below.
+  (void)handler;  // unused based on build context below.
   // NOTE: This code MUST be async-signal safe (it's used by in-process
   // stack dumping signal handler). NO malloc or stdio is allowed here.
 
@@ -214,7 +216,7 @@ void PrintToStderr(const char* output) {
 }
 
 void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
-  ALLOW_UNUSED_PARAM(void_context);  // unused depending on build context
+  (void)void_context;  // unused depending on build context
   // NOTE: This code MUST be async-signal safe.
   // NO malloc or stdio is allowed here.
 
@@ -384,7 +386,6 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   // Non-Mac OSes should probably reraise the signal as well, but the Linux
   // sandbox tests break on CrOS devices.
   // https://code.google.com/p/chromium/issues/detail?id=551681
-  PrintToStderr("Calling _exit(1). Core file will not be generated.\n");
   _exit(1);
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 }
@@ -449,6 +450,8 @@ void WarmUpBacktrace() {
   StackTrace stack_trace;
 }
 
+}  // namespace
+
 #if defined(USE_SYMBOLIZE)
 
 // class SandboxSymbolizeHelper.
@@ -464,8 +467,7 @@ class SandboxSymbolizeHelper {
  public:
   // Returns the singleton instance.
   static SandboxSymbolizeHelper* GetInstance() {
-    return Singleton<SandboxSymbolizeHelper,
-                     LeakySingletonTraits<SandboxSymbolizeHelper>>::get();
+    return Singleton<SandboxSymbolizeHelper>::get();
   }
 
  private:
@@ -681,8 +683,6 @@ class SandboxSymbolizeHelper {
 };
 #endif  // USE_SYMBOLIZE
 
-}  // namespace
-
 bool EnableInProcessStackDumping() {
 #if defined(USE_SYMBOLIZE)
   SandboxSymbolizeHelper::GetInstance();
@@ -719,18 +719,15 @@ bool EnableInProcessStackDumping() {
   return success;
 }
 
-StackTrace::StackTrace(size_t count) {
-// NOTE: This code MUST be async-signal safe (it's used by in-process
-// stack dumping signal handler). NO malloc or stdio is allowed here.
+StackTrace::StackTrace() {
+  // NOTE: This code MUST be async-signal safe (it's used by in-process
+  // stack dumping signal handler). NO malloc or stdio is allowed here.
 
 #if !defined(__UCLIBC__)
-  count = std::min(arraysize(trace_), count);
-
   // Though the backtrace API man page does not list any possible negative
   // return values, we take no chance.
-  count_ = base::saturated_cast<size_t>(backtrace(trace_, count));
+  count_ = base::saturated_cast<size_t>(backtrace(trace_, arraysize(trace_)));
 #else
-  ALLOW_UNUSED_PARAM(count);
   count_ = 0;
 #endif
 }

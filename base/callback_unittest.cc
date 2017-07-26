@@ -14,7 +14,7 @@
 
 namespace base {
 
-void NopInvokeFunc() {}
+void NopInvokeFunc(internal::BindStateBase*) {}
 
 // White-box testpoints to inject into a Callback<> object for checking
 // comparators and emptiness APIs.  Use a BindState that is specialized
@@ -22,26 +22,20 @@ void NopInvokeFunc() {}
 // chance of colliding with another instantiation and breaking the
 // one-definition-rule.
 struct FakeBindState1 : internal::BindStateBase {
-  FakeBindState1() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
+  FakeBindState1() : BindStateBase(&Destroy) {}
  private:
   ~FakeBindState1() {}
-  static void Destroy(const internal::BindStateBase* self) {
-    delete static_cast<const FakeBindState1*>(self);
-  }
-  static bool IsCancelled(const internal::BindStateBase*) {
-    return false;
+  static void Destroy(internal::BindStateBase* self) {
+    delete static_cast<FakeBindState1*>(self);
   }
 };
 
 struct FakeBindState2 : internal::BindStateBase {
-  FakeBindState2() : BindStateBase(&NopInvokeFunc, &Destroy, &IsCancelled) {}
+  FakeBindState2() : BindStateBase(&Destroy) {}
  private:
   ~FakeBindState2() {}
-  static void Destroy(const internal::BindStateBase* self) {
-    delete static_cast<const FakeBindState2*>(self);
-  }
-  static bool IsCancelled(const internal::BindStateBase*) {
-    return false;
+  static void Destroy(internal::BindStateBase* self) {
+    delete static_cast<FakeBindState2*>(self);
   }
 };
 
@@ -50,8 +44,8 @@ namespace {
 class CallbackTest : public ::testing::Test {
  public:
   CallbackTest()
-      : callback_a_(new FakeBindState1()),
-        callback_b_(new FakeBindState2()) {
+      : callback_a_(new FakeBindState1(), &NopInvokeFunc),
+        callback_b_(new FakeBindState2(), &NopInvokeFunc) {
   }
 
   ~CallbackTest() override {}
@@ -94,7 +88,7 @@ TEST_F(CallbackTest, Equals) {
   EXPECT_FALSE(callback_b_.Equals(callback_a_));
 
   // We should compare based on instance, not type.
-  Callback<void()> callback_c(new FakeBindState1());
+  Callback<void()> callback_c(new FakeBindState1(), &NopInvokeFunc);
   Callback<void()> callback_a2 = callback_a_;
   EXPECT_TRUE(callback_a_.Equals(callback_a2));
   EXPECT_FALSE(callback_a_.Equals(callback_c));
@@ -110,17 +104,6 @@ TEST_F(CallbackTest, Reset) {
   ASSERT_FALSE(callback_a_.Equals(null_callback_));
 
   callback_a_.Reset();
-
-  EXPECT_TRUE(callback_a_.is_null());
-  EXPECT_TRUE(callback_a_.Equals(null_callback_));
-}
-
-TEST_F(CallbackTest, Move) {
-  // Moving should reset the callback.
-  ASSERT_FALSE(callback_a_.is_null());
-  ASSERT_FALSE(callback_a_.Equals(null_callback_));
-
-  auto tmp = std::move(callback_a_);
 
   EXPECT_TRUE(callback_a_.is_null());
   EXPECT_TRUE(callback_a_.Equals(null_callback_));

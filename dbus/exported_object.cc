@@ -11,7 +11,7 @@
 #include "base/logging.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
-#include "base/metrics/histogram_macros.h"
+#include "base/metrics/histogram.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/time/time.h"
 #include "dbus/bus.h"
@@ -186,9 +186,8 @@ bool ExportedObject::Register() {
   return true;
 }
 
-DBusHandlerResult ExportedObject::HandleMessage(
-    DBusConnection* /*connection*/,
-    DBusMessage* raw_message) {
+DBusHandlerResult ExportedObject::HandleMessage(DBusConnection*,
+                                                DBusMessage* raw_message) {
   bus_->AssertOnDBusThread();
   DCHECK_EQ(DBUS_MESSAGE_TYPE_METHOD_CALL, dbus_message_get_type(raw_message));
 
@@ -301,8 +300,7 @@ void ExportedObject::OnMethodCompleted(std::unique_ptr<MethodCall> method_call,
                       base::TimeTicks::Now() - start_time);
 }
 
-void ExportedObject::OnUnregistered(DBusConnection* /*connection*/) {
-}
+void ExportedObject::OnUnregistered(DBusConnection*) {}
 
 DBusHandlerResult ExportedObject::HandleMessageThunk(
     DBusConnection* connection,

@@ -2,13 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include "base/atomic_sequence_num.h"
-#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/gtest_util.h"
 #include "base/threading/simple_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -21,49 +17,11 @@ class SetIntRunner : public DelegateSimpleThread::Delegate {
   SetIntRunner(int* ptr, int val) : ptr_(ptr), val_(val) { }
   ~SetIntRunner() override {}
 
- private:
   void Run() override { *ptr_ = val_; }
 
+ private:
   int* ptr_;
   int val_;
-
-  DISALLOW_COPY_AND_ASSIGN(SetIntRunner);
-};
-
-// Signals |started_| when Run() is invoked and waits until |released_| is
-// signaled to return, signaling |done_| before doing so. Useful for tests that
-// care to control Run()'s flow.
-class ControlledRunner : public DelegateSimpleThread::Delegate {
- public:
-  ControlledRunner()
-      : started_(WaitableEvent::ResetPolicy::MANUAL,
-                 WaitableEvent::InitialState::NOT_SIGNALED),
-        released_(WaitableEvent::ResetPolicy::MANUAL,
-                  WaitableEvent::InitialState::NOT_SIGNALED),
-        done_(WaitableEvent::ResetPolicy::MANUAL,
-              WaitableEvent::InitialState::NOT_SIGNALED) {}
-
-  ~ControlledRunner() override { ReleaseAndWaitUntilDone(); }
-
-  void WaitUntilStarted() { started_.Wait(); }
-
-  void ReleaseAndWaitUntilDone() {
-    released_.Signal();
-    done_.Wait();
-  }
-
- private:
-  void Run() override {
-    started_.Signal();
-    released_.Wait();
-    done_.Signal();
-  }
-
-  WaitableEvent started_;
-  WaitableEvent released_;
-  WaitableEvent done_;
-
-  DISALLOW_COPY_AND_ASSIGN(ControlledRunner);
 };
 
 class WaitEventRunner : public DelegateSimpleThread::Delegate {
@@ -71,28 +29,22 @@ class WaitEventRunner : public DelegateSimpleThread::Delegate {
   explicit WaitEventRunner(WaitableEvent* event) : event_(event) { }
   ~WaitEventRunner() override {}
 
- private:
   void Run() override {
     EXPECT_FALSE(event_->IsSignaled());
     event_->Signal();
     EXPECT_TRUE(event_->IsSignaled());
   }
-
+ private:
   WaitableEvent* event_;
-
-  DISALLOW_COPY_AND_ASSIGN(WaitEventRunner);
 };
 
 class SeqRunner : public DelegateSimpleThread::Delegate {
  public:
   explicit SeqRunner(AtomicSequenceNumber* seq) : seq_(seq) { }
-
- private:
   void Run() override { seq_->GetNext(); }
 
+ private:
   AtomicSequenceNumber* seq_;
-
-  DISALLOW_COPY_AND_ASSIGN(SeqRunner);
 };
 
 // We count up on a sequence number, firing on the event when we've hit our
@@ -104,7 +56,6 @@ class VerifyPoolRunner : public DelegateSimpleThread::Delegate {
                    int total, WaitableEvent* event)
       : seq_(seq), total_(total), event_(event) { }
 
- private:
   void Run() override {
     if (seq_->GetNext() == total_) {
       event_->Signal();
@@ -113,11 +64,10 @@ class VerifyPoolRunner : public DelegateSimpleThread::Delegate {
     }
   }
 
+ private:
   AtomicSequenceNumber* seq_;
   int total_;
   WaitableEvent* event_;
-
-  DISALLOW_COPY_AND_ASSIGN(VerifyPoolRunner);
 };
 
 }  // namespace
@@ -158,44 +108,29 @@ TEST(SimpleThreadTest, WaitForEvent) {
   thread.Join();
 }
 
-TEST(SimpleThreadTest, NonJoinableStartAndDieOnJoin) {
-  ControlledRunner runner;
+TEST(SimpleThreadTest, NamedWithOptions) {
+  WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
+                      WaitableEvent::InitialState::NOT_SIGNALED);
 
+  WaitEventRunner runner(&event);
   SimpleThread::Options options;
-  options.joinable = false;
-  DelegateSimpleThread thread(&runner, "non_joinable", options);
+  DelegateSimpleThread thread(&runner, "event_waiter", options);
+  EXPECT_EQ(thread.name_prefix(), "event_waiter");
+  EXPECT_FALSE(event.IsSignaled());
 
-  EXPECT_FALSE(thread.HasBeenStarted());
   thread.Start();
-  EXPECT_TRUE(thread.HasBeenStarted());
+  EXPECT_EQ(thread.name_prefix(), "event_waiter");
+  EXPECT_EQ(thread.name(),
+            std::string("event_waiter/") + IntToString(thread.tid()));
+  event.Wait();
 
-  // Note: this is not quite the same as |thread.HasBeenStarted()| which
-  // represents ThreadMain() getting ready to invoke Run() whereas
-  // |runner.WaitUntilStarted()| ensures Run() was actually invoked.
-  runner.WaitUntilStarted();
+  EXPECT_TRUE(event.IsSignaled());
+  thread.Join();
 
-  EXPECT_FALSE(thread.HasBeenJoined());
-  EXPECT_DCHECK_DEATH({ thread.Join(); });
-}
-
-TEST(SimpleThreadTest, NonJoinableInactiveDelegateDestructionIsOkay) {
-  std::unique_ptr<ControlledRunner> runner(new ControlledRunner);
-
-  SimpleThread::Options options;
-  options.joinable = false;
-  std::unique_ptr<DelegateSimpleThread> thread(
-      new DelegateSimpleThread(runner.get(), "non_joinable", options));
-
-  thread->Start();
-  runner->WaitUntilStarted();
-
-  // Deleting a non-joinable SimpleThread after Run() was invoked is okay.
-  thread.reset();
-
-  runner->WaitUntilStarted();
-  runner->ReleaseAndWaitUntilDone();
-  // It should be safe to destroy a Delegate after its Run() method completed.
-  runner.reset();
+  // We keep the name and tid, even after the thread is gone.
+  EXPECT_EQ(thread.name_prefix(), "event_waiter");
+  EXPECT_EQ(thread.name(),
+            std::string("event_waiter/") + IntToString(thread.tid()));
 }
 
 TEST(SimpleThreadTest, ThreadPool) {

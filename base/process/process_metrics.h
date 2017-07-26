@@ -11,7 +11,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <memory>
 #include <string>
 
 #include "base/base_export.h"
@@ -104,22 +103,22 @@ class BASE_EXPORT ProcessMetrics {
   ~ProcessMetrics();
 
   // Creates a ProcessMetrics for the specified process.
+  // The caller owns the returned object.
 #if !defined(OS_MACOSX) || defined(OS_IOS)
-  static std::unique_ptr<ProcessMetrics> CreateProcessMetrics(
-      ProcessHandle process);
+  static ProcessMetrics* CreateProcessMetrics(ProcessHandle process);
 #else
 
   // The port provider needs to outlive the ProcessMetrics object returned by
   // this function. If NULL is passed as provider, the returned object
   // only returns valid metrics if |process| is the current process.
-  static std::unique_ptr<ProcessMetrics> CreateProcessMetrics(
-      ProcessHandle process,
-      PortProvider* port_provider);
+  static ProcessMetrics* CreateProcessMetrics(ProcessHandle process,
+                                              PortProvider* port_provider);
 #endif  // !defined(OS_MACOSX) || defined(OS_IOS)
 
   // Creates a ProcessMetrics for the current process. This a cross-platform
   // convenience wrapper for CreateProcessMetrics().
-  static std::unique_ptr<ProcessMetrics> CreateCurrentProcessMetrics();
+  // The caller owns the returned object.
+  static ProcessMetrics* CreateCurrentProcessMetrics();
 
   // Returns the current space allocated for the pagefile, in bytes (these pages
   // may or may not be in memory).  On Linux, this returns the total virtual
@@ -136,7 +135,8 @@ class BASE_EXPORT ProcessMetrics {
   // memory currently allocated to a process that cannot be shared. Returns
   // false on platform specific error conditions.  Note: |private_bytes|
   // returns 0 on unsupported OSes: prior to XP SP2.
-  bool GetMemoryBytes(size_t* private_bytes, size_t* shared_bytes) const;
+  bool GetMemoryBytes(size_t* private_bytes,
+                      size_t* shared_bytes);
   // Fills a CommittedKBytes with both resident and paged
   // memory usage as per definition of CommittedBytes.
   void GetCommittedKBytes(CommittedKBytes* usage) const;
@@ -144,9 +144,6 @@ class BASE_EXPORT ProcessMetrics {
   // usage in bytes, as per definition of WorkingSetBytes. Note that this
   // function is somewhat expensive on Windows (a few ms per process).
   bool GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const;
-  // Computes pss (proportional set size) of a process. Note that this
-  // function is somewhat expensive on Windows (a few ms per process).
-  bool GetProportionalSetSizeBytes(uint64_t* pss_bytes) const;
 
 #if defined(OS_MACOSX)
   // Fills both CommitedKBytes and WorkingSetKBytes in a single operation. This
@@ -154,10 +151,6 @@ class BASE_EXPORT ProcessMetrics {
   // system call.
   bool GetCommittedAndWorkingSetKBytes(CommittedKBytes* usage,
                                        WorkingSetKBytes* ws_usage) const;
-  // Returns private, shared, and total resident bytes.
-  bool GetMemoryBytes(size_t* private_bytes,
-                      size_t* shared_bytes,
-                      size_t* resident_bytes) const;
 #endif
 
   // Returns the CPU usage in percent since the last time this method or
@@ -302,9 +295,9 @@ struct BASE_EXPORT SystemMemoryInfoKB {
   int dirty;
 
   // vmstats data.
-  unsigned long pswpin;
-  unsigned long pswpout;
-  unsigned long pgmajfault;
+  int pswpin;
+  int pswpout;
+  int pgmajfault;
 #endif  // defined(OS_ANDROID) || defined(OS_LINUX)
 
 #if defined(OS_CHROMEOS)
@@ -381,9 +374,6 @@ BASE_EXPORT bool IsValidDiskName(const std::string& candidate);
 // Retrieves data from /proc/diskstats about system-wide disk I/O.
 // Fills in the provided |diskinfo| structure. Returns true on success.
 BASE_EXPORT bool GetSystemDiskInfo(SystemDiskInfo* diskinfo);
-
-// Returns the amount of time spent in user space since boot across all CPUs.
-BASE_EXPORT TimeDelta GetUserCpuTimeSinceBoot();
 #endif  // defined(OS_LINUX) || defined(OS_ANDROID)
 
 #if defined(OS_CHROMEOS)

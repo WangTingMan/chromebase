@@ -97,9 +97,9 @@ TEST(TraceEventArgumentTest, LongStrings) {
 }
 
 TEST(TraceEventArgumentTest, PassBaseValue) {
-  Value int_value(42);
-  Value bool_value(true);
-  Value double_value(42.0f);
+  FundamentalValue int_value(42);
+  FundamentalValue bool_value(true);
+  FundamentalValue double_value(42.0f);
 
   auto dict_value = WrapUnique(new DictionaryValue);
   dict_value->SetBoolean("bool", true);
@@ -131,10 +131,10 @@ TEST(TraceEventArgumentTest, PassBaseValue) {
 }
 
 TEST(TraceEventArgumentTest, PassTracedValue) {
-  auto dict_value = MakeUnique<TracedValue>();
+  auto dict_value = WrapUnique(new TracedValue());
   dict_value->SetInteger("a", 1);
 
-  auto nested_dict_value = MakeUnique<TracedValue>();
+  auto nested_dict_value = WrapUnique(new TracedValue());
   nested_dict_value->SetInteger("b", 2);
   nested_dict_value->BeginArray("c");
   nested_dict_value->AppendString("foo");

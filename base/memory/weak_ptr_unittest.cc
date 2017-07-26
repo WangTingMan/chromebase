@@ -12,7 +12,6 @@
 #include "base/location.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/gtest_util.h"
 #include "base/threading/thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -564,6 +563,8 @@ TEST(WeakPtrTest, NonOwnerThreadCanDeleteWeakPtr) {
   background.DeleteArrow(arrow);
 }
 
+#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)) && GTEST_HAS_DEATH_TEST
+
 TEST(WeakPtrDeathTest, WeakPtrCopyDoesNotChangeThreadBinding) {
   // The default style "fast" does not support multi-threaded tests
   // (introduces deadlock on Linux).
@@ -587,7 +588,7 @@ TEST(WeakPtrDeathTest, WeakPtrCopyDoesNotChangeThreadBinding) {
 
   // Although background thread created the copy, it can not deref the copied
   // WeakPtr.
-  ASSERT_DCHECK_DEATH(background.DeRef(arrow_copy));
+  ASSERT_DEATH(background.DeRef(arrow_copy), "");
 
   background.DeleteArrow(arrow_copy);
 }
@@ -609,7 +610,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDereferencesWeakPtrAfterReference) {
   // Background thread tries to deref target, which violates thread ownership.
   BackgroundThread background;
   background.Start();
-  ASSERT_DCHECK_DEATH(background.DeRef(&arrow));
+  ASSERT_DEATH(background.DeRef(&arrow), "");
 }
 
 TEST(WeakPtrDeathTest, NonOwnerThreadDeletesWeakPtrAfterReference) {
@@ -629,7 +630,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDeletesWeakPtrAfterReference) {
   background.DeRef(&arrow);
 
   // Main thread deletes Target, violating thread binding.
-  ASSERT_DCHECK_DEATH(target.reset());
+  ASSERT_DEATH(target.reset(), "");
 
   // |target.reset()| died so |target| still holds the object, so we
   // must pass it to the background thread to teardown.
@@ -652,7 +653,7 @@ TEST(WeakPtrDeathTest, NonOwnerThreadDeletesObjectAfterReference) {
   // Background thread tries to delete target, volating thread binding.
   BackgroundThread background;
   background.Start();
-  ASSERT_DCHECK_DEATH(background.DeleteTarget(target.release()));
+  ASSERT_DEATH(background.DeleteTarget(target.release()), "");
 }
 
 TEST(WeakPtrDeathTest, NonOwnerThreadReferencesObjectAfterDeletion) {
@@ -672,7 +673,9 @@ TEST(WeakPtrDeathTest, NonOwnerThreadReferencesObjectAfterDeletion) {
   background.DeleteTarget(target.release());
 
   // Main thread attempts to dereference the target, violating thread binding.
-  ASSERT_DCHECK_DEATH(arrow.target.get());
+  ASSERT_DEATH(arrow.target.get(), "");
 }
+
+#endif
 
 }  // namespace base
