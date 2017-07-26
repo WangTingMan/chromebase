@@ -11,7 +11,6 @@
 #include <utility>
 
 #include "base/strings/stringprintf.h"
-#include "base/trace_event/memory_usage_estimator.h"
 #include "base/trace_event/trace_event_argument.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 
@@ -23,10 +22,6 @@ StackFrameDeduplicator::FrameNode::FrameNode(StackFrame frame,
     : frame(frame), parent_frame_index(parent_frame_index) {}
 StackFrameDeduplicator::FrameNode::FrameNode(const FrameNode& other) = default;
 StackFrameDeduplicator::FrameNode::~FrameNode() {}
-
-size_t StackFrameDeduplicator::FrameNode::EstimateMemoryUsage() const {
-  return base::trace_event::EstimateMemoryUsage(children);
-}
 
 StackFrameDeduplicator::StackFrameDeduplicator() {}
 StackFrameDeduplicator::~StackFrameDeduplicator() {}
@@ -121,10 +116,19 @@ void StackFrameDeduplicator::AppendAsTraceFormat(std::string* out) const {
 
 void StackFrameDeduplicator::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
-  size_t memory_usage =
-      EstimateMemoryUsage(frames_) + EstimateMemoryUsage(roots_);
+  // The sizes here are only estimates; they fail to take into account the
+  // overhead of the tree nodes for the map, but as an estimate this should be
+  // fine.
+  size_t maps_size = roots_.size() * sizeof(std::pair<StackFrame, int>);
+  size_t frames_allocated = frames_.capacity() * sizeof(FrameNode);
+  size_t frames_resident = frames_.size() * sizeof(FrameNode);
+
+  for (const FrameNode& node : frames_)
+    maps_size += node.children.size() * sizeof(std::pair<StackFrame, int>);
+
   overhead->Add("StackFrameDeduplicator",
-                sizeof(StackFrameDeduplicator) + memory_usage);
+                sizeof(StackFrameDeduplicator) + maps_size + frames_allocated,
+                sizeof(StackFrameDeduplicator) + maps_size + frames_resident);
 }
 
 }  // namespace trace_event

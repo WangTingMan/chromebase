@@ -138,4 +138,12 @@ std::string File::ErrorToString(Error error) {
   return "";
 }
 
+bool File::Flush() {
+  ElapsedTimer timer;
+  SCOPED_FILE_TRACE("Flush");
+  bool return_value = DoFlush();
+  UMA_HISTOGRAM_TIMES("PlatformFile.FlushTime", timer.Elapsed());
+  return return_value;
+}
+
 }  // namespace base

@@ -4,7 +4,19 @@
 
 #include "base/test/test_io_thread.h"
 
-#include "base/logging.h"
+#include "base/bind.h"
+#include "base/callback.h"
+#include "base/synchronization/waitable_event.h"
+
+namespace {
+
+void PostTaskAndWaitHelper(base::WaitableEvent* event,
+                           const base::Closure& task) {
+  task.Run();
+  event->Signal();
+}
+
+}  // namespace
 
 namespace base {
 
@@ -40,6 +52,15 @@ void TestIOThread::Stop() {
 void TestIOThread::PostTask(const tracked_objects::Location& from_here,
                             const base::Closure& task) {
   task_runner()->PostTask(from_here, task);
+}
+
+void TestIOThread::PostTaskAndWait(const tracked_objects::Location& from_here,
+                                   const base::Closure& task) {
+  base::WaitableEvent event(WaitableEvent::ResetPolicy::AUTOMATIC,
+                            WaitableEvent::InitialState::NOT_SIGNALED);
+  task_runner()->PostTask(from_here,
+                          base::Bind(&PostTaskAndWaitHelper, &event, task));
+  event.Wait();
 }
 
 }  // namespace base

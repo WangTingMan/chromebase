@@ -20,13 +20,10 @@
 
 namespace base {
 
-template <typename Signature,
-          internal::CopyMode copy_mode,
-          internal::RepeatMode repeat_mode>
-base::Callback<Signature, copy_mode, repeat_mode> ResetAndReturn(
-    base::Callback<Signature, copy_mode, repeat_mode>* cb) {
-  base::Callback<Signature, copy_mode, repeat_mode> ret(std::move(*cb));
-  DCHECK(!*cb);
+template <typename Sig>
+base::Callback<Sig> ResetAndReturn(base::Callback<Sig>* cb) {
+  base::Callback<Sig> ret(*cb);
+  cb->Reset();
   return ret;
 }
 

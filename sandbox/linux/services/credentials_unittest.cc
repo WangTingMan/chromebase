@@ -145,12 +145,11 @@ SANDBOX_TEST(Credentials, CanDetectRoot) {
 
 // Disabled on ASAN because of crbug.com/451603.
 SANDBOX_TEST(Credentials, DISABLE_ON_ASAN(DropFileSystemAccessIsSafe)) {
-  CHECK(Credentials::HasFileSystemAccess());
   CHECK(Credentials::DropAllCapabilities());
   // Probably missing kernel support.
   if (!Credentials::MoveToNewUserNS()) return;
   CHECK(Credentials::DropFileSystemAccess(ProcUtil::OpenProc().get()));
-  CHECK(!Credentials::HasFileSystemAccess());
+  CHECK(!base::DirectoryExists(base::FilePath("/proc")));
   CHECK(WorkingDirectoryIsRoot());
   CHECK(base::IsDirectoryEmpty(base::FilePath("/")));
   // We want the chroot to never have a subdirectory. A subdirectory
@@ -246,19 +245,18 @@ void SignalHandler(int sig) {
   signal_handler_called = 1;
 }
 
-// glibc (and some other libcs) caches the PID and TID in TLS. This test
-// verifies that these values are correct after DropFilesystemAccess.
 // Disabled on ASAN because of crbug.com/451603.
 SANDBOX_TEST(Credentials, DISABLE_ON_ASAN(DropFileSystemAccessPreservesTLS)) {
   // Probably missing kernel support.
   if (!Credentials::MoveToNewUserNS()) return;
   CHECK(Credentials::DropFileSystemAccess(ProcUtil::OpenProc().get()));
 
-  // The libc getpid implementation may return a cached PID. Ensure that
-  // it matches the PID returned from the getpid system call.
-  CHECK_EQ(sys_getpid(), getpid());
+  // In glibc, pthread_getattr_np makes an assertion about the cached PID/TID in
+  // TLS.
+  pthread_attr_t attr;
+  EXPECT_EQ(0, pthread_getattr_np(pthread_self(), &attr));
 
-  // raise uses the cached TID in glibc.
+  // raise also uses the cached TID in glibc.
   struct sigaction action = {};
   action.sa_handler = &SignalHandler;
   PCHECK(sigaction(SIGUSR1, &action, nullptr) == 0);

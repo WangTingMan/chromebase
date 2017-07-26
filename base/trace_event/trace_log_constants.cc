@@ -14,7 +14,8 @@ const TraceLog::InternalTraceOptions
     TraceLog::kInternalRecordUntilFull = 1 << 0;
 const TraceLog::InternalTraceOptions
     TraceLog::kInternalRecordContinuously = 1 << 1;
-// 1 << 2 is reserved for the DEPRECATED kInternalEnableSampling. DO NOT USE.
+const TraceLog::InternalTraceOptions
+    TraceLog::kInternalEnableSampling = 1 << 2;
 const TraceLog::InternalTraceOptions
     TraceLog::kInternalEchoToConsole = 1 << 3;
 const TraceLog::InternalTraceOptions

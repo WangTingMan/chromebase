@@ -4,46 +4,42 @@
 
 #include "base/threading/post_task_and_reply_impl.h"
 
-#include <utility>
-
 #include "base/bind.h"
-#include "base/debug/leak_annotations.h"
-#include "base/logging.h"
-#include "base/memory/ref_counted.h"
-#include "base/sequence_checker.h"
-#include "base/sequenced_task_runner.h"
-#include "base/threading/sequenced_task_runner_handle.h"
+#include "base/location.h"
+#include "base/single_thread_task_runner.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
 
 namespace {
 
-// This relay class remembers the sequence that it was created on, and ensures
-// that both the |task| and |reply| Closures are deleted on this same sequence.
-// Also, |task| is guaranteed to be deleted before |reply| is run or deleted.
+// This relay class remembers the MessageLoop that it was created on, and
+// ensures that both the |task| and |reply| Closures are deleted on this same
+// thread. Also, |task| is guaranteed to be deleted before |reply| is run or
+// deleted.
 //
-// If RunReplyAndSelfDestruct() doesn't run because the originating execution
-// context is no longer available, then the |task| and |reply| Closures are
-// leaked. Leaking is considered preferable to having a thread-safetey
-// violations caused by invoking the Closure destructor on the wrong sequence.
+// If this is not possible because the originating MessageLoop is no longer
+// available, the the |task| and |reply| Closures are leaked.  Leaking is
+// considered preferable to having a thread-safetey violations caused by
+// invoking the Closure destructor on the wrong thread.
 class PostTaskAndReplyRelay {
  public:
   PostTaskAndReplyRelay(const tracked_objects::Location& from_here,
-                        Closure task,
-                        Closure reply)
-      : sequence_checker_(),
-        from_here_(from_here),
-        origin_task_runner_(SequencedTaskRunnerHandle::Get()),
-        reply_(std::move(reply)),
-        task_(std::move(task)) {}
+                        const Closure& task,
+                        const Closure& reply)
+      : from_here_(from_here),
+        origin_task_runner_(ThreadTaskRunnerHandle::Get()) {
+    task_ = task;
+    reply_ = reply;
+  }
 
   ~PostTaskAndReplyRelay() {
-    DCHECK(sequence_checker_.CalledOnValidSequence());
+    DCHECK(origin_task_runner_->BelongsToCurrentThread());
     task_.Reset();
     reply_.Reset();
   }
 
-  void RunTaskAndPostReply() {
+  void Run() {
     task_.Run();
     origin_task_runner_->PostTask(
         from_here_, Bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
@@ -52,7 +48,7 @@ class PostTaskAndReplyRelay {
 
  private:
   void RunReplyAndSelfDestruct() {
-    DCHECK(sequence_checker_.CalledOnValidSequence());
+    DCHECK(origin_task_runner_->BelongsToCurrentThread());
 
     // Force |task_| to be released before |reply_| is to ensure that no one
     // accidentally depends on |task_| keeping one of its arguments alive while
@@ -65,9 +61,8 @@ class PostTaskAndReplyRelay {
     delete this;
   }
 
-  const SequenceChecker sequence_checker_;
-  const tracked_objects::Location from_here_;
-  const scoped_refptr<SequencedTaskRunner> origin_task_runner_;
+  tracked_objects::Location from_here_;
+  scoped_refptr<SingleThreadTaskRunner> origin_task_runner_;
   Closure reply_;
   Closure task_;
 };
@@ -78,19 +73,14 @@ namespace internal {
 
 bool PostTaskAndReplyImpl::PostTaskAndReply(
     const tracked_objects::Location& from_here,
-    Closure task,
-    Closure reply) {
-  DCHECK(!task.is_null()) << from_here.ToString();
-  DCHECK(!reply.is_null()) << from_here.ToString();
+    const Closure& task,
+    const Closure& reply) {
+  // TODO(tzik): Use DCHECK here once the crash is gone. http://crbug.com/541319
+  CHECK(!task.is_null()) << from_here.ToString();
+  CHECK(!reply.is_null()) << from_here.ToString();
   PostTaskAndReplyRelay* relay =
-      new PostTaskAndReplyRelay(from_here, std::move(task), std::move(reply));
-  // PostTaskAndReplyRelay self-destructs after executing |reply|. On the flip
-  // side though, it is intentionally leaked if the |task| doesn't complete
-  // before the origin sequence stops executing tasks. Annotate |relay| as leaky
-  // to avoid having to suppress every callsite which happens to flakily trigger
-  // this race.
-  ANNOTATE_LEAKING_OBJECT_PTR(relay);
-  if (!PostTask(from_here, Bind(&PostTaskAndReplyRelay::RunTaskAndPostReply,
+      new PostTaskAndReplyRelay(from_here, task, reply);
+  if (!PostTask(from_here, Bind(&PostTaskAndReplyRelay::Run,
                                 Unretained(relay)))) {
     delete relay;
     return false;

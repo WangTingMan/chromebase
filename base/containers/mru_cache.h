@@ -209,12 +209,10 @@ class MRUCacheBase {
 
 // A container that does not do anything to free its data. Use this when storing
 // value types (as opposed to pointers) in the list.
-template <class KeyType,
-          class PayloadType,
-          class CompareType = std::less<KeyType>>
-class MRUCache : public MRUCacheBase<KeyType, PayloadType, CompareType> {
+template <class KeyType, class PayloadType>
+class MRUCache : public MRUCacheBase<KeyType, PayloadType, std::less<KeyType>> {
  private:
-  using ParentType = MRUCacheBase<KeyType, PayloadType, CompareType>;
+  using ParentType = MRUCacheBase<KeyType, PayloadType, std::less<KeyType>>;
 
  public:
   // See MRUCacheBase, noting the possibility of using NO_AUTO_EVICT.

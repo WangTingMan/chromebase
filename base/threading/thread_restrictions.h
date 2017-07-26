@@ -6,8 +6,14 @@
 #define BASE_THREADING_THREAD_RESTRICTIONS_H_
 
 #include "base/base_export.h"
-#include "base/logging.h"
 #include "base/macros.h"
+
+// See comment at top of thread_checker.h
+#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON))
+#define ENABLE_THREAD_RESTRICTIONS 1
+#else
+#define ENABLE_THREAD_RESTRICTIONS 0
+#endif
 
 class BrowserProcessImpl;
 class HistogramSynchronizer;
@@ -51,10 +57,10 @@ namespace gpu {
 class GpuChannelHost;
 }
 namespace mojo {
-class SyncCallRestrictions;
-namespace edk {
-class ScopedIPCSupport;
+namespace common {
+class MessagePumpMojo;
 }
+class SyncCallRestrictions;
 }
 namespace ui {
 class CommandBufferClientImpl;
@@ -84,10 +90,6 @@ namespace base {
 
 namespace android {
 class JavaHandlerThread;
-}
-
-namespace internal {
-class TaskTracker;
 }
 
 class SequencedWorkerPool;
@@ -135,7 +137,21 @@ class BASE_EXPORT ThreadRestrictions {
     DISALLOW_COPY_AND_ASSIGN(ScopedAllowIO);
   };
 
-#if DCHECK_IS_ON()
+  // Constructing a ScopedAllowSingleton temporarily allows accessing for the
+  // current thread.  Doing this is almost always incorrect.
+  class BASE_EXPORT ScopedAllowSingleton {
+   public:
+    ScopedAllowSingleton() { previous_value_ = SetSingletonAllowed(true); }
+    ~ScopedAllowSingleton() { SetSingletonAllowed(previous_value_); }
+   private:
+    // Whether singleton use is allowed when the ScopedAllowSingleton was
+    // constructed.
+    bool previous_value_;
+
+    DISALLOW_COPY_AND_ASSIGN(ScopedAllowSingleton);
+  };
+
+#if ENABLE_THREAD_RESTRICTIONS
   // Set whether the current thread to make IO calls.
   // Threads start out in the *allowed* state.
   // Returns the previous value.
@@ -181,7 +197,6 @@ class BASE_EXPORT ThreadRestrictions {
   friend class content::ScopedAllowWaitForAndroidLayoutTests;
   friend class content::ScopedAllowWaitForDebugURL;
   friend class ::HistogramSynchronizer;
-  friend class internal::TaskTracker;
   friend class ::ScopedAllowWaitForLegacyWebViewApi;
   friend class cc::CompletionEvent;
   friend class cc::SingleThreadTaskGraphRunner;
@@ -195,8 +210,8 @@ class BASE_EXPORT ThreadRestrictions {
   friend class ThreadTestHelper;
   friend class PlatformThread;
   friend class android::JavaHandlerThread;
+  friend class mojo::common::MessagePumpMojo;
   friend class mojo::SyncCallRestrictions;
-  friend class mojo::edk::ScopedIPCSupport;
   friend class ui::CommandBufferClientImpl;
   friend class ui::CommandBufferLocal;
   friend class ui::GpuState;
@@ -225,7 +240,7 @@ class BASE_EXPORT ThreadRestrictions {
   friend class views::ScreenMus;
 // END USAGE THAT NEEDS TO BE FIXED.
 
-#if DCHECK_IS_ON()
+#if ENABLE_THREAD_RESTRICTIONS
   static bool SetWaitAllowed(bool allowed);
 #else
   static bool SetWaitAllowed(bool) { return true; }

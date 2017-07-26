@@ -6,8 +6,10 @@
 #define BASE_THREADING_WORKER_POOL_H_
 
 #include "base/base_export.h"
-#include "base/callback.h"
+#include "base/callback_forward.h"
 #include "base/memory/ref_counted.h"
+
+class Task;
 
 namespace tracked_objects {
 class Location;
@@ -38,8 +40,8 @@ class BASE_EXPORT WorkerPool {
   // for |task| is a worker thread and you can specify |task_is_slow| just
   // like you can for PostTask above.
   static bool PostTaskAndReply(const tracked_objects::Location& from_here,
-                               Closure task,
-                               Closure reply,
+                               const Closure& task,
+                               const Closure& reply,
                                bool task_is_slow);
 
   // Return true if the current thread is one that this WorkerPool runs tasks

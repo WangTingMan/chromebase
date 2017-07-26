@@ -26,19 +26,6 @@ Process SpawnMultiProcessTestChild(
 
   return LaunchProcess(command_line, options);
 }
-
-bool WaitForMultiprocessTestChildExit(const Process& process,
-                                      TimeDelta timeout,
-                                      int* exit_code) {
-  return process.WaitForExitWithTimeout(timeout, exit_code);
-}
-
-bool TerminateMultiProcessTestChild(const Process& process,
-                                    int exit_code,
-                                    bool wait) {
-  return process.Terminate(exit_code, wait);
-}
-
 #endif  // !OS_ANDROID && !__ANDROID__ && !__ANDROID_HOST__
 
 CommandLine GetMultiProcessTestChildBaseCommandLine() {
@@ -52,8 +39,6 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
 MultiProcessTest::MultiProcessTest() {
 }
 
-// Don't compile on Arc++.
-#if 0
 Process MultiProcessTest::SpawnChild(const std::string& procname) {
   LaunchOptions options;
 #if defined(OS_WIN)
@@ -67,7 +52,6 @@ Process MultiProcessTest::SpawnChildWithOptions(
     const LaunchOptions& options) {
   return SpawnMultiProcessTestChild(procname, MakeCmdLine(procname), options);
 }
-#endif
 
 CommandLine MultiProcessTest::MakeCmdLine(const std::string& procname) {
   CommandLine command_line = GetMultiProcessTestChildBaseCommandLine();

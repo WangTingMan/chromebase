@@ -12,6 +12,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/stl_util.h"
 
 // ScopedVector wraps a vector deleting the elements from its
 // destructor.
@@ -87,10 +88,8 @@ class ScopedVector {
 
   // Resize, deleting elements in the disappearing range if we are shrinking.
   void resize(size_t new_size) {
-    if (v_.size() > new_size) {
-      for (auto it = v_.begin() + new_size; it != v_.end(); ++it)
-        delete *it;
-    }
+    if (v_.size() > new_size)
+      STLDeleteContainerPointers(v_.begin() + new_size, v_.end());
     v_.resize(new_size);
   }
 
@@ -99,11 +98,7 @@ class ScopedVector {
     v_.assign(begin, end);
   }
 
-  void clear() {
-    for (auto* item : *this)
-      delete item;
-    v_.clear();
-  }
+  void clear() { STLDeleteElements(&v_); }
 
   // Like |clear()|, but doesn't delete any elements.
   void weak_clear() { v_.clear(); }
@@ -129,8 +124,7 @@ class ScopedVector {
   }
 
   iterator erase(iterator first, iterator last) {
-    for (auto it = first; it != last; ++it)
-      delete *it;
+    STLDeleteContainerPointers(first, last);
     return v_.erase(first, last);
   }
 
