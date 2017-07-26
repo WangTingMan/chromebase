@@ -26,15 +26,6 @@ class MockBus : public Bus {
                ObjectProxy*(const std::string& service_name,
                             const ObjectPath& object_path,
                             int options));
-  MOCK_METHOD3(RemoveObjectProxy, bool(
-      const std::string& service_name,
-      const ObjectPath& object_path,
-      const base::Closure& callback));
-  MOCK_METHOD4(RemoveObjectProxyWithOptions, bool(
-      const std::string& service_name,
-      const ObjectPath& object_path,
-      int options,
-      const base::Closure& callback));
   MOCK_METHOD1(GetExportedObject, ExportedObject*(
       const ObjectPath& object_path));
   MOCK_METHOD2(GetObjectManager, ObjectManager*(const std::string&,

@@ -154,31 +154,18 @@ static_library("sandbox") {
     ]
   }
 
+  # Disable sanitizer coverage in the sandbox code. The sandbox code runs before
+  # sanitizer coverage can initialize. http://crbug.com/484711
+  configs -= [ "//build/config/sanitizers:default_sanitizer_flags" ]
+  configs +=
+      [ "//build/config/sanitizers:default_sanitizer_flags_but_coverage" ]
+
   configs += [ "//build/config:precompiled_headers" ]
 
   deps = [
     "//base",
     "//base:base_static",
   ]
-  if (current_cpu == "x86") {
-    deps += [ ":copy_wow_helper" ]
-  }
-}
-
-if (current_cpu == "x86") {
-  # Make a target that copies the wow_helper files to the out dir.
-  #
-  # TODO(brettw) we can probably just build this now that we have proper
-  # toolchain support.
-  copy("copy_wow_helper") {
-    sources = [
-      "wow_helper/wow_helper.exe",
-      "wow_helper/wow_helper.pdb",
-    ]
-    outputs = [
-      "$root_out_dir/{{source_file_part}}",
-    ]
-  }
 }
 
 test("sbox_integration_tests") {
@@ -204,6 +191,7 @@ test("sbox_integration_tests") {
     "tests/common/controller.h",
     "tests/common/test_utils.cc",
     "tests/common/test_utils.h",
+    "tests/integration_tests/cfi_unittest.cc",
     "tests/integration_tests/integration_tests.cc",
     "tests/integration_tests/integration_tests_common.h",
     "tests/integration_tests/integration_tests_test.cc",
@@ -211,13 +199,28 @@ test("sbox_integration_tests") {
 
   deps = [
     ":sandbox",
-    ":sbox_integration_test_hook_dll",
-    ":sbox_integration_test_win_proc",
     "//base/test:test_support",
     "//testing/gtest",
   ]
 
+  data_deps = [
+    ":cfi_unittest_exe",
+    ":sbox_integration_test_hook_dll",
+    ":sbox_integration_test_win_proc",
+  ]
+
   libs = [ "dxva2.lib" ]
+}
+
+executable("cfi_unittest_exe") {
+  sources = [
+    "tests/integration_tests/cfi_unittest_exe.cc",
+  ]
+  deps = [
+    "//base",
+    "//build/config/sanitizers:deps",
+    "//build/win:default_exe_manifest",
+  ]
 }
 
 loadable_module("sbox_integration_test_hook_dll") {
