@@ -21,7 +21,7 @@
 // Owned() transfers ownership of an object to the Callback resulting from
 // bind; the object will be deleted when the Callback is deleted.
 //
-// Passed() is for transferring movable-but-not-copyable types (eg. scoped_ptr)
+// Passed() is for transferring movable-but-not-copyable types (eg. unique_ptr)
 // through a Callback. Logically, this signifies a destructive transfer of
 // the state of the argument into the target function.  Invoking
 // Callback::Run() twice on a Callback that was created with a Passed()
@@ -174,7 +174,13 @@ namespace base {
 template <typename T>
 struct IsWeakReceiver;
 
+template <typename>
+struct BindUnwrapTraits;
+
 namespace internal {
+
+template <typename Functor, typename SFINAE = void>
+struct FunctorTraits;
 
 template <typename T>
 class UnretainedWrapper {
@@ -275,35 +281,12 @@ class PassedWrapper {
   mutable T scoper_;
 };
 
-// Unwrap the stored parameters for the wrappers above.
 template <typename T>
-T&& Unwrap(T&& o) {
-  return std::forward<T>(o);
-}
+using Unwrapper = BindUnwrapTraits<typename std::decay<T>::type>;
 
 template <typename T>
-T* Unwrap(const UnretainedWrapper<T>& unretained) {
-  return unretained.get();
-}
-
-template <typename T>
-const T& Unwrap(const ConstRefWrapper<T>& const_ref) {
-  return const_ref.get();
-}
-
-template <typename T>
-T* Unwrap(const RetainedRefWrapper<T>& o) {
-  return o.get();
-}
-
-template <typename T>
-T* Unwrap(const OwnedWrapper<T>& o) {
-  return o.get();
-}
-
-template <typename T>
-T Unwrap(const PassedWrapper<T>& o) {
-  return o.Take();
+auto Unwrap(T&& o) -> decltype(Unwrapper<T>::Unwrap(std::forward<T>(o))) {
+  return Unwrapper<T>::Unwrap(std::forward<T>(o));
 }
 
 // IsWeakMethod is a helper that determine if we are binding a WeakPtr<> to a
@@ -496,6 +479,92 @@ struct IsWeakReceiver<internal::ConstRefWrapper<T>> : IsWeakReceiver<T> {};
 
 template <typename T>
 struct IsWeakReceiver<WeakPtr<T>> : std::true_type {};
+
+// An injection point to control how bound objects passed to the target
+// function. BindUnwrapTraits<>::Unwrap() is called for each bound objects right
+// before the target function is invoked.
+template <typename>
+struct BindUnwrapTraits {
+  template <typename T>
+  static T&& Unwrap(T&& o) { return std::forward<T>(o); }
+};
+
+template <typename T>
+struct BindUnwrapTraits<internal::UnretainedWrapper<T>> {
+  static T* Unwrap(const internal::UnretainedWrapper<T>& o) {
+    return o.get();
+  }
+};
+
+template <typename T>
+struct BindUnwrapTraits<internal::ConstRefWrapper<T>> {
+  static const T& Unwrap(const internal::ConstRefWrapper<T>& o) {
+    return o.get();
+  }
+};
+
+template <typename T>
+struct BindUnwrapTraits<internal::RetainedRefWrapper<T>> {
+  static T* Unwrap(const internal::RetainedRefWrapper<T>& o) {
+    return o.get();
+  }
+};
+
+template <typename T>
+struct BindUnwrapTraits<internal::OwnedWrapper<T>> {
+  static T* Unwrap(const internal::OwnedWrapper<T>& o) {
+    return o.get();
+  }
+};
+
+template <typename T>
+struct BindUnwrapTraits<internal::PassedWrapper<T>> {
+  static T Unwrap(const internal::PassedWrapper<T>& o) {
+    return o.Take();
+  }
+};
+
+// CallbackCancellationTraits allows customization of Callback's cancellation
+// semantics. By default, callbacks are not cancellable. A specialization should
+// set is_cancellable = true and implement an IsCancelled() that returns if the
+// callback should be cancelled.
+template <typename Functor, typename BoundArgsTuple, typename SFINAE = void>
+struct CallbackCancellationTraits {
+  static constexpr bool is_cancellable = false;
+};
+
+// Specialization for method bound to weak pointer receiver.
+template <typename Functor, typename... BoundArgs>
+struct CallbackCancellationTraits<
+    Functor,
+    std::tuple<BoundArgs...>,
+    typename std::enable_if<
+        internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
+                               BoundArgs...>::value>::type> {
+  static constexpr bool is_cancellable = true;
+
+  template <typename Receiver, typename... Args>
+  static bool IsCancelled(const Functor&,
+                          const Receiver& receiver,
+                          const Args&...) {
+    return !receiver;
+  }
+};
+
+// Specialization for a nested bind.
+template <typename Signature,
+          typename... BoundArgs,
+          internal::CopyMode copy_mode,
+          internal::RepeatMode repeat_mode>
+struct CallbackCancellationTraits<Callback<Signature, copy_mode, repeat_mode>,
+                                  std::tuple<BoundArgs...>> {
+  static constexpr bool is_cancellable = true;
+
+  template <typename Functor>
+  static bool IsCancelled(const Functor& functor, const BoundArgs&...) {
+    return functor.IsCancelled();
+  }
+};
 
 }  // namespace base
 
