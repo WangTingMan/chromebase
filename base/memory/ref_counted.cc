@@ -10,32 +10,37 @@ namespace base {
 namespace subtle {
 
 bool RefCountedThreadSafeBase::HasOneRef() const {
-  return AtomicRefCountIsOne(&ref_count_);
+  return AtomicRefCountIsOne(
+      &const_cast<RefCountedThreadSafeBase*>(this)->ref_count_);
 }
 
-RefCountedThreadSafeBase::RefCountedThreadSafeBase() = default;
+RefCountedThreadSafeBase::RefCountedThreadSafeBase() : ref_count_(0) {
+#ifndef NDEBUG
+  in_dtor_ = false;
+#endif
+}
 
 RefCountedThreadSafeBase::~RefCountedThreadSafeBase() {
-#if DCHECK_IS_ON()
+#ifndef NDEBUG
   DCHECK(in_dtor_) << "RefCountedThreadSafe object deleted without "
                       "calling Release()";
 #endif
 }
 
 void RefCountedThreadSafeBase::AddRef() const {
-#if DCHECK_IS_ON()
+#ifndef NDEBUG
   DCHECK(!in_dtor_);
 #endif
   AtomicRefCountInc(&ref_count_);
 }
 
 bool RefCountedThreadSafeBase::Release() const {
-#if DCHECK_IS_ON()
+#ifndef NDEBUG
   DCHECK(!in_dtor_);
   DCHECK(!AtomicRefCountIsZero(&ref_count_));
 #endif
   if (!AtomicRefCountDec(&ref_count_)) {
-#if DCHECK_IS_ON()
+#ifndef NDEBUG
     in_dtor_ = true;
 #endif
     return true;

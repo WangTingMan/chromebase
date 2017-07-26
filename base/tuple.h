@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include <tuple>
 
+#include "base/bind_helpers.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -42,6 +43,56 @@ struct IndexSequence {};
 template <size_t... Ns>
 struct MakeIndexSequenceImpl;
 
+#if defined(_PREFAST_) && defined(OS_WIN)
+
+// Work around VC++ 2013 /analyze internal compiler error:
+// https://connect.microsoft.com/VisualStudio/feedback/details/1053626
+
+template <> struct MakeIndexSequenceImpl<0> {
+  using Type = IndexSequence<>;
+};
+template <> struct MakeIndexSequenceImpl<1> {
+  using Type = IndexSequence<0>;
+};
+template <> struct MakeIndexSequenceImpl<2> {
+  using Type = IndexSequence<0,1>;
+};
+template <> struct MakeIndexSequenceImpl<3> {
+  using Type = IndexSequence<0,1,2>;
+};
+template <> struct MakeIndexSequenceImpl<4> {
+  using Type = IndexSequence<0,1,2,3>;
+};
+template <> struct MakeIndexSequenceImpl<5> {
+  using Type = IndexSequence<0,1,2,3,4>;
+};
+template <> struct MakeIndexSequenceImpl<6> {
+  using Type = IndexSequence<0,1,2,3,4,5>;
+};
+template <> struct MakeIndexSequenceImpl<7> {
+  using Type = IndexSequence<0,1,2,3,4,5,6>;
+};
+template <> struct MakeIndexSequenceImpl<8> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7>;
+};
+template <> struct MakeIndexSequenceImpl<9> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7,8>;
+};
+template <> struct MakeIndexSequenceImpl<10> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9>;
+};
+template <> struct MakeIndexSequenceImpl<11> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10>;
+};
+template <> struct MakeIndexSequenceImpl<12> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10,11>;
+};
+template <> struct MakeIndexSequenceImpl<13> {
+  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10,11,12>;
+};
+
+#else  // defined(OS_WIN) && defined(_PREFAST_)
+
 template <size_t... Ns>
 struct MakeIndexSequenceImpl<0, Ns...> {
   using Type = IndexSequence<Ns...>;
@@ -50,6 +101,8 @@ struct MakeIndexSequenceImpl<0, Ns...> {
 template <size_t N, size_t... Ns>
 struct MakeIndexSequenceImpl<N, Ns...>
     : MakeIndexSequenceImpl<N - 1, N - 1, Ns...> {};
+
+#endif  // defined(OS_WIN) && defined(_PREFAST_)
 
 // std::get() in <=libstdc++-4.6 returns an lvalue-reference for
 // rvalue-reference of a tuple, where an rvalue-reference is expected.
@@ -68,10 +121,6 @@ auto get(T& t) -> decltype(std::get<I>(t)) {
 template <size_t N>
 using MakeIndexSequence = typename MakeIndexSequenceImpl<N>::Type;
 
-template <typename T>
-using MakeIndexSequenceForTuple =
-    MakeIndexSequence<std::tuple_size<typename std::decay<T>::type>::value>;
-
 // Dispatchers ----------------------------------------------------------------
 //
 // Helper functions that call the given method on an object, with the unpacked
@@ -83,63 +132,62 @@ using MakeIndexSequenceForTuple =
 
 // Non-Static Dispatchers with no out params.
 
-template <typename ObjT, typename Method, typename Tuple, size_t... Ns>
+template <typename ObjT, typename Method, typename... Ts, size_t... Ns>
 inline void DispatchToMethodImpl(const ObjT& obj,
                                  Method method,
-                                 Tuple&& args,
+                                 const std::tuple<Ts...>& arg,
                                  IndexSequence<Ns...>) {
-  (obj->*method)(base::get<Ns>(std::forward<Tuple>(args))...);
+  (obj->*method)(internal::Unwrap(std::get<Ns>(arg))...);
 }
 
-template <typename ObjT, typename Method, typename Tuple>
+template <typename ObjT, typename Method, typename... Ts>
 inline void DispatchToMethod(const ObjT& obj,
                              Method method,
-                             Tuple&& args) {
-  DispatchToMethodImpl(obj, method, std::forward<Tuple>(args),
-                       MakeIndexSequenceForTuple<Tuple>());
+                             const std::tuple<Ts...>& arg) {
+  DispatchToMethodImpl(obj, method, arg, MakeIndexSequence<sizeof...(Ts)>());
 }
 
 // Static Dispatchers with no out params.
 
-template <typename Function, typename Tuple, size_t... Ns>
+template <typename Function, typename... Ts, size_t... Ns>
 inline void DispatchToFunctionImpl(Function function,
-                                   Tuple&& args,
+                                   const std::tuple<Ts...>& arg,
                                    IndexSequence<Ns...>) {
-  (*function)(base::get<Ns>(std::forward<Tuple>(args))...);
+  (*function)(internal::Unwrap(std::get<Ns>(arg))...);
 }
 
-template <typename Function, typename Tuple>
-inline void DispatchToFunction(Function function, Tuple&& args) {
-  DispatchToFunctionImpl(function, std::forward<Tuple>(args),
-                         MakeIndexSequenceForTuple<Tuple>());
+template <typename Function, typename... Ts>
+inline void DispatchToFunction(Function function,
+                               const std::tuple<Ts...>& arg) {
+  DispatchToFunctionImpl(function, arg, MakeIndexSequence<sizeof...(Ts)>());
 }
 
 // Dispatchers with out parameters.
 
 template <typename ObjT,
           typename Method,
-          typename InTuple,
-          typename OutTuple,
+          typename... InTs,
+          typename... OutTs,
           size_t... InNs,
           size_t... OutNs>
 inline void DispatchToMethodImpl(const ObjT& obj,
                                  Method method,
-                                 InTuple&& in,
-                                 OutTuple* out,
+                                 const std::tuple<InTs...>& in,
+                                 std::tuple<OutTs...>* out,
                                  IndexSequence<InNs...>,
                                  IndexSequence<OutNs...>) {
-  (obj->*method)(base::get<InNs>(std::forward<InTuple>(in))...,
+  (obj->*method)(internal::Unwrap(std::get<InNs>(in))...,
                  &std::get<OutNs>(*out)...);
 }
 
-template <typename ObjT, typename Method, typename InTuple, typename OutTuple>
+template <typename ObjT, typename Method, typename... InTs, typename... OutTs>
 inline void DispatchToMethod(const ObjT& obj,
                              Method method,
-                             InTuple&& in,
-                             OutTuple* out) {
-  DispatchToMethodImpl(obj, method, std::forward<InTuple>(in), out,
-                       MakeIndexSequenceForTuple<InTuple>(),
-                       MakeIndexSequenceForTuple<OutTuple>());
+                             const std::tuple<InTs...>& in,
+                             std::tuple<OutTs...>* out) {
+  DispatchToMethodImpl(obj, method, in, out,
+                       MakeIndexSequence<sizeof...(InTs)>(),
+                       MakeIndexSequence<sizeof...(OutTs)>());
 }
 
 }  // namespace base

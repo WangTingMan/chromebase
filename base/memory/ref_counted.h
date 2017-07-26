@@ -14,8 +14,10 @@
 #include "base/atomic_ref_count.h"
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
-#include "base/logging.h"
 #include "base/macros.h"
+#ifndef NDEBUG
+#include "base/logging.h"
+#endif
 #include "base/threading/thread_collision_warner.h"
 #include "build/build_config.h"
 
@@ -30,16 +32,16 @@ class BASE_EXPORT RefCountedBase {
  protected:
   RefCountedBase()
       : ref_count_(0)
-#if DCHECK_IS_ON()
-        , in_dtor_(false)
-#endif
-  {
+  #ifndef NDEBUG
+      , in_dtor_(false)
+  #endif
+      {
   }
 
   ~RefCountedBase() {
-#if DCHECK_IS_ON()
+  #ifndef NDEBUG
     DCHECK(in_dtor_) << "RefCounted object deleted without calling Release()";
-#endif
+  #endif
   }
 
 
@@ -48,9 +50,9 @@ class BASE_EXPORT RefCountedBase {
     // Current thread books the critical section "AddRelease"
     // without release it.
     // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-#if DCHECK_IS_ON()
+  #ifndef NDEBUG
     DCHECK(!in_dtor_);
-#endif
+  #endif
     ++ref_count_;
   }
 
@@ -60,21 +62,21 @@ class BASE_EXPORT RefCountedBase {
     // Current thread books the critical section "AddRelease"
     // without release it.
     // DFAKE_SCOPED_LOCK_THREAD_LOCKED(add_release_);
-#if DCHECK_IS_ON()
+  #ifndef NDEBUG
     DCHECK(!in_dtor_);
-#endif
+  #endif
     if (--ref_count_ == 0) {
-#if DCHECK_IS_ON()
+  #ifndef NDEBUG
       in_dtor_ = true;
-#endif
+  #endif
       return true;
     }
     return false;
   }
 
  private:
-  mutable size_t ref_count_;
-#if DCHECK_IS_ON()
+  mutable int ref_count_;
+#ifndef NDEBUG
   mutable bool in_dtor_;
 #endif
 
@@ -97,9 +99,9 @@ class BASE_EXPORT RefCountedThreadSafeBase {
   bool Release() const;
 
  private:
-  mutable AtomicRefCount ref_count_ = 0;
-#if DCHECK_IS_ON()
-  mutable bool in_dtor_ = false;
+  mutable AtomicRefCount ref_count_;
+#ifndef NDEBUG
+  mutable bool in_dtor_;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafeBase);
@@ -124,7 +126,7 @@ class BASE_EXPORT RefCountedThreadSafeBase {
 template <class T>
 class RefCounted : public subtle::RefCountedBase {
  public:
-  RefCounted() = default;
+  RefCounted() {}
 
   void AddRef() const {
     subtle::RefCountedBase::AddRef();
@@ -137,7 +139,7 @@ class RefCounted : public subtle::RefCountedBase {
   }
 
  protected:
-  ~RefCounted() = default;
+  ~RefCounted() {}
 
  private:
   DISALLOW_COPY_AND_ASSIGN(RefCounted<T>);
@@ -174,7 +176,7 @@ struct DefaultRefCountedThreadSafeTraits {
 template <class T, typename Traits = DefaultRefCountedThreadSafeTraits<T> >
 class RefCountedThreadSafe : public subtle::RefCountedThreadSafeBase {
  public:
-  RefCountedThreadSafe() = default;
+  RefCountedThreadSafe() {}
 
   void AddRef() const {
     subtle::RefCountedThreadSafeBase::AddRef();
@@ -187,7 +189,7 @@ class RefCountedThreadSafe : public subtle::RefCountedThreadSafeBase {
   }
 
  protected:
-  ~RefCountedThreadSafe() = default;
+  ~RefCountedThreadSafe() {}
 
  private:
   friend struct DefaultRefCountedThreadSafeTraits<T>;
@@ -211,7 +213,7 @@ class RefCountedData
 
  private:
   friend class base::RefCountedThreadSafe<base::RefCountedData<T> >;
-  ~RefCountedData() = default;
+  ~RefCountedData() {}
 };
 
 }  // namespace base
@@ -224,9 +226,6 @@ class RefCountedData
 //
 //   class MyFoo : public RefCounted<MyFoo> {
 //    ...
-//    private:
-//     friend class RefCounted<MyFoo>;  // Allow destruction by RefCounted<>.
-//     ~MyFoo();                        // Destructor must be private/protected.
 //   };
 //
 //   void some_function() {
@@ -238,7 +237,7 @@ class RefCountedData
 //   void some_other_function() {
 //     scoped_refptr<MyFoo> foo = new MyFoo();
 //     ...
-//     foo = nullptr;  // explicitly releases |foo|
+//     foo = NULL;  // explicitly releases |foo|
 //     ...
 //     if (foo)
 //       foo->Method(param);
@@ -253,7 +252,7 @@ class RefCountedData
 //     scoped_refptr<MyFoo> b;
 //
 //     b.swap(a);
-//     // now, |b| references the MyFoo object, and |a| references nullptr.
+//     // now, |b| references the MyFoo object, and |a| references NULL.
 //   }
 //
 // To make both |a| and |b| in the above example reference the same MyFoo
@@ -272,7 +271,8 @@ class scoped_refptr {
  public:
   typedef T element_type;
 
-  scoped_refptr() {}
+  scoped_refptr() : ptr_(NULL) {
+  }
 
   scoped_refptr(T* p) : ptr_(p) {
     if (ptr_)
@@ -314,12 +314,12 @@ class scoped_refptr {
   T* get() const { return ptr_; }
 
   T& operator*() const {
-    assert(ptr_ != nullptr);
+    assert(ptr_ != NULL);
     return *ptr_;
   }
 
   T* operator->() const {
-    assert(ptr_ != nullptr);
+    assert(ptr_ != NULL);
     return ptr_;
   }
 
@@ -382,7 +382,7 @@ class scoped_refptr {
   }
 
  protected:
-  T* ptr_ = nullptr;
+  T* ptr_;
 
  private:
   // Friend required for move constructors that set r.ptr_ to null.
@@ -397,13 +397,11 @@ class scoped_refptr {
   static void Release(T* ptr);
 };
 
-// static
 template <typename T>
 void scoped_refptr<T>::AddRef(T* ptr) {
   ptr->AddRef();
 }
 
-// static
 template <typename T>
 void scoped_refptr<T>::Release(T* ptr) {
   ptr->Release();

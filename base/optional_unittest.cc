@@ -98,7 +98,7 @@ static_assert(
 
 TEST(OptionalTest, DefaultConstructor) {
   {
-    constexpr Optional<float> o;
+    Optional<float> o;
     EXPECT_FALSE(o);
   }
 
@@ -144,28 +144,21 @@ TEST(OptionalTest, CopyConstructor) {
 
 TEST(OptionalTest, ValueConstructor) {
   {
-    constexpr float value = 0.1f;
-    constexpr Optional<float> o(value);
-
+    Optional<float> o(0.1f);
     EXPECT_TRUE(o);
-    EXPECT_EQ(value, o.value());
+    EXPECT_EQ(o.value(), 0.1f);
   }
 
   {
-    std::string value("foo");
-    Optional<std::string> o(value);
-
+    Optional<std::string> o("foo");
     EXPECT_TRUE(o);
-    EXPECT_EQ(value, o.value());
+    EXPECT_EQ(o.value(), "foo");
   }
 
   {
-    TestObject value(3, 0.1);
-    Optional<TestObject> o(value);
-
-    EXPECT_TRUE(o);
-    EXPECT_EQ(TestObject::State::COPY_CONSTRUCTED, o->state());
-    EXPECT_EQ(value, o.value());
+    Optional<TestObject> o(TestObject(3, 0.1));
+    EXPECT_TRUE(!!o);
+    EXPECT_TRUE(o.value() == TestObject(3, 0.1));
   }
 }
 
@@ -205,28 +198,35 @@ TEST(OptionalTest, MoveConstructor) {
 
 TEST(OptionalTest, MoveValueConstructor) {
   {
-    float value = 0.1f;
-    Optional<float> o(std::move(value));
+    Optional<float> first(0.1f);
+    Optional<float> second(std::move(first.value()));
 
-    EXPECT_TRUE(o);
-    EXPECT_EQ(0.1f, o.value());
+    EXPECT_TRUE(second);
+    EXPECT_EQ(second.value(), 0.1f);
+
+    EXPECT_TRUE(first);
   }
 
   {
-    std::string value("foo");
-    Optional<std::string> o(std::move(value));
+    Optional<std::string> first("foo");
+    Optional<std::string> second(std::move(first.value()));
 
-    EXPECT_TRUE(o);
-    EXPECT_EQ("foo", o.value());
+    EXPECT_TRUE(second);
+    EXPECT_EQ("foo", second.value());
+
+    EXPECT_TRUE(first);
   }
 
   {
-    TestObject value(3, 0.1);
-    Optional<TestObject> o(std::move(value));
+    Optional<TestObject> first(TestObject(3, 0.1));
+    Optional<TestObject> second(std::move(first.value()));
 
-    EXPECT_TRUE(o);
-    EXPECT_EQ(TestObject::State::MOVE_CONSTRUCTED, o->state());
-    EXPECT_EQ(TestObject(3, 0.1), o.value());
+    EXPECT_TRUE(!!second);
+    EXPECT_EQ(TestObject::State::MOVE_CONSTRUCTED, second->state());
+    EXPECT_TRUE(TestObject(3, 0.1) == second.value());
+
+    EXPECT_TRUE(!!first);
+    EXPECT_EQ(TestObject::State::MOVED_FROM, first->state());
   }
 }
 
@@ -251,7 +251,7 @@ TEST(OptionalTest, ConstructorForwardArguments) {
 }
 
 TEST(OptionalTest, NulloptConstructor) {
-  constexpr Optional<int> a(base::nullopt);
+  Optional<int> a = base::nullopt;
   EXPECT_FALSE(a);
 }
 
@@ -1296,51 +1296,6 @@ TEST(OptionalTest, Hash_UseInSet) {
   setOptInt.insert(Optional<int>(3));
   EXPECT_EQ(setOptInt.end(), setOptInt.find(42));
   EXPECT_NE(setOptInt.end(), setOptInt.find(3));
-}
-
-TEST(OptionalTest, HasValue) {
-  Optional<int> a;
-  EXPECT_FALSE(a.has_value());
-
-  a = 42;
-  EXPECT_TRUE(a.has_value());
-
-  a = nullopt;
-  EXPECT_FALSE(a.has_value());
-
-  a = 0;
-  EXPECT_TRUE(a.has_value());
-
-  a = Optional<int>();
-  EXPECT_FALSE(a.has_value());
-}
-
-TEST(OptionalTest, Reset_int) {
-  Optional<int> a(0);
-  EXPECT_TRUE(a.has_value());
-  EXPECT_EQ(0, a.value());
-
-  a.reset();
-  EXPECT_FALSE(a.has_value());
-  EXPECT_EQ(-1, a.value_or(-1));
-}
-
-TEST(OptionalTest, Reset_Object) {
-  Optional<TestObject> a(TestObject(0, 0.1));
-  EXPECT_TRUE(a.has_value());
-  EXPECT_EQ(TestObject(0, 0.1), a.value());
-
-  a.reset();
-  EXPECT_FALSE(a.has_value());
-  EXPECT_EQ(TestObject(42, 0.0), a.value_or(TestObject(42, 0.0)));
-}
-
-TEST(OptionalTest, Reset_NoOp) {
-  Optional<int> a;
-  EXPECT_FALSE(a.has_value());
-
-  a.reset();
-  EXPECT_FALSE(a.has_value());
 }
 
 }  // namespace base

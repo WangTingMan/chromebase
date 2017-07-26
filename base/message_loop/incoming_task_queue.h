@@ -16,6 +16,7 @@
 namespace base {
 
 class MessageLoop;
+class WaitableEvent;
 
 namespace internal {
 

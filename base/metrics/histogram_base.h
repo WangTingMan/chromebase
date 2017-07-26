@@ -21,6 +21,7 @@
 
 namespace base {
 
+class BucketRanges;
 class DictionaryValue;
 class HistogramBase;
 class HistogramSamples;
@@ -91,7 +92,7 @@ class BASE_EXPORT HistogramBase {
   static const Sample kSampleType_MAX;  // INT_MAX
 
   enum Flags {
-    kNoFlags = 0x0,
+    kNoFlags = 0,
 
     // Histogram should be UMA uploaded.
     kUmaTargetedHistogramFlag = 0x1,
@@ -120,6 +121,9 @@ class BASE_EXPORT HistogramBase {
     // MemoryAllocator, and that loaded into the Histogram module before this
     // histogram is created.
     kIsPersistent = 0x40,
+
+    // Only for Histogram and its sub classes: fancy bucket-naming support.
+    kHexRangePrintingFlag = 0x8000,
   };
 
   // Histogram data inconsistency types.

@@ -57,12 +57,12 @@ JSONWriter::JSONWriter(int options, std::string* json)
 
 bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
   switch (node.GetType()) {
-    case Value::Type::NONE: {
+    case Value::TYPE_NULL: {
       json_string_->append("null");
       return true;
     }
 
-    case Value::Type::BOOLEAN: {
+    case Value::TYPE_BOOLEAN: {
       bool value;
       bool result = node.GetAsBoolean(&value);
       DCHECK(result);
@@ -70,7 +70,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::INTEGER: {
+    case Value::TYPE_INTEGER: {
       int value;
       bool result = node.GetAsInteger(&value);
       DCHECK(result);
@@ -78,7 +78,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::DOUBLE: {
+    case Value::TYPE_DOUBLE: {
       double value;
       bool result = node.GetAsDouble(&value);
       DCHECK(result);
@@ -110,7 +110,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::STRING: {
+    case Value::TYPE_STRING: {
       std::string value;
       bool result = node.GetAsString(&value);
       DCHECK(result);
@@ -118,7 +118,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::LIST: {
+    case Value::TYPE_LIST: {
       json_string_->push_back('[');
       if (pretty_print_)
         json_string_->push_back(' ');
@@ -128,7 +128,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       bool result = node.GetAsList(&list);
       DCHECK(result);
       for (const auto& value : *list) {
-        if (omit_binary_values_ && value->GetType() == Value::Type::BINARY)
+        if (omit_binary_values_ && value->GetType() == Value::TYPE_BINARY)
           continue;
 
         if (first_value_has_been_output) {
@@ -149,7 +149,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::DICTIONARY: {
+    case Value::TYPE_DICTIONARY: {
       json_string_->push_back('{');
       if (pretty_print_)
         json_string_->append(kPrettyPrintLineEnding);
@@ -161,7 +161,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       for (DictionaryValue::Iterator itr(*dict); !itr.IsAtEnd();
            itr.Advance()) {
         if (omit_binary_values_ &&
-            itr.value().GetType() == Value::Type::BINARY) {
+            itr.value().GetType() == Value::TYPE_BINARY) {
           continue;
         }
 
@@ -194,7 +194,7 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return result;
     }
 
-    case Value::Type::BINARY:
+    case Value::TYPE_BINARY:
       // Successful only if we're allowed to omit it.
       DLOG_IF(ERROR, !omit_binary_values_) << "Cannot serialize binary value.";
       return omit_binary_values_;

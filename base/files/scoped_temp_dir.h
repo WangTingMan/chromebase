@@ -47,9 +47,7 @@ class BASE_EXPORT ScopedTempDir {
   // when this object goes out of scope.
   FilePath Take();
 
-  // Returns the path to the created directory. Call one of the
-  // CreateUniqueTempDir* methods before getting the path.
-  const FilePath& GetPath() const;
+  const FilePath& path() const { return path_; }
 
   // Returns true if path_ is non-empty and exists.
   bool IsValid() const;

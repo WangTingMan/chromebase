@@ -16,7 +16,6 @@
 #include "base/process/process_metrics.h"
 #include "base/template_util.h"
 #include "base/trace_event/heap_profiler_allocation_context.h"
-#include "build/build_config.h"
 
 namespace base {
 namespace trace_event {
@@ -46,7 +45,8 @@ class FixedHashMap {
   using KVPair = std::pair<const Key, Value>;
 
   // For implementation simplicity API uses integer index instead
-  // of iterators. Most operations (except Find) on KVIndex are O(1).
+  // of iterators. Most operations (except FindValidIndex) on KVIndex
+  // are O(1).
   using KVIndex = size_t;
   static const KVIndex kInvalidKVIndex = static_cast<KVIndex>(-1);
 
@@ -199,9 +199,7 @@ class FixedHashMap {
     // the simplest solution is to just allocate a humongous chunk of address
     // space.
 
-    CHECK_LT(next_unused_cell_, num_cells_ + 1)
-        << "Allocation Register hash table has too little capacity. Increase "
-           "the capacity to run heap profiler in large sessions.";
+    DCHECK_LT(next_unused_cell_, num_cells_ + 1);
 
     return &cells_[idx];
   }
@@ -302,25 +300,15 @@ class BASE_EXPORT AllocationRegister {
  private:
   friend AllocationRegisterTest;
 
-// Expect lower number of allocations from mobile platforms. Load factor
-// (capacity / bucket count) is kept less than 10 for optimal hashing. The
-// number of buckets should be changed together with AddressHasher.
-#if defined(OS_ANDROID) || defined(OS_IOS)
+  // Expect max 1.5M allocations. Number of buckets is 2^18 for optimal
+  // hashing and should be changed together with AddressHasher.
   static const size_t kAllocationBuckets = 1 << 18;
   static const size_t kAllocationCapacity = 1500000;
-#else
-  static const size_t kAllocationBuckets = 1 << 19;
-  static const size_t kAllocationCapacity = 5000000;
-#endif
 
-  // 2^16 works well with BacktraceHasher. When increasing this number make
-  // sure BacktraceHasher still produces low number of collisions.
-  static const size_t kBacktraceBuckets = 1 << 16;
-#if defined(OS_ANDROID)
-  static const size_t kBacktraceCapacity = 32000;  // 22K was observed
-#else
-  static const size_t kBacktraceCapacity = 55000;  // 45K was observed on Linux
-#endif
+  // Expect max 2^15 unique backtraces. Can be changed to 2^16 without
+  // needing to tweak BacktraceHasher implementation.
+  static const size_t kBacktraceBuckets = 1 << 15;
+  static const size_t kBacktraceCapacity = kBacktraceBuckets;
 
   struct BacktraceHasher {
     size_t operator () (const Backtrace& backtrace) const;

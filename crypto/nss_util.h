@@ -14,6 +14,7 @@
 #include "crypto/crypto_export.h"
 
 namespace base {
+class FilePath;
 class Lock;
 class Time;
 }  // namespace base

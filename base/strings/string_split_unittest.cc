@@ -150,8 +150,8 @@ TEST_F(SplitStringIntoKeyValuePairsTest, DelimiterInValue) {
 }
 
 TEST(SplitStringUsingSubstrTest, EmptyString) {
-  std::vector<std::string> results = SplitStringUsingSubstr(
-      std::string(), "DELIMITER", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+  std::vector<std::string> results;
+  SplitStringUsingSubstr(std::string(), "DELIMITER", &results);
   ASSERT_EQ(1u, results.size());
   EXPECT_THAT(results, ElementsAre(""));
 }
@@ -231,33 +231,38 @@ TEST(StringUtilTest, SplitString_WhitespaceAndResultType) {
 }
 
 TEST(SplitStringUsingSubstrTest, StringWithNoDelimiter) {
-  std::vector<std::string> results = SplitStringUsingSubstr(
-      "alongwordwithnodelimiter", "DELIMITER", TRIM_WHITESPACE,
-      SPLIT_WANT_ALL);
+  std::vector<std::string> results;
+  SplitStringUsingSubstr("alongwordwithnodelimiter", "DELIMITER", &results);
   ASSERT_EQ(1u, results.size());
   EXPECT_THAT(results, ElementsAre("alongwordwithnodelimiter"));
 }
 
 TEST(SplitStringUsingSubstrTest, LeadingDelimitersSkipped) {
-  std::vector<std::string> results = SplitStringUsingSubstr(
+  std::vector<std::string> results;
+  SplitStringUsingSubstr(
       "DELIMITERDELIMITERDELIMITERoneDELIMITERtwoDELIMITERthree",
-      "DELIMITER", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+      "DELIMITER",
+      &results);
   ASSERT_EQ(6u, results.size());
   EXPECT_THAT(results, ElementsAre("", "", "", "one", "two", "three"));
 }
 
 TEST(SplitStringUsingSubstrTest, ConsecutiveDelimitersSkipped) {
-  std::vector<std::string> results = SplitStringUsingSubstr(
+  std::vector<std::string> results;
+  SplitStringUsingSubstr(
       "unoDELIMITERDELIMITERDELIMITERdosDELIMITERtresDELIMITERDELIMITERcuatro",
-      "DELIMITER", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+      "DELIMITER",
+      &results);
   ASSERT_EQ(7u, results.size());
   EXPECT_THAT(results, ElementsAre("uno", "", "", "dos", "tres", "", "cuatro"));
 }
 
 TEST(SplitStringUsingSubstrTest, TrailingDelimitersSkipped) {
-  std::vector<std::string> results = SplitStringUsingSubstr(
+  std::vector<std::string> results;
+  SplitStringUsingSubstr(
       "unDELIMITERdeuxDELIMITERtroisDELIMITERquatreDELIMITERDELIMITERDELIMITER",
-      "DELIMITER", TRIM_WHITESPACE, SPLIT_WANT_ALL);
+      "DELIMITER",
+      &results);
   ASSERT_EQ(7u, results.size());
   EXPECT_THAT(
       results, ElementsAre("un", "deux", "trois", "quatre", "", "", ""));

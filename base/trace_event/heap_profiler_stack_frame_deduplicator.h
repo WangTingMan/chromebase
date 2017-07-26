@@ -34,8 +34,6 @@ class BASE_EXPORT StackFrameDeduplicator : public ConvertableToTraceFormat {
     FrameNode(const FrameNode& other);
     ~FrameNode();
 
-    size_t EstimateMemoryUsage() const;
-
     StackFrame frame;
 
     // The index of the parent stack frame in |frames_|, or -1 if there is no

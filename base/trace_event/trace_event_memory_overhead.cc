@@ -69,27 +69,27 @@ void TraceEventMemoryOverhead::AddRefCountedString(
 
 void TraceEventMemoryOverhead::AddValue(const Value& value) {
   switch (value.GetType()) {
-    case Value::Type::NONE:
-    case Value::Type::BOOLEAN:
-    case Value::Type::INTEGER:
-    case Value::Type::DOUBLE:
+    case Value::TYPE_NULL:
+    case Value::TYPE_BOOLEAN:
+    case Value::TYPE_INTEGER:
+    case Value::TYPE_DOUBLE:
       Add("FundamentalValue", sizeof(Value));
       break;
 
-    case Value::Type::STRING: {
-      const Value* string_value = nullptr;
+    case Value::TYPE_STRING: {
+      const StringValue* string_value = nullptr;
       value.GetAsString(&string_value);
-      Add("StringValue", sizeof(Value));
+      Add("StringValue", sizeof(StringValue));
       AddString(string_value->GetString());
     } break;
 
-    case Value::Type::BINARY: {
+    case Value::TYPE_BINARY: {
       const BinaryValue* binary_value = nullptr;
       value.GetAsBinary(&binary_value);
       Add("BinaryValue", sizeof(BinaryValue) + binary_value->GetSize());
     } break;
 
-    case Value::Type::DICTIONARY: {
+    case Value::TYPE_DICTIONARY: {
       const DictionaryValue* dictionary_value = nullptr;
       value.GetAsDictionary(&dictionary_value);
       Add("DictionaryValue", sizeof(DictionaryValue));
@@ -100,7 +100,7 @@ void TraceEventMemoryOverhead::AddValue(const Value& value) {
       }
     } break;
 
-    case Value::Type::LIST: {
+    case Value::TYPE_LIST: {
       const ListValue* list_value = nullptr;
       value.GetAsList(&list_value);
       Add("ListValue", sizeof(ListValue));

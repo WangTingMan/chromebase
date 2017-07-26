@@ -14,7 +14,6 @@
 #include "base/files/file_path_watcher.h"
 #include "base/mac/scoped_dispatch_object.h"
 #include "base/macros.h"
-#include "base/memory/weak_ptr.h"
 
 namespace base {
 
@@ -27,7 +26,6 @@ namespace base {
 class FilePathWatcherFSEvents : public FilePathWatcher::PlatformDelegate {
  public:
   FilePathWatcherFSEvents();
-  ~FilePathWatcherFSEvents() override;
 
   // FilePathWatcher::PlatformDelegate overrides.
   bool Watch(const FilePath& path,
@@ -43,6 +41,8 @@ class FilePathWatcherFSEvents : public FilePathWatcher::PlatformDelegate {
                                const FSEventStreamEventFlags flags[],
                                const FSEventStreamEventId event_ids[]);
 
+  ~FilePathWatcherFSEvents() override;
+
   // Called from FSEventsCallback whenever there is a change to the paths.
   void OnFilePathsChanged(const std::vector<FilePath>& paths);
 
@@ -52,6 +52,9 @@ class FilePathWatcherFSEvents : public FilePathWatcher::PlatformDelegate {
   void DispatchEvents(const std::vector<FilePath>& paths,
                       const FilePath& target,
                       const FilePath& resolved_target);
+
+  // Cleans up and stops the event stream.
+  void CancelOnMessageLoopThread() override;
 
   // (Re-)Initialize the event stream to start reporting events from
   // |start_event|.
@@ -88,8 +91,6 @@ class FilePathWatcherFSEvents : public FilePathWatcher::PlatformDelegate {
   // Backend stream we receive event callbacks from (strong reference).
   // (Only accessed from the libdispatch queue.)
   FSEventStreamRef fsevent_stream_;
-
-  WeakPtrFactory<FilePathWatcherFSEvents> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(FilePathWatcherFSEvents);
 };

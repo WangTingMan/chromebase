@@ -4,6 +4,8 @@
 
 #include "crypto/symmetric_key.h"
 
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,8 +15,6 @@
 #include "base/logging.h"
 #include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
-#include "third_party/boringssl/src/include/openssl/evp.h"
-#include "third_party/boringssl/src/include/openssl/rand.h"
 
 namespace crypto {
 
