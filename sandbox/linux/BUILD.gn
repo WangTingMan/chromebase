@@ -4,6 +4,7 @@
 
 import("//build/config/features.gni")
 import("//build/config/nacl/config.gni")
+import("//sandbox/features.gni")
 import("//testing/test.gni")
 
 if (is_android) {
@@ -41,10 +42,7 @@ group("sandbox") {
     public_deps += [ ":suid_sandbox_client" ]
   }
   if (use_seccomp_bpf || is_nacl_nonsfi) {
-    public_deps += [
-      ":seccomp_bpf",
-      ":seccomp_bpf_helpers",
-    ]
+    public_deps += [ ":seccomp_bpf" ]
   }
 }
 
@@ -192,7 +190,6 @@ action("bpf_dsl_golden") {
       rebase_path(outputs, root_build_dir) + rebase_path(inputs, root_build_dir)
 }
 
-
 test("sandbox_linux_unittests") {
   deps = [
     ":sandbox_linux_unittests_sources",
@@ -222,6 +219,14 @@ component("seccomp_bpf") {
     "bpf_dsl/syscall_set.cc",
     "bpf_dsl/syscall_set.h",
     "bpf_dsl/trap_registry.h",
+    "seccomp-bpf-helpers/baseline_policy.cc",
+    "seccomp-bpf-helpers/baseline_policy.h",
+    "seccomp-bpf-helpers/sigsys_handlers.cc",
+    "seccomp-bpf-helpers/sigsys_handlers.h",
+    "seccomp-bpf-helpers/syscall_parameters_restrictions.cc",
+    "seccomp-bpf-helpers/syscall_parameters_restrictions.h",
+    "seccomp-bpf-helpers/syscall_sets.cc",
+    "seccomp-bpf-helpers/syscall_sets.h",
     "seccomp-bpf/die.cc",
     "seccomp-bpf/die.h",
     "seccomp-bpf/sandbox_bpf.cc",
@@ -251,31 +256,6 @@ component("seccomp_bpf") {
       "bpf_dsl/linux_syscall_ranges.h",
       "bpf_dsl/seccomp_macros.h",
       "bpf_dsl/trap_registry.h",
-    ]
-  }
-}
-
-component("seccomp_bpf_helpers") {
-  sources = [
-    "seccomp-bpf-helpers/baseline_policy.cc",
-    "seccomp-bpf-helpers/baseline_policy.h",
-    "seccomp-bpf-helpers/sigsys_handlers.cc",
-    "seccomp-bpf-helpers/sigsys_handlers.h",
-    "seccomp-bpf-helpers/syscall_parameters_restrictions.cc",
-    "seccomp-bpf-helpers/syscall_parameters_restrictions.h",
-    "seccomp-bpf-helpers/syscall_sets.cc",
-    "seccomp-bpf-helpers/syscall_sets.h",
-  ]
-  defines = [ "SANDBOX_IMPLEMENTATION" ]
-
-  deps = [
-    ":sandbox_services",
-    ":seccomp_bpf",
-    "//base",
-  ]
-
-  if (is_nacl_nonsfi) {
-    sources -= [
       "seccomp-bpf-helpers/baseline_policy.cc",
       "seccomp-bpf-helpers/baseline_policy.h",
       "seccomp-bpf-helpers/syscall_sets.cc",
