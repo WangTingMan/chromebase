@@ -326,7 +326,6 @@ cc_library {
                 "base/allocator/allocator_shim.cc",
                 "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
             ],
-            host_ldlibs: ["-lrt"],
         },
         darwin: {
             srcs: libchromeMacSrc,
@@ -567,9 +566,6 @@ cc_test {
                 "libchrome-crypto",
             ],
             cflags: ["-DDONT_EMBED_BUILD_METADATA"],
-        },
-        linux: {
-            host_ldlibs: ["-lrt"],
         },
         darwin: {
             enabled: false,
