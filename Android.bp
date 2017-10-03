@@ -321,7 +321,7 @@ cc_library {
                 "libcutils",
             ],
         },
-        linux: {
+        linux_glibc: {
             srcs: libchromeLinuxSrc + [
                 "base/allocator/allocator_shim.cc",
                 "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
