@@ -311,8 +311,11 @@ cc_library {
         "libgtest_prod",
     ],
     target: {
+        linux: {
+            srcs: libchromeLinuxSrc,
+        },
         android: {
-            srcs: libchromeLinuxSrc + [
+            srcs: [
                 "base/memory/shared_memory_android.cc",
                 "base/sys_info_chromeos.cc",
             ],
@@ -322,7 +325,7 @@ cc_library {
             ],
         },
         linux_glibc: {
-            srcs: libchromeLinuxSrc + [
+            srcs: [
                 "base/allocator/allocator_shim.cc",
                 "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
             ],
