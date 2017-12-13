@@ -15,6 +15,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/test/gtest_util.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -112,7 +113,7 @@ TEST_F(CancelableTaskTrackerTest, CancelPostedTask) {
       test_task_runner.get(), FROM_HERE, MakeExpectedNotRunClosure(FROM_HERE));
   EXPECT_NE(CancelableTaskTracker::kBadTaskId, task_id);
 
-  EXPECT_EQ(1U, test_task_runner->GetPendingTasks().size());
+  EXPECT_EQ(1U, test_task_runner->NumPendingTasks());
 
   task_tracker_.TryCancel(task_id);
 
@@ -344,23 +345,11 @@ class CancelableTaskTrackerDeathTest : public CancelableTaskTrackerTest {
   }
 };
 
-// Duplicated from base/threading/thread_checker.h so that we can be
-// good citizens there and undef the macro.
-#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
-#define ENABLE_THREAD_CHECKER 1
-#else
-#define ENABLE_THREAD_CHECKER 0
-#endif
-
 // Runs |fn| with |task_tracker|, expecting it to crash in debug mode.
 void MaybeRunDeadlyTaskTrackerMemberFunction(
     CancelableTaskTracker* task_tracker,
     const Callback<void(CancelableTaskTracker*)>& fn) {
-// CancelableTask uses DCHECKs with its ThreadChecker (itself only
-// enabled in debug mode).
-#if ENABLE_THREAD_CHECKER
-  EXPECT_DEATH_IF_SUPPORTED(fn.Run(task_tracker), "");
-#endif
+  EXPECT_DCHECK_DEATH(fn.Run(task_tracker));
 }
 
 void PostDoNothingTask(CancelableTaskTracker* task_tracker) {
