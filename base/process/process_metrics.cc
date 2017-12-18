@@ -46,7 +46,7 @@ std::unique_ptr<Value> SystemMetrics::ToValue() const {
   return std::move(res);
 }
 
-ProcessMetrics* ProcessMetrics::CreateCurrentProcessMetrics() {
+std::unique_ptr<ProcessMetrics> ProcessMetrics::CreateCurrentProcessMetrics() {
 #if !defined(OS_MACOSX) || defined(OS_IOS)
   return CreateProcessMetrics(base::GetCurrentProcessHandle());
 #else
@@ -84,8 +84,9 @@ int ProcessMetrics::CalculateIdleWakeupsPerSecond(
   last_idle_wakeups_time_ = time;
   last_absolute_idle_wakeups_ = absolute_idle_wakeups;
 
-  // Round to average wakeups per second.
   int64_t wakeups_delta_for_ms = wakeups_delta * Time::kMicrosecondsPerSecond;
+  // Round the result up by adding 1/2 (the second term resolves to 1/2 without
+  // dropping down into floating point).
   return (wakeups_delta_for_ms + time_delta / 2) / time_delta;
 }
 #else

@@ -39,7 +39,6 @@ std::string SysInfo::OperatingSystemVersion() {
 void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
                                             int32_t* minor_version,
                                             int32_t* bugfix_version) {
-#if defined(MAC_OS_X_VERSION_10_10)
   NSProcessInfo* processInfo = [NSProcessInfo processInfo];
   if ([processInfo respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion version = [processInfo operatingSystemVersion];
@@ -47,18 +46,12 @@ void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
     *minor_version = version.minorVersion;
     *bugfix_version = version.patchVersion;
   } else {
-#else
-  // Android buildbots are too old and have trouble using the forward
-  // declarations for some reason. Conditionally-compile the above block
-  // only when building on a more modern version of OS X.
-  if (true) {
-#endif
     // -[NSProcessInfo operatingSystemVersion] is documented available in 10.10.
     // It's also available via a private API since 10.9.2. For the remaining
     // cases in 10.9, rely on ::Gestalt(..). Since this code is only needed for
     // 10.9.0 and 10.9.1 and uses the recommended replacement thereafter,
     // suppress the warning for this fallback case.
-    DCHECK(base::mac::IsOSMavericks());
+    DCHECK(base::mac::IsOS10_9());
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     Gestalt(gestaltSystemVersionMajor,
