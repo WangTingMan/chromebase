@@ -5,15 +5,16 @@
 #ifndef BASE_TASK_SCHEDULER_TEST_UTILS_H_
 #define BASE_TASK_SCHEDULER_TEST_UTILS_H_
 
-#include "base/logging.h"
-#include "build/build_config.h"
-#include "testing/gtest/include/gtest/gtest.h"
+namespace base {
+namespace internal {
+namespace test {
 
-// Death tests misbehave on Android.
-#if DCHECK_IS_ON() && defined(GTEST_HAS_DEATH_TEST) && !defined(OS_ANDROID)
-#define EXPECT_DCHECK_DEATH(statement, regex) EXPECT_DEATH(statement, regex)
-#else
-#define EXPECT_DCHECK_DEATH(statement, regex)
-#endif
+// An enumeration of possible task scheduler TaskRunner types. Used to
+// parametrize relevant task_scheduler tests.
+enum class ExecutionMode { PARALLEL, SEQUENCED, SINGLE_THREADED };
+
+}  // namespace test
+}  // namespace internal
+}  // namespace base
 
 #endif  // BASE_TASK_SCHEDULER_TEST_UTILS_H_

@@ -149,7 +149,10 @@ string16 QuoteForCommandLineToArgvW(const string16& arg,
 
 }  // namespace
 
-CommandLine::CommandLine(NoProgram) : argv_(1), begin_args_(1) {}
+CommandLine::CommandLine(NoProgram /* no_program */)
+    : argv_(1),
+      begin_args_(1) {
+}
 
 CommandLine::CommandLine(const FilePath& program)
     : argv_(1),
@@ -452,9 +455,7 @@ CommandLine::StringType CommandLine::GetCommandLineStringInternal(
 
 CommandLine::StringType CommandLine::GetArgumentsStringInternal(
     bool quote_placeholders) const {
-#if !defined(OS_WIN)
-  (void)quote_placeholders;  // Avoid an unused warning.
-#endif
+  ALLOW_UNUSED_PARAM(quote_placeholders);
   StringType params;
   // Append switches and arguments.
   bool parse_switches = true;

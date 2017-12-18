@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <string>
+
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 
@@ -47,7 +49,7 @@ void EnsureOpenSSLInit() {
 }
 
 void ClearOpenSSLERRStack(const tracked_objects::Location& location) {
-  if (logging::DEBUG_MODE && VLOG_IS_ON(1)) {
+  if (DCHECK_IS_ON() && VLOG_IS_ON(1)) {
     uint32_t error_num = ERR_peek_error();
     if (error_num == 0)
       return;

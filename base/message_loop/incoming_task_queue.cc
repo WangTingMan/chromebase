@@ -17,7 +17,7 @@ namespace internal {
 
 namespace {
 
-#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
+#if DCHECK_IS_ON()
 // Delays larger than this are often bogus, and a warning should be emitted in
 // debug builds to warn developers.  http://crbug.com/450045
 const int kTaskDelayWarningThresholdInSeconds =
@@ -68,8 +68,8 @@ bool IncomingTaskQueue::AddToIncomingQueue(
       << "Requesting super-long task delay period of " << delay.InSeconds()
       << " seconds from here: " << from_here.ToString();
 
-  PendingTask pending_task(
-      from_here, task, CalculateDelayedRuntime(delay), nestable);
+  PendingTask pending_task(from_here, task, CalculateDelayedRuntime(delay),
+                           nestable);
 #if defined(OS_WIN)
   // We consider the task needs a high resolution timer if the delay is
   // more than 0 and less than 32ms. This caps the relative error to
