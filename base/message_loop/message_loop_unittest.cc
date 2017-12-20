@@ -12,7 +12,6 @@
 #include "base/compiler_specific.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
 #include "base/message_loop/message_loop_test.h"
@@ -94,19 +93,16 @@ void AbortMessagePump() {
   static_cast<base::MessageLoopForUI*>(base::MessageLoop::current())->Abort();
 }
 
-void RunTest_AbortDontRunMoreTasks(bool delayed, bool init_java_first) {
+void RunTest_AbortDontRunMoreTasks(bool delayed) {
+  MessageLoop loop(MessageLoop::TYPE_JAVA);
+
   WaitableEvent test_done_event(WaitableEvent::ResetPolicy::MANUAL,
                                 WaitableEvent::InitialState::NOT_SIGNALED);
 
-  std::unique_ptr<android::JavaHandlerThread> java_thread;
-  if (init_java_first) {
-    java_thread =
-        android::JavaHandlerThreadForTesting::CreateJavaFirst(&test_done_event);
-  } else {
-    java_thread = android::JavaHandlerThreadForTesting::Create(
-        "JavaHandlerThreadForTesting from AbortDontRunMoreTasks",
-        &test_done_event);
-  }
+  std::unique_ptr<android::JavaHandlerThreadForTesting> java_thread;
+  java_thread.reset(new android::JavaHandlerThreadForTesting(
+      "JavaHandlerThreadForTesting from AbortDontRunMoreTasks",
+      &test_done_event));
   java_thread->Start();
 
   if (delayed) {
@@ -125,19 +121,10 @@ void RunTest_AbortDontRunMoreTasks(bool delayed, bool init_java_first) {
 }
 
 TEST(MessageLoopTest, JavaExceptionAbort) {
-  constexpr bool delayed = false;
-  constexpr bool init_java_first = false;
-  RunTest_AbortDontRunMoreTasks(delayed, init_java_first);
+  RunTest_AbortDontRunMoreTasks(false);
 }
 TEST(MessageLoopTest, DelayedJavaExceptionAbort) {
-  constexpr bool delayed = true;
-  constexpr bool init_java_first = false;
-  RunTest_AbortDontRunMoreTasks(delayed, init_java_first);
-}
-TEST(MessageLoopTest, JavaExceptionAbortInitJavaFirst) {
-  constexpr bool delayed = false;
-  constexpr bool init_java_first = true;
-  RunTest_AbortDontRunMoreTasks(delayed, init_java_first);
+  RunTest_AbortDontRunMoreTasks(true);
 }
 #endif  // defined(OS_ANDROID)
 

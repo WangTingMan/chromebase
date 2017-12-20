@@ -14,7 +14,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/persistent_memory_allocator.h"
-#include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -34,7 +33,7 @@ struct Feature kFeatureOffByDefault {
 };
 
 std::string SortFeatureListString(const std::string& feature_list) {
-  std::vector<base::StringPiece> features =
+  std::vector<std::string> features =
       FeatureList::SplitFeatureListString(feature_list);
   std::sort(features.begin(), features.end());
   return JoinString(features, ",");

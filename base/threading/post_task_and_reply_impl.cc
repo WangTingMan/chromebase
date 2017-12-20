@@ -29,8 +29,8 @@ namespace {
 class PostTaskAndReplyRelay {
  public:
   PostTaskAndReplyRelay(const tracked_objects::Location& from_here,
-                        OnceClosure task,
-                        OnceClosure reply)
+                        Closure task,
+                        Closure reply)
       : sequence_checker_(),
         from_here_(from_here),
         origin_task_runner_(SequencedTaskRunnerHandle::Get()),
@@ -39,10 +39,12 @@ class PostTaskAndReplyRelay {
 
   ~PostTaskAndReplyRelay() {
     DCHECK(sequence_checker_.CalledOnValidSequence());
+    task_.Reset();
+    reply_.Reset();
   }
 
   void RunTaskAndPostReply() {
-    std::move(task_).Run();
+    task_.Run();
     origin_task_runner_->PostTask(
         from_here_, Bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
                          base::Unretained(this)));
@@ -52,12 +54,12 @@ class PostTaskAndReplyRelay {
   void RunReplyAndSelfDestruct() {
     DCHECK(sequence_checker_.CalledOnValidSequence());
 
-    // Ensure |task_| has already been released before |reply_| to ensure that
-    // no one accidentally depends on |task_| keeping one of its arguments alive
-    // while |reply_| is executing.
-    DCHECK(!task_);
+    // Force |task_| to be released before |reply_| is to ensure that no one
+    // accidentally depends on |task_| keeping one of its arguments alive while
+    // |reply_| is executing.
+    task_.Reset();
 
-    std::move(reply_).Run();
+    reply_.Run();
 
     // Cue mission impossible theme.
     delete this;
@@ -66,8 +68,8 @@ class PostTaskAndReplyRelay {
   const SequenceChecker sequence_checker_;
   const tracked_objects::Location from_here_;
   const scoped_refptr<SequencedTaskRunner> origin_task_runner_;
-  OnceClosure reply_;
-  OnceClosure task_;
+  Closure reply_;
+  Closure task_;
 };
 
 }  // namespace
@@ -76,8 +78,8 @@ namespace internal {
 
 bool PostTaskAndReplyImpl::PostTaskAndReply(
     const tracked_objects::Location& from_here,
-    OnceClosure task,
-    OnceClosure reply) {
+    Closure task,
+    Closure reply) {
   DCHECK(!task.is_null()) << from_here.ToString();
   DCHECK(!reply.is_null()) << from_here.ToString();
   PostTaskAndReplyRelay* relay =
