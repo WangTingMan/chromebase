@@ -276,9 +276,7 @@ component("base") {
     "command_line.h",
     "compiler_specific.h",
     "containers/adapters.h",
-    "containers/flat_map.h",
     "containers/flat_set.h",
-    "containers/flat_tree.h",
     "containers/hash_tables.h",
     "containers/linked_list.h",
     "containers/mru_cache.h",
@@ -474,7 +472,6 @@ component("base") {
     "mac/scoped_aedesc.h",
     "mac/scoped_authorizationref.h",
     "mac/scoped_block.h",
-    "mac/scoped_cffiledescriptorref.h",
     "mac/scoped_cftyperef.h",
     "mac/scoped_dispatch_object.h",
     "mac/scoped_ionotificationportref.h",
@@ -857,7 +854,6 @@ component("base") {
     "task_scheduler/scheduler_single_thread_task_runner_manager.h",
     "task_scheduler/scheduler_worker.cc",
     "task_scheduler/scheduler_worker.h",
-    "task_scheduler/scheduler_worker_params.h",
     "task_scheduler/scheduler_worker_pool.h",
     "task_scheduler/scheduler_worker_pool_impl.cc",
     "task_scheduler/scheduler_worker_pool_impl.h",
@@ -997,8 +993,6 @@ component("base") {
     "trace_event/memory_dump_manager.cc",
     "trace_event/memory_dump_manager.h",
     "trace_event/memory_dump_provider.h",
-    "trace_event/memory_dump_provider_info.cc",
-    "trace_event/memory_dump_provider_info.h",
     "trace_event/memory_dump_request_args.cc",
     "trace_event/memory_dump_request_args.h",
     "trace_event/memory_dump_scheduler.cc",
@@ -1007,8 +1001,6 @@ component("base") {
     "trace_event/memory_dump_session_state.h",
     "trace_event/memory_infra_background_whitelist.cc",
     "trace_event/memory_infra_background_whitelist.h",
-    "trace_event/memory_peak_detector.cc",
-    "trace_event/memory_peak_detector.h",
     "trace_event/memory_usage_estimator.cc",
     "trace_event/memory_usage_estimator.h",
     "trace_event/process_memory_dump.cc",
@@ -1022,8 +1014,6 @@ component("base") {
     "trace_event/trace_category.h",
     "trace_event/trace_config.cc",
     "trace_event/trace_config.h",
-    "trace_event/trace_config_category_filter.cc",
-    "trace_event/trace_config_category_filter.h",
     "trace_event/trace_event.h",
     "trace_event/trace_event_android.cc",
     "trace_event/trace_event_argument.cc",
@@ -1060,7 +1050,6 @@ component("base") {
     "version.h",
     "vlog.cc",
     "vlog.h",
-    "win/current_module.h",
     "win/enum_variant.cc",
     "win/enum_variant.h",
     "win/event_trace_consumer.h",
@@ -1205,7 +1194,6 @@ component("base") {
       "process/internal_linux.cc",
       "process/memory_linux.cc",
       "process/process_handle_linux.cc",
-      "process/process_info_linux.cc",
       "process/process_iterator_linux.cc",
       "process/process_metrics_linux.cc",
       "sys_info_linux.cc",
@@ -1712,7 +1700,6 @@ component("i18n") {
     "i18n/time_formatting.h",
     "i18n/timezone.cc",
     "i18n/timezone.h",
-    "i18n/unicodestring.h",
     "i18n/utf8_validator_tables.cc",
     "i18n/utf8_validator_tables.h",
   ]
@@ -1906,7 +1893,6 @@ if (is_ios || is_mac) {
 
 test("base_unittests") {
   sources = [
-    "allocator/allocator_interception_mac_unittest.mm",
     "allocator/malloc_zone_functions_mac_unittest.cc",
     "allocator/tcmalloc_unittest.cc",
     "android/application_status_listener_unittest.cc",
@@ -1936,10 +1922,7 @@ test("base_unittests") {
     "cancelable_callback_unittest.cc",
     "command_line_unittest.cc",
     "containers/adapters_unittest.cc",
-    "containers/container_test_utils.h",
-    "containers/flat_map_unittest.cc",
     "containers/flat_set_unittest.cc",
-    "containers/flat_tree_unittest.cc",
     "containers/hash_tables_unittest.cc",
     "containers/linked_list_unittest.cc",
     "containers/mru_cache_unittest.cc",
@@ -1989,7 +1972,6 @@ test("base_unittests") {
     "i18n/time_formatting_unittest.cc",
     "i18n/timezone_unittest.cc",
     "id_map_unittest.cc",
-    "ios/crb_protocol_observers_unittest.mm",
     "ios/device_util_unittest.mm",
     "ios/weak_nsobject_unittest.mm",
     "json/json_parser_unittest.cc",
@@ -2067,7 +2049,6 @@ test("base_unittests") {
     "process/memory_unittest.cc",
     "process/memory_unittest_mac.h",
     "process/memory_unittest_mac.mm",
-    "process/process_info_unittest.cc",
     "process/process_metrics_unittest.cc",
     "process/process_metrics_unittest_ios.cc",
     "process/process_unittest.cc",
@@ -2173,8 +2154,6 @@ test("base_unittests") {
     "trace_event/java_heap_dump_provider_android_unittest.cc",
     "trace_event/memory_allocator_dump_unittest.cc",
     "trace_event/memory_dump_manager_unittest.cc",
-    "trace_event/memory_dump_scheduler_unittest.cc",
-    "trace_event/memory_peak_detector_unittest.cc",
     "trace_event/memory_usage_estimator_unittest.cc",
     "trace_event/process_memory_dump_unittest.cc",
     "trace_event/trace_category_unittest.cc",
@@ -2402,7 +2381,6 @@ if (enable_nocompile_tests) {
       "bind_unittest.nc",
       "callback_list_unittest.nc",
       "callback_unittest.nc",
-      "memory/ref_counted_unittest.nc",
       "memory/weak_ptr_unittest.nc",
       "metrics/histogram_unittest.nc",
     ]
@@ -2468,7 +2446,6 @@ if (is_android) {
     srcjar_deps = [
       ":base_android_java_enums_srcjar",
       ":base_build_config_gen",
-      ":base_java_aidl",
       ":base_native_libraries_gen",
     ]
 
@@ -2547,8 +2524,6 @@ if (is_android) {
       "android/java/src/org/chromium/base/metrics/RecordUserAction.java",
       "android/java/src/org/chromium/base/metrics/StatisticsRecorderAndroid.java",
       "android/java/src/org/chromium/base/multidex/ChromiumMultiDexInstaller.java",
-      "android/java/src/org/chromium/base/process_launcher/ChildProcessCreationParams.java",
-      "android/java/src/org/chromium/base/process_launcher/FileDescriptorInfo.java",
     ]
 
     # New versions of BuildConfig.java and NativeLibraries.java
@@ -2557,13 +2532,6 @@ if (is_android) {
       "*/BuildConfig.class",
       "*/NativeLibraries.class",
       "*/NativeLibraries##*.class",
-    ]
-  }
-
-  android_aidl("base_java_aidl") {
-    import_include = [ "android/java/src" ]
-    sources = [
-      "android/java/src/org/chromium/base/process_launcher/IChildProcessService.aidl",
     ]
   }
 
@@ -2693,7 +2661,6 @@ if (is_android) {
     ]
     java_files = [
       "test/android/java/src/org/chromium/base/ContentUriTestUtils.java",
-      "test/android/java/src/org/chromium/base/JavaHandlerThreadTest.java",
       "test/android/java/src/org/chromium/base/TestSystemMessageHandler.java",
     ]
   }

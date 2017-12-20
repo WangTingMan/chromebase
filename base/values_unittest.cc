@@ -8,8 +8,6 @@
 
 #include <limits>
 #include <memory>
-#include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -19,20 +17,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
-
-TEST(ValuesTest, TestNothrow) {
-  static_assert(std::is_nothrow_move_constructible<Value>::value,
-                "IsNothrowMoveConstructible");
-  static_assert(std::is_nothrow_default_constructible<Value>::value,
-                "IsNothrowDefaultConstructible");
-  static_assert(std::is_nothrow_constructible<Value, std::string&&>::value,
-                "IsNothrowMoveConstructibleFromString");
-  static_assert(
-      std::is_nothrow_constructible<Value, std::vector<char>&&>::value,
-      "IsNothrowMoveConstructibleFromBlob");
-  static_assert(std::is_nothrow_move_assignable<Value>::value,
-                "IsNothrowMoveAssignable");
-}
 
 // Group of tests for the value constructors.
 TEST(ValuesTest, ConstructBool) {
@@ -695,7 +679,7 @@ TEST(ValuesTest, DeepCopy) {
   scoped_nested_dictionary->SetString("key", "value");
   original_dict.Set("dictionary", std::move(scoped_nested_dictionary));
 
-  auto copy_dict = MakeUnique<DictionaryValue>(original_dict);
+  std::unique_ptr<DictionaryValue> copy_dict = original_dict.CreateDeepCopy();
   ASSERT_TRUE(copy_dict.get());
   ASSERT_NE(copy_dict.get(), &original_dict);
 
@@ -805,10 +789,10 @@ TEST(ValuesTest, Equals) {
   std::unique_ptr<Value> null1(Value::CreateNullValue());
   std::unique_ptr<Value> null2(Value::CreateNullValue());
   EXPECT_NE(null1.get(), null2.get());
-  EXPECT_EQ(*null1, *null2);
+  EXPECT_TRUE(null1->Equals(null2.get()));
 
   Value boolean(false);
-  EXPECT_NE(*null1, boolean);
+  EXPECT_FALSE(null1->Equals(&boolean));
 
   DictionaryValue dv;
   dv.SetBoolean("a", false);
@@ -818,29 +802,29 @@ TEST(ValuesTest, Equals) {
   dv.SetString("d2", ASCIIToUTF16("http://google.com"));
   dv.Set("e", Value::CreateNullValue());
 
-  auto copy = MakeUnique<DictionaryValue>(dv);
-  EXPECT_EQ(dv, *copy);
+  std::unique_ptr<DictionaryValue> copy = dv.CreateDeepCopy();
+  EXPECT_TRUE(dv.Equals(copy.get()));
 
   std::unique_ptr<ListValue> list(new ListValue);
   ListValue* original_list = list.get();
   list->Append(Value::CreateNullValue());
   list->Append(WrapUnique(new DictionaryValue));
-  auto list_copy = MakeUnique<Value>(*list);
+  std::unique_ptr<Value> list_copy(list->CreateDeepCopy());
 
   dv.Set("f", std::move(list));
-  EXPECT_NE(dv, *copy);
+  EXPECT_FALSE(dv.Equals(copy.get()));
   copy->Set("f", std::move(list_copy));
-  EXPECT_EQ(dv, *copy);
+  EXPECT_TRUE(dv.Equals(copy.get()));
 
   original_list->Append(MakeUnique<Value>(true));
-  EXPECT_NE(dv, *copy);
+  EXPECT_FALSE(dv.Equals(copy.get()));
 
   // Check if Equals detects differences in only the keys.
-  copy = MakeUnique<DictionaryValue>(dv);
-  EXPECT_EQ(dv, *copy);
+  copy = dv.CreateDeepCopy();
+  EXPECT_TRUE(dv.Equals(copy.get()));
   copy->Remove("a", NULL);
   copy->SetBoolean("aa", false);
-  EXPECT_NE(dv, *copy);
+  EXPECT_FALSE(dv.Equals(copy.get()));
 }
 
 TEST(ValuesTest, StaticEquals) {
@@ -864,126 +848,6 @@ TEST(ValuesTest, StaticEquals) {
   // ownership of the pointer.
   EXPECT_FALSE(Value::Equals(null1.get(), NULL));
   EXPECT_FALSE(Value::Equals(NULL, null1.get()));
-}
-
-TEST(ValuesTest, Comparisons) {
-  // Test None Values.
-  Value null1;
-  Value null2;
-  EXPECT_EQ(null1, null2);
-  EXPECT_FALSE(null1 != null2);
-  EXPECT_FALSE(null1 < null2);
-  EXPECT_FALSE(null1 > null2);
-  EXPECT_LE(null1, null2);
-  EXPECT_GE(null1, null2);
-
-  // Test Bool Values.
-  Value bool1(false);
-  Value bool2(true);
-  EXPECT_FALSE(bool1 == bool2);
-  EXPECT_NE(bool1, bool2);
-  EXPECT_LT(bool1, bool2);
-  EXPECT_FALSE(bool1 > bool2);
-  EXPECT_LE(bool1, bool2);
-  EXPECT_FALSE(bool1 >= bool2);
-
-  // Test Int Values.
-  Value int1(1);
-  Value int2(2);
-  EXPECT_FALSE(int1 == int2);
-  EXPECT_NE(int1, int2);
-  EXPECT_LT(int1, int2);
-  EXPECT_FALSE(int1 > int2);
-  EXPECT_LE(int1, int2);
-  EXPECT_FALSE(int1 >= int2);
-
-  // Test Double Values.
-  Value double1(1.0);
-  Value double2(2.0);
-  EXPECT_FALSE(double1 == double2);
-  EXPECT_NE(double1, double2);
-  EXPECT_LT(double1, double2);
-  EXPECT_FALSE(double1 > double2);
-  EXPECT_LE(double1, double2);
-  EXPECT_FALSE(double1 >= double2);
-
-  // Test String Values.
-  Value string1("1");
-  Value string2("2");
-  EXPECT_FALSE(string1 == string2);
-  EXPECT_NE(string1, string2);
-  EXPECT_LT(string1, string2);
-  EXPECT_FALSE(string1 > string2);
-  EXPECT_LE(string1, string2);
-  EXPECT_FALSE(string1 >= string2);
-
-  // Test Binary Values.
-  Value binary1(std::vector<char>{0x01});
-  Value binary2(std::vector<char>{0x02});
-  EXPECT_FALSE(binary1 == binary2);
-  EXPECT_NE(binary1, binary2);
-  EXPECT_LT(binary1, binary2);
-  EXPECT_FALSE(binary1 > binary2);
-  EXPECT_LE(binary1, binary2);
-  EXPECT_FALSE(binary1 >= binary2);
-
-  // Test Empty List Values.
-  ListValue null_list1;
-  ListValue null_list2;
-  EXPECT_EQ(null_list1, null_list2);
-  EXPECT_FALSE(null_list1 != null_list2);
-  EXPECT_FALSE(null_list1 < null_list2);
-  EXPECT_FALSE(null_list1 > null_list2);
-  EXPECT_LE(null_list1, null_list2);
-  EXPECT_GE(null_list1, null_list2);
-
-  // Test Non Empty List Values.
-  ListValue int_list1;
-  ListValue int_list2;
-  int_list1.AppendInteger(1);
-  int_list2.AppendInteger(2);
-  EXPECT_FALSE(int_list1 == int_list2);
-  EXPECT_NE(int_list1, int_list2);
-  EXPECT_LT(int_list1, int_list2);
-  EXPECT_FALSE(int_list1 > int_list2);
-  EXPECT_LE(int_list1, int_list2);
-  EXPECT_FALSE(int_list1 >= int_list2);
-
-  // Test Empty Dict Values.
-  DictionaryValue null_dict1;
-  DictionaryValue null_dict2;
-  EXPECT_EQ(null_dict1, null_dict2);
-  EXPECT_FALSE(null_dict1 != null_dict2);
-  EXPECT_FALSE(null_dict1 < null_dict2);
-  EXPECT_FALSE(null_dict1 > null_dict2);
-  EXPECT_LE(null_dict1, null_dict2);
-  EXPECT_GE(null_dict1, null_dict2);
-
-  // Test Non Empty Dict Values.
-  DictionaryValue int_dict1;
-  DictionaryValue int_dict2;
-  int_dict1.SetInteger("key", 1);
-  int_dict2.SetInteger("key", 2);
-  EXPECT_FALSE(int_dict1 == int_dict2);
-  EXPECT_NE(int_dict1, int_dict2);
-  EXPECT_LT(int_dict1, int_dict2);
-  EXPECT_FALSE(int_dict1 > int_dict2);
-  EXPECT_LE(int_dict1, int_dict2);
-  EXPECT_FALSE(int_dict1 >= int_dict2);
-
-  // Test Values of different types.
-  std::vector<Value> values = {null1,   bool1,   int1,      double1,
-                               string1, binary1, int_dict1, int_list1};
-  for (size_t i = 0; i < values.size(); ++i) {
-    for (size_t j = i + 1; j < values.size(); ++j) {
-      EXPECT_FALSE(values[i] == values[j]);
-      EXPECT_NE(values[i], values[j]);
-      EXPECT_LT(values[i], values[j]);
-      EXPECT_FALSE(values[i] > values[j]);
-      EXPECT_LE(values[i], values[j]);
-      EXPECT_FALSE(values[i] >= values[j]);
-    }
-  }
 }
 
 TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
@@ -1021,25 +885,25 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   scoped_list->Append(std::move(scoped_list_element_1));
   original_dict.Set("list", std::move(scoped_list));
 
-  auto copy_dict = MakeUnique<Value>(original_dict);
-  auto copy_null = MakeUnique<Value>(*original_null);
-  auto copy_bool = MakeUnique<Value>(*original_bool);
-  auto copy_int = MakeUnique<Value>(*original_int);
-  auto copy_double = MakeUnique<Value>(*original_double);
-  auto copy_string = MakeUnique<Value>(*original_string);
-  auto copy_string16 = MakeUnique<Value>(*original_string16);
-  auto copy_binary = MakeUnique<Value>(*original_binary);
-  auto copy_list = MakeUnique<Value>(*original_list);
+  std::unique_ptr<Value> copy_dict = original_dict.CreateDeepCopy();
+  std::unique_ptr<Value> copy_null = original_null->CreateDeepCopy();
+  std::unique_ptr<Value> copy_bool = original_bool->CreateDeepCopy();
+  std::unique_ptr<Value> copy_int = original_int->CreateDeepCopy();
+  std::unique_ptr<Value> copy_double = original_double->CreateDeepCopy();
+  std::unique_ptr<Value> copy_string = original_string->CreateDeepCopy();
+  std::unique_ptr<Value> copy_string16 = original_string16->CreateDeepCopy();
+  std::unique_ptr<Value> copy_binary = original_binary->CreateDeepCopy();
+  std::unique_ptr<Value> copy_list = original_list->CreateDeepCopy();
 
-  EXPECT_EQ(original_dict, *copy_dict);
-  EXPECT_EQ(*original_null, *copy_null);
-  EXPECT_EQ(*original_bool, *copy_bool);
-  EXPECT_EQ(*original_int, *copy_int);
-  EXPECT_EQ(*original_double, *copy_double);
-  EXPECT_EQ(*original_string, *copy_string);
-  EXPECT_EQ(*original_string16, *copy_string16);
-  EXPECT_EQ(*original_binary, *copy_binary);
-  EXPECT_EQ(*original_list, *copy_list);
+  EXPECT_TRUE(original_dict.Equals(copy_dict.get()));
+  EXPECT_TRUE(original_null->Equals(copy_null.get()));
+  EXPECT_TRUE(original_bool->Equals(copy_bool.get()));
+  EXPECT_TRUE(original_int->Equals(copy_int.get()));
+  EXPECT_TRUE(original_double->Equals(copy_double.get()));
+  EXPECT_TRUE(original_string->Equals(copy_string.get()));
+  EXPECT_TRUE(original_string16->Equals(copy_string16.get()));
+  EXPECT_TRUE(original_binary->Equals(copy_binary.get()));
+  EXPECT_TRUE(original_list->Equals(copy_list.get()));
 }
 
 TEST(ValuesTest, RemoveEmptyChildren) {
@@ -1204,27 +1068,27 @@ TEST(ValuesTest, DictionaryIterator) {
   }
 
   Value value1("value1");
-  dict.Set("key1", MakeUnique<Value>(value1));
+  dict.Set("key1", value1.CreateDeepCopy());
   bool seen1 = false;
   for (DictionaryValue::Iterator it(dict); !it.IsAtEnd(); it.Advance()) {
     EXPECT_FALSE(seen1);
     EXPECT_EQ("key1", it.key());
-    EXPECT_EQ(value1, it.value());
+    EXPECT_TRUE(value1.Equals(&it.value()));
     seen1 = true;
   }
   EXPECT_TRUE(seen1);
 
   Value value2("value2");
-  dict.Set("key2", MakeUnique<Value>(value2));
+  dict.Set("key2", value2.CreateDeepCopy());
   bool seen2 = seen1 = false;
   for (DictionaryValue::Iterator it(dict); !it.IsAtEnd(); it.Advance()) {
     if (it.key() == "key1") {
       EXPECT_FALSE(seen1);
-      EXPECT_EQ(value1, it.value());
+      EXPECT_TRUE(value1.Equals(&it.value()));
       seen1 = true;
     } else if (it.key() == "key2") {
       EXPECT_FALSE(seen2);
-      EXPECT_EQ(value2, it.value());
+      EXPECT_TRUE(value2.Equals(&it.value()));
       seen2 = true;
     } else {
       ADD_FAILURE();
@@ -1248,21 +1112,21 @@ TEST(ValuesTest, GetWithNullOutValue) {
   DictionaryValue dict_value;
   ListValue list_value;
 
-  main_dict.Set("bool", MakeUnique<Value>(bool_value));
-  main_dict.Set("int", MakeUnique<Value>(int_value));
-  main_dict.Set("double", MakeUnique<Value>(double_value));
-  main_dict.Set("string", MakeUnique<Value>(string_value));
-  main_dict.Set("binary", MakeUnique<Value>(binary_value));
-  main_dict.Set("dict", MakeUnique<Value>(dict_value));
-  main_dict.Set("list", MakeUnique<Value>(list_value));
+  main_dict.Set("bool", bool_value.CreateDeepCopy());
+  main_dict.Set("int", int_value.CreateDeepCopy());
+  main_dict.Set("double", double_value.CreateDeepCopy());
+  main_dict.Set("string", string_value.CreateDeepCopy());
+  main_dict.Set("binary", binary_value.CreateDeepCopy());
+  main_dict.Set("dict", dict_value.CreateDeepCopy());
+  main_dict.Set("list", list_value.CreateDeepCopy());
 
-  main_list.Append(MakeUnique<Value>(bool_value));
-  main_list.Append(MakeUnique<Value>(int_value));
-  main_list.Append(MakeUnique<Value>(double_value));
-  main_list.Append(MakeUnique<Value>(string_value));
-  main_list.Append(MakeUnique<Value>(binary_value));
-  main_list.Append(MakeUnique<Value>(dict_value));
-  main_list.Append(MakeUnique<Value>(list_value));
+  main_list.Append(bool_value.CreateDeepCopy());
+  main_list.Append(int_value.CreateDeepCopy());
+  main_list.Append(double_value.CreateDeepCopy());
+  main_list.Append(string_value.CreateDeepCopy());
+  main_list.Append(binary_value.CreateDeepCopy());
+  main_list.Append(dict_value.CreateDeepCopy());
+  main_list.Append(list_value.CreateDeepCopy());
 
   EXPECT_TRUE(main_dict.Get("bool", NULL));
   EXPECT_TRUE(main_dict.Get("int", NULL));

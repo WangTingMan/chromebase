@@ -11,7 +11,6 @@
 #include <string>
 
 #include "base/base_export.h"
-#include "base/gtest_prod_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/trace_event/memory_allocator_dump_guid.h"
@@ -86,21 +85,11 @@ class BASE_EXPORT MemoryAllocatorDump {
   TracedValue* attributes_for_testing() const { return attributes_.get(); }
 
  private:
-  // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
-  friend class MemoryDumpManager;
-  FRIEND_TEST_ALL_PREFIXES(MemoryAllocatorDumpTest, GetSize);
-
-  // Get the size for this dump.
-  // The size is the value set with AddScalar(kNameSize, kUnitsBytes, size);
-  // TODO(hjd): Transitional until we send the full PMD. See crbug.com/704203
-  uint64_t GetSize() const { return size_; };
-
   const std::string absolute_name_;
   ProcessMemoryDump* const process_memory_dump_;  // Not owned (PMD owns this).
   std::unique_ptr<TracedValue> attributes_;
   MemoryAllocatorDumpGuid guid_;
   int flags_;  // See enum Flags.
-  uint64_t size_;
 
   // A local buffer for Sprintf conversion on fastpath. Avoids allocating
   // temporary strings on each AddScalar() call.
