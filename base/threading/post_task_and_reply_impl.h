@@ -29,12 +29,12 @@ class BASE_EXPORT PostTaskAndReplyImpl {
   // SequencedTaskRunnerHandle::IsSet(). Both |task| and |reply| are guaranteed
   // to be deleted on the sequence or thread that called this.
   bool PostTaskAndReply(const tracked_objects::Location& from_here,
-                        OnceClosure task,
-                        OnceClosure reply);
+                        Closure task,
+                        Closure reply);
 
  private:
   virtual bool PostTask(const tracked_objects::Location& from_here,
-                        OnceClosure task) = 0;
+                        const Closure& task) = 0;
 };
 
 }  // namespace internal

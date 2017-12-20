@@ -27,8 +27,8 @@ class PostTaskAndReplyWorkerPool : public internal::PostTaskAndReplyImpl {
 
  private:
   bool PostTask(const tracked_objects::Location& from_here,
-                OnceClosure task) override {
-    return WorkerPool::PostTask(from_here, std::move(task), task_is_slow_);
+                const Closure& task) override {
+    return WorkerPool::PostTask(from_here, task, task_is_slow_);
   }
 
   bool task_is_slow_;
@@ -45,7 +45,7 @@ class WorkerPoolTaskRunner : public TaskRunner {
 
   // TaskRunner implementation
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       OnceClosure task,
+                       const Closure& task,
                        TimeDelta delay) override;
   bool RunsTasksOnCurrentThread() const override;
 
@@ -56,7 +56,7 @@ class WorkerPoolTaskRunner : public TaskRunner {
   // zero because non-zero delays are not supported.
   bool PostDelayedTaskAssertZeroDelay(
       const tracked_objects::Location& from_here,
-      OnceClosure task,
+      const Closure& task,
       base::TimeDelta delay);
 
   const bool tasks_are_slow_;
@@ -73,9 +73,9 @@ WorkerPoolTaskRunner::~WorkerPoolTaskRunner() {
 
 bool WorkerPoolTaskRunner::PostDelayedTask(
     const tracked_objects::Location& from_here,
-    OnceClosure task,
+    const Closure& task,
     TimeDelta delay) {
-  return PostDelayedTaskAssertZeroDelay(from_here, std::move(task), delay);
+  return PostDelayedTaskAssertZeroDelay(from_here, task, delay);
 }
 
 bool WorkerPoolTaskRunner::RunsTasksOnCurrentThread() const {
@@ -84,11 +84,11 @@ bool WorkerPoolTaskRunner::RunsTasksOnCurrentThread() const {
 
 bool WorkerPoolTaskRunner::PostDelayedTaskAssertZeroDelay(
     const tracked_objects::Location& from_here,
-    OnceClosure task,
+    const Closure& task,
     base::TimeDelta delay) {
   DCHECK_EQ(delay.InMillisecondsRoundedUp(), 0)
       << "WorkerPoolTaskRunner does not support non-zero delays";
-  return WorkerPool::PostTask(from_here, std::move(task), tasks_are_slow_);
+  return WorkerPool::PostTask(from_here, task, tasks_are_slow_);
 }
 
 struct TaskRunnerHolder {
@@ -102,8 +102,8 @@ struct TaskRunnerHolder {
 }  // namespace
 
 bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  OnceClosure task,
-                                  OnceClosure reply,
+                                  Closure task,
+                                  Closure reply,
                                   bool task_is_slow) {
   // Do not report PostTaskAndReplyRelay leaks in tests. There's nothing we can
   // do about them because WorkerPool doesn't have a flushing API.
