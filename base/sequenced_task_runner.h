@@ -6,7 +6,6 @@
 #define BASE_SEQUENCED_TASK_RUNNER_H_
 
 #include "base/base_export.h"
-#include "base/callback.h"
 #include "base/sequenced_task_runner_helpers.h"
 #include "base/task_runner.h"
 
@@ -110,11 +109,11 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   // below.
 
   bool PostNonNestableTask(const tracked_objects::Location& from_here,
-                           OnceClosure task);
+                           const Closure& task);
 
   virtual bool PostNonNestableDelayedTask(
       const tracked_objects::Location& from_here,
-      OnceClosure task,
+      const Closure& task,
       base::TimeDelta delay) = 0;
 
   // Submits a non-nestable task to delete the given object.  Returns

@@ -26,7 +26,7 @@ class SequenceCheckerImpl::Core {
 
   ~Core() = default;
 
-  bool CalledOnValidSequence() const {
+  bool CalledOnValidThread() const {
     if (sequence_token_.IsValid())
       return sequence_token_ == SequenceToken::GetForCurrentThread();
 
@@ -58,7 +58,7 @@ bool SequenceCheckerImpl::CalledOnValidSequence() const {
   AutoLock auto_lock(lock_);
   if (!core_)
     core_ = MakeUnique<Core>();
-  return core_->CalledOnValidSequence();
+  return core_->CalledOnValidThread();
 }
 
 void SequenceCheckerImpl::DetachFromSequence() {

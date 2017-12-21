@@ -5,18 +5,19 @@
 #ifndef BASE_WIN_SCOPED_COMPTR_H_
 #define BASE_WIN_SCOPED_COMPTR_H_
 
-#include <objbase.h>
 #include <unknwn.h>
 
 #include "base/logging.h"
+#include "base/memory/ref_counted.h"
 
 namespace base {
 namespace win {
 
-// DEPRECATED: Use Microsoft::WRL::ComPtr instead.
 // A fairly minimalistic smart class for COM interface pointers.
+// Uses scoped_refptr for the basic smart pointer functionality
+// and adds a few IUnknown specific services.
 template <class Interface, const IID* interface_id = &__uuidof(Interface)>
-class ScopedComPtr {
+class ScopedComPtr : public scoped_refptr<Interface> {
  public:
   // Utility template to prevent users of ScopedComPtr from calling AddRef
   // and/or Release() without going through the ScopedComPtr class.
@@ -27,17 +28,16 @@ class ScopedComPtr {
     STDMETHOD_(ULONG, Release)() = 0;
   };
 
+  typedef scoped_refptr<Interface> ParentClass;
+
   ScopedComPtr() {
   }
 
-  explicit ScopedComPtr(Interface* p) : ptr_(p) {
-    if (ptr_)
-      ptr_->AddRef();
+  explicit ScopedComPtr(Interface* p) : ParentClass(p) {
   }
 
-  ScopedComPtr(const ScopedComPtr<Interface, interface_id>& p) : ptr_(p.get()) {
-    if (ptr_)
-      ptr_->AddRef();
+  ScopedComPtr(const ScopedComPtr<Interface, interface_id>& p)
+      : ParentClass(p) {
   }
 
   ~ScopedComPtr() {
@@ -46,37 +46,31 @@ class ScopedComPtr {
     static_assert(
         sizeof(ScopedComPtr<Interface, interface_id>) == sizeof(Interface*),
         "ScopedComPtrSize");
-    Release();
   }
-
-  Interface* get() const { return ptr_; }
-
-  explicit operator bool() const { return ptr_ != nullptr; }
 
   // Explicit Release() of the held object.  Useful for reuse of the
   // ScopedComPtr instance.
   // Note that this function equates to IUnknown::Release and should not
   // be confused with e.g. unique_ptr::release().
   void Release() {
-    Interface* temp = ptr_;
-    if (temp) {
-      ptr_ = nullptr;
-      temp->Release();
+    if (this->ptr_ != NULL) {
+      this->ptr_->Release();
+      this->ptr_ = NULL;
     }
   }
 
   // Sets the internal pointer to NULL and returns the held object without
   // releasing the reference.
   Interface* Detach() {
-    Interface* p = ptr_;
-    ptr_ = nullptr;
+    Interface* p = this->ptr_;
+    this->ptr_ = NULL;
     return p;
   }
 
   // Accepts an interface pointer that has already been addref-ed.
   void Attach(Interface* p) {
-    DCHECK(!ptr_);
-    ptr_ = p;
+    DCHECK(!this->ptr_);
+    this->ptr_ = p;
   }
 
   // Retrieves the pointer address.
@@ -84,8 +78,8 @@ class ScopedComPtr {
   // The function DCHECKs on the current value being NULL.
   // Usage: Foo(p.Receive());
   Interface** Receive() {
-    DCHECK(!ptr_) << "Object leak. Pointer must be NULL";
-    return &ptr_;
+    DCHECK(!this->ptr_) << "Object leak. Pointer must be NULL";
+    return &this->ptr_;
   }
 
   // A convenience for whenever a void pointer is needed as an out argument.
@@ -95,51 +89,50 @@ class ScopedComPtr {
 
   template <class Query>
   HRESULT QueryInterface(Query** p) {
-    DCHECK(p);
-    DCHECK(ptr_);
+    DCHECK(p != NULL);
+    DCHECK(this->ptr_ != NULL);
     // IUnknown already has a template version of QueryInterface
     // so the iid parameter is implicit here. The only thing this
     // function adds are the DCHECKs.
-    return ptr_->QueryInterface(IID_PPV_ARGS(p));
+    return this->ptr_->QueryInterface(p);
   }
 
   // QI for times when the IID is not associated with the type.
   HRESULT QueryInterface(const IID& iid, void** obj) {
-    DCHECK(obj);
-    DCHECK(ptr_);
-    return ptr_->QueryInterface(iid, obj);
+    DCHECK(obj != NULL);
+    DCHECK(this->ptr_ != NULL);
+    return this->ptr_->QueryInterface(iid, obj);
   }
 
   // Queries |other| for the interface this object wraps and returns the
   // error code from the other->QueryInterface operation.
   HRESULT QueryFrom(IUnknown* object) {
-    DCHECK(object);
-    return object->QueryInterface(IID_PPV_ARGS(Receive()));
+    DCHECK(object != NULL);
+    return object->QueryInterface(Receive());
   }
 
   // Convenience wrapper around CoCreateInstance
-  HRESULT CreateInstance(const CLSID& clsid,
-                         IUnknown* outer = nullptr,
+  HRESULT CreateInstance(const CLSID& clsid, IUnknown* outer = NULL,
                          DWORD context = CLSCTX_ALL) {
-    DCHECK(!ptr_);
+    DCHECK(!this->ptr_);
     HRESULT hr = ::CoCreateInstance(clsid, outer, context, *interface_id,
-                                    reinterpret_cast<void**>(&ptr_));
+                                    reinterpret_cast<void**>(&this->ptr_));
     return hr;
   }
 
   // Checks if the identity of |other| and this object is the same.
   bool IsSameObject(IUnknown* other) {
-    if (!other && !ptr_)
+    if (!other && !this->ptr_)
       return true;
 
-    if (!other || !ptr_)
+    if (!other || !this->ptr_)
       return false;
 
     ScopedComPtr<IUnknown> my_identity;
-    QueryInterface(IID_PPV_ARGS(my_identity.Receive()));
+    QueryInterface(my_identity.Receive());
 
     ScopedComPtr<IUnknown> other_identity;
-    other->QueryInterface(IID_PPV_ARGS(other_identity.Receive()));
+    other->QueryInterface(other_identity.Receive());
 
     return my_identity == other_identity;
   }
@@ -155,114 +148,19 @@ class ScopedComPtr {
   // by statically casting the ScopedComPtr instance to the wrapped interface
   // and then making the call... but generally that shouldn't be necessary.
   BlockIUnknownMethods* operator->() const {
-    DCHECK(ptr_);
-    return reinterpret_cast<BlockIUnknownMethods*>(ptr_);
+    DCHECK(this->ptr_ != NULL);
+    return reinterpret_cast<BlockIUnknownMethods*>(this->ptr_);
   }
 
-  ScopedComPtr<Interface, interface_id>& operator=(Interface* rhs) {
-    // AddRef first so that self assignment should work
-    if (rhs)
-      rhs->AddRef();
-    Interface* old_ptr = ptr_;
-    ptr_ = rhs;
-    if (old_ptr)
-      old_ptr->Release();
-    return *this;
-  }
-
-  ScopedComPtr<Interface, interface_id>& operator=(
-      const ScopedComPtr<Interface, interface_id>& rhs) {
-    return *this = rhs.ptr_;
-  }
-
-  Interface& operator*() const {
-    DCHECK(ptr_);
-    return *ptr_;
-  }
-
-  bool operator==(const ScopedComPtr<Interface, interface_id>& rhs) const {
-    return ptr_ == rhs.get();
-  }
-
-  template <typename U>
-  bool operator==(const ScopedComPtr<U>& rhs) const {
-    return ptr_ == rhs.get();
-  }
-
-  template <typename U>
-  bool operator==(const U* rhs) const {
-    return ptr_ == rhs;
-  }
-
-  bool operator!=(const ScopedComPtr<Interface, interface_id>& rhs) const {
-    return ptr_ != rhs.get();
-  }
-
-  template <typename U>
-  bool operator!=(const ScopedComPtr<U>& rhs) const {
-    return ptr_ != rhs.get();
-  }
-
-  template <typename U>
-  bool operator!=(const U* rhs) const {
-    return ptr_ != rhs;
-  }
-
-  void swap(ScopedComPtr<Interface, interface_id>& r) {
-    Interface* tmp = ptr_;
-    ptr_ = r.ptr_;
-    r.ptr_ = tmp;
-  }
+  // Pull in operator=() from the parent class.
+  using scoped_refptr<Interface>::operator=;
 
   // static methods
+
   static const IID& iid() {
     return *interface_id;
   }
-
- private:
-  Interface* ptr_ = nullptr;
 };
-
-template <typename T, typename U>
-bool operator==(const T* lhs, const ScopedComPtr<U>& rhs) {
-  return lhs == rhs.get();
-}
-
-template <typename T>
-bool operator==(const ScopedComPtr<T>& lhs, std::nullptr_t null) {
-  return !static_cast<bool>(lhs);
-}
-
-template <typename T>
-bool operator==(std::nullptr_t null, const ScopedComPtr<T>& rhs) {
-  return !static_cast<bool>(rhs);
-}
-
-template <typename T, typename U>
-bool operator!=(const T* lhs, const ScopedComPtr<U>& rhs) {
-  return !operator==(lhs, rhs);
-}
-
-template <typename T>
-bool operator!=(const ScopedComPtr<T>& lhs, std::nullptr_t null) {
-  return !operator==(lhs, null);
-}
-
-template <typename T>
-bool operator!=(std::nullptr_t null, const ScopedComPtr<T>& rhs) {
-  return !operator==(null, rhs);
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& out, const ScopedComPtr<T>& p) {
-  return out << p.get();
-}
-
-// Helper to make IID_PPV_ARGS work with ScopedComPtr.
-template <typename T>
-void** IID_PPV_ARGS_Helper(base::win::ScopedComPtr<T>* pp) throw() {
-  return pp->ReceiveVoid();
-}
 
 }  // namespace win
 }  // namespace base
