@@ -48,26 +48,24 @@ class FixedHashMap {
   // For implementation simplicity API uses integer index instead
   // of iterators. Most operations (except Find) on KVIndex are O(1).
   using KVIndex = size_t;
-  enum : KVIndex { kInvalidKVIndex = static_cast<KVIndex>(-1) };
+  static const KVIndex kInvalidKVIndex = static_cast<KVIndex>(-1);
 
   // Capacity controls how many items this hash map can hold, and largely
   // affects memory footprint.
-  explicit FixedHashMap(size_t capacity)
-      : num_cells_(capacity),
-        num_inserts_dropped_(0),
-        cells_(static_cast<Cell*>(
-            AllocateGuardedVirtualMemory(num_cells_ * sizeof(Cell)))),
-        buckets_(static_cast<Bucket*>(
-            AllocateGuardedVirtualMemory(NumBuckets * sizeof(Bucket)))),
-        free_list_(nullptr),
-        next_unused_cell_(0) {}
+  FixedHashMap(size_t capacity)
+    : num_cells_(capacity),
+      cells_(static_cast<Cell*>(
+          AllocateGuardedVirtualMemory(num_cells_ * sizeof(Cell)))),
+      buckets_(static_cast<Bucket*>(
+          AllocateGuardedVirtualMemory(NumBuckets * sizeof(Bucket)))),
+      free_list_(nullptr),
+      next_unused_cell_(0) {}
 
   ~FixedHashMap() {
     FreeGuardedVirtualMemory(cells_, num_cells_ * sizeof(Cell));
     FreeGuardedVirtualMemory(buckets_, NumBuckets * sizeof(Bucket));
   }
 
-  // Returns {kInvalidKVIndex, false} if the table is full.
   std::pair<KVIndex, bool> Insert(const Key& key, const Value& value) {
     Cell** p_cell = Lookup(key);
     Cell* cell = *p_cell;
@@ -76,15 +74,7 @@ class FixedHashMap {
     }
 
     // Get a free cell and link it.
-    cell = GetFreeCell();
-    if (!cell) {
-      if (num_inserts_dropped_ <
-          std::numeric_limits<decltype(num_inserts_dropped_)>::max()) {
-        ++num_inserts_dropped_;
-      }
-      return {kInvalidKVIndex, false};
-    }
-    *p_cell = cell;
+    *p_cell = cell = GetFreeCell();
     cell->p_prev = p_cell;
     cell->next = nullptr;
 
@@ -147,8 +137,6 @@ class FixedHashMap {
            bits::Align(sizeof(Bucket) * NumBuckets, page_size);
   }
 
-  size_t num_inserts_dropped() const { return num_inserts_dropped_; }
-
  private:
   friend base::trace_event::AllocationRegisterTest;
 
@@ -187,8 +175,7 @@ class FixedHashMap {
   }
 
   // Returns a cell that is not being used to store an entry (either by
-  // recycling from the free list or by taking a fresh cell). May return
-  // nullptr if the hash table has run out of memory.
+  // recycling from the free list or by taking a fresh cell).
   Cell* GetFreeCell() {
     // First try to re-use a cell from the free list.
     if (free_list_) {
@@ -197,14 +184,26 @@ class FixedHashMap {
       return cell;
     }
 
-    // If the hash table has too little capacity (when too little address space
-    // was reserved for |cells_|), return nullptr.
-    if (next_unused_cell_ >= num_cells_) {
-      return nullptr;
-    }
-
     // Otherwise pick the next cell that has not been touched before.
-    return &cells_[next_unused_cell_++];
+    size_t idx = next_unused_cell_;
+    next_unused_cell_++;
+
+    // If the hash table has too little capacity (when too little address space
+    // was reserved for |cells_|), |next_unused_cell_| can be an index outside
+    // of the allocated storage. A guard page is allocated there to crash the
+    // program in that case. There are alternative solutions:
+    // - Deal with it, increase capacity by reallocating |cells_|.
+    // - Refuse to insert and let the caller deal with it.
+    // Because free cells are re-used before accessing fresh cells with a higher
+    // index, and because reserving address space without touching it is cheap,
+    // the simplest solution is to just allocate a humongous chunk of address
+    // space.
+
+    CHECK_LT(next_unused_cell_, num_cells_ + 1)
+        << "Allocation Register hash table has too little capacity. Increase "
+           "the capacity to run heap profiler in large sessions.";
+
+    return &cells_[idx];
   }
 
   // Returns a value in the range [0, NumBuckets - 1] (inclusive).
@@ -219,9 +218,6 @@ class FixedHashMap {
 
   // Number of cells.
   size_t const num_cells_;
-
-  // Number of calls to Insert() that were lost because the hashtable was full.
-  size_t num_inserts_dropped_;
 
   // The array of cells. This array is backed by mmapped memory. Lower indices
   // are accessed first, higher indices are accessed only when the |free_list_|
@@ -252,8 +248,6 @@ class TraceEventMemoryOverhead;
 // freed. Internally it has two hashtables: one for Backtraces and one for
 // actual allocations. Sizes of both hashtables are fixed, and this class
 // allocates (mmaps) only in its constructor.
-//
-// When either hash table hits max size, new inserts are dropped.
 class BASE_EXPORT AllocationRegister {
  public:
   // Details about an allocation.
@@ -288,10 +282,7 @@ class BASE_EXPORT AllocationRegister {
 
   // Inserts allocation details into the table. If the address was present
   // already, its details are updated. |address| must not be null.
-  //
-  // Returns true if an insert occurred. Inserts may fail because the table
-  // is full.
-  bool Insert(const void* address,
+  void Insert(const void* address,
               size_t size,
               const AllocationContext& context);
 
@@ -367,14 +358,6 @@ class BASE_EXPORT AllocationRegister {
 
   AllocationMap allocations_;
   BacktraceMap backtraces_;
-
-  // Sentinel used when the |backtraces_| table is full.
-  //
-  // This is a slightly abstraction to allow for constant propagation. It
-  // knows that the sentinel will be the first item inserted into the table
-  // and that the first index retuned will be 0. The constructor DCHECKs
-  // this assumption.
-  enum : BacktraceMap::KVIndex { kOutOfStorageBacktraceIndex = 0 };
 
   DISALLOW_COPY_AND_ASSIGN(AllocationRegister);
 };
