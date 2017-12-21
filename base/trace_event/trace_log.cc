@@ -1512,14 +1512,13 @@ void TraceLog::AddMetadataEventsWhileLocked() {
   }
 
 #if !defined(OS_NACL) && !defined(OS_IOS)
-  //TODO: CurrentProcessInfo::CreationTime() is breaking MAC build, uncomment when fixed.
-  // Time process_creation_time = CurrentProcessInfo::CreationTime();
-  // if (!process_creation_time.is_null()) {
-  //   TimeDelta process_uptime = Time::Now() - process_creation_time;
-  //   InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),
-  //                           current_thread_id, "process_uptime_seconds",
-  //                           "uptime", process_uptime.InSeconds());
-  // }
+  Time process_creation_time = CurrentProcessInfo::CreationTime();
+  if (!process_creation_time.is_null()) {
+    TimeDelta process_uptime = Time::Now() - process_creation_time;
+    InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),
+                            current_thread_id, "process_uptime_seconds",
+                            "uptime", process_uptime.InSeconds());
+  }
 #endif  // !defined(OS_NACL) && !defined(OS_IOS)
 
   if (!process_labels_.empty()) {
