@@ -6,7 +6,6 @@
 #define BASE_MESSAGE_LOOP_INCOMING_TASK_QUEUE_H_
 
 #include "base/base_export.h"
-#include "base/callback.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/pending_task.h"
@@ -36,7 +35,7 @@ class BASE_EXPORT IncomingTaskQueue
   // returns false. In all cases, the ownership of |task| is transferred to the
   // called method.
   bool AddToIncomingQueue(const tracked_objects::Location& from_here,
-                          Closure task,
+                          const Closure& task,
                           TimeDelta delay,
                           bool nestable);
 
