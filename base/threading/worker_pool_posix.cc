@@ -6,8 +6,6 @@
 
 #include <stddef.h>
 
-#include <utility>
-
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/lazy_instance.h"
@@ -49,7 +47,7 @@ class WorkerPoolImpl {
   ~WorkerPoolImpl() = delete;
 
   void PostTask(const tracked_objects::Location& from_here,
-                base::Closure task,
+                const base::Closure& task,
                 bool task_is_slow);
 
  private:
@@ -61,9 +59,9 @@ WorkerPoolImpl::WorkerPoolImpl()
                                              kIdleSecondsBeforeExit)) {}
 
 void WorkerPoolImpl::PostTask(const tracked_objects::Location& from_here,
-                              base::Closure task,
+                              const base::Closure& task,
                               bool /*task_is_slow*/) {
-  pool_->PostTask(from_here, std::move(task));
+  pool_->PostTask(from_here, task);
 }
 
 base::LazyInstance<WorkerPoolImpl>::Leaky g_lazy_worker_pool =
@@ -114,10 +112,9 @@ void WorkerThread::ThreadMain() {
 
 // static
 bool WorkerPool::PostTask(const tracked_objects::Location& from_here,
-                          base::Closure task,
+                          const base::Closure& task,
                           bool task_is_slow) {
-  g_lazy_worker_pool.Pointer()->PostTask(from_here, std::move(task),
-                                         task_is_slow);
+  g_lazy_worker_pool.Pointer()->PostTask(from_here, task, task_is_slow);
   return true;
 }
 
@@ -140,8 +137,8 @@ PosixDynamicThreadPool::~PosixDynamicThreadPool() {
 
 void PosixDynamicThreadPool::PostTask(
     const tracked_objects::Location& from_here,
-    base::Closure task) {
-  PendingTask pending_task(from_here, std::move(task));
+    const base::Closure& task) {
+  PendingTask pending_task(from_here, task);
   AddTask(&pending_task);
 }
 

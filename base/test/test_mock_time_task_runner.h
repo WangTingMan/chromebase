@@ -12,7 +12,6 @@
 #include <queue>
 #include <vector>
 
-#include "base/callback.h"
 #include "base/callback_helpers.h"
 #include "base/macros.h"
 #include "base/single_thread_task_runner.h"
@@ -141,10 +140,10 @@ class TestMockTimeTaskRunner : public SingleThreadTaskRunner {
   // SingleThreadTaskRunner:
   bool RunsTasksOnCurrentThread() const override;
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure task,
+                       const Closure& task,
                        TimeDelta delay) override;
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure task,
+                                  const Closure& task,
                                   TimeDelta delay) override;
 
  protected:
