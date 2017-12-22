@@ -5,8 +5,6 @@
 #ifndef BASE_CRITICAL_CLOSURE_H_
 #define BASE_CRITICAL_CLOSURE_H_
 
-#include <utility>
-
 #include "base/callback.h"
 #include "base/macros.h"
 #include "build/build_config.h"
@@ -29,7 +27,7 @@ bool IsMultiTaskingSupported();
 // |ios::ScopedCriticalAction|.
 class CriticalClosure {
  public:
-  explicit CriticalClosure(Closure closure);
+  explicit CriticalClosure(const Closure& closure);
   ~CriticalClosure();
   void Run();
 
@@ -57,13 +55,13 @@ class CriticalClosure {
 // background running time, |MakeCriticalClosure| should be applied on them
 // before posting.
 #if defined(OS_IOS)
-inline Closure MakeCriticalClosure(Closure closure) {
+inline Closure MakeCriticalClosure(const Closure& closure) {
   DCHECK(internal::IsMultiTaskingSupported());
   return base::Bind(&internal::CriticalClosure::Run,
-                    Owned(new internal::CriticalClosure(std::move(closure))));
+                    Owned(new internal::CriticalClosure(closure)));
 }
 #else  // defined(OS_IOS)
-inline Closure MakeCriticalClosure(Closure closure) {
+inline Closure MakeCriticalClosure(const Closure& closure) {
   // No-op for platforms where the application does not need to acquire
   // background time for closures to finish when it goes into the background.
   return closure;

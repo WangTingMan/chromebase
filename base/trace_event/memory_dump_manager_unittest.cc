@@ -7,11 +7,9 @@
 #include <stdint.h>
 
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "base/bind_helpers.h"
-#include "base/callback.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/message_loop/message_loop.h"
@@ -104,10 +102,10 @@ void OnTraceDataCollected(Closure quit_closure,
 // Posts |task| to |task_runner| and blocks until it is executed.
 void PostTaskAndWait(const tracked_objects::Location& from_here,
                      SequencedTaskRunner* task_runner,
-                     base::Closure task) {
+                     const base::Closure& task) {
   base::WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                             WaitableEvent::InitialState::NOT_SIGNALED);
-  task_runner->PostTask(from_here, std::move(task));
+  task_runner->PostTask(from_here, task);
   task_runner->PostTask(
       FROM_HERE, base::Bind(&WaitableEvent::Signal, base::Unretained(&event)));
   // The SequencedTaskRunner guarantees that |event| will only be signaled after
@@ -121,8 +119,7 @@ void PostTaskAndWait(const tracked_objects::Location& from_here,
 // requests locally to the MemoryDumpManager instead of performing IPC dances.
 class MemoryDumpManagerDelegateForTesting : public MemoryDumpManagerDelegate {
  public:
-  MemoryDumpManagerDelegateForTesting(bool is_coordinator)
-      : is_coordinator_(is_coordinator) {
+  MemoryDumpManagerDelegateForTesting() {
     ON_CALL(*this, RequestGlobalMemoryDump(_, _))
         .WillByDefault(Invoke(
             this, &MemoryDumpManagerDelegateForTesting::CreateProcessDump));
@@ -132,13 +129,13 @@ class MemoryDumpManagerDelegateForTesting : public MemoryDumpManagerDelegate {
                void(const MemoryDumpRequestArgs& args,
                     const MemoryDumpCallback& callback));
 
-  bool IsCoordinator() const override { return is_coordinator_; }
+  uint64_t GetTracingProcessId() const override {
+    NOTREACHED();
+    return MemoryDumpManager::kInvalidTracingProcessId;
+  }
 
   // Promote the CreateProcessDump to public so it can be used by test fixtures.
   using MemoryDumpManagerDelegate::CreateProcessDump;
-
- private:
-  bool is_coordinator_;
 };
 
 class MockMemoryDumpProvider : public MemoryDumpProvider {
@@ -183,19 +180,19 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   unsigned no_of_post_tasks() const { return num_of_post_tasks_; }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure task,
+                                  const Closure& task,
                                   TimeDelta delay) override {
     NOTREACHED();
     return false;
   }
 
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure task,
+                       const Closure& task,
                        TimeDelta delay) override {
     num_of_post_tasks_++;
     if (enabled_) {
       return worker_pool_.pool()->PostSequencedWorkerTask(token_, from_here,
-                                                          std::move(task));
+                                                          task);
     }
     return false;
   }
@@ -223,12 +220,13 @@ class MemoryDumpManagerTest : public testing::Test {
     mdm_.reset(new MemoryDumpManager());
     MemoryDumpManager::SetInstanceForTesting(mdm_.get());
     ASSERT_EQ(mdm_.get(), MemoryDumpManager::GetInstance());
+    delegate_.reset(new MemoryDumpManagerDelegateForTesting);
   }
 
   void TearDown() override {
     MemoryDumpManager::SetInstanceForTesting(nullptr);
-    delegate_ = nullptr;
     mdm_.reset();
+    delegate_.reset();
     message_loop_.reset();
     TraceLog::DeleteForTesting();
   }
@@ -250,8 +248,7 @@ class MemoryDumpManagerTest : public testing::Test {
  protected:
   void InitializeMemoryDumpManager(bool is_coordinator) {
     mdm_->set_dumper_registrations_ignored_for_testing(true);
-    delegate_ = new MemoryDumpManagerDelegateForTesting(is_coordinator);
-    mdm_->Initialize(base::WrapUnique(delegate_));
+    mdm_->Initialize(delegate_.get(), is_coordinator);
   }
 
   void RequestGlobalDumpAndWait(MemoryDumpType dump_type,
@@ -277,8 +274,7 @@ class MemoryDumpManagerTest : public testing::Test {
   void DisableTracing() { TraceLog::GetInstance()->SetDisabled(); }
 
   bool IsPeriodicDumpingEnabled() const {
-    return MemoryDumpScheduler::GetInstance()
-        ->IsPeriodicTimerRunningForTesting();
+    return mdm_->dump_scheduler_->IsPeriodicTimerRunningForTesting();
   }
 
   int GetMaxConsecutiveFailuresCount() const {
@@ -287,7 +283,7 @@ class MemoryDumpManagerTest : public testing::Test {
 
   const MemoryDumpProvider::Options kDefaultOptions;
   std::unique_ptr<MemoryDumpManager> mdm_;
-  MemoryDumpManagerDelegateForTesting* delegate_;
+  std::unique_ptr<MemoryDumpManagerDelegateForTesting> delegate_;
   bool last_callback_success_;
 
  private:
@@ -901,6 +897,7 @@ TEST_F(MemoryDumpManagerTest, InitializedAfterStartOfTracing) {
   // initialization gets NACK-ed cleanly.
   {
     EXPECT_CALL(mdp, OnMemoryDump(_, _)).Times(0);
+    EXPECT_CALL(*delegate_, RequestGlobalMemoryDump(_, _)).Times(0);
     RequestGlobalDumpAndWait(MemoryDumpType::EXPLICITLY_TRIGGERED,
                              MemoryDumpLevelOfDetail::DETAILED);
     EXPECT_FALSE(last_callback_success_);
@@ -909,9 +906,9 @@ TEST_F(MemoryDumpManagerTest, InitializedAfterStartOfTracing) {
   // Now late-initialize the MemoryDumpManager and check that the
   // RequestGlobalDump completes successfully.
   {
-    InitializeMemoryDumpManager(false /* is_coordinator */);
     EXPECT_CALL(mdp, OnMemoryDump(_, _)).Times(1);
     EXPECT_CALL(*delegate_, RequestGlobalMemoryDump(_, _)).Times(1);
+    InitializeMemoryDumpManager(false /* is_coordinator */);
     RequestGlobalDumpAndWait(MemoryDumpType::EXPLICITLY_TRIGGERED,
                              MemoryDumpLevelOfDetail::DETAILED);
     EXPECT_TRUE(last_callback_success_);
