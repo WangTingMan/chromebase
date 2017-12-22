@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/test/test_pending_task.h"
-
 #include <string>
-#include <utility>
+
+#include "base/test/test_pending_task.h"
 
 namespace base {
 
 TestPendingTask::TestPendingTask() : nestability(NESTABLE) {}
 
-TestPendingTask::TestPendingTask(const tracked_objects::Location& location,
-                                 Closure task,
-                                 TimeTicks post_time,
-                                 TimeDelta delay,
-                                 TestNestability nestability)
+TestPendingTask::TestPendingTask(
+    const tracked_objects::Location& location,
+    const Closure& task,
+    TimeTicks post_time,
+    TimeDelta delay,
+    TestNestability nestability)
     : location(location),
-      task(std::move(task)),
+      task(task),
       post_time(post_time),
       delay(delay),
       nestability(nestability) {}

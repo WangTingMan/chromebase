@@ -100,8 +100,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   EXPECT_TRUE(allocator_->used_histogram_);
   EXPECT_EQ("UMA.PersistentAllocator." + base_name + ".UsedPct",
             allocator_->used_histogram_->histogram_name());
-  EXPECT_EQ(PersistentMemoryAllocator::MEMORY_INITIALIZED,
-            allocator_->GetMemoryState());
 
   // Get base memory info for later comparison.
   PersistentMemoryAllocator::MemoryInfo meminfo0;
@@ -256,11 +254,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   allocator_->Delete(obj2);
   PersistentMemoryAllocator::Iterator iter1z(allocator_.get());
   EXPECT_EQ(nullptr, iter1z.GetNextOfObject<TestObject2>());
-
-  // Ensure that the memory state can be set.
-  allocator_->SetMemoryState(PersistentMemoryAllocator::MEMORY_DELETED);
-  EXPECT_EQ(PersistentMemoryAllocator::MEMORY_DELETED,
-            allocator_->GetMemoryState());
 }
 
 TEST_F(PersistentMemoryAllocatorTest, PageTest) {
@@ -698,8 +691,8 @@ TEST(FilePersistentMemoryAllocatorTest, CreationTest) {
   const size_t mmlength = mmfile->length();
   EXPECT_GE(meminfo1.total, mmlength);
 
-  FilePersistentMemoryAllocator file(std::move(mmfile), 0, 0, "", false);
-  EXPECT_FALSE(file.IsReadonly());
+  FilePersistentMemoryAllocator file(std::move(mmfile), 0, 0, "", true);
+  EXPECT_TRUE(file.IsReadonly());
   EXPECT_EQ(TEST_ID, file.Id());
   EXPECT_FALSE(file.IsFull());
   EXPECT_FALSE(file.IsCorrupt());
@@ -720,11 +713,6 @@ TEST(FilePersistentMemoryAllocatorTest, CreationTest) {
   EXPECT_GE(meminfo1.free, meminfo2.free);
   EXPECT_EQ(mmlength, meminfo2.total);
   EXPECT_EQ(0U, meminfo2.free);
-
-  // There's no way of knowing if Flush actually does anything but at least
-  // verify that it runs without CHECK violations.
-  file.Flush(false);
-  file.Flush(true);
 }
 
 TEST(FilePersistentMemoryAllocatorTest, ExtendTest) {
