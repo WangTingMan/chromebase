@@ -57,6 +57,7 @@ cc_defaults {
     cflags: [
         "-Wno-unused-parameter",
         "-Wno-unused-function",
+        "-Wno-unused-variable",
         "-Wno-missing-field-initializers",
     ],
 
