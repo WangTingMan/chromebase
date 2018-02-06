@@ -38,7 +38,15 @@ cc_defaults {
             ],
         },
         darwin: {
-            enabled: false,
+            cflags: [
+                "-D_FILE_OFFSET_BITS=64",
+            ],
+            host_ldlibs: [
+                "-framework AppKit",
+                "-framework CoreFoundation",
+                "-framework Foundation",
+                "-framework Security",
+            ],
         },
     },
 }
