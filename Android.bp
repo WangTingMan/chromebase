@@ -276,34 +276,15 @@ libchromeLinuxSrc = [
     "components/timers/alarm_timer_chromeos.cc",
 ]
 
-libchromeMacSrc = [
-    "base/files/file_path_watcher_fsevents.cc",
-    "base/files/file_path_watcher_kqueue.cc",
-    "base/files/file_path_watcher_mac.cc",
-    "base/files/file_util_mac.mm",
-    "base/mac/bundle_locations.mm",
-    "base/mac/call_with_eh_frame.cc",
-    "base/mac/foundation_util.mm",
-    "base/mac/mach_logging.cc",
-    "base/mac/scoped_mach_port.cc",
-    "base/mac/scoped_mach_vm.cc",
-    "base/mac/scoped_nsautorelease_pool.mm",
-    "base/mac/sdk_forward_declarations.mm",
-    "base/memory/shared_memory_mac.cc",
-    "base/memory/shared_memory_handle_mac.cc",
-    "base/message_loop/message_pump_mac.mm",
-    "base/process/launch_mac.cc",
-    "base/process/port_provider_mac.cc",
-    "base/process/process_handle_mac.cc",
-    "base/process/process_info_mac.cc",
-    "base/process/process_iterator_mac.cc",
-    "base/process/process_metrics_mac.cc",
-    "base/strings/sys_string_conversions_mac.mm",
-    "base/sys_info_mac.mm",
-    "base/time/time_mac.cc",
-    "base/threading/platform_thread_mac.mm",
+libchromeLinuxGlibcSrc = [
+    "base/allocator/allocator_shim.cc",
+    "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
 ]
 
+libchromeAndroidSrc = [
+    "base/memory/shared_memory_android.cc",
+    "base/sys_info_chromeos.cc",
+]
 
 // libchrome static+shared for host and device
 // ========================================================
@@ -328,24 +309,15 @@ cc_library {
         linux: {
             srcs: libchromeLinuxSrc,
         },
+        linux_glibc: {
+            srcs: libchromeLinuxGlibcSrc,
+        },
         android: {
-            srcs: [
-                "base/memory/shared_memory_android.cc",
-                "base/sys_info_chromeos.cc",
-            ],
+            srcs: libchromeAndroidSrc,
             shared_libs: [
                 "liblog",
                 "libcutils",
             ],
-        },
-        linux_glibc: {
-            srcs: [
-                "base/allocator/allocator_shim.cc",
-                "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
-            ],
-        },
-        darwin: {
-            srcs: libchromeMacSrc,
         },
     },
 }
@@ -388,11 +360,6 @@ cc_library_static {
         "base/test/test_switches.cc",
         "base/test/test_timeouts.cc",
     ],
-    target: {
-        darwin: {
-            enabled: false,
-        },
-    },
 }
 
 // Helpers needed for unit tests (for host).
@@ -403,11 +370,6 @@ cc_library_host_static {
     shared_libs: ["libchrome"],
 
     srcs: ["base/test/simple_test_clock.cc"],
-    target: {
-        darwin: {
-            enabled: false,
-        },
-    },
 }
 
 // Host and target unit tests. Run (from repo root) with:
@@ -593,9 +555,6 @@ cc_test {
                 "libchrome-crypto",
             ],
             cflags: ["-DDONT_EMBED_BUILD_METADATA"],
-        },
-        darwin: {
-            enabled: false,
         },
     },
 }
