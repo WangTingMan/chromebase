@@ -126,10 +126,8 @@ uintptr_t ScanStackForNextFrame(uintptr_t fp, uintptr_t stack_end) {
       }
     }
   }
-#else
-  ALLOW_UNUSED_PARAM(fp);
-  ALLOW_UNUSED_PARAM(stack_end);
 #endif  // defined(OS_LINUX)
+
   return 0;
 }
 
