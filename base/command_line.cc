@@ -455,7 +455,6 @@ CommandLine::StringType CommandLine::GetCommandLineStringInternal(
 
 CommandLine::StringType CommandLine::GetArgumentsStringInternal(
     bool quote_placeholders) const {
-  ALLOW_UNUSED_PARAM(quote_placeholders);
   StringType params;
   // Append switches and arguments.
   bool parse_switches = true;
