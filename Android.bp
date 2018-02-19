@@ -15,6 +15,18 @@
 // Common defaults
 // ========================================================
 
+// Using Chrome header files directly could cause -Wunused-parameter errors,
+// and this is workaround. Please find the document in include_generator.py
+// for details.
+gensrcs {
+    name: "libchrome-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: ["**/*.h"],
+    output_extension: "h",
+}
+
 cc_defaults {
     name: "libchrome-defaults",
     // Set clang to "true" to force clang or "false" to force gcc.
@@ -24,12 +36,18 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-Wno-deprecated-declarations",
+        "-Wno-unused-parameter",
     ],
     include_dirs: [
         "external/valgrind/include",
         "external/valgrind",
     ],
-    export_include_dirs: ["."],
+
+    // Note: Although the generated header files are exported here, in building
+    // libchrome, "." has priority (unlike building projects using libchrome),
+    // so the raw header files are used for them.
+    generated_headers: ["libchrome-include"],
+    export_generated_headers: ["libchrome-include"],
     target: {
         host: {
             cflags: [
