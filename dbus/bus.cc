@@ -84,13 +84,13 @@ class Watch : public base::MessagePumpLibevent::Watcher {
 
  private:
   // Implement MessagePumpLibevent::Watcher.
-  void OnFileCanReadWithoutBlocking(int /*file_descriptor*/) override {
+  void OnFileCanReadWithoutBlocking(int file_descriptor) override {
     const bool success = dbus_watch_handle(raw_watch_, DBUS_WATCH_READABLE);
     CHECK(success) << "Unable to allocate memory";
   }
 
   // Implement MessagePumpLibevent::Watcher.
-  void OnFileCanWriteWithoutBlocking(int /*file_descriptor*/) override {
+  void OnFileCanWriteWithoutBlocking(int file_descriptor) override {
     const bool success = dbus_watch_handle(raw_watch_, DBUS_WATCH_WRITABLE);
     CHECK(success) << "Unable to allocate memory";
   }
@@ -1090,7 +1090,7 @@ void Bus::OnToggleTimeout(DBusTimeout* raw_timeout) {
 }
 
 void Bus::OnDispatchStatusChanged(DBusConnection* connection,
-                                  DBusDispatchStatus /*status*/) {
+                                  DBusDispatchStatus status) {
   DCHECK_EQ(connection, connection_);
   AssertOnDBusThread();
 
@@ -1187,9 +1187,9 @@ void Bus::OnDispatchStatusChangedThunk(DBusConnection* connection,
 
 // static
 DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
-    DBusConnection* /*connection*/,
+    DBusConnection* connection,
     DBusMessage* message,
-    void* /*data*/) {
+    void* data) {
   if (dbus_message_is_signal(message,
                              DBUS_INTERFACE_LOCAL,
                              kDisconnectedSignal)) {
@@ -1201,7 +1201,7 @@ DBusHandlerResult Bus::OnConnectionDisconnectedFilter(
 
 // static
 DBusHandlerResult Bus::OnServiceOwnerChangedFilter(
-    DBusConnection* /*connection*/,
+    DBusConnection* connection,
     DBusMessage* message,
     void* data) {
   if (dbus_message_is_signal(message,

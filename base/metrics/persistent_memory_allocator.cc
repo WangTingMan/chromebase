@@ -872,7 +872,7 @@ PersistentMemoryAllocator::GetBlock(Reference ref, uint32_t type_id,
   return reinterpret_cast<const volatile BlockHeader*>(mem_base_ + ref);
 }
 
-void PersistentMemoryAllocator::FlushPartial(size_t /*length*/, bool /*sync*/) {
+void PersistentMemoryAllocator::FlushPartial(size_t length, bool sync) {
   // Generally there is nothing to do as every write is done through volatile
   // memory with atomic instructions to guarantee consistency. This (virtual)
   // method exists so that derivced classes can do special things, such as

@@ -62,7 +62,7 @@ WorkerPoolImpl::WorkerPoolImpl()
 
 void WorkerPoolImpl::PostTask(const tracked_objects::Location& from_here,
                               base::Closure task,
-                              bool /*task_is_slow*/) {
+                              bool task_is_slow) {
   pool_->PostTask(from_here, std::move(task));
 }
 

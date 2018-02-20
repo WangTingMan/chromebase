@@ -53,8 +53,6 @@ StringPieceType::size_type FindDriveLetter(StringPieceType path) {
        (path[0] >= L'a' && path[0] <= L'z'))) {
     return 1;
   }
-#else
-  (void)path;  // Avoid an unused warning.
 #endif  // FILE_PATH_USES_DRIVE_LETTERS
   return StringType::npos;
 }
@@ -1328,7 +1326,6 @@ FilePath FilePath::NormalizePathSeparatorsTo(CharType separator) const {
   }
   return FilePath(copy);
 #else
-  (void)separator;  // Avoid an unused warning.
   return *this;
 #endif
 }
