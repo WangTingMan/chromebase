@@ -79,7 +79,6 @@ const char kSymbolCharacters[] =
 void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
-  ALLOW_UNUSED_PARAM(text);
 #if defined(__GLIBCXX__) && !defined(__UCLIBC__)
 
   std::string::size_type search_from = 0;
@@ -214,7 +213,6 @@ void PrintToStderr(const char* output) {
 }
 
 void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
-  ALLOW_UNUSED_PARAM(void_context);  // unused depending on build context
   // NOTE: This code MUST be async-signal safe.
   // NO malloc or stdio is allowed here.
 
@@ -730,7 +728,6 @@ StackTrace::StackTrace(size_t count) {
   // return values, we take no chance.
   count_ = base::saturated_cast<size_t>(backtrace(trace_, count));
 #else
-  ALLOW_UNUSED_PARAM(count);
   count_ = 0;
 #endif
 }

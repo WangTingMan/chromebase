@@ -807,8 +807,6 @@ bool SequencedWorkerPool::Inner::PostTaskToTaskScheduler(
     const TimeDelta& delay) {
 #if 1
   NOTREACHED();
-  ALLOW_UNUSED_PARAM(sequenced);
-  ALLOW_UNUSED_PARAM(delay);
   return false;
 #else
   DCHECK_EQ(AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER, g_all_pools_state);
@@ -849,8 +847,6 @@ SequencedWorkerPool::Inner::GetTaskSchedulerTaskRunner(
     const TaskTraits& traits) {
 #if 1
   NOTREACHED();
-  ALLOW_UNUSED_PARAM(sequence_token_id);
-  ALLOW_UNUSED_PARAM(traits);
   return scoped_refptr<TaskRunner>();
 #else
   DCHECK_EQ(AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER, g_all_pools_state);
@@ -1479,7 +1475,6 @@ void SequencedWorkerPool::EnableWithRedirectionToTaskSchedulerForProcess(
     TaskPriority max_task_priority) {
 #if 1
   NOTREACHED();
-  ALLOW_UNUSED_PARAM(max_task_priority);
 #else
   // TODO(fdoray): Uncomment this line. It is initially commented to avoid a
   // revert of the CL that adds debug::DumpWithoutCrashing() in case of

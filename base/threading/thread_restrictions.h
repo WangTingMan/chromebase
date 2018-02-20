@@ -163,9 +163,9 @@ class BASE_EXPORT ThreadRestrictions {
 #else
   // Inline the empty definitions of these functions so that they can be
   // compiled out.
-  static bool SetIOAllowed(bool) { return true; }
+  static bool SetIOAllowed(bool allowed) { return true; }
   static void AssertIOAllowed() {}
-  static bool SetSingletonAllowed(bool) { return true; }
+  static bool SetSingletonAllowed(bool allowed) { return true; }
   static void AssertSingletonAllowed() {}
   static void DisallowWaiting() {}
   static void AssertWaitAllowed() {}

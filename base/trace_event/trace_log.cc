@@ -398,7 +398,6 @@ void TraceLog::InitializeThreadLocalEventBufferIfSupported() {
 
 bool TraceLog::OnMemoryDump(const MemoryDumpArgs& args,
                             ProcessMemoryDump* pmd) {
-  ALLOW_UNUSED_PARAM(args);
   // TODO(ssid): Use MemoryDumpArgs to create light dumps when requested
   // (crbug.com/499731).
   TraceEventMemoryOverhead overhead;
@@ -1406,7 +1405,6 @@ std::string TraceLog::EventToConsoleMessage(unsigned char phase,
 void TraceLog::EndFilteredEvent(const unsigned char* category_group_enabled,
                                 const char* name,
                                 TraceEventHandle handle) {
-  ALLOW_UNUSED_PARAM(handle);
   const char* category_name = GetCategoryGroupName(category_group_enabled);
   ForEachCategoryFilter(
       category_group_enabled,

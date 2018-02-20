@@ -5,7 +5,6 @@
 #include <malloc.h>
 
 #include "base/allocator/allocator_shim.h"
-#include "base/compiler_specific.h"
 #include "build/build_config.h"
 
 #if defined(OS_ANDROID) && __ANDROID_API__ < 17
@@ -34,7 +33,6 @@ namespace {
 using base::allocator::AllocatorDispatch;
 
 void* RealMalloc(const AllocatorDispatch*, size_t size, void* context) {
-  ALLOW_UNUSED_PARAM(context);
   return __real_malloc(size);
 }
 
@@ -42,7 +40,6 @@ void* RealCalloc(const AllocatorDispatch*,
                  size_t n,
                  size_t size,
                  void* context) {
-  ALLOW_UNUSED_PARAM(context);
   return __real_calloc(n, size);
 }
 
@@ -50,7 +47,6 @@ void* RealRealloc(const AllocatorDispatch*,
                   void* address,
                   size_t size,
                   void* context) {
-  ALLOW_UNUSED_PARAM(context);
   return __real_realloc(address, size);
 }
 
@@ -58,12 +54,10 @@ void* RealMemalign(const AllocatorDispatch*,
                    size_t alignment,
                    size_t size,
                    void* context) {
-  ALLOW_UNUSED_PARAM(context);
   return __real_memalign(alignment, size);
 }
 
 void RealFree(const AllocatorDispatch*, void* address, void* context) {
-  ALLOW_UNUSED_PARAM(context);
   __real_free(address);
 }
 
@@ -74,8 +68,6 @@ size_t DummyMallocUsableSize(const void*) { return 0; }
 size_t RealSizeEstimate(const AllocatorDispatch*,
                         void* address,
                         void* context) {
-  ALLOW_UNUSED_PARAM(address);
-  ALLOW_UNUSED_PARAM(context);
 #if defined(OS_ANDROID)
 #if __ANDROID_API__ < 17
   // malloc_usable_size() is available only starting from API 17.

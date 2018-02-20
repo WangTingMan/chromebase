@@ -824,7 +824,6 @@ TrackedTime ThreadData::Now() {
 
 // static
 void ThreadData::EnsureCleanupWasCalled(int major_threads_shutdown_count) {
-  ALLOW_UNUSED_PARAM(major_threads_shutdown_count);
   base::AutoLock lock(*list_lock_.Pointer());
 
   // TODO(jar): until this is working on XP, don't run the real test.
