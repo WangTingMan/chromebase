@@ -7,8 +7,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "base/compiler_specific.h"
-
 namespace base {
 
 void EnableTerminationOnOutOfMemory() {
@@ -18,13 +16,10 @@ void EnableTerminationOnHeapCorruption() {
 }
 
 bool AdjustOOMScore(ProcessId process, int score) {
-  ALLOW_UNUSED_PARAM(process);
-  ALLOW_UNUSED_PARAM(score);
   return false;
 }
 
 void TerminateBecauseOutOfMemory(size_t size) {
-  ALLOW_UNUSED_PARAM(size);
   abort();
 }
 

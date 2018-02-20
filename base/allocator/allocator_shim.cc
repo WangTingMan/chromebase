@@ -58,7 +58,6 @@ bool CallNewHandler(size_t size) {
 #if defined(OS_WIN)
   return base::allocator::WinCallNewHandler(size);
 #else
-  ALLOW_UNUSED_PARAM(size);
   // TODO(primiano): C++11 has introduced ::get_new_handler() which is supposed
   // to be thread safe and would avoid the spinlock boilerplate here. However
   // it doesn't seem to be available yet in the Linux chroot headers yet.

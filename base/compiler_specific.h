@@ -85,9 +85,6 @@
 //   ALLOW_UNUSED_LOCAL(x);
 #define ALLOW_UNUSED_LOCAL(x) false ? (void)x : (void)0
 
-// Used for Arc++ where -Wno-unused-parameter is used.
-#define ALLOW_UNUSED_PARAM(x) false ? (void)x : (void)0
-
 // Annotate a typedef or function indicating it's ok if it's not used.
 // Use like:
 //   typedef Foo Bar ALLOW_UNUSED_TYPE;
