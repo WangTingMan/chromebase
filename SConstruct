@@ -14,6 +14,7 @@ env = Environment()
 BASE_VER = os.environ.get('BASE_VER', '0')
 PKG_CONFIG = os.environ.get('PKG_CONFIG', 'pkg-config')
 CHROME_INCLUDE_PATH = os.environ.get('CHROME_INCLUDE_PATH', '.')
+USE_ASAN = os.environ.get('USE_ASAN', '0')
 USE_CRYPTO = os.environ.get('USE_CRYPTO', '1')
 USE_DBUS = os.environ.get('USE_DBUS', '1')
 USE_TIMERS = os.environ.get('USE_TIMERS', '1')
@@ -398,12 +399,16 @@ for lib in base_libs:
   if name != corename:
     libs += [corename]
 
+  linkflags = ['-Wl,--as-needed', '-Wl,-soname,lib%s.so' % name]
+  # Address sanitizer builds do not support -z,defs.
+  if USE_ASAN != '1':
+    linkflags += ['-Wl,-z,defs']
+
   e = env.Clone()
   e.Append(
     LIBS = Split(libs),
     LIBPATH = ['.'],
-    LINKFLAGS = ['-Wl,--as-needed', '-Wl,-z,defs',
-                 '-Wl,-soname,lib%s.so' % name],
+    LINKFLAGS = linkflags,
   )
   if pc_libs:
     e.ParseConfig(PKG_CONFIG + ' --cflags --libs %s' % pc_libs)
