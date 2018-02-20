@@ -359,7 +359,7 @@ bool SharedMemory::FilePathForMemoryName(const std::string& mem_name,
 }
 #endif  // !defined(OS_ANDROID) && !defined(__ANDROID__)
 
-bool SharedMemory::ShareToProcessCommon(ProcessHandle,
+bool SharedMemory::ShareToProcessCommon(ProcessHandle process,
                                         SharedMemoryHandle* new_handle,
                                         bool close_self,
                                         ShareMode share_mode) {

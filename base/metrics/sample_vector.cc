@@ -26,7 +26,7 @@ SampleVector::SampleVector(uint64_t id, const BucketRanges* bucket_ranges)
 
 SampleVector::SampleVector(uint64_t id,
                            HistogramBase::AtomicCount* counts,
-                           size_t /*counts_size*/,
+                           size_t counts_size,
                            Metadata* meta,
                            const BucketRanges* bucket_ranges)
     : HistogramSamples(id, meta),

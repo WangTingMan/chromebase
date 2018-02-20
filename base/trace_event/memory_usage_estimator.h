@@ -208,7 +208,7 @@ struct EMUCaller<
     T,
     typename std::enable_if<!HasEMU<T>::value &&
                             is_trivially_destructible<T>::value>::type> {
-  static size_t Call(const T&) { return 0; }
+  static size_t Call(const T& value) { return 0; }
 };
 
 // Returns reference to the underlying container of a container adapter.

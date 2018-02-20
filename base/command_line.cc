@@ -149,7 +149,7 @@ string16 QuoteForCommandLineToArgvW(const string16& arg,
 
 }  // namespace
 
-CommandLine::CommandLine(NoProgram /* no_program */)
+CommandLine::CommandLine(NoProgram no_program)
     : argv_(1),
       begin_args_(1) {
 }

@@ -56,14 +56,14 @@ class BASE_EXPORT MemoryDumpProvider {
 
   // Called by the MemoryDumpManager when an allocator should start or stop
   // collecting extensive allocation data, if supported.
-  virtual void OnHeapProfilingEnabled(bool) {}
+  virtual void OnHeapProfilingEnabled(bool enabled) {}
 
   // Quickly record the total memory usage in |memory_total|. This method will
   // be called only when the dump provider registration has
   // |is_fast_polling_supported| set to true. This method is used for polling at
   // high frequency for detecting peaks. See comment on
   // |is_fast_polling_supported| option if you need to override this method.
-  virtual void PollFastMemoryTotal(uint64_t* /* memory_total */) {}
+  virtual void PollFastMemoryTotal(uint64_t* memory_total) {}
 
   // Indicates that fast memory polling is not going to be used in the near
   // future and the MDP can tear down any resource kept around for fast memory
