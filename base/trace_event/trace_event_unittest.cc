@@ -2158,7 +2158,6 @@ TEST_F(TraceEventTestFixture, TraceWithDisabledByDefaultCategoryFilters) {
   trace_log->SetDisabled();
 }
 
-
 class MyData : public ConvertableToTraceFormat {
  public:
   MyData() {}

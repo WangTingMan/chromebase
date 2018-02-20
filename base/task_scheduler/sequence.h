@@ -82,7 +82,7 @@ class BASE_EXPORT Sequence : public RefCountedThreadSafe<Sequence> {
   // Queue of tasks to execute.
   std::queue<std::unique_ptr<Task>> queue_;
 
-  // Number of tasks contained in the sequence for each priority.
+  // Number of tasks contained in the Sequence for each priority.
   size_t num_tasks_per_priority_[static_cast<int>(TaskPriority::HIGHEST) + 1] =
       {};
 
