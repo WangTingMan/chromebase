@@ -65,7 +65,6 @@ cc_defaults {
     name: "libchrome-test-defaults",
     defaults: ["libchrome-defaults"],
     cflags: [
-        "-Wno-unused-parameter",
         "-Wno-unused-function",
         "-Wno-unused-variable",
         "-Wno-missing-field-initializers",
@@ -353,7 +352,6 @@ cc_library_shared {
         "crypto/sha2.cc",
     ],
 
-    cflags: ["-Wno-unused-parameter"],
     shared_libs: [
         "libchrome",
         "libcrypto",

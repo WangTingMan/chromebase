@@ -534,7 +534,6 @@ Histogram::~Histogram() {
 }
 
 bool Histogram::PrintEmptyBucket(uint32_t index) const {
-  ALLOW_UNUSED_PARAM(index);
   return true;
 }
 
@@ -1139,7 +1138,6 @@ bool CustomHistogram::SerializeInfoImpl(Pickle* pickle) const {
 }
 
 double CustomHistogram::GetBucketSize(Count current, uint32_t i) const {
-  ALLOW_UNUSED_PARAM(i);
   // If this is a histogram of enum values, normalizing the bucket count
   // by the bucket range is not helpful, so just return the bucket count.
   return current;
