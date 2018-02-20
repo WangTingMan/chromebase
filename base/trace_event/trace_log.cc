@@ -303,7 +303,7 @@ void TraceLog::ThreadLocalEventBuffer::WillDestroyCurrentMessageLoop() {
   delete this;
 }
 
-bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs&,
+bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs& args,
                                                     ProcessMemoryDump* pmd) {
   if (!chunk_)
     return true;

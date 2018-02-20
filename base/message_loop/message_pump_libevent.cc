@@ -90,7 +90,7 @@ event* MessagePumpLibevent::FileDescriptorWatcher::ReleaseEvent() {
 
 void MessagePumpLibevent::FileDescriptorWatcher::OnFileCanReadWithoutBlocking(
     int fd,
-    MessagePumpLibevent*) {
+    MessagePumpLibevent* pump) {
   // Since OnFileCanWriteWithoutBlocking() gets called first, it can stop
   // watching the file descriptor.
   if (!watcher_)
@@ -100,7 +100,7 @@ void MessagePumpLibevent::FileDescriptorWatcher::OnFileCanReadWithoutBlocking(
 
 void MessagePumpLibevent::FileDescriptorWatcher::OnFileCanWriteWithoutBlocking(
     int fd,
-    MessagePumpLibevent*) {
+    MessagePumpLibevent* pump) {
   DCHECK(watcher_);
   watcher_->OnFileCanWriteWithoutBlocking(fd);
 }
@@ -199,8 +199,8 @@ bool MessagePumpLibevent::WatchFileDescriptor(int fd,
 }
 
 // Tell libevent to break out of inner loop.
-static void timer_callback(int /*fd*/, short /*events*/, void* context) {
-  event_base_loopbreak((struct event_base *)context);
+static void timer_callback(int fd, short events, void* context) {
+  event_base_loopbreak((struct event_base*)context);
 }
 
 // Reentrant!
@@ -345,7 +345,7 @@ void MessagePumpLibevent::OnLibeventNotification(int fd,
 
 // Called if a byte is received on the wakeup pipe.
 // static
-void MessagePumpLibevent::OnWakeup(int socket, short /*flags*/, void* context) {
+void MessagePumpLibevent::OnWakeup(int socket, short flags, void* context) {
   MessagePumpLibevent* that = static_cast<MessagePumpLibevent*>(context);
   DCHECK(that->wakeup_pipe_out_ == socket);
 

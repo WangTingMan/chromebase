@@ -228,7 +228,7 @@ class BASE_EXPORT ThreadRestrictions {
 #if DCHECK_IS_ON()
   static bool SetWaitAllowed(bool allowed);
 #else
-  static bool SetWaitAllowed(bool) { return true; }
+  static bool SetWaitAllowed(bool allowed) { return true; }
 #endif
 
   // Constructing a ScopedAllowWait temporarily allows waiting on the current
