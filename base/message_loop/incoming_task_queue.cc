@@ -34,7 +34,6 @@ bool AlwaysNotifyPump(MessageLoop::Type type) {
   // to the incoming queue.
   return type == MessageLoop::TYPE_UI || type == MessageLoop::TYPE_JAVA;
 #else
-  (void)type;  // Avoid an unused warning.
   return false;
 #endif
 }

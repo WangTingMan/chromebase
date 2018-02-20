@@ -12,7 +12,7 @@ namespace debug {
 #pragma optimize("", off)
 #endif
 
-void Alias(const void* /* var */) {
+void Alias(const void* var) {
 }
 
 #if defined(COMPILER_MSVC)
