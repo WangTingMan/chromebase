@@ -50,8 +50,7 @@ bool UnixDomainSocket::SendMsg(int fd,
                                const void* buf,
                                size_t length,
                                const std::vector<int>& fds) {
-  struct msghdr msg;
-  memset(&msg, 0, sizeof(msg));
+  struct msghdr msg = {};
   struct iovec iov = { const_cast<void*>(buf), length };
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
@@ -109,8 +108,7 @@ ssize_t UnixDomainSocket::RecvMsgWithFlags(int fd,
                                            ProcessId* out_pid) {
   fds->clear();
 
-  struct msghdr msg;
-  memset(&msg, 0, sizeof(msg));
+  struct msghdr msg = {};
   struct iovec iov = { buf, length };
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
