@@ -32,6 +32,7 @@
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_buffer.h"
 #include "base/trace_event/trace_config_memory_test_util.h"
+#include "build/build_config.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -104,7 +105,7 @@ void OnTraceDataCollected(Closure quit_closure,
 // Posts |task| to |task_runner| and blocks until it is executed.
 void PostTaskAndWait(const tracked_objects::Location& from_here,
                      SequencedTaskRunner* task_runner,
-                     base::Closure task) {
+                     base::OnceClosure task) {
   base::WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
                             WaitableEvent::InitialState::NOT_SIGNALED);
   task_runner->PostTask(from_here, std::move(task));
@@ -114,8 +115,6 @@ void PostTaskAndWait(const tracked_objects::Location& from_here,
   // |task| is executed.
   event.Wait();
 }
-
-}  // namespace
 
 // Testing MemoryDumpManagerDelegate which, by default, short-circuits dump
 // requests locally to the MemoryDumpManager instead of performing IPC dances.
@@ -183,14 +182,14 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   unsigned no_of_post_tasks() const { return num_of_post_tasks_; }
 
   bool PostNonNestableDelayedTask(const tracked_objects::Location& from_here,
-                                  Closure task,
+                                  OnceClosure task,
                                   TimeDelta delay) override {
     NOTREACHED();
     return false;
   }
 
   bool PostDelayedTask(const tracked_objects::Location& from_here,
-                       Closure task,
+                       OnceClosure task,
                        TimeDelta delay) override {
     num_of_post_tasks_++;
     if (enabled_) {
@@ -212,6 +211,8 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   bool enabled_;
   unsigned num_of_post_tasks_;
 };
+
+}  // namespace
 
 class MemoryDumpManagerTest : public testing::Test {
  public:
@@ -439,7 +440,13 @@ TEST_F(MemoryDumpManagerTest, MultipleDumpers) {
 
 // Checks that the dump provider invocations depend only on the current
 // registration state and not on previous registrations and dumps.
-TEST_F(MemoryDumpManagerTest, RegistrationConsistency) {
+// Flaky on iOS, see crbug.com/706874
+#if defined(OS_IOS)
+#define MAYBE_RegistrationConsistency DISABLED_RegistrationConsistency
+#else
+#define MAYBE_RegistrationConsistency RegistrationConsistency
+#endif
+TEST_F(MemoryDumpManagerTest, MAYBE_RegistrationConsistency) {
   InitializeMemoryDumpManager(false /* is_coordinator */);
   MockMemoryDumpProvider mdp;
 
@@ -1013,7 +1020,13 @@ TEST_F(MemoryDumpManagerTest, TraceConfigExpectationsWhenIsCoordinator) {
 
 // Tests against race conditions that might arise when disabling tracing in the
 // middle of a global memory dump.
-TEST_F(MemoryDumpManagerTest, DisableTracingWhileDumping) {
+// Flaky on iOS, see crbug.com/706961
+#if defined(OS_IOS)
+#define MAYBE_DisableTracingWhileDumping DISABLED_DisableTracingWhileDumping
+#else
+#define MAYBE_DisableTracingWhileDumping DisableTracingWhileDumping
+#endif
+TEST_F(MemoryDumpManagerTest, MAYBE_DisableTracingWhileDumping) {
   base::WaitableEvent tracing_disabled_event(
       WaitableEvent::ResetPolicy::AUTOMATIC,
       WaitableEvent::InitialState::NOT_SIGNALED);
