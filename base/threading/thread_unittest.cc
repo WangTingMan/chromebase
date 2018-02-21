@@ -32,6 +32,8 @@ typedef PlatformTest ThreadTest;
 namespace {
 
 void ToggleValue(bool* value) {
+  ANNOTATE_BENIGN_RACE(value, "Test-only data race on boolean "
+                       "in base/thread_unittest");
   *value = !*value;
 }
 
@@ -39,6 +41,8 @@ class SleepInsideInitThread : public Thread {
  public:
   SleepInsideInitThread() : Thread("none") {
     init_called_ = false;
+    ANNOTATE_BENIGN_RACE(
+        this, "Benign test-only data race on vptr - http://crbug.com/98219");
   }
   ~SleepInsideInitThread() override { Stop(); }
 

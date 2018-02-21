@@ -34,7 +34,6 @@ bool AlwaysNotifyPump(MessageLoop::Type type) {
   // to the incoming queue.
   return type == MessageLoop::TYPE_UI || type == MessageLoop::TYPE_JAVA;
 #else
-  (void)type;  // Avoid an unused warning.
   return false;
 #endif
 }
@@ -61,9 +60,10 @@ IncomingTaskQueue::IncomingTaskQueue(MessageLoop* message_loop)
 
 bool IncomingTaskQueue::AddToIncomingQueue(
     const tracked_objects::Location& from_here,
-    Closure task,
+    OnceClosure task,
     TimeDelta delay,
     bool nestable) {
+  DCHECK(task);
   DLOG_IF(WARNING,
           delay.InSeconds() > kTaskDelayWarningThresholdInSeconds)
       << "Requesting super-long task delay period of " << delay.InSeconds()

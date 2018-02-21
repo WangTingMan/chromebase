@@ -130,7 +130,7 @@ class Histogram::Factory {
   // Perform any required datafill on the just-created histogram.  If
   // overridden, be sure to call the "super" version -- this method may not
   // always remain empty.
-  virtual void FillHistogram(HistogramBase* /*histogram*/) {}
+  virtual void FillHistogram(HistogramBase* histogram) {}
 
   // These values are protected (instead of private) because they need to
   // be accessible to methods of sub-classes in order to avoid passing
