@@ -8,12 +8,7 @@
 #include <sys/mman.h>
 
 #include "base/logging.h"
-
-#if defined(__ANDROID__)
-#include <cutils/ashmem.h>
-#else
 #include "third_party/ashmem/ashmem.h"
-#endif
 
 namespace base {
 
