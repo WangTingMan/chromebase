@@ -174,7 +174,7 @@ FilePath::FilePath() {
 
 FilePath::FilePath(const FilePath& that) : path_(that.path_) {
 }
-FilePath::FilePath(FilePath&& that) = default;
+FilePath::FilePath(FilePath&& that) noexcept = default;
 
 FilePath::FilePath(StringPieceType path) {
   path.CopyToString(&path_);
@@ -563,6 +563,12 @@ FilePath FilePath::StripTrailingSeparators() const {
 }
 
 bool FilePath::ReferencesParent() const {
+  if (path_.find(kParentDirectory) == StringType::npos) {
+    // GetComponents is quite expensive, so avoid calling it in the majority
+    // of cases where there isn't a kParentDirectory anywhere in the path.
+    return false;
+  }
+
   std::vector<StringType> components;
   GetComponents(&components);
 

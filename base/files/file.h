@@ -255,6 +255,16 @@ class BASE_EXPORT File {
 
   // Instructs the filesystem to flush the file to disk. (POSIX: fsync, Windows:
   // FlushFileBuffers).
+  // Calling Flush() does not guarantee file integrity and thus is not a valid
+  // substitute for file integrity checks and recovery codepaths for malformed
+  // files. It can also be *really* slow, so avoid blocking on Flush(),
+  // especially please don't block shutdown on Flush().
+  // Latency percentiles of Flush() across all platforms as of July 2016:
+  // 50 %     > 5 ms
+  // 10 %     > 58 ms
+  //  1 %     > 357 ms
+  //  0.1 %   > 1.8 seconds
+  //  0.01 %  > 7.6 seconds
   bool Flush();
 
   // Updates the file times.
