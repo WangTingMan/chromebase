@@ -27,9 +27,9 @@
 
 #if defined(OS_ANDROID)
 #include "base/os_compat_android.h"
+#endif
+#if defined(OS_ANDROID) || defined(__ANDROID__)
 #include "third_party/ashmem/ashmem.h"
-#elif defined(__ANDROID__)
-#include <cutils/ashmem.h>
 #endif
 
 namespace base {
