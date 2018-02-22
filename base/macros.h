@@ -12,6 +12,8 @@
 
 #include <stddef.h>  // For size_t.
 
+// We define following macros conditionally as they may be defined by another libraries.
+
 // Distinguish mips32.
 #if defined(__mips__) && (_MIPS_SIM == _ABIO32) && !defined(__mips32__)
 #define __mips32__
