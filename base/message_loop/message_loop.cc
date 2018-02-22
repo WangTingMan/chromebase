@@ -641,8 +641,6 @@ bool MessageLoopForUI::WatchFileDescriptor(
 //------------------------------------------------------------------------------
 // MessageLoopForIO
 
-MessageLoopForIO::MessageLoopForIO() : MessageLoop(TYPE_IO) {}
-
 #if !defined(OS_NACL_SFI)
 
 #if defined(OS_WIN)
