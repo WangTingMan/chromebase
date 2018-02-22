@@ -22,12 +22,6 @@
 #include "base/strings/string_piece.h"  // For implicit conversions.
 #include "build/build_config.h"
 
-#if defined(ANDROID)
-// On Android, bionic's stdio.h defines an snprintf macro when being built with
-// clang. Undefine it here so it won't collide with base::snprintf().
-#undef snprintf
-#endif  // defined(ANDROID)
-
 namespace base {
 
 // C standard-library functions that aren't cross-platform are provided as
