@@ -796,7 +796,6 @@ void LogMessage::Init(const char* file, int line) {
     gettimeofday(&tv, nullptr);
     time_t t = tv.tv_sec;
     struct tm local_time;
-	memset(&local_time, 0, sizeof(local_time));
     localtime_r(&t, &local_time);
     struct tm* tm_time = &local_time;
     stream_ << std::setfill('0')
