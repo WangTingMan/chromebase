@@ -49,7 +49,7 @@
 #include "build/build_config.h"
 
 #if defined(USE_SYMBOLIZE)
-#error "symbolize support was removed from libchrome"
+#include "base/third_party/symbolize/symbolize.h"
 #endif
 
 namespace base {

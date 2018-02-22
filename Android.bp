@@ -36,6 +36,7 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-Wno-deprecated-declarations",
+        "-Wno-missing-field-initializers",
         "-Wno-unused-parameter",
     ],
     include_dirs: [
@@ -67,7 +68,6 @@ cc_defaults {
     cflags: [
         "-Wno-unused-function",
         "-Wno-unused-variable",
-        "-Wno-missing-field-initializers",
     ],
 
     clang_cflags: [

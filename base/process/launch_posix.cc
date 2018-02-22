@@ -163,12 +163,7 @@ int sys_rt_sigaction(int sig, const struct kernel_sigaction* act,
 // See crbug.com/177956.
 void ResetChildSignalHandlersToDefaults(void) {
   for (int signum = 1; ; ++signum) {
-#if defined(ANDROID)
-    struct kernel_sigaction act;
-    memset(&act, 0, sizeof(act));
-#else
     struct kernel_sigaction act = {0};
-#endif
     int sigaction_get_ret = sys_rt_sigaction(signum, nullptr, &act);
     if (sigaction_get_ret && errno == EINVAL) {
 #if !defined(NDEBUG)

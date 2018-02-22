@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 
-#include <modp_b64/modp_b64.h>
+#include "third_party/modp_b64/modp_b64.h"
 
 namespace base {
 
