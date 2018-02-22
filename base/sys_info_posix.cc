@@ -85,7 +85,10 @@ bool IsStatsZeroIfUnlimited(const base::FilePath& path) {
   if (HANDLE_EINTR(statfs(path.value().c_str(), &stats)) != 0)
     return false;
 
-  switch (static_cast<uint32_t>(stats.f_type)) {
+  // In some platforms, |statfs_buf.f_type| is declared as signed, but some of
+  // the values will overflow it, causing narrowing warnings. Cast to the
+  // largest possible unsigned integer type to avoid it.
+  switch (static_cast<uintmax_t>(stats.f_type)) {
     case TMPFS_MAGIC:
     case HUGETLBFS_MAGIC:
     case RAMFS_MAGIC:

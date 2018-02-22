@@ -17,6 +17,8 @@
 #include <android-base/macros.h>
 #endif  // defined(ANDROID)
 
+// We define following macros conditionally as they may be defined by another libraries.
+
 // Put this in the declarations for a class to be uncopyable.
 #if !defined(DISALLOW_COPY)
 #define DISALLOW_COPY(TypeName) \
@@ -29,9 +31,8 @@
   void operator=(const TypeName&) = delete
 #endif
 
-// A macro to disallow the copy constructor and operator= functions
-// This should be used in the private: declarations for a class
-// We define this macro conditionally as it may be defined by another libraries.
+// A macro to disallow the copy constructor and operator= functions.
+// This should be used in the private: declarations for a class.
 #if !defined(DISALLOW_COPY_AND_ASSIGN)
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
