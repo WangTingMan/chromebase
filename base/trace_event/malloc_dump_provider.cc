@@ -211,7 +211,7 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
                                       &allocated_objects_size);
   DCHECK(res);
 #elif defined(OS_MACOSX) || defined(OS_IOS)
-  malloc_statistics_t stats = {};
+  malloc_statistics_t stats = {0};
   malloc_zone_statistics(nullptr, &stats);
   total_virtual_size = stats.size_allocated;
   allocated_objects_size = stats.size_in_use;

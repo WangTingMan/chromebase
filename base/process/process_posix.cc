@@ -102,12 +102,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
     return false;
   }
 
-#if defined(ANDROID)
-  struct kevent change;
-  memset(&change, 0, sizeof(change));
-#else
   struct kevent change = {0};
-#endif
   EV_SET(&change, handle, EVFILT_PROC, EV_ADD, NOTE_EXIT, 0, NULL);
   int result = HANDLE_EINTR(kevent(kq.get(), &change, 1, NULL, 0, NULL));
   if (result == -1) {
