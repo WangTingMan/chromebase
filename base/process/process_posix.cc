@@ -126,12 +126,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
   }
 
   result = -1;
-#if defined(ANDROID)
-  struct kevent event;
-  memset(&event, 0, sizeof(event));
-#else
   struct kevent event = {0};
-#endif
 
   while (wait_forever || remaining_delta > base::TimeDelta()) {
     struct timespec remaining_timespec;

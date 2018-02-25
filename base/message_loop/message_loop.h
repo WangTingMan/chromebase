@@ -559,7 +559,8 @@ static_assert(sizeof(MessageLoop) == sizeof(MessageLoopForUI),
 //
 class BASE_EXPORT MessageLoopForIO : public MessageLoop {
  public:
-  MessageLoopForIO();
+  MessageLoopForIO() : MessageLoop(TYPE_IO) {
+  }
 
   // Returns the MessageLoopForIO of the current thread.
   static MessageLoopForIO* current() {
