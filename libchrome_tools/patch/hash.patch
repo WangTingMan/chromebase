@@ -1,0 +1,28 @@
+# libchrome does not support SuperFastHash. Instead use std::hash.
+
+--- a/base/hash.cc
++++ b/base/hash.cc
+@@ -4,19 +4,13 @@
+ 
+ #include "base/hash.h"
+ 
+-// Definition in base/third_party/superfasthash/superfasthash.c. (Third-party
+-// code did not come with its own header file, so declaring the function here.)
+-// Note: This algorithm is also in Blink under Source/wtf/StringHasher.h.
+-extern "C" uint32_t SuperFastHash(const char* data, int len);
++#include <functional>
+ 
+ namespace base {
+ 
+-uint32_t SuperFastHash(const char* data, size_t length) {
+-  if (length > static_cast<size_t>(std::numeric_limits<int>::max())) {
+-    NOTREACHED();
+-    return 0;
+-  }
+-  return ::SuperFastHash(data, static_cast<int>(length));
++uint32_t SuperFastHash(const char* data, size_t len) {
++  std::hash<std::string> hash_fn;
++  return hash_fn(std::string(data, len));
+ }
+ 
+ }  // namespace base
