@@ -1,0 +1,152 @@
+# libchrome does not support TaskScheduler.
+
+--- a/base/threading/sequenced_worker_pool.cc
++++ b/base/threading/sequenced_worker_pool.cc
+@@ -27,8 +27,12 @@
+ #include "base/strings/stringprintf.h"
+ #include "base/synchronization/condition_variable.h"
+ #include "base/synchronization/lock.h"
++// Don't enable the redirect to TaskScheduler on Arc++ to avoid pulling a bunch
++// of dependencies. Some code also #ifdef'ed below.
++#if 0
+ #include "base/task_scheduler/post_task.h"
+ #include "base/task_scheduler/task_scheduler.h"
++#endif
+ #include "base/threading/platform_thread.h"
+ #include "base/threading/sequenced_task_runner_handle.h"
+ #include "base/threading/simple_thread.h"
+@@ -755,10 +759,13 @@ bool SequencedWorkerPool::Inner::PostTas
+     if (optional_token_name)
+       sequenced.sequence_token_id = LockedGetNamedTokenID(*optional_token_name);
+ 
++    // See on top of the file why we don't compile this on Arc++.
++#if 0
+     if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
+       if (!PostTaskToTaskScheduler(std::move(sequenced), delay))
+         return false;
+     } else {
++#endif
+       SequencedWorkerPool::WorkerShutdown shutdown_behavior =
+           sequenced.shutdown_behavior;
+       pending_tasks_.insert(std::move(sequenced));
+@@ -767,7 +774,9 @@ bool SequencedWorkerPool::Inner::PostTas
+         blocking_shutdown_pending_task_count_++;
+ 
+       create_thread_id = PrepareToStartAdditionalThreadIfHelpful();
++#if 0
+     }
++#endif
+   }
+ 
+   // Use != REDIRECTED_TO_TASK_SCHEDULER instead of == USE_WORKER_POOL to ensure
+@@ -802,6 +811,10 @@ bool SequencedWorkerPool::Inner::PostTas
+ bool SequencedWorkerPool::Inner::PostTaskToTaskScheduler(
+     SequencedTask sequenced,
+     const TimeDelta& delay) {
++#if 1
++  NOTREACHED();
++  return false;
++#else
+   DCHECK_EQ(AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER, g_all_pools_state);
+ 
+   lock_.AssertAcquired();
+@@ -832,12 +845,17 @@ bool SequencedWorkerPool::Inner::PostTas
+   return GetTaskSchedulerTaskRunner(sequenced.sequence_token_id, traits)
+       ->PostDelayedTask(sequenced.posted_from, std::move(sequenced.task),
+                         delay);
++#endif
+ }
+ 
+ scoped_refptr<TaskRunner>
+ SequencedWorkerPool::Inner::GetTaskSchedulerTaskRunner(
+     int sequence_token_id,
+     const TaskTraits& traits) {
++#if 1
++  NOTREACHED();
++  return scoped_refptr<TaskRunner>();
++#else
+   DCHECK_EQ(AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER, g_all_pools_state);
+ 
+   lock_.AssertAcquired();
+@@ -871,16 +889,19 @@ SequencedWorkerPool::Inner::GetTaskSched
+   }
+ 
+   return task_runner;
++#endif
+ }
+ 
+ bool SequencedWorkerPool::Inner::RunsTasksOnCurrentThread() const {
+   AutoLock lock(lock_);
+   if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
++#if 0
+     if (!runs_tasks_on_verifier_) {
+       runs_tasks_on_verifier_ = CreateTaskRunnerWithTraits(
+           TaskTraits().MayBlock().WithBaseSyncPrimitives().WithPriority(
+               task_priority_));
+     }
++#endif
+     return runs_tasks_on_verifier_->RunsTasksOnCurrentThread();
+   } else {
+     return ContainsKey(threads_, PlatformThread::CurrentId());
+@@ -1467,6 +1488,9 @@ void SequencedWorkerPool::EnableForProce
+ // static
+ void SequencedWorkerPool::EnableWithRedirectionToTaskSchedulerForProcess(
+     TaskPriority max_task_priority) {
++#if 1
++  NOTREACHED();
++#else
+   // TODO(fdoray): Uncomment this line. It is initially commented to avoid a
+   // revert of the CL that adds debug::DumpWithoutCrashing() in case of
+   // waterfall failures.
+@@ -1474,6 +1498,7 @@ void SequencedWorkerPool::EnableWithRedi
+   DCHECK(TaskScheduler::GetInstance());
+   g_all_pools_state = AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER;
+   g_max_task_priority = max_task_priority;
++#endif
+ }
+ 
+ // static
+@@ -1623,8 +1648,12 @@ void SequencedWorkerPool::FlushForTestin
+   DCHECK(!RunsTasksOnCurrentThread());
+   base::ThreadRestrictions::ScopedAllowWait allow_wait;
+   if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
++#if 1
++    NOTREACHED();
++#else
+     // TODO(gab): Remove this if http://crbug.com/622400 fails.
+     TaskScheduler::GetInstance()->FlushForTesting();
++#endif
+   } else {
+     inner_->CleanupForTesting();
+   }
+--- a/base/trace_event/trace_log.cc
++++ b/base/trace_event/trace_log.cc
+@@ -27,7 +27,10 @@
+ #include "base/strings/string_tokenizer.h"
+ #include "base/strings/stringprintf.h"
+ #include "base/sys_info.h"
++// post_task.h pulls in a lot of code not needed on Arc++.
++#if 0
+ #include "base/task_scheduler/post_task.h"
++#endif
+ #include "base/threading/platform_thread.h"
+ #include "base/threading/thread_id_name_manager.h"
+ #include "base/threading/thread_task_runner_handle.h"
+@@ -968,6 +971,7 @@ void TraceLog::FinishFlush(int generatio
+   }
+ 
+   if (use_worker_thread_) {
++#if 0
+     base::PostTaskWithTraits(
+         FROM_HERE, base::TaskTraits()
+                        .MayBlock()
+@@ -978,6 +982,9 @@ void TraceLog::FinishFlush(int generatio
+              Passed(&previous_logged_events), flush_output_callback,
+              argument_filter_predicate));
+     return;
++#else
++    NOTREACHED();
++#endif
+   }
+ 
+   ConvertTraceEventsToTraceFormat(std::move(previous_logged_events),
