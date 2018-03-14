@@ -59,7 +59,7 @@ namespace {
 
 volatile sig_atomic_t in_signal_handler = 0;
 
-#if !defined(USE_SYMBOLIZE) && defined(__GLIBCXX__)
+#if !defined(USE_SYMBOLIZE)
 // The prefix used for mangled symbols, per the Itanium C++ ABI:
 // http://www.codesourcery.com/cxx-abi/abi.html#mangling
 const char kMangledSymbolPrefix[] = "_Z";
@@ -68,9 +68,9 @@ const char kMangledSymbolPrefix[] = "_Z";
 // (('a'..'z').to_a+('A'..'Z').to_a+('0'..'9').to_a + ['_']).join
 const char kSymbolCharacters[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-#endif  // !defined(USE_SYMBOLIZE) && defined(__GLIBCXX__)
+#endif  // !defined(USE_SYMBOLIZE)
 
-#if !defined(USE_SYMBOLIZE) && !defined(__UCLIBC__)
+#if !defined(USE_SYMBOLIZE)
 // Demangles C++ symbols in the given text. Example:
 //
 // "out/Debug/base_unittests(_ZN10StackTraceC1Ev+0x20) [0x817778c]"
@@ -79,7 +79,8 @@ const char kSymbolCharacters[] =
 void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
-#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
+
+#if !defined(__UCLIBC__)
 
   std::string::size_type search_from = 0;
   while (search_from < text->size()) {
@@ -115,7 +116,7 @@ void DemangleSymbols(std::string* text) {
       search_from = mangled_start + 2;
     }
   }
-#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
+#endif  // !defined(__UCLIBC__)
 }
 #endif  // !defined(USE_SYMBOLIZE)
 

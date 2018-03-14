@@ -40,9 +40,6 @@
 #if defined(__ANDROID__)  // Android targets
 
 #define __linux__ 1
-#if defined(__BIONIC__)
-#define __UCLIBC__ 1
-#endif  // defined(__BIONIC__)
 
 #elif !defined(__ANDROID_HOST__)  // Chrome OS
 
