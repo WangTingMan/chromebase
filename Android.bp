@@ -92,9 +92,9 @@ libchromeCommonSrc = [
     "base/debug/debugger.cc",
     "base/debug/debugger_posix.cc",
     "base/debug/dump_without_crashing.cc",
+    "base/debug/proc_maps_linux.cc",
     "base/debug/profiler.cc",
     "base/debug/stack_trace.cc",
-    "base/debug/stack_trace_posix.cc",
     "base/debug/task_annotator.cc",
     "base/environment.cc",
     "base/feature_list.cc",
@@ -296,10 +296,12 @@ libchromeLinuxSrc = [
 
 libchromeLinuxGlibcSrc = [
     "base/allocator/allocator_shim.cc",
-    "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
+    "base/allocator/allocator_shim_default_dispatch_to_glibc.cc",
+    "base/debug/stack_trace_posix.cc",
 ]
 
 libchromeAndroidSrc = [
+    "base/debug/stack_trace_android.cc",
     "base/memory/shared_memory_android.cc",
     "base/sys_info_chromeos.cc",
 ]

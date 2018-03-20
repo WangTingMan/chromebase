@@ -1,6 +1,6 @@
 --- a/build/build_config.h
 +++ b/build/build_config.h
-@@ -16,6 +16,43 @@
+@@ -16,6 +16,40 @@
  #ifndef BUILD_BUILD_CONFIG_H_
  #define BUILD_BUILD_CONFIG_H_
  
@@ -28,9 +28,6 @@
 +#if defined(__ANDROID__)  // Android targets
 +
 +#define __linux__ 1
-+#if defined(__BIONIC__)
-+#define __UCLIBC__ 1
-+#endif  // defined(__BIONIC__)
 +
 +#elif !defined(__ANDROID_HOST__)  // Chrome OS
 +
@@ -44,7 +41,7 @@
  // A set of macros to use for platform detection.
  #if defined(__native_client__)
  // __native_client__ must be first, so that other OS_ defines are not set.
-@@ -28,8 +65,7 @@
+@@ -28,8 +62,7 @@
  #else
  #define OS_NACL_SFI
  #endif
