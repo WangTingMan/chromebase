@@ -402,7 +402,7 @@ class JSONFileValueSerializerTest : public testing::Test {
   ScopedTempDir temp_dir_;
 };
 
-TEST_F(JSONFileValueSerializerTest, Roundtrip) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_Roundtrip) {
   FilePath original_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
   original_file_path = original_file_path.AppendASCII("serializer_test.json");
@@ -445,7 +445,7 @@ TEST_F(JSONFileValueSerializerTest, Roundtrip) {
   EXPECT_TRUE(DeleteFile(written_file_path, false));
 }
 
-TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_RoundtripNested) {
   FilePath original_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
   original_file_path =
@@ -471,7 +471,7 @@ TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
   EXPECT_TRUE(DeleteFile(written_file_path, false));
 }
 
-TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_NoWhitespace) {
   FilePath source_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &source_file_path));
   source_file_path =

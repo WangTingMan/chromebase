@@ -545,7 +545,7 @@ TEST(JSONReaderTest, LiteralRoots) {
   EXPECT_EQ("root", str_val);
 }
 
-TEST(JSONReaderTest, ReadFromFile) {
+TEST(JSONReaderTest, DISABLED_ReadFromFile) {
   FilePath path;
   ASSERT_TRUE(PathService::Get(base::DIR_TEST_DATA, &path));
   path = path.AppendASCII("json");
