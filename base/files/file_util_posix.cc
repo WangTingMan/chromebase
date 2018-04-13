@@ -29,6 +29,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
+#include "base/path_service.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/stl_util.h"
 #include "base/strings/string_split.h"
@@ -49,7 +50,6 @@
 #if defined(OS_ANDROID)
 #include "base/android/content_uri_utils.h"
 #include "base/os_compat_android.h"
-#include "base/path_service.h"
 #endif
 
 #if !defined(OS_IOS)
