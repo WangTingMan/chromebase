@@ -8,14 +8,11 @@
 
 #include <memory>
 
-#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
 #include "base/base_paths.h"
-#include "base/path_service.h"
-#endif
-
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/path_service.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
@@ -570,8 +567,7 @@ TEST(JSONReaderTest, Reading) {
   }
 }
 
-#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
-TEST(JSONReaderTest, ReadFromFile) {
+TEST(JSONReaderTest, DISABLED_ReadFromFile) {
   FilePath path;
   ASSERT_TRUE(PathService::Get(base::DIR_TEST_DATA, &path));
   path = path.AppendASCII("json");
@@ -585,7 +581,6 @@ TEST(JSONReaderTest, ReadFromFile) {
   ASSERT_TRUE(root) << reader.GetErrorMessage();
   EXPECT_TRUE(root->IsType(Value::Type::DICTIONARY));
 }
-#endif  // !__ANDROID__ && !__ANDROID_HOST__
 
 // Tests that the root of a JSON object can be deleted safely while its
 // children outlive it.
