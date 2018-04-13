@@ -1,23 +1,36 @@
-# Currently, PathService is not available on libchrome.
+# Several paths are not supported in PathService by libchrome.
 
+--- a/base/base_paths_posix.cc
++++ b/base/base_paths_posix.cc
+@@ -19,7 +19,8 @@
+ #include "base/files/file_path.h"
+ #include "base/files/file_util.h"
+ #include "base/logging.h"
+-#include "base/nix/xdg_util.h"
++// Unused, and this file is not ported to libchrome.
++// #include "base/nix/xdg_util.h"
+ #include "base/path_service.h"
+ #include "base/process/process_metrics.h"
+ #include "build/build_config.h"
+@@ -77,6 +78,8 @@ bool PathProviderPosix(int key, FilePath
+       return true;
+ #endif
+     }
++// Following paths are not supported in libchrome/libmojo.
++#if 0
+     case DIR_SOURCE_ROOT: {
+       // Allow passing this in the environment, for more flexibility in build
+       // tree configurations (sub-project builds, gyp --output_dir, etc.)
+@@ -112,6 +115,7 @@ bool PathProviderPosix(int key, FilePath
+       *result = cache_dir;
+       return true;
+     }
++#endif
+   }
+   return false;
+ }
 --- a/base/files/file_util_posix.cc
 +++ b/base/files/file_util_posix.cc
-@@ -29,7 +29,6 @@
- #include "base/logging.h"
- #include "base/macros.h"
- #include "base/memory/singleton.h"
--#include "base/path_service.h"
- #include "base/posix/eintr_wrapper.h"
- #include "base/stl_util.h"
- #include "base/strings/string_split.h"
-@@ -50,6 +49,7 @@
- #if defined(OS_ANDROID)
- #include "base/android/content_uri_utils.h"
- #include "base/os_compat_android.h"
-+#include "base/path_service.h"
- #endif
- 
- #if !defined(OS_IOS)
 @@ -533,6 +533,8 @@ bool GetTempDir(FilePath* path) {
    } else {
  #if defined(OS_ANDROID)
@@ -29,64 +42,41 @@
  #endif
 --- a/base/json/json_reader_unittest.cc
 +++ b/base/json/json_reader_unittest.cc
-@@ -8,11 +8,14 @@
- 
- #include <memory>
- 
-+#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
- #include "base/base_paths.h"
-+#include "base/path_service.h"
-+#endif
-+
- #include "base/files/file_util.h"
- #include "base/logging.h"
- #include "base/macros.h"
--#include "base/path_service.h"
- #include "base/strings/string_piece.h"
- #include "base/strings/utf_string_conversions.h"
- #include "base/values.h"
-@@ -567,6 +570,7 @@ TEST(JSONReaderTest, Reading) {
+@@ -567,7 +567,7 @@ TEST(JSONReaderTest, Reading) {
    }
  }
  
-+#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
- TEST(JSONReaderTest, ReadFromFile) {
+-TEST(JSONReaderTest, ReadFromFile) {
++TEST(JSONReaderTest, DISABLED_ReadFromFile) {
    FilePath path;
    ASSERT_TRUE(PathService::Get(base::DIR_TEST_DATA, &path));
-@@ -581,6 +585,7 @@ TEST(JSONReaderTest, ReadFromFile) {
-   ASSERT_TRUE(root) << reader.GetErrorMessage();
-   EXPECT_TRUE(root->IsType(Value::Type::DICTIONARY));
- }
-+#endif  // !__ANDROID__ && !__ANDROID_HOST__
- 
- // Tests that the root of a JSON object can be deleted safely while its
- // children outlive it.
+   path = path.AppendASCII("json");
 --- a/base/json/json_value_serializer_unittest.cc
 +++ b/base/json/json_value_serializer_unittest.cc
-@@ -11,7 +11,9 @@
- #include "base/json/json_reader.h"
- #include "base/json/json_string_value_serializer.h"
- #include "base/json/json_writer.h"
-+#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
- #include "base/path_service.h"
-+#endif
- #include "base/strings/string_piece.h"
- #include "base/strings/string_util.h"
- #include "base/strings/utf_string_conversions.h"
-@@ -395,6 +397,8 @@ TEST(JSONValueSerializerTest, JSONReader
-   ASSERT_FALSE(JSONReader::Read("/ * * / [1]"));
+@@ -402,7 +402,7 @@ class JSONFileValueSerializerTest : publ
+   ScopedTempDir temp_dir_;
+ };
+ 
+-TEST_F(JSONFileValueSerializerTest, Roundtrip) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_Roundtrip) {
+   FilePath original_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
+   original_file_path = original_file_path.AppendASCII("serializer_test.json");
+@@ -445,7 +445,7 @@ TEST_F(JSONFileValueSerializerTest, Roun
+   EXPECT_TRUE(DeleteFile(written_file_path, false));
  }
  
-+#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
-+
- class JSONFileValueSerializerTest : public testing::Test {
-  protected:
-   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
-@@ -481,6 +485,7 @@ TEST_F(JSONFileValueSerializerTest, NoWh
-   std::unique_ptr<Value> root = deserializer.Deserialize(nullptr, nullptr);
-   ASSERT_TRUE(root);
+-TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_RoundtripNested) {
+   FilePath original_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
+   original_file_path =
+@@ -471,7 +471,7 @@ TEST_F(JSONFileValueSerializerTest, Roun
+   EXPECT_TRUE(DeleteFile(written_file_path, false));
  }
-+#endif  // !__ANDROID__ && !__ANDROID_HOST__
  
- }  // namespace
- 
+-TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_NoWhitespace) {
+   FilePath source_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &source_file_path));
+   source_file_path =

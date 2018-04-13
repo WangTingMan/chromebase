@@ -11,9 +11,7 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_string_value_serializer.h"
 #include "base/json/json_writer.h"
-#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
 #include "base/path_service.h"
-#endif
 #include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
@@ -397,8 +395,6 @@ TEST(JSONValueSerializerTest, JSONReaderComments) {
   ASSERT_FALSE(JSONReader::Read("/ * * / [1]"));
 }
 
-#if !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
-
 class JSONFileValueSerializerTest : public testing::Test {
  protected:
   void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
@@ -406,7 +402,7 @@ class JSONFileValueSerializerTest : public testing::Test {
   ScopedTempDir temp_dir_;
 };
 
-TEST_F(JSONFileValueSerializerTest, Roundtrip) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_Roundtrip) {
   FilePath original_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
   original_file_path = original_file_path.AppendASCII("serializer_test.json");
@@ -449,7 +445,7 @@ TEST_F(JSONFileValueSerializerTest, Roundtrip) {
   EXPECT_TRUE(DeleteFile(written_file_path, false));
 }
 
-TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_RoundtripNested) {
   FilePath original_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
   original_file_path =
@@ -475,7 +471,7 @@ TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
   EXPECT_TRUE(DeleteFile(written_file_path, false));
 }
 
-TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
+TEST_F(JSONFileValueSerializerTest, DISABLED_NoWhitespace) {
   FilePath source_file_path;
   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &source_file_path));
   source_file_path =
@@ -485,7 +481,6 @@ TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
   std::unique_ptr<Value> root = deserializer.Deserialize(nullptr, nullptr);
   ASSERT_TRUE(root);
 }
-#endif  // !__ANDROID__ && !__ANDROID_HOST__
 
 }  // namespace
 
