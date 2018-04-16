@@ -569,6 +569,7 @@ MULTIPROCESS_TEST_MAIN(ChildMain) {
 
 }  // namespace
 
+// ARC note: don't compile as SpawnMultiProcessTestChild brings in a lot of
 #if !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
 TEST(ProcessMetricsTest, GetChildOpenFdCount) {
   ScopedTempDir temp_dir;
