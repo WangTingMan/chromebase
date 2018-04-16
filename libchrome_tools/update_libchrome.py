@@ -62,8 +62,7 @@ _IMPORT_BLACKLIST = [
     'base/allocator/features.h',
     'base/debug/debugging_flags.h',
 
-    # Blacklist several third party libraries, instead system libraries should
-    # be used.
+    # Blacklist several third party libraries; system libraries should be used.
     'base/third_party/libevent/*',
     'base/third_party/symbolize/*',
     'testing/gmock/*',
