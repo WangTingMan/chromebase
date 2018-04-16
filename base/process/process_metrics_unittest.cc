@@ -549,7 +549,7 @@ MULTIPROCESS_TEST_MAIN(ChildMain) {
 
 }  // namespace
 
-// Arc++ note: don't compile as SpawnMultiProcessTestChild brings in a lot of
+// ARC note: don't compile as SpawnMultiProcessTestChild brings in a lot of
 // extra dependency.
 #if !defined(OS_ANDROID) && !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
 TEST(ProcessMetricsTest, GetOpenFdCount) {
