@@ -54,7 +54,7 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
 MultiProcessTest::MultiProcessTest() {
 }
 
-// Don't compile on Arc++.
+// Don't compile on ARC.
 #if 0
 SpawnChildResult MultiProcessTest::SpawnChild(const std::string& procname) {
   LaunchOptions options;
