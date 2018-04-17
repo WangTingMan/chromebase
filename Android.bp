@@ -23,7 +23,15 @@ gensrcs {
     cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
     tool_files: ["libchrome_tools/include_generator.py"],
     export_include_dirs: ["."],
-    srcs: ["**/*.h"],
+    srcs: [
+        "base/**/*.h",
+        "build/**/*.h",
+        "components/**/*.h",
+        "device/**/*.h",
+        "testing/**/*.h",
+        "third_party/**/*.h",
+        "ui/**/*.h",
+    ],
     output_extension: "h",
 }
 
@@ -365,6 +373,18 @@ cc_library {
 
 // libchrome-crypto shared library for device
 // ========================================================
+
+// Similar to libchrome, generate wrapped header files. See comments for
+// libchrome-include for the details.
+gensrcs {
+    name: "libchrome-crypto-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: ["crypto/**/*.h"],
+    output_extension: "h",
+}
+
 cc_library_shared {
     name: "libchrome-crypto",
     defaults: ["libchrome-defaults"],
@@ -375,6 +395,9 @@ cc_library_shared {
         "crypto/secure_util.cc",
         "crypto/sha2.cc",
     ],
+
+    generated_headers: ["libchrome-crypto-include"],
+    export_generated_headers: ["libchrome-crypto-include"],
 
     shared_libs: [
         "libchrome",
