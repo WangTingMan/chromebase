@@ -253,8 +253,11 @@ void CheckException(JNIEnv* env) {
   }
 
   // Now, feel good about it and die.
+  // TODO(lhchavez): Remove this hack. See b/28814913 for details.
   if (java_throwable)
     LOG(FATAL) << GetJavaExceptionInfo(env, java_throwable);
+  else
+    LOG(FATAL) << "Unhandled exception";
 }
 
 std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {

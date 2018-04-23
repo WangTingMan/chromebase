@@ -25,10 +25,16 @@ import zipfile
 # Some clients do not add //build/android/gyp to PYTHONPATH.
 import md5_check  # pylint: disable=relative-import
 
+# pylib conflicts with mojo/public/tools/bindings/pylib. Prioritize
+# build/android/pylib.
+# PYTHONPATH wouldn't help in this case, because soong put source files under
+# temp directory for each build, so the abspath is unknown until the
+# execution.
 #sys.path.append(os.path.join(os.path.dirname(__file__),
 #                             os.pardir, os.pardir, os.pardir))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__),
                                 os.pardir, os.pardir))
+
 import gn_helpers
 
 # Definition copied from pylib/constants/__init__.py to avoid adding

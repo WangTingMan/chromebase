@@ -24,7 +24,7 @@ namespace core {
 class MOJO_SYSTEM_IMPL_EXPORT HandleTable {
  public:
   HandleTable();
-  ~HandleTable() override;
+  ~HandleTable();
 
   // HandleTable is thread-hostile. All access should be gated by GetLock().
   base::Lock& GetLock();
