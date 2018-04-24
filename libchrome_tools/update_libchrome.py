@@ -48,11 +48,13 @@ _LIBCHROME_ROOT = os.path.dirname(_TOOLS_DIR)
 # repository.
 _IMPORT_BLACKLIST = [
     # Libchrome specific files.
+    '.gitignore',
     'Android.bp',
     'MODULE_LICENSE_BSD',
     'NOTICE',
     'OWNERS',
     'SConstruct',
+    'libmojo.pc.in',
     'testrunner.cc',
 
     # libchrome_tools is out of the update target.
@@ -61,13 +63,20 @@ _IMPORT_BLACKLIST = [
     # Those files should be generated. Please see also buildflag_header.patch.
     'base/allocator/features.h',
     'base/debug/debugging_flags.h',
+    'gen/*',
+
+    # Local patch to support time.mojom.
+    # TODO(hidehiko): Remove this after roll to ToT Chrome.
+    'mojo/common/time_struct_traits.h',
 
     # Blacklist several third party libraries; system libraries should be used.
     'base/third_party/libevent/*',
     'base/third_party/symbolize/*',
     'testing/gmock/*',
     'testing/gtest/*',
-    'third_party/*',
+    'third_party/ashmem/*',
+    'third_party/modp_b64/*',
+    'third_party/protobuf/*',
 ]
 
 def _find_target_files():
@@ -90,7 +99,7 @@ def _clean_existing_dir(output_root):
   os.makedirs(output_root, mode=0o755, exist_ok=True)
   for path in os.listdir(output_root):
     target_path = os.path.join(output_root, path)
-    if not os.path.isdir(target_path) or path in ('.git', 'libchrome_tools'):
+    if (not os.path.isdir(target_path) or path in ('.git', 'libchrome_tools')):
       continue
     shutil.rmtree(target_path)
 
