@@ -429,6 +429,7 @@ test_libs = [
   {
     'name': 'base_test_support',
     'sources': """
+               fuzzed_data_provider.cc
                simple_test_clock.cc
                simple_test_tick_clock.cc
                test_file_util.cc
