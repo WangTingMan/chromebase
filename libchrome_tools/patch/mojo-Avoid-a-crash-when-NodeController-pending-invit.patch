@@ -1,0 +1,44 @@
+From 30a0b449c8f7036c300d808db96b391220b7698f Mon Sep 17 00:00:00 2001
+From: Luis Hector Chavez <lhchavez@google.com>
+Date: Wed, 23 May 2018 00:39:19 +0000
+Subject: [PATCH] [mojo]: Avoid a crash when NodeController pending invitations
+ diverge
+
+This change avoids a crash when NodeController::pending_broker_clients_
+and NodeController::pending_invitations_ diverge. This might happen with
+complex enough node topologies, where there is a node that proxies
+invitations to a set of other nodes.
+
+BUG=845709
+
+Change-Id: Ia678f464fafb69628600ec00dac19da3b6868fe0
+Reviewed-on: https://chromium-review.googlesource.com/1069728
+Reviewed-by: Ken Rockot <rockot@chromium.org>
+Commit-Queue: Luis Hector Chavez <lhchavez@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#560857}
+---
+ mojo/edk/system/node_controller.cc | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/mojo/edk/system/node_controller.cc b/mojo/edk/system/node_controller.cc
+index 73b16b1..e608f0c 100644
+--- a/mojo/edk/system/node_controller.cc
++++ b/mojo/edk/system/node_controller.cc
+@@ -1102,8 +1102,13 @@ void NodeController::OnAcceptBrokerClient(const ports::NodeName& from_node,
+   while (!pending_broker_clients.empty()) {
+     const ports::NodeName& child_name = pending_broker_clients.front();
+     auto it = pending_children_.find(child_name);
+-    DCHECK(it != pending_children_.end());
+-    broker->AddBrokerClient(child_name, it->second->CopyRemoteProcessHandle());
++    // If for any reason we don't have a pending invitation for the invitee,
++    // there's nothing left to do: we've already swapped the relevant state into
++    // the stack.
++    if (it != pending_children_.end()) {
++      broker->AddBrokerClient(child_name,
++                              it->second->CopyRemoteProcessHandle());
++    }
+     pending_broker_clients.pop();
+   }
+ 
+-- 
+2.17.0.921.gf22659ad46-goog
