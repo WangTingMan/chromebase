@@ -397,6 +397,7 @@ gensrcs {
 
 cc_library_shared {
     name: "libchrome-crypto",
+    vendor_available: true,
     defaults: ["libchrome-defaults"],
     srcs: [
         "crypto/openssl_util.cc",
@@ -900,6 +901,7 @@ genrule {
 
 cc_library_shared {
     name: "libmojo",
+    vendor_available: true,
 
     generated_headers: [
         "libmojo_jni_headers",
@@ -956,6 +958,8 @@ cc_library_shared {
         "libchrome",
         "libchrome-crypto",
     ],
+
+    header_libs: ["jni_headers"],
 
     export_include_dirs: ["."],
 }
