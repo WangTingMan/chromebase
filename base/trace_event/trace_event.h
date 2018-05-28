@@ -5,12 +5,49 @@
 #ifndef BASE_TRACE_EVENT_TRACE_EVENT_H_
 #define BASE_TRACE_EVENT_TRACE_EVENT_H_
 
+// Replace with stub implementation.
+#if 1
+#include "base/trace_event/common/trace_event_common.h"
+#include "base/trace_event/heap_profiler.h"
+
+// To avoid -Wunused-* errors, eat expression by macro.
+namespace libchrome_internal {
+template <typename... Args> void Ignore(Args&&... args) {}
+}
+#define INTERNAL_IGNORE(...) \
+  (false ? libchrome_internal::Ignore(__VA_ARGS__) : (void) 0)
+
+// Body is effectively empty.
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED(...) INTERNAL_IGNORE(__VA_ARGS__)
+#define INTERNAL_TRACE_TASK_EXECUTION(...)
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(...) \
+  INTERNAL_IGNORE(__VA_ARGS__)
+#define TRACE_ID_MANGLE(val) (val)
 #define INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(...) INTERNAL_IGNORE(__VA_ARGS__)
 #define INTERNAL_TRACE_EVENT_GET_CATEGORY_ENABLED(...) \
     INTERNAL_IGNORE(__VA_ARGS__)
 #define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE(...) \
     false
 #define INTERNAL_TRACE_EVENT_ADD(...) INTERNAL_IGNORE(__VA_ARGS__)
+
+namespace base {
+namespace trace_event {
+
+class TraceLog {
+ public:
+  static TraceLog* GetInstance() {
+    static TraceLog instance;
+    return &instance;
+  }
+
+  pid_t process_id() { return 0; }
+  void SetCurrentThreadBlocksMessageLoop() {}
+};
+
+}  // namespace trace_event
+}  // namespace base
+#else
+
 // This header file defines implementation details of how the trace macros in
 // trace_event_common.h collect and store trace events. Anything not
 // implementation-specific should go in trace_event_common.h instead of here.
@@ -1194,4 +1231,5 @@ template<typename IDType> class TraceScopedTrackableObject {
 }  // namespace trace_event
 }  // namespace base
 
+#endif
 #endif  // BASE_TRACE_EVENT_TRACE_EVENT_H_
