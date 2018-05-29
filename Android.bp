@@ -483,7 +483,6 @@ cc_test {
         "base/files/scoped_temp_dir_unittest.cc",
         "base/gmock_unittest.cc",
         "base/guid_unittest.cc",
-        "base/id_map_unittest.cc",
         "base/json/json_parser_unittest.cc",
         "base/json/json_reader_unittest.cc",
         "base/json/json_value_converter_unittest.cc",
