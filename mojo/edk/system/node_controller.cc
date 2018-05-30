@@ -1102,8 +1102,13 @@ void NodeController::OnAcceptBrokerClient(const ports::NodeName& from_node,
   while (!pending_broker_clients.empty()) {
     const ports::NodeName& child_name = pending_broker_clients.front();
     auto it = pending_children_.find(child_name);
-    DCHECK(it != pending_children_.end());
-    broker->AddBrokerClient(child_name, it->second->CopyRemoteProcessHandle());
+    // If for any reason we don't have a pending invitation for the invitee,
+    // there's nothing left to do: we've already swapped the relevant state into
+    // the stack.
+    if (it != pending_children_.end()) {
+      broker->AddBrokerClient(child_name,
+                              it->second->CopyRemoteProcessHandle());
+    }
     pending_broker_clients.pop();
   }
 
