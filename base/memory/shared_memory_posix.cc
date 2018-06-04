@@ -15,7 +15,8 @@
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/memory/shared_memory_helper.h"
-#include "base/memory/shared_memory_tracker.h"
+// Unsupported in libchrome.
+// #include "base/memory/shared_memory_tracker.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/safe_strerror.h"
 #include "base/process/process_metrics.h"
@@ -290,7 +291,8 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
     DCHECK_EQ(0U,
               reinterpret_cast<uintptr_t>(memory_) &
                   (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
-    SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
+    // Unsupported in libchrome.
+    // SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   } else {
     memory_ = NULL;
   }
@@ -303,7 +305,8 @@ bool SharedMemory::Unmap() {
     return false;
 
   munmap(memory_, mapped_size_);
-  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
+  // Unsupported in libchrome.
+  // SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
   memory_ = NULL;
   mapped_size_ = 0;
   return true;
