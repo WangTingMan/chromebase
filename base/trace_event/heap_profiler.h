@@ -5,6 +5,22 @@
 #ifndef BASE_TRACE_EVENT_HEAP_PROFILER_H
 #define BASE_TRACE_EVENT_HEAP_PROFILER_H
 
+// Replace with stub implementation.
+#if 1
+#define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
+  trace_event_internal::HeapProfilerScopedTaskExecutionTracker
+
+namespace trace_event_internal {
+
+class HeapProfilerScopedTaskExecutionTracker {
+ public:
+  explicit HeapProfilerScopedTaskExecutionTracker(const char*) {}
+};
+
+}  // namespace trace_event_internal
+
+#else
+
 #include "base/compiler_specific.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 
@@ -86,4 +102,5 @@ class BASE_EXPORT HeapProfilerScopedIgnore {
 
 }  // namespace trace_event_internal
 
+#endif
 #endif  // BASE_TRACE_EVENT_HEAP_PROFILER_H
