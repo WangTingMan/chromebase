@@ -119,34 +119,3 @@
    } else {
      inner_->CleanupForTesting();
    }
---- a/base/trace_event/trace_log.cc
-+++ b/base/trace_event/trace_log.cc
-@@ -27,7 +27,10 @@
- #include "base/strings/string_tokenizer.h"
- #include "base/strings/stringprintf.h"
- #include "base/sys_info.h"
-+// post_task.h pulls in a lot of code not needed on Arc++.
-+#if 0
- #include "base/task_scheduler/post_task.h"
-+#endif
- #include "base/threading/platform_thread.h"
- #include "base/threading/thread_id_name_manager.h"
- #include "base/threading/thread_task_runner_handle.h"
-@@ -968,6 +971,7 @@ void TraceLog::FinishFlush(int generatio
-   }
- 
-   if (use_worker_thread_) {
-+#if 0
-     base::PostTaskWithTraits(
-         FROM_HERE, base::TaskTraits()
-                        .MayBlock()
-@@ -978,6 +982,9 @@ void TraceLog::FinishFlush(int generatio
-              Passed(&previous_logged_events), flush_output_callback,
-              argument_filter_predicate));
-     return;
-+#else
-+    NOTREACHED();
-+#endif
-   }
- 
-   ConvertTraceEventsToTraceFormat(std::move(previous_logged_events),

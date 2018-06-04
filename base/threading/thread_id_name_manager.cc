@@ -10,7 +10,8 @@
 #include "base/logging.h"
 #include "base/memory/singleton.h"
 #include "base/strings/string_util.h"
-#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
+// Unsupported in libchrome.
+// #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 
 namespace base {
 namespace {
@@ -80,8 +81,9 @@ void ThreadIdNameManager::SetName(PlatformThreadId id,
   // call GetName(which holds a lock) during the first allocation because it can
   // cause a deadlock when the first allocation happens in the
   // ThreadIdNameManager itself when holding the lock.
-  trace_event::AllocationContextTracker::SetCurrentThreadName(
-      leaked_str->c_str());
+  // Unsupported in libchrome.
+  // trace_event::AllocationContextTracker::SetCurrentThreadName(
+  //     leaked_str->c_str());
 }
 
 const char* ThreadIdNameManager::GetName(PlatformThreadId id) {
