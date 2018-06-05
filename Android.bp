@@ -691,6 +691,38 @@ cc_prebuilt_binary {
     host_supported: true,
 }
 
+python_binary_host {
+    name: "mojom_generate_type_mappings",
+    main: "libchrome_tools/mojom_generate_type_mappings.py",
+    srcs: [
+        "build/gn_helpers.py",
+        "libchrome_tools/mojom_generate_type_mappings.py",
+        "mojo/public/tools/bindings/generate_type_mappings.py",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+genrule {
+    name: "libmojo_common_custom_types__type_mappings",
+    cmd: "$(location mojom_generate_type_mappings)" +
+    "    --output=$(out)" +
+    "    $(in)",
+
+    tools: ["mojom_generate_type_mappings"],
+
+    srcs: [
+        "mojo/common/file.typemap",
+        "mojo/common/file_path.typemap",
+        "mojo/common/string16.typemap",
+        "mojo/common/text_direction.typemap",
+        "mojo/common/time.typemap",
+        "mojo/common/unguessable_token.typemap",
+        "mojo/common/values.typemap",
+        "mojo/common/version.typemap",
+    ],
+    out: ["common_custom_types__type_mappings"],
+}
+
 genrule {
     name: "libmojo_mojom_headers",
     cmd: "$(location mojom_source_generator_sh)" +
@@ -698,7 +730,7 @@ genrule {
     "    --package=external/libchrome" +
     "    --output_dir=$(genDir)" +
     "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --typemap=$(location common_custom_types__type_mappings)" +
     "    --generators=c++" +
     "    --use_new_wrapper_types" +
     "    $(in)",
@@ -708,11 +740,7 @@ genrule {
         "mojom_source_generator_sh",
     ],
 
-    tool_files: [
-        // This file was copied from out/Release in a Chrome checkout.
-        // TODO(lhchavez): Generate this file instead of hardcoding it.
-        "gen/mojo/common/common_custom_types__type_mappings",
-    ],
+    tool_files: [":libmojo_common_custom_types__type_mappings"],
 
     srcs: [":libmojo_mojom_files"],
 
@@ -766,7 +794,7 @@ genrule {
     "    --package=external/libchrome" +
     "    --output_dir=$(genDir)" +
     "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --typemap=$(location common_custom_types__type_mappings)" +
     "    --generators=c++" +
     "    --use_new_wrapper_types" +
     "    $(in)",
@@ -776,12 +804,7 @@ genrule {
         "mojom_source_generator_sh",
     ],
 
-    tool_files: [
-        // This file was copied from out/Release in a Chrome checkout.
-        // TODO(lhchavez): Generate this file instead of hardcoding it.
-        "gen/mojo/common/common_custom_types__type_mappings",
-        "libchrome_tools/mojom_source_generator.sh",
-    ],
+    tool_files: [":libmojo_common_custom_types__type_mappings"],
 
     srcs: [":libmojo_mojom_files"],
 
@@ -920,7 +943,7 @@ genrule {
     "    --package=external/libchrome" +
     "    --output_dir=$(genDir)" +
     "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --typemap=$(location common_custom_types__type_mappings)" +
     "    --generators=java" +
     "    --use_new_wrapper_types" +
     "    $(in)",
@@ -930,11 +953,7 @@ genrule {
         "mojom_source_generator_sh",
     ],
 
-    tool_files: [
-        // This file was copied from out/Release in a Chrome checkout.
-        // TODO(lhchavez): Generate this file instead of hardcoding it.
-        "gen/mojo/common/common_custom_types__type_mappings",
-    ],
+    tool_files: [":libmojo_common_custom_types__type_mappings"],
 
     srcs: [":libmojo_mojom_files"],
 
