@@ -44,6 +44,17 @@ _TOOLS_DIR = os.path.dirname(os.path.realpath(__file__))
 _LIBCHROME_ROOT = os.path.dirname(_TOOLS_DIR)
 
 
+# Files in this list or in the directory listed here will be just copied.
+# Paths ends with '/' is interpreted as directory.
+_IMPORT_LIST = [
+    'mojo/',
+    'third_party/catapult/LICENSE',
+    'third_party/catapult/devil/',
+    'third_party/ply/',
+    'third_party/markupsafe/',
+    'third_party/jinja2/',
+]
+
 # Files which are in the repository, but should not be imported from Chrome
 # repository.
 _IMPORT_BLACKLIST = [
@@ -57,17 +68,19 @@ _IMPORT_BLACKLIST = [
     'libmojo.pc.in',
     'testrunner.cc',
 
+    # No Chromium OWNERS should be imported.
+    '*/OWNERS',
+
     # libchrome_tools is out of the update target.
     'libchrome_tools/*',
+
+    # No internal directories.
+    'mojo/internal/*',
 
     # Those files should be generated. Please see also buildflag_header.patch.
     'base/allocator/features.h',
     'base/debug/debugging_flags.h',
     'gen/*',
-
-    # Local patch to support time.mojom.
-    # TODO(hidehiko): Remove this after roll to ToT Chrome.
-    'mojo/common/time_struct_traits.h',
 
     # Blacklist several third party libraries; system libraries should be used.
     'base/third_party/libevent/*',
@@ -79,14 +92,40 @@ _IMPORT_BLACKLIST = [
     'third_party/protobuf/*',
 ]
 
-def _find_target_files():
+def _find_target_files(chromium_root):
   """Returns target files to be upreved."""
+  # Files in the repository should be updated.
   output = subprocess.check_output(
       ['git', 'ls-tree', '-r', '--name-only', '--full-name', 'HEAD'],
       cwd=_LIBCHROME_ROOT).decode('utf-8')
+
+  # Files in _IMPORT_LIST are copied in the following section, so
+  # exclude them from candidates, here, so that files deleted in chromium
+  # repository will be deleted on update.
+  candidates = [
+      path for path in output.splitlines()
+      if not any(path.startswith(import_path) for import_path in _IMPORT_LIST)]
+
+  # All files listed in _IMPORT_LIST should be imported, too.
+  for import_path in _IMPORT_LIST:
+    import_root = os.path.join(chromium_root, import_path)
+
+    # If it is a file, just add to the candidates.
+    if os.path.isfile(import_root):
+      candidates.append(import_path)
+      continue
+
+    # If it is a directory, traverse all files in the directory recursively
+    # and add all of them to candidates.
+    for dirpath, dirnames, filenames in os.walk(import_root):
+      for filename in filenames:
+        filepath = os.path.join(dirpath, filename)
+        candidates.append(os.path.relpath(filepath, chromium_root))
+
+  # Apply blacklist.
   exclude_pattern = re.compile('|'.join(
       '(?:%s)' % fnmatch.translate(pattern) for pattern in _IMPORT_BLACKLIST))
-  return [filepath for filepath in output.splitlines()
+  return [filepath for filepath in candidates
           if not exclude_pattern.match(filepath)]
 
 
@@ -111,10 +150,11 @@ def _import_files(chromium_root, output_root):
     chromium_root: Path to the Chromium's repository.
     output_root: Path to the output directory.
   """
-  for filepath in _find_target_files():
+  for filepath in _find_target_files(chromium_root):
+    source_path = os.path.join(chromium_root, filepath)
     target_path = os.path.join(output_root, filepath)
     os.makedirs(os.path.dirname(target_path), mode=0o755, exist_ok=True)
-    shutil.copy2(os.path.join(chromium_root, filepath), target_path)
+    shutil.copy2(source_path, target_path)
 
 
 def _apply_patch_files(patch_root, output_root):
