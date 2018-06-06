@@ -946,6 +946,7 @@ genrule {
     "    --typemap=$(location common_custom_types__type_mappings)" +
     "    --generators=java" +
     "    --use_new_wrapper_types" +
+    "    --srcjar=$(out)" +
     "    $(in)",
 
     tools: [
@@ -957,52 +958,7 @@ genrule {
 
     srcs: [":libmojo_mojom_files"],
 
-    out: [
-        "src/org/chromium/gfx/mojom/InsetsF.java",
-        "src/org/chromium/gfx/mojom/Insets.java",
-        "src/org/chromium/gfx/mojom/PointF.java",
-        "src/org/chromium/gfx/mojom/Point.java",
-        "src/org/chromium/gfx/mojom/RangeF.java",
-        "src/org/chromium/gfx/mojom/Range.java",
-        "src/org/chromium/gfx/mojom/RectF.java",
-        "src/org/chromium/gfx/mojom/Rect.java",
-        "src/org/chromium/gfx/mojom/SizeF.java",
-        "src/org/chromium/gfx/mojom/Size.java",
-        "src/org/chromium/gfx/mojom/Vector2dF.java",
-        "src/org/chromium/gfx/mojom/Vector2d.java",
-        "src/org/chromium/IPC/mojom/ChannelBootstrap_Internal.java",
-        "src/org/chromium/IPC/mojom/ChannelBootstrap.java",
-        "src/org/chromium/IPC/mojom/Channel_Internal.java",
-        "src/org/chromium/IPC/mojom/Channel.java",
-        "src/org/chromium/IPC/mojom/GenericInterface_Internal.java",
-        "src/org/chromium/IPC/mojom/GenericInterface.java",
-        "src/org/chromium/IPC/mojom/IpcConstants.java",
-        "src/org/chromium/IPC/mojom/SerializedHandle.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/FlushForTesting.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/InterfaceControlMessagesConstants.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/QueryVersion.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/QueryVersionResult.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RequireVersion.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunInput.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunMessageParams.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunOrClosePipeInput.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunOrClosePipeMessageParams.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunOutput.java",
-        "src/org/chromium/mojo/bindings/interfacecontrol/RunResponseMessageParams.java",
-        "src/org/chromium/mojo/bindings/pipecontrol/DisconnectReason.java",
-        "src/org/chromium/mojo/bindings/pipecontrol/PeerAssociatedEndpointClosedEvent.java",
-        "src/org/chromium/mojo/bindings/pipecontrol/PipeControlMessagesConstants.java",
-        "src/org/chromium/mojo/bindings/pipecontrol/RunOrClosePipeInput.java",
-        "src/org/chromium/mojo/bindings/pipecontrol/RunOrClosePipeMessageParams.java",
-        "src/org/chromium/mojo/common/mojom/File.java",
-        "src/org/chromium/mojo/common/mojom/String16.java",
-        "src/org/chromium/mojo/common/mojom/TextDirection.java",
-        "src/org/chromium/mojo/common/mojom/TimeDelta.java",
-        "src/org/chromium/mojo/common/mojom/Time.java",
-        "src/org/chromium/mojo/common/mojom/TimeTicks.java",
-        "src/org/chromium/mojo/common/mojom/UnguessableToken.java",
-        "src/org/chromium/mojo/common/mojom/Version.java",
-    ],
+    out: ["libmojo_mojom.srcjar"],
 }
 
 java_library {

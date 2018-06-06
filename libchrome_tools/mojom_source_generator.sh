@@ -71,6 +71,10 @@ for arg in "$@"; do
     --generators=*)
       generators="${arg#'--generators='}"
       ;;
+    --srcjar=*)
+      srcjar="${arg#'--srcjar='}"
+      srcjar="$(get_abs_path ${srcjar})"
+      ;;
     --*)
       args=("${args[@]}" "${arg}")
       ;;
@@ -113,3 +117,7 @@ for file in "${files[@]}"; do
     unzip -qo -d "${output_dir}"/src "${output_dir}/${rel_path}".srcjar
   fi
 done
+
+if [[ -n "${srcjar}" ]] ; then
+  (cd "${output_dir}/src" && find . -name '*.java' -print | zip "${srcjar}" -@)
+fi
