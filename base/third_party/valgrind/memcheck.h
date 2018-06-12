@@ -1,6 +1,4 @@
-#ifdef ANDROID
-  #include "memcheck/memcheck.h"
-#else
+
 /*
    ----------------------------------------------------------------
 
@@ -279,4 +277,3 @@ typedef
 
 #endif
 
-#endif
