@@ -57,10 +57,6 @@ cc_defaults {
         "-Wno-missing-field-initializers",
         "-Wno-unused-parameter",
     ],
-    include_dirs: [
-        "external/valgrind/include",
-        "external/valgrind",
-    ],
 
     // Note: Although the generated header files are exported here, in building
     // libchrome, "." has priority (unlike building projects using libchrome),
