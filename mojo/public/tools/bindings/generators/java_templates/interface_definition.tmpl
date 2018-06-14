@@ -113,12 +113,7 @@ try {
 {%       else %}
             {{request_struct|name}}.deserialize(messageWithHeader.getPayload());
 {%       endif %}
-            try {
-                getImpl().{{method|name}}({{run_callback('data', method.parameters)}}{% if with_response %}{% if method.parameters %}, {% endif %}new {{response_struct|name}}ProxyToResponder(getCore(), receiver, header.getRequestId()){% endif %});
-            } catch (RuntimeException e) {
-                // TODO(lhchavez): Remove this hack. See b/28814913 for details.
-                android.util.Log.wtf("{{namespace}}.{{interface.name}}", "Uncaught runtime exception", e);
-            }
+            getImpl().{{method|name}}({{run_callback('data', method.parameters)}}{% if with_response %}{% if method.parameters %}, {% endif %}new {{response_struct|name}}ProxyToResponder(getCore(), receiver, header.getRequestId()){% endif %});
             return true;
         }
 {%     endif %}
@@ -246,12 +241,7 @@ class {{interface|name}}_Internal {
 {%   if method.response_parameters|length %}
                 {{response_struct|name}} response = {{response_struct|name}}.deserialize(messageWithHeader.getPayload());
 {%   endif %}
-                try {
-                    mCallback.call({{run_callback('response', method.response_parameters)}});
-                } catch (RuntimeException e) {
-                    // TODO(lhchavez): Remove this hack. See b/28814913 for details.
-                    android.util.Log.wtf("{{namespace}}.{{interface.name}}", "Uncaught runtime exception", e);
-                }
+                mCallback.call({{run_callback('response', method.response_parameters)}});
                 return true;
             } catch (org.chromium.mojo.bindings.DeserializationException e) {
                 return false;
