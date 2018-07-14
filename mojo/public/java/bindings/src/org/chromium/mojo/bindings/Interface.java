@@ -206,13 +206,7 @@ public interface Interface extends ConnectionErrorHandler, Closeable {
                                                 == RunOutput.Tag.QueryVersionResult) {
                                     mVersion = response.output.getQueryVersionResult().version;
                                 }
-                                try {
-                                    callback.call(mVersion);
-                                } catch (RuntimeException e) {
-                                    // TODO(lhchavez): Remove this hack. See b/28986534 for details.
-                                    android.util.Log.wtf("org.chromium.mojo.bindings.Interface",
-                                            "Uncaught runtime exception", e);
-                                }
+                                callback.call(mVersion);
                             }
                         });
             }

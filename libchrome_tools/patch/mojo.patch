@@ -141,23 +141,6 @@
    // Workaround for https://crbug.com/665869.
    base::subtle::MemoryBarrier();
  #endif
---- a/mojo/public/java/bindings/src/org/chromium/mojo/bindings/Interface.java
-+++ b/mojo/public/java/bindings/src/org/chromium/mojo/bindings/Interface.java
-@@ -206,7 +206,13 @@ public interface Interface extends Conne
-                                                 == RunOutput.Tag.QueryVersionResult) {
-                                     mVersion = response.output.getQueryVersionResult().version;
-                                 }
--                                callback.call(mVersion);
-+                                try {
-+                                    callback.call(mVersion);
-+                                } catch (RuntimeException e) {
-+                                    // TODO(lhchavez): Remove this hack. See b/28986534 for details.
-+                                    android.util.Log.wtf("org.chromium.mojo.bindings.Interface",
-+                                            "Uncaught runtime exception", e);
-+                                }
-                             }
-                         });
-             }
 --- a/mojo/public/java/bindings/src/org/chromium/mojo/bindings/RouterImpl.java
 +++ b/mojo/public/java/bindings/src/org/chromium/mojo/bindings/RouterImpl.java
 @@ -171,20 +171,23 @@ public class RouterImpl implements Route
@@ -217,36 +200,6 @@
              return responder.accept(message);
          } else {
              if (mIncomingMessageReceiver != null) {
---- a/mojo/public/tools/bindings/generators/java_templates/interface_definition.tmpl
-+++ b/mojo/public/tools/bindings/generators/java_templates/interface_definition.tmpl
-@@ -113,7 +113,12 @@ try {
- {%       else %}
-             {{request_struct|name}}.deserialize(messageWithHeader.getPayload());
- {%       endif %}
--            getImpl().{{method|name}}({{run_callback('data', method.parameters)}}{% if with_response %}{% if method.parameters %}, {% endif %}new {{response_struct|name}}ProxyToResponder(getCore(), receiver, header.getRequestId()){% endif %});
-+            try {
-+                getImpl().{{method|name}}({{run_callback('data', method.parameters)}}{% if with_response %}{% if method.parameters %}, {% endif %}new {{response_struct|name}}ProxyToResponder(getCore(), receiver, header.getRequestId()){% endif %});
-+            } catch (RuntimeException e) {
-+                // TODO(lhchavez): Remove this hack. See b/28814913 for details.
-+                android.util.Log.wtf("{{namespace}}.{{interface.name}}", "Uncaught runtime exception", e);
-+            }
-             return true;
-         }
- {%     endif %}
-@@ -241,7 +246,12 @@ class {{interface|name}}_Internal {
- {%   if method.response_parameters|length %}
-                 {{response_struct|name}} response = {{response_struct|name}}.deserialize(messageWithHeader.getPayload());
- {%   endif %}
--                mCallback.call({{run_callback('response', method.response_parameters)}});
-+                try {
-+                    mCallback.call({{run_callback('response', method.response_parameters)}});
-+                } catch (RuntimeException e) {
-+                    // TODO(lhchavez): Remove this hack. See b/28814913 for details.
-+                    android.util.Log.wtf("{{namespace}}.{{interface.name}}", "Uncaught runtime exception", e);
-+                }
-                 return true;
-             } catch (org.chromium.mojo.bindings.DeserializationException e) {
-                 return false;
 --- a/base/android/jni_android.cc
 +++ b/base/android/jni_android.cc
 @@ -10,7 +10,8 @@
