@@ -119,5 +119,6 @@ for file in "${files[@]}"; do
 done
 
 if [[ -n "${srcjar}" ]] ; then
-  (cd "${output_dir}/src" && find . -name '*.java' -print | zip "${srcjar}" -@)
+  (cd "${output_dir}/src" && \
+   find . -name '*.java' -print | zip --quiet "${srcjar}" -@)
 fi
