@@ -75,6 +75,13 @@ class BASE_EXPORT PlatformThreadLocalStorage {
   // GetTLSValue() to retrieve the value of slot as it has already been reset
   // in Posix.
   static void OnThreadExit(void* value);
+  // Normally, Chrome runs as a process, so freeing the TLS is not needed since
+  // the OS will perform that while it's reclaiming the process' memory upon
+  // termination. If, however, this code is used inside a library that is
+  // dynamically loaded and unloaded, the consumer is responsible for calling
+  // this after all Chrome threads have stopped and prior to unloading the
+  // library.
+  static void ForceFreeTLS();
 #endif
 };
 
