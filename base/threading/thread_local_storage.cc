@@ -247,6 +247,17 @@ void PlatformThreadLocalStorage::OnThreadExit() {
 void PlatformThreadLocalStorage::OnThreadExit(void* value) {
   OnThreadExitInternal(static_cast<TlsVectorEntry*>(value));
 }
+
+// static
+void PlatformThreadLocalStorage::ForceFreeTLS() {
+  PlatformThreadLocalStorage::TLSKey key =
+      base::subtle::NoBarrier_AtomicExchange(
+          &g_native_tls_key,
+          PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES);
+  if (key == PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES)
+    return;
+  PlatformThreadLocalStorage::FreeTLS(key);
+}
 #endif  // defined(OS_WIN)
 
 }  // namespace internal
