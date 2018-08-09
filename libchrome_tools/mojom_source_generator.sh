@@ -23,12 +23,13 @@ set -e
 
 args=()
 files=()
+includes=()
+gen_dirs=()
 
 mojom_bindings_generator=""
 package=""
 output_dir=""
 generators=""
-private_mojo_root="$(pwd)/external/libchrome"
 
 # Given a path to directory or file, return the absolute path.
 get_abs_path() {
@@ -62,7 +63,7 @@ for arg in "$@"; do
     --typemap=*)
       typemap="${arg#'--typemap='}"
       typemap="$(get_abs_path ${typemap})"
-      args=("${args[@]}" "--typemap=${typemap}")
+      args+=("--typemap=${typemap}")
       ;;
     --bytecode_path=*)
       bytecode_path="${arg#'--bytecode_path='}"
@@ -75,42 +76,61 @@ for arg in "$@"; do
       srcjar="${arg#'--srcjar='}"
       srcjar="$(get_abs_path ${srcjar})"
       ;;
+    -I=*)
+      includes+=("$(get_abs_path "${arg#'-I='}")")
+      ;;
     --*)
-      args=("${args[@]}" "${arg}")
+      args+=("${arg}")
       ;;
-    *)
-      files=("${files[@]}" "$(get_abs_path ${arg})")
+    *.mojom)
+      # Add all .mojom files directly as files.
+      files+=("$(get_abs_path ${arg})")
       ;;
+    *.p)
+      # Get the gen/ dir of any pickle (.p) file so that the bindings
+      # generator
+      # can get the correct path.
+      gen_dirs+=("$(get_abs_path "${arg}" | sed -e 's@/gen/.*$@/gen@')")
   esac
 done
 
-cd "${package}"
+# Add the current package as include path, and then rewrite all the include
+# paths so that the bindings generator can relativize the paths correctly.
+includes+=("$(pwd)/${package}")
+includes=($(printf -- "%q\n" "${includes[@]}" | sed -e 's/.*/-I=&:&/'))
+
+# Remove duplicates from the list of gen/ directories that contain the pickle
+# files.
+if [[ "${#gen_dirs[@]}" -ge 1 ]]; then
+  gen_dirs=($(printf -- "--gen_dir=%q\n" "${gen_dirs[@]}" | sort -u))
+fi
+
 "${mojom_bindings_generator}" --use_bundled_pylibs precompile \
     -o "${output_dir}"
 
 for file in "${files[@]}"; do
   # Java source generations depends on zipfile that assumes the output directory
   # already exists. So, we need to create the directory beforehand.
-  rel_path="${file#`pwd`/}"
+  rel_path="${file#`pwd`/$package/}"
   rel_dir="${rel_path%/*}"
 
   mkdir -p "${output_dir}/${rel_dir}"
 
-  # The calls to mojom_bindings_generator below uses -I option to include the
-  # libmojo root directory as part of searchable directory for imports. With
-  # this, we can have a mojo file located in some arbitrary directories that
-  # imports a mojo file under external/libchrome.
   "${mojom_bindings_generator}" --use_bundled_pylibs generate \
       -o "${output_dir}" "${args[@]}" \
       --bytecode_path="${bytecode_path}" \
-      -I "${private_mojo_root}:${private_mojo_root}" \
-      --generators=${generators} "${file}"
+      "${gen_dirs[@]}" \
+      -d "${package}" \
+      "${includes[@]}" \
+      --generators="${generators}" "${file}"
   if [[ "${generators}" =~ .*c\+\+.* ]] ; then
     "${mojom_bindings_generator}" --use_bundled_pylibs generate \
         -o "${output_dir}" \
         --generate_non_variant_code "${args[@]}" \
-        -I "${private_mojo_root}:${private_mojo_root}" \
-        --bytecode_path="${bytecode_path}" --generators=${generators} \
+        "${gen_dirs[@]}" \
+        -d "${package}" \
+        "${includes[@]}" \
+        --bytecode_path="${bytecode_path}" --generators="${generators}" \
         "${file}"
   fi
   if [[ "${generators}" =~ .*java.* ]] ; then
