@@ -54,6 +54,10 @@ cc_defaults {
         "-Wall",
         "-Werror",
         "-Wno-deprecated-declarations",
+        "-Wno-implicit-fallthrough",
+        // memory_mapped_file.cc:80, json_parser.cc:264,
+        // sys_string_conversions_posix.cc:122, and
+        // icu_utf.cc:161,165 have -Wno-implicit-fallthrough.
         "-Wno-missing-field-initializers",
         "-Wno-unused-parameter",
     ],
@@ -87,10 +91,6 @@ cc_defaults {
     clang_cflags: [
         // Temporarily suppress the warnings http://b/38232827
         "-Wno-error=unused-lambda-capture",
-        "-Wno-implicit-fallthrough",
-        // memory_mapped_file.cc:80, json_parser.cc:264,
-        // sys_string_conversions_posix.cc:122, and
-        // icu_utf.cc:161,165 have -Wno-implicit-fallthrough.
     ],
 }
 
