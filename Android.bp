@@ -685,10 +685,42 @@ python_binary_host {
     defaults: ["libmojo_scripts"],
 }
 
+python_binary_host {
+    name: "merge_srcjars",
+    main: "libchrome_tools/merge_srcjars.py",
+    srcs: ["libchrome_tools/merge_srcjars.py"],
+    version: {
+        py3: {
+            enabled: true,
+        },
+        py2: {
+            enabled: false,
+        },
+    },
+}
+
+// TODO(lhchavez): Delete this once all other projects have been migrated.
 cc_prebuilt_binary {
     name: "mojom_source_generator_sh",
     srcs: ["libchrome_tools/mojom_source_generator.sh"],
     host_supported: true,
+}
+
+genrule {
+    name: "libmojo_mojom_templates",
+    cmd: "$(location mojom_bindings_generator)" +
+    "    --use_bundled_pylibs precompile" +
+    "    -o $(genDir)",
+
+    tools: [
+        "mojom_bindings_generator",
+    ],
+
+    out: [
+        "cpp_templates.zip",
+        "java_templates.zip",
+        "js_templates.zip",
+    ],
 }
 
 python_binary_host {
@@ -723,115 +755,27 @@ genrule {
     out: ["common_custom_types__type_mappings"],
 }
 
-genrule {
-    name: "libmojo_mojom_headers",
-    cmd: "$(location mojom_source_generator_sh)" +
-    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
-    "    --package=external/libchrome" +
-    "    --output_dir=$(genDir)" +
-    "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location common_custom_types__type_mappings)" +
-    "    --generators=c++" +
-    "    --use_new_wrapper_types" +
-    "    $(in)",
-
-    tools: [
-        "mojom_bindings_generator",
-        "mojom_source_generator_sh",
-    ],
-
-    tool_files: [":libmojo_common_custom_types__type_mappings"],
-
+generate_mojom_pickles {
+    name: "libmojo_mojom_pickles",
     srcs: [":libmojo_mojom_files"],
-
-    out: [
-        "ipc/ipc.mojom.h",
-        "ipc/ipc.mojom-shared.h",
-        "ipc/ipc.mojom-shared-internal.h",
-        "mojo/common/file.mojom.h",
-        "mojo/common/file.mojom-shared.h",
-        "mojo/common/file.mojom-shared-internal.h",
-        "mojo/common/file_path.mojom.h",
-        "mojo/common/file_path.mojom-shared.h",
-        "mojo/common/file_path.mojom-shared-internal.h",
-        "mojo/common/string16.mojom.h",
-        "mojo/common/string16.mojom-shared.h",
-        "mojo/common/string16.mojom-shared-internal.h",
-        "mojo/common/text_direction.mojom.h",
-        "mojo/common/text_direction.mojom-shared.h",
-        "mojo/common/text_direction.mojom-shared-internal.h",
-        "mojo/common/time.mojom.h",
-        "mojo/common/time.mojom-shared.h",
-        "mojo/common/time.mojom-shared-internal.h",
-        "mojo/common/unguessable_token.mojom.h",
-        "mojo/common/unguessable_token.mojom-shared.h",
-        "mojo/common/unguessable_token.mojom-shared-internal.h",
-        "mojo/common/values.mojom.h",
-        "mojo/common/values.mojom-shared.h",
-        "mojo/common/values.mojom-shared-internal.h",
-        "mojo/common/version.mojom.h",
-        "mojo/common/version.mojom-shared.h",
-        "mojo/common/version.mojom-shared-internal.h",
-        "mojo/public/interfaces/bindings/interface_control_messages.mojom.h",
-        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared.h",
-        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared-internal.h",
-        "mojo/public/interfaces/bindings/pipe_control_messages.mojom.h",
-        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared.h",
-        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared-internal.h",
-        "ui/gfx/geometry/mojo/geometry.mojom.h",
-        "ui/gfx/geometry/mojo/geometry.mojom-shared.h",
-        "ui/gfx/geometry/mojo/geometry.mojom-shared-internal.h",
-        "ui/gfx/range/mojo/range.mojom.h",
-        "ui/gfx/range/mojo/range.mojom-shared.h",
-        "ui/gfx/range/mojo/range.mojom-shared-internal.h",
-    ],
 }
 
-genrule {
-    name: "libmojo_mojom_srcs",
-    cmd: "$(location mojom_source_generator_sh)" +
-    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
-    "    --package=external/libchrome" +
-    "    --output_dir=$(genDir)" +
-    "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location common_custom_types__type_mappings)" +
-    "    --generators=c++" +
-    "    --use_new_wrapper_types" +
-    "    $(in)",
-
-    tools: [
-        "mojom_bindings_generator",
-        "mojom_source_generator_sh",
-    ],
-
-    tool_files: [":libmojo_common_custom_types__type_mappings"],
-
+generate_mojom_headers {
+    name: "libmojo_mojom_headers",
     srcs: [":libmojo_mojom_files"],
+    pickles: [":libmojo_mojom_pickles"],
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
+}
 
-    out: [
-        "ipc/ipc.mojom.cc",
-        "ipc/ipc.mojom-shared.cc",
-        "mojo/common/file.mojom.cc",
-        "mojo/common/file.mojom-shared.cc",
-        "mojo/common/string16.mojom.cc",
-        "mojo/common/string16.mojom-shared.cc",
-        "mojo/common/text_direction.mojom.cc",
-        "mojo/common/text_direction.mojom-shared.cc",
-        "mojo/common/time.mojom.cc",
-        "mojo/common/time.mojom-shared.cc",
-        "mojo/common/unguessable_token.mojom.cc",
-        "mojo/common/unguessable_token.mojom-shared.cc",
-        "mojo/common/version.mojom.cc",
-        "mojo/common/version.mojom-shared.cc",
-        "mojo/public/interfaces/bindings/interface_control_messages.mojom.cc",
-        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared.cc",
-        "mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc",
-        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared.cc",
-        "ui/gfx/geometry/mojo/geometry.mojom.cc",
-        "ui/gfx/geometry/mojo/geometry.mojom-shared.cc",
-        "ui/gfx/range/mojo/range.mojom.cc",
-        "ui/gfx/range/mojo/range.mojom-shared.cc",
-    ],
+generate_mojom_srcs {
+    name: "libmojo_mojom_srcs",
+    srcs: [":libmojo_mojom_files"],
+    pickles: [":libmojo_mojom_pickles"],
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
 }
 
 // TODO(hidehiko): Remove JNI for ContextUtils, after cleaning up the
@@ -875,15 +819,11 @@ cc_library_shared {
     name: "libmojo",
     vendor_available: true,
 
+    generated_sources: ["libmojo_mojom_srcs"],
     generated_headers: [
         "libmojo_jni_headers",
         "libmojo_mojom_headers",
     ],
-
-    generated_sources: [
-        "libmojo_mojom_srcs",
-    ],
-
     export_generated_headers: [
         "libmojo_jni_headers",
         "libmojo_mojom_headers",
@@ -936,29 +876,14 @@ cc_library_shared {
     export_include_dirs: ["."],
 }
 
-genrule {
+generate_mojom_srcjar {
     name: "libmojo_mojom_java_srcs",
-    cmd: "$(location mojom_source_generator_sh)" +
-    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
-    "    --package=external/libchrome" +
-    "    --output_dir=$(genDir)" +
-    "    --bytecode_path=$(genDir)" +
-    "    --typemap=$(location common_custom_types__type_mappings)" +
-    "    --generators=java" +
-    "    --use_new_wrapper_types" +
-    "    --srcjar=$(out)" +
-    "    $(in)",
-
-    tools: [
-        "mojom_bindings_generator",
-        "mojom_source_generator_sh",
-    ],
-
-    tool_files: [":libmojo_common_custom_types__type_mappings"],
-
     srcs: [":libmojo_mojom_files"],
-
-    out: ["libmojo_mojom.srcjar"],
+    pickles: [":libmojo_mojom_pickles"],
+    srcjar: "libmojo_mojom.srcjar",
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
 }
 
 java_library {
