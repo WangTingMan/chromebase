@@ -691,10 +691,10 @@ python_binary_host {
     srcs: ["libchrome_tools/merge_srcjars.py"],
     version: {
         py3: {
-            enabled: true,
+            enabled: false
         },
         py2: {
-            enabled: false,
+            enabled: true,
         },
     },
 }
