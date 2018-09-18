@@ -3,7 +3,6 @@ package libchrome
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"android/soong/android"
@@ -23,7 +22,7 @@ var (
 	pctx = android.NewPackageContext("android/soong/external/libchrome")
 
 	mojomBindingsGenerator = pctx.HostBinToolVariable("mojomBindingsGenerator", "mojom_bindings_generator")
-	mergeSrcjars           = pctx.HostBinToolVariable("mergeSrcjars", "merge_srcjars")
+	mergeZips              = pctx.HostBinToolVariable("mergeZips", "merge_zips")
 
 	generateMojomPicklesRule = pctx.StaticRule("generateMojomPicklesRule", blueprint.RuleParams{
 		Command: `${mojomBindingsGenerator}
@@ -56,9 +55,9 @@ var (
 	}, "generator", "package", "flags", "outDir", "templateDir")
 
 	mergeSrcjarsRule = pctx.StaticRule("mergeSrcjarsRule", blueprint.RuleParams{
-		Command: "${mergeSrcjars} --output=${out} ${in}",
+		Command: "${mergeZips} ${out} ${in}",
 		CommandDeps: []string{
-			"${mergeSrcjars}",
+			"${mergeZips}",
 		},
 		Description: "Merge .srcjars $in => $out",
 	})
@@ -155,12 +154,8 @@ func (p *mojomGenerationProperties) flags(ctx android.ModuleContext) string {
 	for _, typemap := range ctx.ExpandSources(p.Typemaps, nil) {
 		flags = append(flags, fmt.Sprintf("--typemap=%s", typemap.String()))
 	}
-	for _, include := range p.Includes {
-		includePath, err := filepath.Abs(include)
-		if err != nil {
-			ctx.PropertyErrorf("includes", "Failed to get the absolute path for %s: %q", include, err)
-		}
-		flags = append(flags, fmt.Sprintf("-I=%s:%s", includePath, includePath))
+	for _, include := range android.PathsForSource(ctx, p.Includes) {
+		flags = append(flags, fmt.Sprintf("-I=%s:%s", include, include))
 	}
 	for _, pickle := range p.Pickles {
 		m := android.SrcIsModule(pickle)

@@ -685,20 +685,6 @@ python_binary_host {
     defaults: ["libmojo_scripts"],
 }
 
-python_binary_host {
-    name: "merge_srcjars",
-    main: "libchrome_tools/merge_srcjars.py",
-    srcs: ["libchrome_tools/merge_srcjars.py"],
-    version: {
-        py3: {
-            enabled: false
-        },
-        py2: {
-            enabled: true,
-        },
-    },
-}
-
 // TODO(lhchavez): Delete this once all other projects have been migrated.
 cc_prebuilt_binary {
     name: "mojom_source_generator_sh",
