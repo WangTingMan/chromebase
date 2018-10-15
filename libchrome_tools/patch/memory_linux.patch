@@ -1,0 +1,17 @@
+# this file used to have a bunch of __libc_* extern definitions, android complains only about this one as missing
+
+diff --git a/base/process/memory_linux.cc b/base/process/memory_linux.cc
+index 171753c..11e482b 100644
+--- a/base/process/memory_linux.cc
++++ b/base/process/memory_linux.cc
+@@ -22,6 +22,10 @@
+ #include "third_party/tcmalloc/gperftools-2.0/chromium/src/gperftools/tcmalloc.h"
+ #endif
+ 
++extern "C" {
++void* __libc_malloc(size_t size);
++}
++
+ namespace base {
+ 
+ size_t g_oom_size = 0U;

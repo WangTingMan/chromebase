@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-define("mojo/public/js/interface_types", [
-  "mojo/public/js/core",
-], function(core) {
+(function() {
+  var internal = mojo.internal;
 
   // Constants ----------------------------------------------------------------
   var kInterfaceIdNamespaceMask = 0x80000000;
@@ -19,16 +18,25 @@ define("mojo/public/js/interface_types", [
   }
 
   InterfacePtrInfo.prototype.isValid = function() {
-    return core.isHandle(this.handle);
+    return this.handle instanceof MojoHandle;
   };
 
   InterfacePtrInfo.prototype.close = function() {
     if (!this.isValid())
       return;
 
-    core.close(this.handle);
+    this.handle.close();
     this.handle = null;
     this.version = 0;
+  };
+
+  function AssociatedInterfacePtrInfo(interfaceEndpointHandle, version) {
+    this.interfaceEndpointHandle = interfaceEndpointHandle;
+    this.version = version;
+  }
+
+  AssociatedInterfacePtrInfo.prototype.isValid = function() {
+    return this.interfaceEndpointHandle.isValid();
   };
 
   // ---------------------------------------------------------------------------
@@ -38,15 +46,27 @@ define("mojo/public/js/interface_types", [
   }
 
   InterfaceRequest.prototype.isValid = function() {
-    return core.isHandle(this.handle);
+    return this.handle instanceof MojoHandle;
   };
 
   InterfaceRequest.prototype.close = function() {
     if (!this.isValid())
       return;
 
-    core.close(this.handle);
+    this.handle.close();
     this.handle = null;
+  };
+
+  function AssociatedInterfaceRequest(interfaceEndpointHandle) {
+    this.interfaceEndpointHandle = interfaceEndpointHandle;
+  }
+
+  AssociatedInterfaceRequest.prototype.isValid = function() {
+    return this.interfaceEndpointHandle.isValid();
+  };
+
+  AssociatedInterfaceRequest.prototype.resetWithReason = function(reason) {
+    this.interfaceEndpointHandle.reset(reason);
   };
 
   function isMasterInterfaceId(interfaceId) {
@@ -57,14 +77,21 @@ define("mojo/public/js/interface_types", [
     return interfaceId !== kInvalidInterfaceId;
   }
 
-  var exports = {};
-  exports.InterfacePtrInfo = InterfacePtrInfo;
-  exports.InterfaceRequest = InterfaceRequest;
-  exports.isMasterInterfaceId = isMasterInterfaceId;
-  exports.isValidInterfaceId = isValidInterfaceId;
-  exports.kInvalidInterfaceId = kInvalidInterfaceId;
-  exports.kMasterInterfaceId = kMasterInterfaceId;
-  exports.kInterfaceIdNamespaceMask = kInterfaceIdNamespaceMask;
+  function hasInterfaceIdNamespaceBitSet(interfaceId) {
+    if (interfaceId >= 2 * kInterfaceIdNamespaceMask) {
+      throw new Error("Interface ID should be a 32-bit unsigned integer.");
+    }
+    return interfaceId >= kInterfaceIdNamespaceMask;
+  }
 
-  return exports;
-});
+  mojo.InterfacePtrInfo = InterfacePtrInfo;
+  mojo.InterfaceRequest = InterfaceRequest;
+  mojo.AssociatedInterfacePtrInfo = AssociatedInterfacePtrInfo;
+  mojo.AssociatedInterfaceRequest = AssociatedInterfaceRequest;
+  internal.isMasterInterfaceId = isMasterInterfaceId;
+  internal.isValidInterfaceId = isValidInterfaceId;
+  internal.hasInterfaceIdNamespaceBitSet = hasInterfaceIdNamespaceBitSet;
+  internal.kInvalidInterfaceId = kInvalidInterfaceId;
+  internal.kMasterInterfaceId = kMasterInterfaceId;
+  internal.kInterfaceIdNamespaceMask = kInterfaceIdNamespaceMask;
+})();

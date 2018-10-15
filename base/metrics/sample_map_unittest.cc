@@ -81,14 +81,14 @@ TEST(SampleMapIteratorTest, IterateTest) {
   std::unique_ptr<SampleCountIterator> it = samples.Iterator();
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
   EXPECT_EQ(1, min);
   EXPECT_EQ(2, max);
   EXPECT_EQ(100, count);
-  EXPECT_FALSE(it->GetBucketIndex(NULL));
+  EXPECT_FALSE(it->GetBucketIndex(nullptr));
 
   it->Next();
   it->Get(&min, &max, &count);
@@ -125,7 +125,7 @@ TEST(SampleMapIteratorTest, SkipEmptyRanges) {
   EXPECT_FALSE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
@@ -153,7 +153,7 @@ TEST(SampleMapIteratorDeathTest, IterateDoneTest) {
   EXPECT_TRUE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
   EXPECT_DCHECK_DEATH(it->Get(&min, &max, &count));
 

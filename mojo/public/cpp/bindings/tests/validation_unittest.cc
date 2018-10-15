@@ -10,7 +10,9 @@
 #include <utility>
 #include <vector>
 
+#include "base/macros.h"
 #include "base/message_loop/message_loop.h"
+#include "base/numerics/safe_math.h"
 #include "base/run_loop.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "mojo/public/c/system/macros.h"
@@ -23,6 +25,7 @@
 #include "mojo/public/cpp/bindings/message_header_validator.h"
 #include "mojo/public/cpp/bindings/tests/validation_test_input_parser.h"
 #include "mojo/public/cpp/system/core.h"
+#include "mojo/public/cpp/system/message.h"
 #include "mojo/public/cpp/test_support/test_support.h"
 #include "mojo/public/interfaces/bindings/tests/validation_test_associated_interfaces.mojom.h"
 #include "mojo/public/interfaces/bindings/tests/validation_test_interfaces.mojom.h"
@@ -31,6 +34,25 @@
 namespace mojo {
 namespace test {
 namespace {
+
+Message CreateRawMessage(size_t size) {
+  ScopedMessageHandle handle;
+  MojoResult rv = CreateMessage(&handle);
+  DCHECK_EQ(MOJO_RESULT_OK, rv);
+  DCHECK(handle.is_valid());
+
+  DCHECK(base::IsValueInRangeForNumericType<uint32_t>(size));
+  MojoAppendMessageDataOptions options;
+  options.struct_size = sizeof(options);
+  options.flags = MOJO_APPEND_MESSAGE_DATA_FLAG_COMMIT_SIZE;
+  void* buffer;
+  uint32_t buffer_size;
+  rv = MojoAppendMessageData(handle->value(), static_cast<uint32_t>(size),
+                             nullptr, 0, &options, &buffer, &buffer_size);
+  DCHECK_EQ(MOJO_RESULT_OK, rv);
+
+  return Message(std::move(handle));
+}
 
 template <typename T>
 void Append(std::vector<uint8_t>* data_vector, T data) {
@@ -150,8 +172,7 @@ bool ReadTestCase(const std::string& test,
     return false;
   }
 
-  message->Initialize(static_cast<uint32_t>(data.size()),
-                      false /* zero_initialized */);
+  *message = CreateRawMessage(data.size());
   if (!data.empty())
     memcpy(message->mutable_data(), &data[0], data.size());
   message->mutable_handles()->resize(num_handles);
@@ -443,8 +464,7 @@ TEST_F(ValidationIntegrationTest, InterfacePtr) {
 TEST_F(ValidationIntegrationTest, Binding) {
   IntegrationTestInterfaceImpl interface_impl;
   Binding<IntegrationTestInterface> binding(
-      &interface_impl,
-      MakeRequest<IntegrationTestInterface>(testee_endpoint()));
+      &interface_impl, IntegrationTestInterfaceRequest(testee_endpoint()));
   binding.EnableTestingMode();
 
   RunValidationTests("integration_intf_rqst", test_message_receiver());

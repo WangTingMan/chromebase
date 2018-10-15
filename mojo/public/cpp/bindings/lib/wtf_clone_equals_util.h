@@ -8,11 +8,10 @@
 #include <type_traits>
 
 #include "mojo/public/cpp/bindings/clone_traits.h"
-#include "mojo/public/cpp/bindings/lib/equals_traits.h"
-#include "third_party/WebKit/Source/wtf/HashMap.h"
-#include "third_party/WebKit/Source/wtf/Optional.h"
-#include "third_party/WebKit/Source/wtf/Vector.h"
-#include "third_party/WebKit/Source/wtf/text/WTFString.h"
+#include "mojo/public/cpp/bindings/equals_traits.h"
+#include "third_party/blink/renderer/platform/wtf/hash_map.h"
+#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
+#include "third_party/blink/renderer/platform/wtf/vector.h"
 
 namespace mojo {
 
@@ -20,7 +19,7 @@ template <typename T>
 struct CloneTraits<WTF::Vector<T>, false> {
   static WTF::Vector<T> Clone(const WTF::Vector<T>& input) {
     WTF::Vector<T> result;
-    result.reserveCapacity(input.size());
+    result.ReserveCapacity(input.size());
     for (const auto& element : input)
       result.push_back(mojo::Clone(element));
 
@@ -32,14 +31,12 @@ template <typename K, typename V>
 struct CloneTraits<WTF::HashMap<K, V>, false> {
   static WTF::HashMap<K, V> Clone(const WTF::HashMap<K, V>& input) {
     WTF::HashMap<K, V> result;
-    auto input_end = input.end();
-    for (auto it = input.begin(); it != input_end; ++it)
-      result.add(mojo::Clone(it->key), mojo::Clone(it->value));
+    for (const auto& element : input)
+      result.insert(mojo::Clone(element.key), mojo::Clone(element.value));
+
     return result;
   }
 };
-
-namespace internal {
 
 template <typename T>
 struct EqualsTraits<WTF::Vector<T>, false> {
@@ -47,7 +44,7 @@ struct EqualsTraits<WTF::Vector<T>, false> {
     if (a.size() != b.size())
       return false;
     for (size_t i = 0; i < a.size(); ++i) {
-      if (!internal::Equals(a[i], b[i]))
+      if (!mojo::Equals(a[i], b[i]))
         return false;
     }
     return true;
@@ -65,14 +62,13 @@ struct EqualsTraits<WTF::HashMap<K, V>, false> {
 
     for (auto iter = a.begin(); iter != a_end; ++iter) {
       auto b_iter = b.find(iter->key);
-      if (b_iter == b_end || !internal::Equals(iter->value, b_iter->value))
+      if (b_iter == b_end || !mojo::Equals(iter->value, b_iter->value))
         return false;
     }
     return true;
   }
 };
 
-}  // namespace internal
 }  // namespace mojo
 
 #endif  // MOJO_PUBLIC_CPP_BINDINGS_LIB_WTF_CLONE_EQUALS_UTIL_H_

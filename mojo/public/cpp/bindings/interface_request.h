@@ -11,7 +11,6 @@
 #include "base/macros.h"
 #include "base/optional.h"
 #include "base/single_thread_task_runner.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "mojo/public/cpp/bindings/disconnect_reason.h"
 #include "mojo/public/cpp/bindings/interface_ptr.h"
 #include "mojo/public/cpp/bindings/pipe_control_message_proxy.h"
@@ -33,18 +32,8 @@ class InterfaceRequest {
   InterfaceRequest() {}
   InterfaceRequest(decltype(nullptr)) {}
 
-  // Creates a new message pipe over which Interface is to be served, binding
-  // the specified InterfacePtr to one end of the message pipe and this
-  // InterfaceRequest to the other. For example usage, see comments on
-  // MakeRequest(InterfacePtr*) below.
-  explicit InterfaceRequest(InterfacePtr<Interface>* ptr,
-                            scoped_refptr<base::SingleThreadTaskRunner> runner =
-                                base::ThreadTaskRunnerHandle::Get()) {
-    MessagePipe pipe;
-    ptr->Bind(InterfacePtrInfo<Interface>(std::move(pipe.handle0), 0u),
-              std::move(runner));
-    Bind(std::move(pipe.handle1));
-  }
+  explicit InterfaceRequest(ScopedMessagePipeHandle handle)
+      : handle_(std::move(handle)) {}
 
   // Takes the message pipe from another InterfaceRequest.
   InterfaceRequest(InterfaceRequest&& other) {
@@ -62,13 +51,10 @@ class InterfaceRequest {
     return *this;
   }
 
-  // Binds the request to a message pipe over which Interface is to be
-  // requested.  If the request is already bound to a message pipe, the current
-  // message pipe will be closed.
-  void Bind(ScopedMessagePipeHandle handle) { handle_ = std::move(handle); }
-
   // Indicates whether the request currently contains a valid message pipe.
   bool is_pending() const { return handle_.is_valid(); }
+
+  explicit operator bool() const { return handle_.is_valid(); }
 
   // Removes the message pipe from the request and returns it.
   ScopedMessagePipeHandle PassMessagePipe() { return std::move(handle_); }
@@ -101,16 +87,6 @@ class InterfaceRequest {
 
   DISALLOW_COPY_AND_ASSIGN(InterfaceRequest);
 };
-
-// Makes an InterfaceRequest bound to the specified message pipe. If |handle|
-// is empty or invalid, the resulting InterfaceRequest will represent the
-// absence of a request.
-template <typename Interface>
-InterfaceRequest<Interface> MakeRequest(ScopedMessagePipeHandle handle) {
-  InterfaceRequest<Interface> request;
-  request.Bind(std::move(handle));
-  return std::move(request);
-}
 
 // Creates a new message pipe over which Interface is to be served. Binds the
 // specified InterfacePtr to one end of the message pipe, and returns an
@@ -158,9 +134,21 @@ InterfaceRequest<Interface> MakeRequest(ScopedMessagePipeHandle handle) {
 template <typename Interface>
 InterfaceRequest<Interface> MakeRequest(
     InterfacePtr<Interface>* ptr,
-    scoped_refptr<base::SingleThreadTaskRunner> runner =
-        base::ThreadTaskRunnerHandle::Get()) {
-  return InterfaceRequest<Interface>(ptr, runner);
+    scoped_refptr<base::SingleThreadTaskRunner> runner = nullptr) {
+  MessagePipe pipe;
+  ptr->Bind(InterfacePtrInfo<Interface>(std::move(pipe.handle0), 0u),
+            std::move(runner));
+  return InterfaceRequest<Interface>(std::move(pipe.handle1));
+}
+
+// Similar to the constructor above, but binds one end of the message pipe to
+// an InterfacePtrInfo instance.
+template <typename Interface>
+InterfaceRequest<Interface> MakeRequest(InterfacePtrInfo<Interface>* ptr_info) {
+  MessagePipe pipe;
+  ptr_info->set_handle(std::move(pipe.handle0));
+  ptr_info->set_version(0u);
+  return InterfaceRequest<Interface>(std::move(pipe.handle1));
 }
 
 // Fuses an InterfaceRequest<T> endpoint with an InterfacePtrInfo<T> endpoint.

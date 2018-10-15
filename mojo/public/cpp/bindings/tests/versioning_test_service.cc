@@ -11,7 +11,7 @@
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "mojo/public/interfaces/bindings/tests/versioning_test_service.mojom.h"
 #include "services/service_manager/public/c/main.h"
-#include "services/service_manager/public/cpp/interface_factory.h"
+#include "services/service_manager/public/cpp/binder_registry.h"
 #include "services/service_manager/public/cpp/service.h"
 #include "services/service_manager/public/cpp/service_runner.h"
 
@@ -94,25 +94,28 @@ class HumanResourceDatabaseImpl : public HumanResourceDatabase {
   StrongBinding<HumanResourceDatabase> strong_binding_;
 };
 
-class HumanResourceSystemServer
-    : public service_manager::Service,
-      public InterfaceFactory<HumanResourceDatabase> {
+class HumanResourceSystemServer : public service_manager::Service {
  public:
-  HumanResourceSystemServer() {}
-
-  // service_manager::Service implementation.
-  bool OnConnect(Connection* connection) override {
-    connection->AddInterface<HumanResourceDatabase>(this);
-    return true;
+  HumanResourceSystemServer() {
+    registry_.AddInterface<HumanResourceDatabase>(
+        base::Bind(&HumanResourceSystemServer::Create, base::Unretained(this)));
   }
 
-  // InterfaceFactory<HumanResourceDatabase> implementation.
-  void Create(Connection* connection,
-              InterfaceRequest<HumanResourceDatabase> request) override {
+  // service_manager::Service implementation.
+  void OnBindInterface(const service_manager::BindSourceInfo& source_info,
+                       const std::string& interface_name,
+                       mojo::ScopedMessagePipeHandle interface_pipe) override {
+    registry_.BindInterface(interface_name, std::move(interface_pipe));
+  }
+
+  void Create(HumanResourceDatabaseRequest request) {
     // It will be deleted automatically when the underlying pipe encounters a
     // connection error.
     new HumanResourceDatabaseImpl(std::move(request));
   }
+
+ private:
+  service_manager::BinderRegistry registry_;
 };
 
 }  // namespace versioning

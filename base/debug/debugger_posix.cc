@@ -122,7 +122,7 @@ bool BeingDebugged() {
   return being_debugged;
 }
 
-#elif defined(OS_LINUX) || defined(OS_ANDROID)
+#elif defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_AIX)
 
 // We can look in /proc/self/status for TracerPid.  We are likely used in crash
 // handling, so we are careful not to use the heap or have side effects.
@@ -159,6 +159,13 @@ bool BeingDebugged() {
   // Our pid is 0 without a debugger, assume this for any pid starting with 0.
   pid_index += tracer.size();
   return pid_index < status.size() && status[pid_index] != '0';
+}
+
+#elif defined(OS_FUCHSIA)
+
+bool BeingDebugged() {
+  // TODO(fuchsia): No gdb/gdbserver in the SDK yet.
+  return false;
 }
 
 #else

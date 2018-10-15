@@ -1,0 +1,65 @@
+diff --git a/base/observer_list_unittest.cc b/base/observer_list_unittest.cc
+index 1470b90..50d7e7e 100644
+--- a/base/observer_list_unittest.cc
++++ b/base/observer_list_unittest.cc
+@@ -17,9 +17,11 @@
+ #include "base/run_loop.h"
+ #include "base/sequenced_task_runner.h"
+ #include "base/single_thread_task_runner.h"
++#include "base/strings/string_piece.h"
+ #include "base/synchronization/waitable_event.h"
+-#include "base/task_scheduler/post_task.h"
+-#include "base/task_scheduler/task_scheduler.h"
++// TaskScheduler not supported in libchrome
++// #include "base/task_scheduler/post_task.h"
++// #include "base/task_scheduler/task_scheduler.h"
+ #include "base/test/gtest_util.h"
+ #include "base/test/scoped_task_environment.h"
+ #include "base/threading/platform_thread.h"
+@@ -690,6 +692,8 @@ class SequenceVerificationObserver : public Foo {
+ }  // namespace
+ 
+ // Verify that observers are notified on the correct sequence.
++// TaskScheduler not supported in libchrome
++#if 0
+ TEST(ObserverListThreadSafeTest, NotificationOnValidSequence) {
+   test::ScopedTaskEnvironment scoped_task_environment;
+ 
+@@ -717,9 +721,12 @@ TEST(ObserverListThreadSafeTest, NotificationOnValidSequence) {
+   EXPECT_TRUE(observer_1.called_on_valid_sequence());
+   EXPECT_TRUE(observer_2.called_on_valid_sequence());
+ }
++#endif
+ 
+ // Verify that when an observer is added to a NOTIFY_ALL ObserverListThreadSafe
+ // from a notification, it is itself notified.
++// TaskScheduler not supported in libchrome
++#if 0
+ TEST(ObserverListThreadSafeTest, AddObserverFromNotificationNotifyAll) {
+   test::ScopedTaskEnvironment scoped_task_environment;
+   auto observer_list = MakeRefCounted<ObserverListThreadSafe<Foo>>();
+@@ -737,6 +744,7 @@ TEST(ObserverListThreadSafeTest, AddObserverFromNotificationNotifyAll) {
+ 
+   EXPECT_EQ(1, observer_added_from_notification.GetValue());
+ }
++#endif
+ 
+ namespace {
+ 
+@@ -769,6 +777,8 @@ class RemoveWhileNotificationIsRunningObserver : public Foo {
+ 
+ // Verify that there is no crash when an observer is removed while it is being
+ // notified.
++// TaskScheduler not supported in libchrome
++#if 0
+ TEST(ObserverListThreadSafeTest, RemoveWhileNotificationIsRunning) {
+   auto observer_list = MakeRefCounted<ObserverListThreadSafe<Foo>>();
+   RemoveWhileNotificationIsRunningObserver observer;
+@@ -793,6 +803,7 @@ TEST(ObserverListThreadSafeTest, RemoveWhileNotificationIsRunning) {
+ 
+   observer.Unblock();
+ }
++#endif
+ 
+ TEST(ObserverListTest, Existing) {
+   ObserverList<Foo> observer_list(ObserverListPolicy::EXISTING_ONLY);

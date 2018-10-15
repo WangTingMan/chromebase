@@ -9,8 +9,8 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "mojo/public/cpp/bindings/lib/message_builder.h"
 #include "mojo/public/cpp/bindings/lib/serialization.h"
+#include "mojo/public/cpp/bindings/message.h"
 #include "mojo/public/interfaces/bindings/pipe_control_messages.mojom.h"
 
 namespace mojo {
@@ -18,21 +18,16 @@ namespace {
 
 Message ConstructRunOrClosePipeMessage(
     pipe_control::RunOrClosePipeInputPtr input_ptr) {
-  internal::SerializationContext context;
-
   auto params_ptr = pipe_control::RunOrClosePipeMessageParams::New();
   params_ptr->input = std::move(input_ptr);
 
-  size_t size = internal::PrepareToSerialize<
-      pipe_control::RunOrClosePipeMessageParamsDataView>(params_ptr, &context);
-  internal::MessageBuilder builder(pipe_control::kRunOrClosePipeMessageId, 0,
-                                   size, 0);
-
-  pipe_control::internal::RunOrClosePipeMessageParams_Data* params = nullptr;
+  Message message(pipe_control::kRunOrClosePipeMessageId, 0, 0, 0, nullptr);
+  internal::SerializationContext context;
+  pipe_control::internal::RunOrClosePipeMessageParams_Data::BufferWriter params;
   internal::Serialize<pipe_control::RunOrClosePipeMessageParamsDataView>(
-      params_ptr, builder.buffer(), &params, &context);
-  builder.message()->set_interface_id(kInvalidInterfaceId);
-  return std::move(*builder.message());
+      params_ptr, message.payload_buffer(), &params, &context);
+  message.set_interface_id(kInvalidInterfaceId);
+  return message;
 }
 
 }  // namespace

@@ -28,14 +28,13 @@
 #if defined(OS_FREEBSD)
 #include <sys/param.h>
 #include <sys/sysctl.h>
-#elif defined(OS_SOLARIS)
+#elif defined(OS_SOLARIS) || defined(OS_AIX)
 #include <stdlib.h>
 #endif
 
 namespace base {
 
 bool PathProviderPosix(int key, FilePath* result) {
-  FilePath path;
   switch (key) {
     case FILE_EXE:
     case FILE_MODULE: {  // TODO(evanm): is this correct?
@@ -68,7 +67,7 @@ bool PathProviderPosix(int key, FilePath* result) {
       }
       *result = FilePath(bin_dir);
       return true;
-#elif defined(OS_OPENBSD)
+#elif defined(OS_OPENBSD) || defined(OS_AIX)
       // There is currently no way to get the executable path on OpenBSD
       char* cpath;
       if ((cpath = getenv("CHROME_EXE_PATH")) != NULL)
@@ -85,6 +84,7 @@ bool PathProviderPosix(int key, FilePath* result) {
       // tree configurations (sub-project builds, gyp --output_dir, etc.)
       std::unique_ptr<Environment> env(Environment::Create());
       std::string cr_source_root;
+      FilePath path;
       if (env->GetVar("CR_SOURCE_ROOT", &cr_source_root)) {
         path = FilePath(cr_source_root);
         if (PathExists(path)) {

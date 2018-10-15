@@ -50,20 +50,16 @@ enum JSONParserOptions {
   // Allows commas to exist after the last element in structures.
   JSON_ALLOW_TRAILING_COMMAS = 1 << 0,
 
-  // The parser can perform optimizations by placing hidden data in the root of
-  // the JSON object, which speeds up certain operations on children. However,
-  // if the child is Remove()d from root, it would result in use-after-free
-  // unless it is DeepCopy()ed or this option is used.
-  JSON_DETACHABLE_CHILDREN = 1 << 1,
-
   // If set the parser replaces invalid characters with the Unicode replacement
   // character (U+FFFD). If not set, invalid characters trigger a hard error and
   // parsing fails.
-  JSON_REPLACE_INVALID_CHARACTERS = 1 << 2,
+  JSON_REPLACE_INVALID_CHARACTERS = 1 << 1,
 };
 
 class BASE_EXPORT JSONReader {
  public:
+  static const int kStackMaxDepth;
+
   // Error codes during parsing.
   enum JsonParseError {
     JSON_NO_ERROR = 0,
@@ -75,6 +71,7 @@ class BASE_EXPORT JSONReader {
     JSON_UNEXPECTED_DATA_AFTER_ROOT,
     JSON_UNSUPPORTED_ENCODING,
     JSON_UNQUOTED_DICTIONARY_KEY,
+    JSON_TOO_LARGE,
     JSON_PARSE_ERROR_COUNT
   };
 
@@ -87,12 +84,10 @@ class BASE_EXPORT JSONReader {
   static const char kUnexpectedDataAfterRoot[];
   static const char kUnsupportedEncoding[];
   static const char kUnquotedDictionaryKey[];
+  static const char kInputTooLarge[];
 
-  // Constructs a reader with the default options, JSON_PARSE_RFC.
-  JSONReader();
-
-  // Constructs a reader with custom options.
-  explicit JSONReader(int options);
+  // Constructs a reader.
+  JSONReader(int options = JSON_PARSE_RFC, int max_depth = kStackMaxDepth);
 
   ~JSONReader();
 
@@ -100,17 +95,16 @@ class BASE_EXPORT JSONReader {
   // If |json| is not a properly formed JSON string, returns nullptr.
   // Wrap this in base::FooValue::From() to check the Value is of type Foo and
   // convert to a FooValue at the same time.
-  static std::unique_ptr<Value> Read(StringPiece json);
-
-  // Same as Read() above, but the parser respects the given |options|.
-  static std::unique_ptr<Value> Read(StringPiece json, int options);
+  static std::unique_ptr<Value> Read(StringPiece json,
+                                     int options = JSON_PARSE_RFC,
+                                     int max_depth = kStackMaxDepth);
 
   // Reads and parses |json| like Read(). |error_code_out| and |error_msg_out|
   // are optional. If specified and nullptr is returned, they will be populated
   // an error code and a formatted error message (including error location if
   // appropriate). Otherwise, they will be unmodified.
   static std::unique_ptr<Value> ReadAndReturnError(
-      const StringPiece& json,
+      StringPiece json,
       int options,  // JSONParserOptions
       int* error_code_out,
       std::string* error_msg_out,

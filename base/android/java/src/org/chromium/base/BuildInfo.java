@@ -5,12 +5,12 @@
 package org.chromium.base;
 
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
-import android.os.StrictMode;
+import android.os.Build.VERSION;
+import android.text.TextUtils;
 
 import org.chromium.base.annotations.CalledByNative;
 
@@ -22,122 +22,144 @@ public class BuildInfo {
     private static final String TAG = "BuildInfo";
     private static final int MAX_FINGERPRINT_LENGTH = 128;
 
+    private static PackageInfo sBrowserPackageInfo;
+    private static boolean sInitialized;
+
+    /** The application name (e.g. "Chrome"). For WebView, this is name of the embedding app. */
+    public final String hostPackageLabel;
+    /** By default: same as versionCode. For WebView: versionCode of the embedding app. */
+    public final int hostVersionCode;
+    /** The packageName of Chrome/WebView. Use application context for host app packageName. */
+    public final String packageName;
+    /** The versionCode of the apk. */
+    public final int versionCode;
+    /** The versionName of Chrome/WebView. Use application context for host app versionName. */
+    public final String versionName;
+    /** Result of PackageManager.getInstallerPackageName(). Never null, but may be "". */
+    public final String installerPackageName;
+    /** The versionCode of Play Services (for crash reporting). */
+    public final String gmsVersionCode;
+    /** Formatted ABI string (for crash reporting). */
+    public final String abiString;
+    /** Truncated version of Build.FINGERPRINT (for crash reporting). */
+    public final String androidBuildFingerprint;
+    /** A string that is different each time the apk changes. */
+    public final String extractedFileSuffix;
+    /** Whether or not the device has apps installed for using custom themes. */
+    public final String customThemes;
+    /** Product version as stored in Android resources. */
+    public final String resourcesVersion;
+
+    private static class Holder { private static BuildInfo sInstance = new BuildInfo(); }
+
+    @CalledByNative
+    private static String[] getAll() {
+        BuildInfo buildInfo = getInstance();
+        String hostPackageName = ContextUtils.getApplicationContext().getPackageName();
+        return new String[] {
+                Build.BRAND, Build.DEVICE, Build.ID, Build.MANUFACTURER, Build.MODEL,
+                String.valueOf(Build.VERSION.SDK_INT), Build.TYPE, Build.BOARD, hostPackageName,
+                String.valueOf(buildInfo.hostVersionCode), buildInfo.hostPackageLabel,
+                buildInfo.packageName, String.valueOf(buildInfo.versionCode), buildInfo.versionName,
+                buildInfo.androidBuildFingerprint, buildInfo.gmsVersionCode,
+                buildInfo.installerPackageName, buildInfo.abiString, BuildConfig.FIREBASE_APP_ID,
+                buildInfo.customThemes, buildInfo.resourcesVersion, buildInfo.extractedFileSuffix,
+                isAtLeastP() ? "1" : "0",
+        };
+    }
+
+    private static String nullToEmpty(CharSequence seq) {
+        return seq == null ? "" : seq.toString();
+    }
+
     /**
-     * BuildInfo is a static utility class and therefore shouldn't be instantiated.
+     * @param packageInfo Package for Chrome/WebView (as opposed to host app).
      */
-    private BuildInfo() {}
-
-    @CalledByNative
-    public static String getDevice() {
-        return Build.DEVICE;
+    public static void setBrowserPackageInfo(PackageInfo packageInfo) {
+        assert !sInitialized;
+        sBrowserPackageInfo = packageInfo;
     }
 
-    @CalledByNative
-    public static String getBrand() {
-        return Build.BRAND;
+    public static BuildInfo getInstance() {
+        return Holder.sInstance;
     }
 
-    @CalledByNative
-    public static String getAndroidBuildId() {
-        return Build.ID;
-    }
-
-    /**
-     * @return The build fingerprint for the current Android install.  The value is truncated to a
-     * 128 characters as this is used for crash and UMA reporting, which should avoid huge
-     * strings.
-     */
-    @CalledByNative
-    public static String getAndroidBuildFingerprint() {
-        return Build.FINGERPRINT.substring(
-                0, Math.min(Build.FINGERPRINT.length(), MAX_FINGERPRINT_LENGTH));
-    }
-
-    @CalledByNative
-    public static String getDeviceManufacturer() {
-        return Build.MANUFACTURER;
-    }
-
-    @CalledByNative
-    public static String getDeviceModel() {
-        return Build.MODEL;
-    }
-
-    @CalledByNative
-    public static String getGMSVersionCode() {
-        String msg = "gms versionCode not available.";
+    private BuildInfo() {
+        sInitialized = true;
         try {
-            PackageManager packageManager =
-                    ContextUtils.getApplicationContext().getPackageManager();
-            PackageInfo packageInfo = packageManager.getPackageInfo("com.google.android.gms", 0);
-            msg = Integer.toString(packageInfo.versionCode);
-        } catch (NameNotFoundException e) {
-            Log.d(TAG, "GMS package is not found.", e);
-        }
-        return msg;
-    }
-
-    @CalledByNative
-    public static String getPackageVersionCode() {
-        String msg = "versionCode not available.";
-        try {
-            PackageManager pm = ContextUtils.getApplicationContext().getPackageManager();
-            PackageInfo pi = pm.getPackageInfo(getPackageName(), 0);
-            msg = "";
-            if (pi.versionCode > 0) {
-                msg = Integer.toString(pi.versionCode);
+            Context appContext = ContextUtils.getApplicationContext();
+            String hostPackageName = appContext.getPackageName();
+            PackageManager pm = appContext.getPackageManager();
+            PackageInfo pi = pm.getPackageInfo(hostPackageName, 0);
+            hostVersionCode = pi.versionCode;
+            if (sBrowserPackageInfo != null) {
+                packageName = sBrowserPackageInfo.packageName;
+                versionCode = sBrowserPackageInfo.versionCode;
+                versionName = nullToEmpty(sBrowserPackageInfo.versionName);
+                sBrowserPackageInfo = null;
+            } else {
+                packageName = hostPackageName;
+                versionCode = hostVersionCode;
+                versionName = nullToEmpty(pi.versionName);
             }
-        } catch (NameNotFoundException e) {
-            Log.d(TAG, msg);
-        }
-        return msg;
-    }
 
-    @CalledByNative
-    public static String getPackageVersionName() {
-        String msg = "versionName not available";
-        try {
-            PackageManager pm = ContextUtils.getApplicationContext().getPackageManager();
-            PackageInfo pi = pm.getPackageInfo(getPackageName(), 0);
-            msg = "";
-            if (pi.versionName != null) {
-                msg = pi.versionName;
+            hostPackageLabel = nullToEmpty(pm.getApplicationLabel(pi.applicationInfo));
+            installerPackageName = nullToEmpty(pm.getInstallerPackageName(packageName));
+
+            PackageInfo gmsPackageInfo = null;
+            try {
+                gmsPackageInfo = pm.getPackageInfo("com.google.android.gms", 0);
+            } catch (NameNotFoundException e) {
+                Log.d(TAG, "GMS package is not found.", e);
             }
+            gmsVersionCode = gmsPackageInfo != null ? String.valueOf(gmsPackageInfo.versionCode)
+                                                    : "gms versionCode not available.";
+
+            String hasCustomThemes = "true";
+            try {
+                // Substratum is a theme engine that enables users to use custom themes provided
+                // by theme apps. Sometimes these can cause crashs if not installed correctly.
+                // These crashes can be difficult to debug, so knowing if the theme manager is
+                // present on the device is useful (http://crbug.com/820591).
+                pm.getPackageInfo("projekt.substratum", 0);
+            } catch (NameNotFoundException e) {
+                hasCustomThemes = "false";
+            }
+            customThemes = hasCustomThemes;
+
+            String currentResourcesVersion = "Not Enabled";
+            // Controlled by target specific build flags.
+            if (BuildConfig.R_STRING_PRODUCT_VERSION != 0) {
+                try {
+                    // This value can be compared with the actual product version to determine if
+                    // corrupted resources were the cause of a crash. This can happen if the app
+                    // loads resources from the outdated package  during an update
+                    // (http://crbug.com/820591).
+                    currentResourcesVersion = ContextUtils.getApplicationContext().getString(
+                            BuildConfig.R_STRING_PRODUCT_VERSION);
+                } catch (Exception e) {
+                    currentResourcesVersion = "Not found";
+                }
+            }
+            resourcesVersion = currentResourcesVersion;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                abiString = TextUtils.join(", ", Build.SUPPORTED_ABIS);
+            } else {
+                abiString = String.format("ABI1: %s, ABI2: %s", Build.CPU_ABI, Build.CPU_ABI2);
+            }
+
+            // Use lastUpdateTime when developing locally, since versionCode does not normally
+            // change in this case.
+            long version = versionCode > 10 ? versionCode : pi.lastUpdateTime;
+            extractedFileSuffix = String.format("@%x", version);
+
+            // The value is truncated, as this is used for crash and UMA reporting.
+            androidBuildFingerprint = Build.FINGERPRINT.substring(
+                    0, Math.min(Build.FINGERPRINT.length(), MAX_FINGERPRINT_LENGTH));
         } catch (NameNotFoundException e) {
-            Log.d(TAG, msg);
+            throw new RuntimeException(e);
         }
-        return msg;
-    }
-
-    @CalledByNative
-    public static String getPackageLabel() {
-        // Third-party code does disk read on the getApplicationInfo call. http://crbug.com/614343
-        StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
-        try {
-            PackageManager packageManager =
-                    ContextUtils.getApplicationContext().getPackageManager();
-            ApplicationInfo appInfo = packageManager.getApplicationInfo(
-                    getPackageName(), PackageManager.GET_META_DATA);
-            CharSequence label = packageManager.getApplicationLabel(appInfo);
-            return label != null ? label.toString() : "";
-        } catch (NameNotFoundException e) {
-            return "";
-        } finally {
-            StrictMode.setThreadPolicy(oldPolicy);
-        }
-    }
-
-    @CalledByNative
-    public static String getPackageName() {
-        if (ContextUtils.getApplicationContext() == null) {
-            return "";
-        }
-        return ContextUtils.getApplicationContext().getPackageName();
-    }
-
-    @CalledByNative
-    public static String getBuildType() {
-        return Build.TYPE;
     }
 
     /**
@@ -147,25 +169,25 @@ public class BuildInfo {
         return "eng".equals(Build.TYPE) || "userdebug".equals(Build.TYPE);
     }
 
-    @CalledByNative
-    public static int getSdkInt() {
-        return Build.VERSION.SDK_INT;
+    // The markers Begin:BuildCompat and End:BuildCompat delimit code
+    // that is autogenerated from Android sources.
+    // Begin:BuildCompat P
+
+    /**
+     * Checks if the device is running on a pre-release version of Android P or newer.
+     * <p>
+     * @return {@code true} if P APIs are available for use, {@code false} otherwise
+     */
+    public static boolean isAtLeastP() {
+        return VERSION.SDK_INT >= 28;
     }
 
     /**
-     * @return Whether the current device is running Android O release or newer.
+     * Checks if the application targets at least released SDK P
      */
-    public static boolean isAtLeastO() {
-        return !"REL".equals(Build.VERSION.CODENAME)
-                && ("O".equals(Build.VERSION.CODENAME) || Build.VERSION.CODENAME.startsWith("OMR"));
+    public static boolean targetsAtLeastP() {
+        return ContextUtils.getApplicationContext().getApplicationInfo().targetSdkVersion >= 28;
     }
 
-    /**
-     * @return Whether the current app targets the SDK for at least O
-     */
-    public static boolean targetsAtLeastO(Context appContext) {
-        return isAtLeastO()
-                && appContext.getApplicationInfo().targetSdkVersion
-                == Build.VERSION_CODES.CUR_DEVELOPMENT;
-    }
+    // End:BuildCompat
 }

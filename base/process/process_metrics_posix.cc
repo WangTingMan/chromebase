@@ -7,12 +7,21 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 #include "base/logging.h"
 #include "build/build_config.h"
+
+#if !defined(OS_FUCHSIA)
+#include <sys/resource.h>
+#endif
+
+#if defined(OS_MACOSX)
+#include <malloc/malloc.h>
+#else
+#include <malloc.h>
+#endif
 
 namespace base {
 
@@ -23,7 +32,9 @@ int64_t TimeValToMicroseconds(const struct timeval& tv) {
   return ret;
 }
 
-ProcessMetrics::~ProcessMetrics() { }
+ProcessMetrics::~ProcessMetrics() = default;
+
+#if !defined(OS_FUCHSIA)
 
 #if defined(OS_LINUX)
 static const rlim_t kSystemDefaultMaxFds = 8192;
@@ -39,6 +50,8 @@ static const rlim_t kSystemDefaultMaxFds = 1024;
 static const rlim_t kSystemDefaultMaxFds = 256;
 #elif defined(OS_ANDROID)
 static const rlim_t kSystemDefaultMaxFds = 1024;
+#elif defined(OS_AIX)
+static const rlim_t kSystemDefaultMaxFds = 8192;
 #endif
 
 size_t GetMaxFds() {
@@ -58,11 +71,12 @@ size_t GetMaxFds() {
   return static_cast<size_t>(max_fds);
 }
 
-
-void SetFdLimit(unsigned int max_descriptors) {
+void IncreaseFdLimitTo(unsigned int max_descriptors) {
   struct rlimit limits;
   if (getrlimit(RLIMIT_NOFILE, &limits) == 0) {
     unsigned int new_limit = max_descriptors;
+    if (max_descriptors <= limits.rlim_cur)
+      return;
     if (limits.rlim_max > 0 && limits.rlim_max < max_descriptors) {
       new_limit = limits.rlim_max;
     }
@@ -75,8 +89,28 @@ void SetFdLimit(unsigned int max_descriptors) {
   }
 }
 
+#endif  // !defined(OS_FUCHSIA)
+
 size_t GetPageSize() {
   return getpagesize();
+}
+
+size_t ProcessMetrics::GetMallocUsage() {
+#if defined(OS_MACOSX) || defined(OS_IOS)
+  malloc_statistics_t stats = {0};
+  malloc_zone_statistics(nullptr, &stats);
+  return stats.size_in_use;
+#elif defined(OS_LINUX) || defined(OS_ANDROID)
+  struct mallinfo minfo = mallinfo();
+#if defined(USE_TCMALLOC)
+  return minfo.uordblks;
+#else
+  return minfo.hblkhd + minfo.arena;
+#endif
+#elif defined(OS_FUCHSIA)
+  // TODO(fuchsia): Not currently exposed. https://crbug.com/735087.
+  return 0;
+#endif
 }
 
 }  // namespace base

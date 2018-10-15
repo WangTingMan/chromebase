@@ -27,50 +27,11 @@
 
 #include <stddef.h>
 #include <tuple>
+#include <utility>
 
 #include "build/build_config.h"
 
 namespace base {
-
-// Index sequences
-//
-// Minimal clone of the similarly-named C++14 functionality.
-
-template <size_t...>
-struct IndexSequence {};
-
-template <size_t... Ns>
-struct MakeIndexSequenceImpl;
-
-template <size_t... Ns>
-struct MakeIndexSequenceImpl<0, Ns...> {
-  using Type = IndexSequence<Ns...>;
-};
-
-template <size_t N, size_t... Ns>
-struct MakeIndexSequenceImpl<N, Ns...>
-    : MakeIndexSequenceImpl<N - 1, N - 1, Ns...> {};
-
-// std::get() in <=libstdc++-4.6 returns an lvalue-reference for
-// rvalue-reference of a tuple, where an rvalue-reference is expected.
-template <size_t I, typename... Ts>
-typename std::tuple_element<I, std::tuple<Ts...>>::type&& get(
-    std::tuple<Ts...>&& t) {
-  using ElemType = typename std::tuple_element<I, std::tuple<Ts...>>::type;
-  return std::forward<ElemType>(std::get<I>(t));
-}
-
-template <size_t I, typename T>
-auto get(T& t) -> decltype(std::get<I>(t)) {
-  return std::get<I>(t);
-}
-
-template <size_t N>
-using MakeIndexSequence = typename MakeIndexSequenceImpl<N>::Type;
-
-template <typename T>
-using MakeIndexSequenceForTuple =
-    MakeIndexSequence<std::tuple_size<typename std::decay<T>::type>::value>;
 
 // Dispatchers ----------------------------------------------------------------
 //
@@ -87,16 +48,17 @@ template <typename ObjT, typename Method, typename Tuple, size_t... Ns>
 inline void DispatchToMethodImpl(const ObjT& obj,
                                  Method method,
                                  Tuple&& args,
-                                 IndexSequence<Ns...>) {
-  (obj->*method)(base::get<Ns>(std::forward<Tuple>(args))...);
+                                 std::index_sequence<Ns...>) {
+  (obj->*method)(std::get<Ns>(std::forward<Tuple>(args))...);
 }
 
 template <typename ObjT, typename Method, typename Tuple>
 inline void DispatchToMethod(const ObjT& obj,
                              Method method,
                              Tuple&& args) {
+  constexpr size_t size = std::tuple_size<std::decay_t<Tuple>>::value;
   DispatchToMethodImpl(obj, method, std::forward<Tuple>(args),
-                       MakeIndexSequenceForTuple<Tuple>());
+                       std::make_index_sequence<size>());
 }
 
 // Static Dispatchers with no out params.
@@ -104,14 +66,15 @@ inline void DispatchToMethod(const ObjT& obj,
 template <typename Function, typename Tuple, size_t... Ns>
 inline void DispatchToFunctionImpl(Function function,
                                    Tuple&& args,
-                                   IndexSequence<Ns...>) {
-  (*function)(base::get<Ns>(std::forward<Tuple>(args))...);
+                                   std::index_sequence<Ns...>) {
+  (*function)(std::get<Ns>(std::forward<Tuple>(args))...);
 }
 
 template <typename Function, typename Tuple>
 inline void DispatchToFunction(Function function, Tuple&& args) {
+  constexpr size_t size = std::tuple_size<std::decay_t<Tuple>>::value;
   DispatchToFunctionImpl(function, std::forward<Tuple>(args),
-                         MakeIndexSequenceForTuple<Tuple>());
+                         std::make_index_sequence<size>());
 }
 
 // Dispatchers with out parameters.
@@ -126,9 +89,9 @@ inline void DispatchToMethodImpl(const ObjT& obj,
                                  Method method,
                                  InTuple&& in,
                                  OutTuple* out,
-                                 IndexSequence<InNs...>,
-                                 IndexSequence<OutNs...>) {
-  (obj->*method)(base::get<InNs>(std::forward<InTuple>(in))...,
+                                 std::index_sequence<InNs...>,
+                                 std::index_sequence<OutNs...>) {
+  (obj->*method)(std::get<InNs>(std::forward<InTuple>(in))...,
                  &std::get<OutNs>(*out)...);
 }
 
@@ -137,9 +100,11 @@ inline void DispatchToMethod(const ObjT& obj,
                              Method method,
                              InTuple&& in,
                              OutTuple* out) {
+  constexpr size_t in_size = std::tuple_size<std::decay_t<InTuple>>::value;
+  constexpr size_t out_size = std::tuple_size<OutTuple>::value;
   DispatchToMethodImpl(obj, method, std::forward<InTuple>(in), out,
-                       MakeIndexSequenceForTuple<InTuple>(),
-                       MakeIndexSequenceForTuple<OutTuple>());
+                       std::make_index_sequence<in_size>(),
+                       std::make_index_sequence<out_size>());
 }
 
 }  // namespace base

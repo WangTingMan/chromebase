@@ -10,11 +10,13 @@
 
 namespace base {
 
-#if !defined(OS_IOS)
+// See https://crbug.com/726484 for Fuchsia.
+// Cannot read boot time on Android O, crbug.com/788870.
+#if !defined(OS_IOS) && !defined(OS_FUCHSIA) && !defined(OS_ANDROID)
 TEST(ProcessInfoTest, CreationTime) {
   Time creation_time = CurrentProcessInfo::CreationTime();
   ASSERT_FALSE(creation_time.is_null());
 }
-#endif  // !defined(OS_IOS)
+#endif  // !defined(OS_IOS) && !defined(OS_FUCHSIA) && !defined(OS_ANDROID)
 
 }  // namespace base

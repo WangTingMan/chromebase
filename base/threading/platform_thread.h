@@ -17,7 +17,9 @@
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
-#include <windows.h>
+#include "base/win/windows_types.h"
+#elif defined(OS_FUCHSIA)
+#include <zircon/types.h>
 #elif defined(OS_MACOSX)
 #include <mach/mach_types.h>
 #elif defined(OS_POSIX)
@@ -30,6 +32,8 @@ namespace base {
 // Used for logging. Always an integer value.
 #if defined(OS_WIN)
 typedef DWORD PlatformThreadId;
+#elif defined(OS_FUCHSIA)
+typedef zx_handle_t PlatformThreadId;
 #elif defined(OS_MACOSX)
 typedef mach_port_t PlatformThreadId;
 #elif defined(OS_POSIX)
@@ -48,16 +52,12 @@ class PlatformThreadRef {
  public:
 #if defined(OS_WIN)
   typedef DWORD RefType;
-#elif defined(OS_POSIX)
+#else  //  OS_POSIX
   typedef pthread_t RefType;
 #endif
-  PlatformThreadRef()
-      : id_(0) {
-  }
+  constexpr PlatformThreadRef() : id_(0) {}
 
-  explicit PlatformThreadRef(RefType id)
-      : id_(id) {
-  }
+  explicit constexpr PlatformThreadRef(RefType id) : id_(id) {}
 
   bool operator==(PlatformThreadRef other) const {
     return id_ == other.id_;
@@ -77,13 +77,13 @@ class PlatformThreadHandle {
  public:
 #if defined(OS_WIN)
   typedef void* Handle;
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   typedef pthread_t Handle;
 #endif
 
-  PlatformThreadHandle() : handle_(0) {}
+  constexpr PlatformThreadHandle() : handle_(0) {}
 
-  explicit PlatformThreadHandle(Handle handle) : handle_(handle) {}
+  explicit constexpr PlatformThreadHandle(Handle handle) : handle_(handle) {}
 
   bool is_equal(const PlatformThreadHandle& other) const {
     return handle_ == other.handle_;
@@ -126,7 +126,7 @@ class BASE_EXPORT PlatformThread {
     virtual void ThreadMain() = 0;
 
    protected:
-    virtual ~Delegate() {}
+    virtual ~Delegate() = default;
   };
 
   // Gets the current thread id, which may be useful for logging purposes.
@@ -200,10 +200,16 @@ class BASE_EXPORT PlatformThread {
   // priority of the current thread.
   static bool CanIncreaseCurrentThreadPriority();
 
-  // Toggles the current thread's priority at runtime. A thread may not be able
-  // to raise its priority back up after lowering it if the process does not
-  // have a proper permission, e.g. CAP_SYS_NICE on Linux. A thread may not be
-  // able to lower its priority back down after raising it to REALTIME_AUDIO.
+  // Toggles the current thread's priority at runtime.
+  //
+  // A thread may not be able to raise its priority back up after lowering it if
+  // the process does not have a proper permission, e.g. CAP_SYS_NICE on Linux.
+  // A thread may not be able to lower its priority back down after raising it
+  // to REALTIME_AUDIO.
+  //
+  // This function must not be called from the main thread on Mac. This is to
+  // avoid performance regressions (https://crbug.com/601270).
+  //
   // Since changing other threads' priority is not permitted in favor of
   // security, this interface is restricted to change only the current thread
   // priority (https://crbug.com/399473).

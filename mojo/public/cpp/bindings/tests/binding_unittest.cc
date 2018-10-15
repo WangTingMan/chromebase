@@ -13,9 +13,10 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/weak_ptr.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "mojo/core/embedder/embedder.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
+#include "mojo/public/cpp/bindings/tests/bindings_test_base.h"
 #include "mojo/public/interfaces/bindings/tests/ping_service.mojom.h"
 #include "mojo/public/interfaces/bindings/tests/sample_interfaces.mojom.h"
 #include "mojo/public/interfaces/bindings/tests/sample_service.mojom.h"
@@ -23,19 +24,6 @@
 
 namespace mojo {
 namespace {
-
-class BindingTestBase : public testing::Test {
- public:
-  BindingTestBase() {}
-  ~BindingTestBase() override {}
-
-  base::MessageLoop& loop() { return loop_; }
-
- private:
-  base::MessageLoop loop_;
-
-  DISALLOW_COPY_AND_ASSIGN(BindingTestBase);
-};
 
 class ServiceImpl : public sample::Service {
  public:
@@ -79,9 +67,9 @@ base::Callback<void(Args...)> SetFlagAndRunClosure(
 
 // BindingTest -----------------------------------------------------------------
 
-using BindingTest = BindingTestBase;
+using BindingTest = BindingsTestBase;
 
-TEST_F(BindingTest, Close) {
+TEST_P(BindingTest, Close) {
   bool called = false;
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
@@ -98,7 +86,7 @@ TEST_F(BindingTest, Close) {
 }
 
 // Tests that destroying a mojo::Binding closes the bound message pipe handle.
-TEST_F(BindingTest, DestroyClosesMessagePipe) {
+TEST_P(BindingTest, DestroyClosesMessagePipe) {
   bool encountered_error = false;
   ServiceImpl impl;
   sample::ServicePtr ptr;
@@ -133,7 +121,7 @@ TEST_F(BindingTest, DestroyClosesMessagePipe) {
 
 // Tests that the binding's connection error handler gets called when the other
 // end is closed.
-TEST_F(BindingTest, ConnectionError) {
+TEST_P(BindingTest, ConnectionError) {
   bool called = false;
   {
     ServiceImpl impl;
@@ -154,7 +142,7 @@ TEST_F(BindingTest, ConnectionError) {
 
 // Tests that calling Close doesn't result in the connection error handler being
 // called.
-TEST_F(BindingTest, CloseDoesntCallConnectionErrorHandler) {
+TEST_P(BindingTest, CloseDoesntCallConnectionErrorHandler) {
   ServiceImpl impl;
   sample::ServicePtr ptr;
   Binding<sample::Service> binding(&impl, MakeRequest(&ptr));
@@ -198,7 +186,7 @@ class ServiceImplWithBinding : public ServiceImpl {
 };
 
 // Tests that the binding may be deleted in the connection error handler.
-TEST_F(BindingTest, SelfDeleteOnConnectionError) {
+TEST_P(BindingTest, SelfDeleteOnConnectionError) {
   bool was_deleted = false;
   sample::ServicePtr ptr;
   // This should delete itself on connection error.
@@ -212,7 +200,7 @@ TEST_F(BindingTest, SelfDeleteOnConnectionError) {
 }
 
 // Tests that explicitly calling Unbind followed by rebinding works.
-TEST_F(BindingTest, Unbind) {
+TEST_P(BindingTest, Unbind) {
   ServiceImpl impl;
   sample::ServicePtr ptr;
   Binding<sample::Service> binding(&impl, MakeRequest(&ptr));
@@ -262,14 +250,7 @@ class IntegerAccessorImpl : public sample::IntegerAccessor {
   DISALLOW_COPY_AND_ASSIGN(IntegerAccessorImpl);
 };
 
-TEST_F(BindingTest, SetInterfacePtrVersion) {
-  IntegerAccessorImpl impl;
-  sample::IntegerAccessorPtr ptr;
-  Binding<sample::IntegerAccessor> binding(&impl, &ptr);
-  EXPECT_EQ(3u, ptr.version());
-}
-
-TEST_F(BindingTest, PauseResume) {
+TEST_P(BindingTest, PauseResume) {
   bool called = false;
   base::RunLoop run_loop;
   sample::ServicePtr ptr;
@@ -292,7 +273,7 @@ TEST_F(BindingTest, PauseResume) {
 }
 
 // Verifies the connection error handler is not run while a binding is paused.
-TEST_F(BindingTest, ErrorHandleNotRunWhilePaused) {
+TEST_P(BindingTest, ErrorHandleNotRunWhilePaused) {
   bool called = false;
   base::RunLoop run_loop;
   sample::ServicePtr ptr;
@@ -343,7 +324,7 @@ class CallbackFilter : public MessageReceiver {
   ~CallbackFilter() override {}
 
   static std::unique_ptr<CallbackFilter> Wrap(const base::Closure& callback) {
-    return base::MakeUnique<CallbackFilter>(callback);
+    return std::make_unique<CallbackFilter>(callback);
   }
 
   // MessageReceiver:
@@ -358,7 +339,7 @@ class CallbackFilter : public MessageReceiver {
 
 // Verifies that message filters are notified in the order they were added and
 // are always notified before a message is dispatched.
-TEST_F(BindingTest, MessageFilter) {
+TEST_P(BindingTest, MessageFilter) {
   test::PingServicePtr ptr;
   PingServiceImpl impl;
   mojo::Binding<test::PingService> binding(&impl, MakeRequest(&ptr));
@@ -389,7 +370,7 @@ void Fail() {
   FAIL() << "Unexpected connection error";
 }
 
-TEST_F(BindingTest, FlushForTesting) {
+TEST_P(BindingTest, FlushForTesting) {
   bool called = false;
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
@@ -408,7 +389,7 @@ TEST_F(BindingTest, FlushForTesting) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(BindingTest, FlushForTestingWithClosedPeer) {
+TEST_P(BindingTest, FlushForTestingWithClosedPeer) {
   bool called = false;
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
@@ -423,7 +404,7 @@ TEST_F(BindingTest, FlushForTestingWithClosedPeer) {
   binding.FlushForTesting();
 }
 
-TEST_F(BindingTest, ConnectionErrorWithReason) {
+TEST_P(BindingTest, ConnectionErrorWithReason) {
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
   ServiceImpl impl;
@@ -455,7 +436,7 @@ struct WeakPtrImplRefTraits {
 template <typename T>
 using WeakBinding = Binding<T, WeakPtrImplRefTraits<T>>;
 
-TEST_F(BindingTest, CustomImplPointerType) {
+TEST_P(BindingTest, CustomImplPointerType) {
   PingServiceImpl impl;
   base::WeakPtrFactory<test::PingService> weak_factory(&impl);
 
@@ -485,13 +466,76 @@ TEST_F(BindingTest, CustomImplPointerType) {
   }
 }
 
+TEST_P(BindingTest, ReportBadMessage) {
+  bool called = false;
+  test::PingServicePtr ptr;
+  auto request = MakeRequest(&ptr);
+  base::RunLoop run_loop;
+  ptr.set_connection_error_handler(
+      SetFlagAndRunClosure(&called, run_loop.QuitClosure()));
+  PingServiceImpl impl;
+  Binding<test::PingService> binding(&impl, std::move(request));
+  impl.set_ping_handler(base::Bind(
+      [](Binding<test::PingService>* binding) {
+        binding->ReportBadMessage("received bad message");
+      },
+      &binding));
+
+  std::string received_error;
+  core::SetDefaultProcessErrorCallback(
+      base::Bind([](std::string* out_error,
+                    const std::string& error) { *out_error = error; },
+                 &received_error));
+
+  ptr->Ping(base::Bind([] {}));
+  EXPECT_FALSE(called);
+  run_loop.Run();
+  EXPECT_TRUE(called);
+  EXPECT_EQ("received bad message", received_error);
+
+  core::SetDefaultProcessErrorCallback(mojo::core::ProcessErrorCallback());
+}
+
+TEST_P(BindingTest, GetBadMessageCallback) {
+  test::PingServicePtr ptr;
+  auto request = MakeRequest(&ptr);
+  base::RunLoop run_loop;
+  PingServiceImpl impl;
+  ReportBadMessageCallback bad_message_callback;
+
+  std::string received_error;
+  core::SetDefaultProcessErrorCallback(
+      base::Bind([](std::string* out_error,
+                    const std::string& error) { *out_error = error; },
+                 &received_error));
+
+  {
+    Binding<test::PingService> binding(&impl, std::move(request));
+    impl.set_ping_handler(base::Bind(
+        [](Binding<test::PingService>* binding,
+           ReportBadMessageCallback* out_callback) {
+          *out_callback = binding->GetBadMessageCallback();
+        },
+        &binding, &bad_message_callback));
+    ptr->Ping(run_loop.QuitClosure());
+    run_loop.Run();
+    EXPECT_TRUE(received_error.empty());
+    EXPECT_TRUE(bad_message_callback);
+  }
+
+  std::move(bad_message_callback).Run("delayed bad message");
+  EXPECT_EQ("delayed bad message", received_error);
+
+  core::SetDefaultProcessErrorCallback(mojo::core::ProcessErrorCallback());
+}
+
 // StrongBindingTest -----------------------------------------------------------
 
-using StrongBindingTest = BindingTestBase;
+using StrongBindingTest = BindingsTestBase;
 
 // Tests that destroying a mojo::StrongBinding closes the bound message pipe
 // handle but does *not* destroy the implementation object.
-TEST_F(StrongBindingTest, DestroyClosesMessagePipe) {
+TEST_P(StrongBindingTest, DestroyClosesMessagePipe) {
   base::RunLoop run_loop;
   bool encountered_error = false;
   bool was_deleted = false;
@@ -502,7 +546,7 @@ TEST_F(StrongBindingTest, DestroyClosesMessagePipe) {
   bool called = false;
   base::RunLoop run_loop2;
 
-  auto binding = MakeStrongBinding(base::MakeUnique<ServiceImpl>(&was_deleted),
+  auto binding = MakeStrongBinding(std::make_unique<ServiceImpl>(&was_deleted),
                                    std::move(request));
   ptr->Frobinate(
       nullptr, sample::Service::BazOptions::REGULAR, nullptr,
@@ -523,7 +567,7 @@ TEST_F(StrongBindingTest, DestroyClosesMessagePipe) {
 
 // Tests the typical case, where the implementation object owns the
 // StrongBinding (and should be destroyed on connection error).
-TEST_F(StrongBindingTest, ConnectionErrorDestroysImpl) {
+TEST_P(StrongBindingTest, ConnectionErrorDestroysImpl) {
   sample::ServicePtr ptr;
   bool was_deleted = false;
   // Will delete itself.
@@ -540,12 +584,12 @@ TEST_F(StrongBindingTest, ConnectionErrorDestroysImpl) {
   EXPECT_TRUE(was_deleted);
 }
 
-TEST_F(StrongBindingTest, FlushForTesting) {
+TEST_P(StrongBindingTest, FlushForTesting) {
   bool called = false;
   bool was_deleted = false;
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
-  auto binding = MakeStrongBinding(base::MakeUnique<ServiceImpl>(&was_deleted),
+  auto binding = MakeStrongBinding(std::make_unique<ServiceImpl>(&was_deleted),
                                    std::move(request));
   binding->set_connection_error_handler(base::Bind(&Fail));
 
@@ -568,12 +612,12 @@ TEST_F(StrongBindingTest, FlushForTesting) {
   EXPECT_TRUE(was_deleted);
 }
 
-TEST_F(StrongBindingTest, FlushForTestingWithClosedPeer) {
+TEST_P(StrongBindingTest, FlushForTestingWithClosedPeer) {
   bool called = false;
   bool was_deleted = false;
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
-  auto binding = MakeStrongBinding(base::MakeUnique<ServiceImpl>(&was_deleted),
+  auto binding = MakeStrongBinding(std::make_unique<ServiceImpl>(&was_deleted),
                                    std::move(request));
   binding->set_connection_error_handler(SetFlagAndRunClosure(&called));
   ptr.reset();
@@ -587,11 +631,11 @@ TEST_F(StrongBindingTest, FlushForTestingWithClosedPeer) {
   ASSERT_FALSE(binding);
 }
 
-TEST_F(StrongBindingTest, ConnectionErrorWithReason) {
+TEST_P(StrongBindingTest, ConnectionErrorWithReason) {
   sample::ServicePtr ptr;
   auto request = MakeRequest(&ptr);
   auto binding =
-      MakeStrongBinding(base::MakeUnique<ServiceImpl>(), std::move(request));
+      MakeStrongBinding(std::make_unique<ServiceImpl>(), std::move(request));
   base::RunLoop run_loop;
   binding->set_connection_error_with_reason_handler(base::Bind(
       [](const base::Closure& quit_closure, uint32_t custom_reason,
@@ -606,6 +650,9 @@ TEST_F(StrongBindingTest, ConnectionErrorWithReason) {
 
   run_loop.Run();
 }
+
+INSTANTIATE_MOJO_BINDINGS_TEST_CASE_P(BindingTest);
+INSTANTIATE_MOJO_BINDINGS_TEST_CASE_P(StrongBindingTest);
 
 }  // namespace
 }  // mojo
