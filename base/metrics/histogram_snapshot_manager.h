@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <atomic>
 #include <map>
 #include <string>
 #include <vector>
@@ -27,10 +28,10 @@ class HistogramFlattener;
 // corruption, this class also validates as much redundancy as it can before
 // calling for the marginal change (a.k.a., delta) in a histogram to be
 // recorded.
-class BASE_EXPORT HistogramSnapshotManager {
+class BASE_EXPORT HistogramSnapshotManager final {
  public:
   explicit HistogramSnapshotManager(HistogramFlattener* histogram_flattener);
-  virtual ~HistogramSnapshotManager();
+  ~HistogramSnapshotManager();
 
   // Snapshot all histograms, and ask |histogram_flattener_| to record the
   // delta. |flags_to_set| is used to set flags for each histogram.
@@ -38,17 +39,9 @@ class BASE_EXPORT HistogramSnapshotManager {
   // Only histograms that have all the flags specified by the argument will be
   // chosen. If all histograms should be recorded, set it to
   // |Histogram::kNoFlags|.
-  template <class ForwardHistogramIterator>
-  void PrepareDeltas(ForwardHistogramIterator begin,
-                     ForwardHistogramIterator end,
+  void PrepareDeltas(const std::vector<HistogramBase*>& histograms,
                      HistogramBase::Flags flags_to_set,
-                     HistogramBase::Flags required_flags) {
-    for (ForwardHistogramIterator it = begin; it != end; ++it) {
-      (*it)->SetFlags(flags_to_set);
-      if (((*it)->flags() & required_flags) == required_flags)
-        PrepareDelta(*it);
-    }
-  }
+                     HistogramBase::Flags required_flags);
 
   // When the collection is not so simple as can be done using a single
   // iterator, the steps can be performed separately. Call PerpareDelta()
@@ -75,18 +68,19 @@ class BASE_EXPORT HistogramSnapshotManager {
   void PrepareSamples(const HistogramBase* histogram,
                       std::unique_ptr<HistogramSamples> samples);
 
-  // Try to detect and fix count inconsistency of logged samples.
-  void InspectLoggedSamplesInconsistency(
-      const HistogramSamples& new_snapshot,
-      HistogramSamples* logged_samples);
+  // |histogram_flattener_| handles the logistics of recording the histogram
+  // deltas.
+  HistogramFlattener* const histogram_flattener_;  // Weak.
 
   // For histograms, track what has been previously seen, indexed
   // by the hash of the histogram name.
   std::map<uint64_t, SampleInfo> known_histograms_;
 
-  // |histogram_flattener_| handles the logistics of recording the histogram
-  // deltas.
-  HistogramFlattener* histogram_flattener_;  // Weak.
+  // A flag indicating if a thread is currently doing an operation. This is
+  // used to check against concurrent access which is not supported. A Thread-
+  // Checker is not sufficient because it may be guarded by at outside lock
+  // (as is the case with cronet).
+  std::atomic<bool> is_active_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramSnapshotManager);
 };

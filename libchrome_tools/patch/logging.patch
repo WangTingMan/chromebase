@@ -1,19 +1,17 @@
+diff --git a/base/logging.cc b/base/logging.cc
+index 8eabda0..112afb8 100644
 --- a/base/logging.cc
 +++ b/base/logging.cc
-@@ -71,7 +71,11 @@ typedef pthread_mutex_t* MutexHandle;
- #include "base/posix/safe_strerror.h"
+@@ -58,7 +58,7 @@ typedef HANDLE MutexHandle;
+ #include <zircon/syscalls.h>
  #endif
  
 -#if defined(OS_ANDROID)
-+#if !defined(OS_ANDROID)
-+#include "base/files/file_path.h"
-+#endif
-+
 +#if defined(OS_ANDROID) || defined(__ANDROID__)
  #include <android/log.h>
  #endif
  
-@@ -358,21 +362,23 @@ bool BaseInitLoggingImpl(const LoggingSe
+@@ -407,21 +407,23 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
    // Can log only to the system debug log.
    CHECK_EQ(settings.logging_dest & ~LOG_TO_SYSTEM_DEBUG_LOG, 0);
  #endif
@@ -52,16 +50,16 @@
    }
  
    g_logging_destination = settings.logging_dest;
-@@ -668,7 +674,7 @@ LogMessage::~LogMessage() {
- 
-       asl_send(asl_client.get(), asl_message.get());
+@@ -755,7 +757,7 @@ LogMessage::~LogMessage() {
+                        str_newline.c_str());
+ #endif  // defined(USE_ASL)
      }
 -#elif defined(OS_ANDROID)
 +#elif defined(OS_ANDROID) || defined(__ANDROID__)
      android_LogPriority priority =
          (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
      switch (severity_) {
-@@ -685,7 +691,16 @@ LogMessage::~LogMessage() {
+@@ -772,7 +774,16 @@ LogMessage::~LogMessage() {
          priority = ANDROID_LOG_FATAL;
          break;
      }

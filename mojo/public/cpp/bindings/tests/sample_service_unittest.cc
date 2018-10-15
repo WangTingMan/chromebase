@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "mojo/public/cpp/bindings/tests/bindings_test_base.h"
 #include "mojo/public/interfaces/bindings/tests/sample_service.mojom.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -56,7 +57,7 @@ FooPtr MakeFoo() {
   for (size_t i = 0; i < input_streams.size(); ++i) {
     MojoCreateDataPipeOptions options;
     options.struct_size = sizeof(MojoCreateDataPipeOptions);
-    options.flags = MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE;
+    options.flags = MOJO_CREATE_DATA_PIPE_FLAG_NONE;
     options.element_num_bytes = 1;
     options.capacity_num_bytes = 1024;
     mojo::ScopedDataPipeProducerHandle producer;
@@ -225,8 +226,8 @@ void Print(int depth, const char* name, const FooPtr& foo) {
   }
 }
 
-void DumpHex(const uint8_t* bytes, uint32_t num_bytes) {
-  for (uint32_t i = 0; i < num_bytes; ++i) {
+void DumpHex(const uint8_t* bytes, size_t num_bytes) {
+  for (size_t i = 0; i < num_bytes; ++i) {
     std::cout << std::setw(2) << std::setfill('0') << std::hex
               << uint32_t(bytes[i]);
 
@@ -278,6 +279,8 @@ class ServiceProxyImpl : public ServiceProxy {
 
 class SimpleMessageReceiver : public mojo::MessageReceiverWithResponder {
  public:
+  bool PrefersSerializedMessages() override { return true; }
+
   bool Accept(mojo::Message* message) override {
     // Imagine some IPC happened here.
 
@@ -302,9 +305,9 @@ class SimpleMessageReceiver : public mojo::MessageReceiverWithResponder {
   }
 };
 
-using BindingsSampleTest = testing::Test;
+using BindingsSampleTest = mojo::BindingsTestBase;
 
-TEST_F(BindingsSampleTest, Basic) {
+TEST_P(BindingsSampleTest, Basic) {
   SimpleMessageReceiver receiver;
 
   // User has a proxy to a Service somehow.
@@ -326,7 +329,7 @@ TEST_F(BindingsSampleTest, Basic) {
   delete service;
 }
 
-TEST_F(BindingsSampleTest, DefaultValues) {
+TEST_P(BindingsSampleTest, DefaultValues) {
   DefaultsTestPtr defaults(DefaultsTest::New());
   EXPECT_EQ(-12, defaults->a0);
   EXPECT_EQ(kTwelve, defaults->a1);
@@ -357,6 +360,8 @@ TEST_F(BindingsSampleTest, DefaultValues) {
   EXPECT_EQ(0x123456789, defaults->a24);
   EXPECT_EQ(-0x123456789, defaults->a25);
 }
+
+INSTANTIATE_MOJO_BINDINGS_TEST_CASE_P(BindingsSampleTest);
 
 }  // namespace
 }  // namespace sample

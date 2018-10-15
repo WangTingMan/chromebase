@@ -43,14 +43,14 @@ TEST(CallbackHelpersTest, TestScopedClosureRunnerExitScope) {
 
 TEST(CallbackHelpersTest, TestScopedClosureRunnerRelease) {
   int run_count = 0;
-  base::Closure c;
+  base::OnceClosure c;
   {
     base::ScopedClosureRunner runner(base::Bind(&Increment, &run_count));
     c = runner.Release();
     EXPECT_EQ(0, run_count);
   }
   EXPECT_EQ(0, run_count);
-  c.Run();
+  std::move(c).Run();
   EXPECT_EQ(1, run_count);
 }
 
@@ -107,6 +107,21 @@ TEST(CallbackHelpersTest, TestScopedClosureRunnerMoveAssignment) {
   }
   EXPECT_EQ(0, run_count_1);
   EXPECT_EQ(1, run_count_2);
+}
+
+TEST(CallbackHelpersTest, TestAdaptCallbackForRepeating) {
+  int count = 0;
+  base::OnceCallback<void(int*)> cb =
+      base::BindOnce([](int* count) { ++*count; });
+
+  base::RepeatingCallback<void(int*)> wrapped =
+      base::AdaptCallbackForRepeating(std::move(cb));
+
+  EXPECT_EQ(0, count);
+  wrapped.Run(&count);
+  EXPECT_EQ(1, count);
+  wrapped.Run(&count);
+  EXPECT_EQ(1, count);
 }
 
 }  // namespace

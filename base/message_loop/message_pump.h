@@ -7,19 +7,19 @@
 
 #include "base/base_export.h"
 #include "base/message_loop/timer_slack.h"
-#include "base/threading/non_thread_safe.h"
+#include "base/sequence_checker.h"
 
 namespace base {
 
 class TimeTicks;
 
-class BASE_EXPORT MessagePump : public NonThreadSafe {
+class BASE_EXPORT MessagePump {
  public:
   // Please see the comments above the Run method for an illustration of how
   // these delegate methods are used.
   class BASE_EXPORT Delegate {
    public:
-    virtual ~Delegate() {}
+    virtual ~Delegate() = default;
 
     // Called from within Run in response to ScheduleWork or when the message
     // pump would otherwise call DoDelayedWork.  Returns true to indicate that

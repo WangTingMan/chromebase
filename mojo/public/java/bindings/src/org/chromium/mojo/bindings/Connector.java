@@ -169,9 +169,7 @@ public class Connector implements MessageReceiver, HandleOwner<MessagePipeHandle
         ResultAnd<Boolean> result;
         do {
             try {
-                result = readAndDispatchMessage(
-                        mMessagePipeHandle, mIncomingMessageReceiver,
-                        ExceptionHandler.DefaultExceptionHandler.getInstance());
+                result = readAndDispatchMessage(mMessagePipeHandle, mIncomingMessageReceiver);
             } catch (MojoException e) {
                 onError(e);
                 return;
@@ -193,28 +191,25 @@ public class Connector implements MessageReceiver, HandleOwner<MessagePipeHandle
      *
      * @param receiver The {@link MessageReceiver} that will receive the read {@link Message}. Can
      *            be <code>null</code>, in which case the message is discarded.
-     * @param exceptionHandler The {@link ExceptionHandler} that can decide whether any uncaught
-     *            exception will close the connection or not.
      */
     static ResultAnd<Boolean> readAndDispatchMessage(
-            MessagePipeHandle handle, MessageReceiver receiver, ExceptionHandler exceptionHandler) {
-        // TODO(qsr) Allow usage of a pool of pre-allocated buffer for performance.
-        ResultAnd<ReadMessageResult> result =
-                handle.readMessage(null, 0, MessagePipeHandle.ReadFlags.NONE);
-        if (result.getMojoResult() != MojoResult.RESOURCE_EXHAUSTED) {
+            MessagePipeHandle handle, MessageReceiver receiver) {
+        ResultAnd<ReadMessageResult> result = handle.readMessage(MessagePipeHandle.ReadFlags.NONE);
+        if (result.getMojoResult() != MojoResult.OK) {
             return new ResultAnd<Boolean>(result.getMojoResult(), false);
         }
         ReadMessageResult readResult = result.getValue();
         assert readResult != null;
-        ByteBuffer buffer = ByteBuffer.allocateDirect(readResult.getMessageSize());
-        result = handle.readMessage(
-                buffer, readResult.getHandlesCount(), MessagePipeHandle.ReadFlags.NONE);
-        if (receiver != null && result.getMojoResult() == MojoResult.OK) {
+        if (receiver != null) {
             boolean accepted;
             try {
-                accepted = receiver.accept(new Message(buffer, result.getValue().getHandles()));
+                accepted = receiver.accept(
+                        new Message(ByteBuffer.wrap(readResult.mData), readResult.mHandles));
             } catch (RuntimeException e) {
-                accepted = exceptionHandler.handleException(e);
+                // The DefaultExceptionHandler will decide whether any uncaught exception will
+                // close the connection or not.
+                accepted =
+                        ExceptionHandler.DefaultExceptionHandler.getInstance().handleException(e);
             }
             return new ResultAnd<Boolean>(result.getMojoResult(), accepted);
         }

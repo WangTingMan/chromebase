@@ -19,6 +19,16 @@
 
 // We define following macros conditionally as they may be defined by another libraries.
 
+// Distinguish mips32.
+#if defined(__mips__) && (_MIPS_SIM == _ABIO32) && !defined(__mips32__)
+#define __mips32__
+#endif
+
+// Distinguish mips64.
+#if defined(__mips__) && (_MIPS_SIM == _ABI64) && !defined(__mips64__)
+#define __mips64__
+#endif
+
 // Put this in the declarations for a class to be uncopyable.
 #if !defined(DISALLOW_COPY)
 #define DISALLOW_COPY(TypeName) \
@@ -27,24 +37,19 @@
 
 // Put this in the declarations for a class to be unassignable.
 #if !defined(DISALLOW_ASSIGN)
-#define DISALLOW_ASSIGN(TypeName) \
-  void operator=(const TypeName&) = delete
+#define DISALLOW_ASSIGN(TypeName) TypeName& operator=(const TypeName&) = delete
 #endif
 
-// A macro to disallow the copy constructor and operator= functions.
-// This should be used in the private: declarations for a class.
+// Put this in the declarations for a class to be uncopyable and unassignable.
 #if !defined(DISALLOW_COPY_AND_ASSIGN)
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;      \
-  void operator=(const TypeName&) = delete
+  DISALLOW_COPY(TypeName);                 \
+  DISALLOW_ASSIGN(TypeName)
 #endif
 
 // A macro to disallow all the implicit constructors, namely the
 // default constructor, copy constructor and operator= functions.
-//
-// This should be used in the private: declarations for a class
-// that wants to prevent anyone from instantiating it. This is
-// especially useful for classes containing only static methods.
+// This is especially useful for classes containing only static methods.
 #if !defined(DISALLOW_IMPLICIT_CONSTRUCTORS)
 #define DISALLOW_IMPLICIT_CONSTRUCTORS(TypeName) \
   TypeName() = delete;                           \
@@ -60,6 +65,9 @@
 // This template function declaration is used in defining arraysize.
 // Note that the function doesn't need an implementation, as we only
 // use its type.
+//
+// DEPRECATED, please use base::size(array) instead.
+// TODO(https://crbug.com/837308): Replace existing arraysize usages.
 #if !defined(arraysize)
 template <typename T, size_t N> char (&ArraySizeHelper(T (&array)[N]))[N];
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
@@ -77,29 +85,29 @@ template<typename T>
 inline void ignore_result(const T&) {
 }
 
-// The following enum should be used only as a constructor argument to indicate
-// that the variable has static storage class, and that the constructor should
-// do nothing to its state.  It indicates to the reader that it is legal to
-// declare a static instance of the class, provided the constructor is given
-// the base::LINKER_INITIALIZED argument.  Normally, it is unsafe to declare a
-// static variable that has a constructor or a destructor because invocation
-// order is undefined.  However, IF the type can be initialized by filling with
-// zeroes (which the loader does for static variables), AND the destructor also
-// does nothing to the storage, AND there are no virtual methods, then a
-// constructor declared as
-//       explicit MyClass(base::LinkerInitialized x) {}
-// and invoked as
-//       static MyClass my_variable_name(base::LINKER_INITIALIZED);
 namespace base {
-enum LinkerInitialized { LINKER_INITIALIZED };
 
 // Use these to declare and define a static local variable (static T;) so that
-// it is leaked so that its destructors are not called at exit. If you need
-// thread-safe initialization, use base/lazy_instance.h instead.
+// it is leaked so that its destructors are not called at exit.  This is
+// thread-safe.
+//
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEPRECATED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Please don't use this macro. Use a function-local static of type
+// base::NoDestructor<T> instead:
+//
+// Factory& Factory::GetInstance() {
+//   static base::NoDestructor<Factory> instance;
+//   return *instance;
+// }
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #if !defined(CR_DEFINE_STATIC_LOCAL)
 #define CR_DEFINE_STATIC_LOCAL(type, name, arguments) \
   static type& name = *new type arguments
 #endif
+
+// Workaround for MSVC, which expands __VA_ARGS__ as one macro argument. To
+// work around this bug, wrap the entire expression in this macro...
+#define CR_EXPAND_ARG(arg) arg
 
 }  // base
 

@@ -11,13 +11,13 @@
 #include "build/build_config.h"
 #include "crypto/crypto_export.h"
 
-#if defined (OS_IOS)
-typedef void* SecKeychainRef;
-typedef void* SecKeychainItemRef;
-typedef void SecKeychainAttributeList;
-#endif
-
 namespace crypto {
+
+#if defined(OS_IOS)
+using AppleSecKeychainItemRef = void*;
+#else
+using AppleSecKeychainItemRef = SecKeychainItemRef;
+#endif
 
 // Wraps the KeychainServices API in a very thin layer, to allow it to be
 // mocked out for testing.
@@ -32,72 +32,26 @@ class CRYPTO_EXPORT AppleKeychain {
   AppleKeychain();
   virtual ~AppleKeychain();
 
-  virtual OSStatus FindGenericPassword(CFTypeRef keychainOrArray,
-                                       UInt32 serviceNameLength,
+  virtual OSStatus FindGenericPassword(UInt32 serviceNameLength,
                                        const char* serviceName,
                                        UInt32 accountNameLength,
                                        const char* accountName,
                                        UInt32* passwordLength,
                                        void** passwordData,
-                                       SecKeychainItemRef* itemRef) const;
+                                       AppleSecKeychainItemRef* itemRef) const;
 
-  virtual OSStatus ItemFreeContent(SecKeychainAttributeList* attrList,
-                                   void* data) const;
+  virtual OSStatus ItemFreeContent(void* data) const;
 
-  virtual OSStatus AddGenericPassword(SecKeychainRef keychain,
-                                      UInt32 serviceNameLength,
+  virtual OSStatus AddGenericPassword(UInt32 serviceNameLength,
                                       const char* serviceName,
                                       UInt32 accountNameLength,
                                       const char* accountName,
                                       UInt32 passwordLength,
                                       const void* passwordData,
-                                      SecKeychainItemRef* itemRef) const;
+                                      AppleSecKeychainItemRef* itemRef) const;
 
 #if !defined(OS_IOS)
-  virtual OSStatus ItemCopyAttributesAndData(
-      SecKeychainItemRef itemRef,
-      SecKeychainAttributeInfo* info,
-      SecItemClass* itemClass,
-      SecKeychainAttributeList** attrList,
-      UInt32* length,
-      void** outData) const;
-
-  virtual OSStatus ItemModifyAttributesAndData(
-      SecKeychainItemRef itemRef,
-      const SecKeychainAttributeList* attrList,
-      UInt32 length,
-      const void* data) const;
-
-  virtual OSStatus ItemFreeAttributesAndData(SecKeychainAttributeList* attrList,
-                                             void* data) const;
-
-  virtual OSStatus ItemDelete(SecKeychainItemRef itemRef) const;
-
-  virtual OSStatus SearchCreateFromAttributes(
-      CFTypeRef keychainOrArray,
-      SecItemClass itemClass,
-      const SecKeychainAttributeList* attrList,
-      SecKeychainSearchRef* searchRef) const;
-
-  virtual OSStatus SearchCopyNext(SecKeychainSearchRef searchRef,
-                                  SecKeychainItemRef* itemRef) const;
-
-  virtual OSStatus AddInternetPassword(SecKeychainRef keychain,
-                                       UInt32 serverNameLength,
-                                       const char* serverName,
-                                       UInt32 securityDomainLength,
-                                       const char* securityDomain,
-                                       UInt32 accountNameLength,
-                                       const char* accountName,
-                                       UInt32 pathLength, const char* path,
-                                       UInt16 port, SecProtocolType protocol,
-                                       SecAuthenticationType authenticationType,
-                                       UInt32 passwordLength,
-                                       const void* passwordData,
-                                       SecKeychainItemRef* itemRef) const;
-
-  // Calls CFRelease on the given ref, after checking that |ref| is non-NULL.
-  virtual void Free(CFTypeRef ref) const;
+  virtual OSStatus ItemDelete(AppleSecKeychainItemRef itemRef) const;
 #endif  // !defined(OS_IOS)
 
  private:

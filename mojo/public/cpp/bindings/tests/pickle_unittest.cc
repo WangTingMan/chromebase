@@ -157,22 +157,39 @@ class PickleTest : public testing::Test {
   template <typename ProxyType = PicklePasser>
   InterfacePtr<ProxyType> ConnectToChromiumService() {
     InterfacePtr<ProxyType> proxy;
-    InterfaceRequest<ProxyType> request(&proxy);
     chromium_bindings_.AddBinding(
         &chromium_service_,
-        ConvertInterfaceRequest<PicklePasser>(std::move(request)));
+        ConvertInterfaceRequest<PicklePasser>(mojo::MakeRequest(&proxy)));
     return proxy;
   }
 
   template <typename ProxyType = blink::PicklePasser>
   InterfacePtr<ProxyType> ConnectToBlinkService() {
     InterfacePtr<ProxyType> proxy;
-    InterfaceRequest<ProxyType> request(&proxy);
-    blink_bindings_.AddBinding(
-        &blink_service_,
-        ConvertInterfaceRequest<blink::PicklePasser>(std::move(request)));
+    blink_bindings_.AddBinding(&blink_service_,
+                               ConvertInterfaceRequest<blink::PicklePasser>(
+                                   mojo::MakeRequest(&proxy)));
     return proxy;
   }
+
+ protected:
+  static void ForceMessageSerialization(bool forced) {
+    // Force messages to be serialized in this test since it intentionally
+    // exercises StructTraits logic.
+    Connector::OverrideDefaultSerializationBehaviorForTesting(
+        forced ? Connector::OutgoingSerializationMode::kEager
+               : Connector::OutgoingSerializationMode::kLazy,
+        Connector::IncomingSerializationMode::kDispatchAsIs);
+  }
+
+  class ScopedForceMessageSerialization {
+   public:
+    ScopedForceMessageSerialization() { ForceMessageSerialization(true); }
+    ~ScopedForceMessageSerialization() { ForceMessageSerialization(false); }
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(ScopedForceMessageSerialization);
+  };
 
  private:
   base::MessageLoop loop_;
@@ -297,6 +314,7 @@ TEST_F(PickleTest, BlinkProxyToChromiumService) {
 }
 
 TEST_F(PickleTest, PickleArray) {
+  ScopedForceMessageSerialization force_serialization;
   auto proxy = ConnectToChromiumService();
   auto pickles = std::vector<PickledStructChromium>(2);
   pickles[0].set_foo(1);
@@ -328,6 +346,7 @@ TEST_F(PickleTest, PickleArray) {
 }
 
 TEST_F(PickleTest, PickleArrayArray) {
+  ScopedForceMessageSerialization force_serialization;
   auto proxy = ConnectToChromiumService();
   auto pickle_arrays = std::vector<std::vector<PickledStructChromium>>(2);
   for (size_t i = 0; i < 2; ++i)
@@ -374,6 +393,7 @@ TEST_F(PickleTest, PickleArrayArray) {
 }
 
 TEST_F(PickleTest, PickleContainer) {
+  ScopedForceMessageSerialization force_serialization;
   auto proxy = ConnectToChromiumService();
   PickleContainerPtr pickle_container = PickleContainer::New();
   pickle_container->f_struct.set_foo(42);

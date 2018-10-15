@@ -6,12 +6,12 @@
 
 namespace mojo {
 
-void GetIsolatedInterface(ScopedInterfaceEndpointHandle handle) {
+void AssociateWithDisconnectedPipe(ScopedInterfaceEndpointHandle handle) {
   MessagePipe pipe;
   scoped_refptr<internal::MultiplexRouter> router =
-      new internal::MultiplexRouter(std::move(pipe.handle0),
-                                    internal::MultiplexRouter::MULTI_INTERFACE,
-                                    false, base::ThreadTaskRunnerHandle::Get());
+      new internal::MultiplexRouter(
+          std::move(pipe.handle0), internal::MultiplexRouter::MULTI_INTERFACE,
+          false, base::SequencedTaskRunnerHandle::Get());
   router->AssociateInterface(std::move(handle));
 }
 

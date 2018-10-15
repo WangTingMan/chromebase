@@ -12,11 +12,14 @@ HighResolutionTimerManager::HighResolutionTimerManager()
     : hi_res_clock_available_(false) {
 }
 
-HighResolutionTimerManager::~HighResolutionTimerManager() {
-}
+HighResolutionTimerManager::~HighResolutionTimerManager() = default;
 
 void HighResolutionTimerManager::OnPowerStateChange(bool on_battery_power) {
 }
+
+void HighResolutionTimerManager::OnSuspend() {}
+
+void HighResolutionTimerManager::OnResume() {}
 
 void HighResolutionTimerManager::UseHiResClock(bool use) {
 }

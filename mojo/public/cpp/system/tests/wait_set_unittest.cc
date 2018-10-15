@@ -31,18 +31,11 @@ void WriteMessage(const ScopedMessagePipeHandle& handle,
 }
 
 std::string ReadMessage(const ScopedMessagePipeHandle& handle) {
-  uint32_t num_bytes = 0;
-  uint32_t num_handles = 0;
-  MojoResult rv = ReadMessageRaw(handle.get(), nullptr, &num_bytes, nullptr,
-                                 &num_handles, MOJO_READ_MESSAGE_FLAG_NONE);
-  CHECK_EQ(MOJO_RESULT_RESOURCE_EXHAUSTED, rv);
-  CHECK_EQ(0u, num_handles);
-
-  std::vector<char> buffer(num_bytes);
-  rv = ReadMessageRaw(handle.get(), buffer.data(), &num_bytes, nullptr,
-                      &num_handles, MOJO_READ_MESSAGE_FLAG_NONE);
+  std::vector<uint8_t> bytes;
+  MojoResult rv = ReadMessageRaw(handle.get(), &bytes, nullptr,
+                                 MOJO_READ_MESSAGE_FLAG_NONE);
   CHECK_EQ(MOJO_RESULT_OK, rv);
-  return std::string(buffer.data(), buffer.size());
+  return std::string(bytes.begin(), bytes.end());
 }
 
 class ThreadedRunner : public base::SimpleThread {
@@ -340,7 +333,7 @@ TEST_F(WaitSetTest, NoStarvation) {
 
   std::vector<std::unique_ptr<base::WaitableEvent>> events(kNumTestEvents);
   for (auto& event_ptr : events) {
-    event_ptr = base::MakeUnique<base::WaitableEvent>(
+    event_ptr = std::make_unique<base::WaitableEvent>(
         base::WaitableEvent::ResetPolicy::MANUAL,
         base::WaitableEvent::InitialState::NOT_SIGNALED);
     event_ptr->Signal();

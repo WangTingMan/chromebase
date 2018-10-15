@@ -1,0 +1,125 @@
+diff --git a/base/message_loop/message_loop_unittest.cc b/base/message_loop/message_loop_unittest.cc
+index 1a21fc5..7743479 100644
+--- a/base/message_loop/message_loop_unittest.cc
++++ b/base/message_loop/message_loop_unittest.cc
+@@ -22,7 +22,8 @@
+ #include "base/run_loop.h"
+ #include "base/single_thread_task_runner.h"
+ #include "base/synchronization/waitable_event.h"
+-#include "base/task_scheduler/task_scheduler.h"
++// Unsupported in libchrome
++// #include "base/task_scheduler/task_scheduler.h"
+ #include "base/test/gtest_util.h"
+ #include "base/test/test_simple_task_runner.h"
+ #include "base/test/test_timeouts.h"
+@@ -260,7 +261,8 @@ void PostNTasks(int posts_remaining) {
+ 
+ enum class TaskSchedulerAvailability {
+   NO_TASK_SCHEDULER,
+-  WITH_TASK_SCHEDULER,
++  // Unsupported in libchrome.
++  // WITH_TASK_SCHEDULER,
+ };
+ 
+ std::string TaskSchedulerAvailabilityToString(
+@@ -268,8 +270,9 @@ std::string TaskSchedulerAvailabilityToString(
+   switch (availability) {
+     case TaskSchedulerAvailability::NO_TASK_SCHEDULER:
+       return "NoTaskScheduler";
+-    case TaskSchedulerAvailability::WITH_TASK_SCHEDULER:
+-      return "WithTaskScheduler";
++    // Unsupported in libchrome.
++    // case TaskSchedulerAvailability::WITH_TASK_SCHEDULER:
++    //   return "WithTaskScheduler";
+   }
+   NOTREACHED();
+   return "Unknown";
+@@ -282,11 +285,16 @@ class MessageLoopTest
+   ~MessageLoopTest() override = default;
+ 
+   void SetUp() override {
++    // Unsupported in libchrome.
++#if 0
+     if (GetParam() == TaskSchedulerAvailability::WITH_TASK_SCHEDULER)
+       TaskScheduler::CreateAndStartWithDefaultParams("MessageLoopTest");
++#endif
+   }
+ 
+   void TearDown() override {
++    // Unsupported in libchrome.
++#if 0
+     if (GetParam() == TaskSchedulerAvailability::WITH_TASK_SCHEDULER) {
+       // Failure to call FlushForTesting() could result in task leaks as tasks
+       // are skipped on shutdown.
+@@ -295,6 +303,7 @@ class MessageLoopTest
+       base::TaskScheduler::GetInstance()->JoinForTesting();
+       base::TaskScheduler::SetInstance(nullptr);
+     }
++#endif
+   }
+ 
+   static std::string ParamInfoToString(
+@@ -776,13 +785,18 @@ class MessageLoopTypedTest
+   ~MessageLoopTypedTest() = default;
+ 
+   void SetUp() override {
++// Unsupported in libchrome.
++#if 0
+     if (GetTaskSchedulerAvailability() ==
+         TaskSchedulerAvailability::WITH_TASK_SCHEDULER) {
+       TaskScheduler::CreateAndStartWithDefaultParams("MessageLoopTypedTest");
+     }
++#endif
+   }
+ 
+   void TearDown() override {
++// Unsupported in libchrome.
++#if 0
+     if (GetTaskSchedulerAvailability() ==
+         TaskSchedulerAvailability::WITH_TASK_SCHEDULER) {
+       // Failure to call FlushForTesting() could result in task leaks as tasks
+@@ -792,6 +806,7 @@ class MessageLoopTypedTest
+       base::TaskScheduler::GetInstance()->JoinForTesting();
+       base::TaskScheduler::SetInstance(nullptr);
+     }
++#endif
+   }
+ 
+   static std::string ParamInfoToString(
+@@ -1769,8 +1784,10 @@ INSTANTIATE_TEST_CASE_P(
+                           TaskSchedulerAvailability::NO_TASK_SCHEDULER),
+                       MessageLoopTypedTestParams(
+                           MessageLoop::TYPE_UI,
+-                          TaskSchedulerAvailability::NO_TASK_SCHEDULER),
+-                      MessageLoopTypedTestParams(
++                          TaskSchedulerAvailability::NO_TASK_SCHEDULER)
++// Unsupported in libchrome.
++#if 0
++                      ,MessageLoopTypedTestParams(
+                           MessageLoop::TYPE_DEFAULT,
+                           TaskSchedulerAvailability::WITH_TASK_SCHEDULER),
+                       MessageLoopTypedTestParams(
+@@ -1778,7 +1795,9 @@ INSTANTIATE_TEST_CASE_P(
+                           TaskSchedulerAvailability::WITH_TASK_SCHEDULER),
+                       MessageLoopTypedTestParams(
+                           MessageLoop::TYPE_UI,
+-                          TaskSchedulerAvailability::WITH_TASK_SCHEDULER)),
++                          TaskSchedulerAvailability::WITH_TASK_SCHEDULER)
++#endif
++                      ),
+     MessageLoopTypedTest::ParamInfoToString);
+ 
+ #if defined(OS_WIN)
+@@ -2210,8 +2229,10 @@ TEST_P(MessageLoopTest, SequenceLocalStorageDifferentMessageLoops) {
+ INSTANTIATE_TEST_CASE_P(
+     ,
+     MessageLoopTest,
+-    ::testing::Values(TaskSchedulerAvailability::NO_TASK_SCHEDULER,
+-                      TaskSchedulerAvailability::WITH_TASK_SCHEDULER),
++    ::testing::Values(TaskSchedulerAvailability::NO_TASK_SCHEDULER
++                      // Unsupported in libchrome
++                      //, TaskSchedulerAvailability::WITH_TASK_SCHEDULER
++                      ),
+     MessageLoopTest::ParamInfoToString);
+ 
+ namespace {

@@ -7,7 +7,7 @@
 
 #include "base/logging.h"
 #include "mojo/public/cpp/bindings/map_traits.h"
-#include "third_party/WebKit/Source/wtf/HashMap.h"
+#include "third_party/blink/renderer/platform/wtf/hash_map.h"
 
 namespace mojo {
 
@@ -48,7 +48,7 @@ struct MapTraits<WTF::HashMap<K, V>> {
 
   template <typename IK, typename IV>
   static bool Insert(WTF::HashMap<K, V>& input, IK&& key, IV&& value) {
-    if (!WTF::HashMap<K, V>::isValidKey(key)) {
+    if (!WTF::HashMap<K, V>::IsValidKey(key)) {
       LOG(ERROR) << "The key value is disallowed by WTF::HashMap";
       return false;
     }

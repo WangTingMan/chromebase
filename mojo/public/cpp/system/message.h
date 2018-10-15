@@ -6,8 +6,10 @@
 #define MOJO_PUBLIC_CPP_SYSTEM_MESSAGE_H_
 
 #include <limits>
+#include <vector>
 
 #include "base/macros.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/strings/string_piece.h"
 #include "mojo/public/c/system/message_pipe.h"
 #include "mojo/public/cpp/system/handle.h"
@@ -38,7 +40,7 @@ class MessageHandle {
 
   void Close() {
     DCHECK(is_valid());
-    MojoResult result = MojoFreeMessage(value_);
+    MojoResult result = MojoDestroyMessage(value_);
     ALLOW_UNUSED_LOCAL(result);
     DCHECK_EQ(MOJO_RESULT_OK, result);
   }
@@ -49,17 +51,9 @@ class MessageHandle {
 
 using ScopedMessageHandle = ScopedHandleBase<MessageHandle>;
 
-inline MojoResult AllocMessage(size_t num_bytes,
-                               const MojoHandle* handles,
-                               size_t num_handles,
-                               MojoAllocMessageFlags flags,
-                               ScopedMessageHandle* handle) {
-  DCHECK_LE(num_bytes, std::numeric_limits<uint32_t>::max());
-  DCHECK_LE(num_handles, std::numeric_limits<uint32_t>::max());
+inline MojoResult CreateMessage(ScopedMessageHandle* handle) {
   MojoMessageHandle raw_handle;
-  MojoResult rv = MojoAllocMessage(static_cast<uint32_t>(num_bytes), handles,
-                                   static_cast<uint32_t>(num_handles), flags,
-                                   &raw_handle);
+  MojoResult rv = MojoCreateMessage(nullptr, &raw_handle);
   if (rv != MOJO_RESULT_OK)
     return rv;
 
@@ -67,15 +61,39 @@ inline MojoResult AllocMessage(size_t num_bytes,
   return MOJO_RESULT_OK;
 }
 
-inline MojoResult GetMessageBuffer(MessageHandle message, void** buffer) {
+inline MojoResult GetMessageData(MessageHandle message,
+                                 void** buffer,
+                                 uint32_t* num_bytes,
+                                 std::vector<ScopedHandle>* handles,
+                                 MojoGetMessageDataFlags flags) {
   DCHECK(message.is_valid());
-  return MojoGetMessageBuffer(message.value(), buffer);
+  DCHECK(num_bytes);
+  DCHECK(buffer);
+  uint32_t num_handles = 0;
+
+  MojoGetMessageDataOptions options;
+  options.struct_size = sizeof(options);
+  options.flags = flags;
+  MojoResult rv = MojoGetMessageData(message.value(), &options, buffer,
+                                     num_bytes, nullptr, &num_handles);
+  if (rv != MOJO_RESULT_RESOURCE_EXHAUSTED) {
+    if (handles)
+      handles->clear();
+    return rv;
+  }
+
+  handles->resize(num_handles);
+  return MojoGetMessageData(message.value(), &options, buffer, num_bytes,
+                            reinterpret_cast<MojoHandle*>(handles->data()),
+                            &num_handles);
 }
 
 inline MojoResult NotifyBadMessage(MessageHandle message,
                                    const base::StringPiece& error) {
   DCHECK(message.is_valid());
-  return MojoNotifyBadMessage(message.value(), error.data(), error.size());
+  DCHECK(base::IsValueInRangeForNumericType<uint32_t>(error.size()));
+  return MojoNotifyBadMessage(message.value(), error.data(),
+                              static_cast<uint32_t>(error.size()), nullptr);
 }
 
 }  // namespace mojo

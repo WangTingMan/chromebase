@@ -45,12 +45,12 @@ template<>
 class BASE_EXPORT JavaRef<jobject> {
  public:
   // Initializes a null reference. Don't add anything else here; it's inlined.
-  JavaRef() : obj_(nullptr) {}
+  constexpr JavaRef() : obj_(nullptr) {}
 
   // Allow nullptr to be converted to JavaRef. This avoids having to declare an
   // empty JavaRef just to pass null to a function, and makes C++ "nullptr" and
   // Java "null" equivalent.
-  JavaRef(std::nullptr_t) : JavaRef() {}
+  constexpr JavaRef(std::nullptr_t) : JavaRef() {}
 
   // Public to allow destruction of null JavaRef objects.
   // Don't add anything else here; it's inlined.
@@ -146,8 +146,8 @@ class JavaParamRef : public JavaRef<T> {
 template<typename T>
 class ScopedJavaLocalRef : public JavaRef<T> {
  public:
-  ScopedJavaLocalRef() : env_(nullptr) {}
-  ScopedJavaLocalRef(std::nullptr_t) : env_(nullptr) {}
+  constexpr ScopedJavaLocalRef() : env_(nullptr) {}
+  constexpr ScopedJavaLocalRef(std::nullptr_t) : env_(nullptr) {}
 
   // Non-explicit copy constructor, to allow ScopedJavaLocalRef to be returned
   // by value as this is the normal usage pattern.
@@ -234,8 +234,8 @@ class ScopedJavaLocalRef : public JavaRef<T> {
 template<typename T>
 class ScopedJavaGlobalRef : public JavaRef<T> {
  public:
-  ScopedJavaGlobalRef() {}
-  ScopedJavaGlobalRef(std::nullptr_t) {}
+  constexpr ScopedJavaGlobalRef() {}
+  constexpr ScopedJavaGlobalRef(std::nullptr_t) {}
 
   ScopedJavaGlobalRef(const ScopedJavaGlobalRef<T>& other) {
     this->Reset(other);
@@ -277,22 +277,6 @@ class ScopedJavaGlobalRef : public JavaRef<T> {
   T Release() {
     return static_cast<T>(this->ReleaseInternal());
   }
-};
-
-// Temporary type for parameters to Java functions, to allow incremental
-// migration from bare jobject to JavaRef. Don't use outside JNI generator.
-template <typename T>
-class JavaRefOrBare {
- public:
-  JavaRefOrBare(std::nullptr_t) : obj_(nullptr) {}
-  JavaRefOrBare(const JavaRef<T>& ref) : obj_(ref.obj()) {}
-  JavaRefOrBare(T obj) : obj_(obj) {}
-  T obj() const { return obj_; }
-
- private:
-  T obj_;
-
-  DISALLOW_COPY_AND_ASSIGN(JavaRefOrBare);
 };
 
 }  // namespace android

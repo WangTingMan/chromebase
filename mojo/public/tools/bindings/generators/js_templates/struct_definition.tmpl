@@ -30,6 +30,54 @@
     }
   };
 
+{#--- Fuzzing #}
+{%- if generate_fuzzing %}
+{%-   from "fuzzing.tmpl" import generate_or_mutate %}
+  {{struct.name}}.generate = function(generator_) {
+    var generated = new {{struct.name}};
+{%-   for field in struct.fields %}
+    generated.{{field.name}} = {{generate_or_mutate('generator_', 'generate', field.kind)|indent(4)}};
+{%-   endfor %}
+    return generated;
+  };
+
+  {{struct.name}}.prototype.mutate = function(mutator_) {
+{%-   for field in struct.fields %}
+    if (mutator_.chooseMutateField()) {
+      this.{{field.name}} = {{generate_or_mutate('mutator_', 'mutate', field.kind, 'this.' ~ field.name)|indent(6)}};
+    }
+{%-   endfor %}
+    return this;
+  };
+
+{%-   from "fuzzing.tmpl" import get_handle_deps %}
+  {{struct.name}}.prototype.getHandleDeps = function() {
+    var handles = [];
+{%-   for field in struct.fields %}
+{%-     if field.kind|contains_handles_or_interfaces %}
+    if (this.{{field.name}} !== null) {
+      Array.prototype.push.apply(handles, {{get_handle_deps(field.kind, 'this.' ~ field.name)|indent(6)}});
+    }
+{%-     endif %}
+{%-   endfor %}
+    return handles;
+  };
+
+  {{struct.name}}.prototype.setHandles = function() {
+    this.setHandlesInternal_(arguments, 0);
+  };
+
+{%-   from "fuzzing.tmpl" import set_handles %}
+  {{struct.name}}.prototype.setHandlesInternal_ = function(handles, idx) {
+{%-   for field in struct.fields %}
+{%-     if field.kind|contains_handles_or_interfaces %}
+    {{set_handles(field.kind, 'this.' ~ field.name)|indent(4)}};
+{%-     endif %}
+{%-   endfor %}
+    return idx;
+  };
+{%- endif %}
+
 {#--- Validation #}
 
   {{struct.name}}.validate = function(messageValidator, offset) {
@@ -58,8 +106,9 @@
 {%-   set offset = packed_field|field_offset %}
 {%-   set field = packed_field.field %}
 {%-   set name = struct.name ~ '.' ~ field.name %}
-{%    if field|is_object_field or field|is_any_handle_or_interface_field or
-          field|is_enum_field %}
+{%    if field.kind|is_object_kind or
+         field.kind|is_any_handle_or_interface_kind or
+         field.kind|is_enum_kind %}
 {%      if packed_field.min_version > last_checked_version %}
 {%        set last_checked_version = packed_field.min_version %}
     // version check {{name}}
@@ -84,7 +133,7 @@
     var version = decoder.readUint32();
 {%- for byte in struct.bytes %}
 {%-   if byte.packed_fields|length >= 1 and
-         byte.packed_fields[0].field|is_bool_field %}
+         byte.packed_fields[0].field.kind|is_bool_kind %}
     packed = decoder.readUint8();
 {%-     for packed_field in byte.packed_fields %}
     val.{{packed_field.field.name}} = (packed >> {{packed_field.bit}}) & 1 ? true : false;
@@ -108,7 +157,7 @@
 
 {%- for byte in struct.bytes %}
 {%-   if byte.packed_fields|length >= 1 and
-         byte.packed_fields[0].field|is_bool_field %}
+         byte.packed_fields[0].field.kind|is_bool_kind %}
     packed = 0;
 {%-     for packed_field in byte.packed_fields %}
     packed |= (val.{{packed_field.field.name}} & 1) << {{packed_field.bit}}

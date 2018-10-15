@@ -26,6 +26,10 @@ const char switches::kTestLauncherForceRunBrokenTests[] =
 // Path to file containing test filter (one pattern per line).
 const char switches::kTestLauncherFilterFile[] = "test-launcher-filter-file";
 
+// Whether the test launcher should launch in "interactive mode", which disables
+// timeouts (and may have other effects for specific test types).
+const char switches::kTestLauncherInteractive[] = "test-launcher-interactive";
+
 // Number of parallel test launcher jobs.
 const char switches::kTestLauncherJobs[] = "test-launcher-jobs";
 
@@ -55,6 +59,11 @@ const char switches::kTestLauncherPrintWritablePath[] =
 // minus one (last shard).
 const char switches::kTestLauncherShardIndex[] =
     "test-launcher-shard-index";
+
+// Limit of test part results in the output. Default limit is 10.
+// Negative value will completely disable limit.
+const char switches::kTestLauncherTestPartResultsLimit[] =
+    "test-launcher-test-part-results-limit";
 
 // Total number of shards. Must be the same for all shards.
 const char switches::kTestLauncherTotalShards[] =

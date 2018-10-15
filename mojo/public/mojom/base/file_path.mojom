@@ -1,0 +1,24 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mojo_base.mojom;
+
+struct FilePath {
+  // In chrome, ninja have a goal that can define file_path_is_string for a set
+  // of mojom files.
+  // In android we don't have such ability ,one would have to add
+  // "--enable_feature file_path_is_string" to all targets generating pickle
+  //  files, headers and sources, and also in all project including them.
+  // Faster solution was to just remove this "EnableIf" definition in libchrome.
+  // [EnableIf=file_path_is_string]
+  string path;
+
+  // This duplicates the contents of mojo_base.mojom.String16. String16 isn't
+  // used here due to typemapping dependency problems. base::FilePath is
+  // used for the typemap for both variants, but base::string16 and WTF::String
+  // are used for mojo_base.mojom.String16 typemapping. This mismatch causes
+  // problems with dependencies.
+  [EnableIf=file_path_is_string16]
+  array<uint16> path;
+};

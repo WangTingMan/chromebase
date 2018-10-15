@@ -74,23 +74,28 @@
 
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
+#include "base/containers/span.h"
 #include "base/gtest_prod_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/metrics/bucket_ranges.h"
 #include "base/metrics/histogram_base.h"
 #include "base/metrics/histogram_samples.h"
+#include "base/strings/string_piece.h"
 #include "base/time/time.h"
 
 namespace base {
 
 class BooleanHistogram;
 class CustomHistogram;
+class DelayedPersistentAllocation;
 class Histogram;
+class HistogramTest;
 class LinearHistogram;
 class Pickle;
 class PickleIterator;
 class SampleVector;
+class SampleVectorBase;
 
 class BASE_EXPORT Histogram : public HistogramBase {
  public:
@@ -121,10 +126,15 @@ class BASE_EXPORT Histogram : public HistogramBase {
                                        base::TimeDelta maximum,
                                        uint32_t bucket_count,
                                        int32_t flags);
+  static HistogramBase* FactoryMicrosecondsTimeGet(const std::string& name,
+                                                   base::TimeDelta minimum,
+                                                   base::TimeDelta maximum,
+                                                   uint32_t bucket_count,
+                                                   int32_t flags);
 
-  // Overloads of the above two functions that take a const char* |name| param,
-  // to avoid code bloat from the std::string constructor being inlined into
-  // call sites.
+  // Overloads of the above functions that take a const char* |name| param, to
+  // avoid code bloat from the std::string constructor being inlined into call
+  // sites.
   static HistogramBase* FactoryGet(const char* name,
                                    Sample minimum,
                                    Sample maximum,
@@ -135,16 +145,20 @@ class BASE_EXPORT Histogram : public HistogramBase {
                                        base::TimeDelta maximum,
                                        uint32_t bucket_count,
                                        int32_t flags);
+  static HistogramBase* FactoryMicrosecondsTimeGet(const char* name,
+                                                   base::TimeDelta minimum,
+                                                   base::TimeDelta maximum,
+                                                   uint32_t bucket_count,
+                                                   int32_t flags);
 
   // Create a histogram using data in persistent storage.
   static std::unique_ptr<HistogramBase> PersistentCreate(
-      const std::string& name,
+      const char* name,
       Sample minimum,
       Sample maximum,
       const BucketRanges* ranges,
-      HistogramBase::AtomicCount* counts,
-      HistogramBase::AtomicCount* logged_counts,
-      uint32_t counts_size,
+      const DelayedPersistentAllocation& counts,
+      const DelayedPersistentAllocation& logged_counts,
       HistogramSamples::Metadata* meta,
       HistogramSamples::Metadata* logged_meta);
 
@@ -172,19 +186,20 @@ class BASE_EXPORT Histogram : public HistogramBase {
   //----------------------------------------------------------------------------
   // Accessors for factory construction, serialization and testing.
   //----------------------------------------------------------------------------
-  Sample declared_min() const { return declared_min_; }
-  Sample declared_max() const { return declared_max_; }
+  const BucketRanges* bucket_ranges() const;
+  Sample declared_min() const;
+  Sample declared_max() const;
   virtual Sample ranges(uint32_t i) const;
   virtual uint32_t bucket_count() const;
-  const BucketRanges* bucket_ranges() const { return bucket_ranges_; }
 
   // This function validates histogram construction arguments. It returns false
-  // if some of the arguments are totally bad.
+  // if some of the arguments are bad but also corrects them so they should
+  // function on non-dcheck builds without crashing.
   // Note. Currently it allow some bad input, e.g. 0 as minimum, but silently
   // converts it to good input: 1.
-  // TODO(kaiwang): Be more restrict and return false for any bad input, and
-  // make this a readonly validating function.
-  static bool InspectConstructionArguments(const std::string& name,
+  // TODO(bcwhite): Use false returns to create "sink" histograms so that bad
+  // data doesn't create confusion on the servers.
+  static bool InspectConstructionArguments(StringPiece name,
                                            Sample* minimum,
                                            Sample* maximum,
                                            uint32_t* bucket_count);
@@ -205,6 +220,10 @@ class BASE_EXPORT Histogram : public HistogramBase {
   void WriteHTMLGraph(std::string* output) const override;
   void WriteAscii(std::string* output) const override;
 
+  // Validates the histogram contents and CHECKs on errors.
+  // TODO(bcwhite): Remove this after https://crbug/836875.
+  void ValidateHistogramContents() const override;
+
  protected:
   // This class, defined entirely within the .cc file, contains all the
   // common logic for building a Histogram and can be overridden by more
@@ -215,7 +234,7 @@ class BASE_EXPORT Histogram : public HistogramBase {
 
   // |ranges| should contain the underflow and overflow buckets. See top
   // comments for example.
-  Histogram(const std::string& name,
+  Histogram(const char* name,
             Sample minimum,
             Sample maximum,
             const BucketRanges* ranges);
@@ -226,18 +245,17 @@ class BASE_EXPORT Histogram : public HistogramBase {
   // the life of this memory is managed externally and exceeds the lifetime
   // of this object. Practically, this memory is never released until the
   // process exits and the OS cleans it up.
-  Histogram(const std::string& name,
+  Histogram(const char* name,
             Sample minimum,
             Sample maximum,
             const BucketRanges* ranges,
-            HistogramBase::AtomicCount* counts,
-            HistogramBase::AtomicCount* logged_counts,
-            uint32_t counts_size,
+            const DelayedPersistentAllocation& counts,
+            const DelayedPersistentAllocation& logged_counts,
             HistogramSamples::Metadata* meta,
             HistogramSamples::Metadata* logged_meta);
 
   // HistogramBase implementation:
-  bool SerializeInfoImpl(base::Pickle* pickle) const override;
+  void SerializeInfoImpl(base::Pickle* pickle) const override;
 
   // Method to override to skip the display of the i'th bucket if it's empty.
   virtual bool PrintEmptyBucket(uint32_t index) const;
@@ -252,6 +270,7 @@ class BASE_EXPORT Histogram : public HistogramBase {
 
  private:
   // Allow tests to corrupt our innards for testing purposes.
+  friend class HistogramTest;
   FRIEND_TEST_ALL_PREFIXES(HistogramTest, BoundsTest);
   FRIEND_TEST_ALL_PREFIXES(HistogramTest, BucketPlacementTest);
   FRIEND_TEST_ALL_PREFIXES(HistogramTest, CorruptSampleCounts);
@@ -263,8 +282,13 @@ class BASE_EXPORT Histogram : public HistogramBase {
       base::PickleIterator* iter);
   static HistogramBase* DeserializeInfoImpl(base::PickleIterator* iter);
 
-  // Implementation of SnapshotSamples function.
-  std::unique_ptr<SampleVector> SnapshotSampleVector() const;
+  // Create a snapshot containing all samples (both logged and unlogged).
+  // Implementation of SnapshotSamples method with a more specific type for
+  // internal use.
+  std::unique_ptr<SampleVector> SnapshotAllSamples() const;
+
+  // Create a copy of unlogged samples.
+  std::unique_ptr<SampleVector> SnapshotUnloggedSamples() const;
 
   //----------------------------------------------------------------------------
   // Helpers for emitting Ascii graphic.  Each method appends data to output.
@@ -274,10 +298,10 @@ class BASE_EXPORT Histogram : public HistogramBase {
                       std::string* output) const;
 
   // Find out how large (graphically) the largest bucket will appear to be.
-  double GetPeakBucketSize(const SampleVector& samples) const;
+  double GetPeakBucketSize(const SampleVectorBase& samples) const;
 
   // Write a common header message describing this histogram.
-  void WriteAsciiHeader(const SampleVector& samples,
+  void WriteAsciiHeader(const SampleVectorBase& samples,
                         Count sample_count,
                         std::string* output) const;
 
@@ -296,22 +320,17 @@ class BASE_EXPORT Histogram : public HistogramBase {
                              int64_t* sum,
                              ListValue* buckets) const override;
 
-  // Does not own this object. Should get from StatisticsRecorder.
-  const BucketRanges* bucket_ranges_;
+  // Samples that have not yet been logged with SnapshotDelta().
+  std::unique_ptr<SampleVectorBase> unlogged_samples_;
 
-  Sample declared_min_;  // Less than this goes into the first bucket.
-  Sample declared_max_;  // Over this goes into the last bucket.
+  // Accumulation of all samples that have been logged with SnapshotDelta().
+  std::unique_ptr<SampleVectorBase> logged_samples_;
 
-  // Finally, provide the state that changes with the addition of each new
-  // sample.
-  std::unique_ptr<SampleVector> samples_;
-
-  // Also keep a previous uploaded state for calculating deltas.
-  std::unique_ptr<HistogramSamples> logged_samples_;
-
+#if DCHECK_IS_ON()  // Don't waste memory if it won't be used.
   // Flag to indicate if PrepareFinalDelta has been previously called. It is
   // used to DCHECK that a final delta is not created multiple times.
   mutable bool final_delta_created_ = false;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(Histogram);
 };
@@ -353,13 +372,12 @@ class BASE_EXPORT LinearHistogram : public Histogram {
 
   // Create a histogram using data in persistent storage.
   static std::unique_ptr<HistogramBase> PersistentCreate(
-      const std::string& name,
+      const char* name,
       Sample minimum,
       Sample maximum,
       const BucketRanges* ranges,
-      HistogramBase::AtomicCount* counts,
-      HistogramBase::AtomicCount* logged_counts,
-      uint32_t counts_size,
+      const DelayedPersistentAllocation& counts,
+      const DelayedPersistentAllocation& logged_counts,
       HistogramSamples::Metadata* meta,
       HistogramSamples::Metadata* logged_meta);
 
@@ -391,18 +409,17 @@ class BASE_EXPORT LinearHistogram : public Histogram {
  protected:
   class Factory;
 
-  LinearHistogram(const std::string& name,
+  LinearHistogram(const char* name,
                   Sample minimum,
                   Sample maximum,
                   const BucketRanges* ranges);
 
-  LinearHistogram(const std::string& name,
+  LinearHistogram(const char* name,
                   Sample minimum,
                   Sample maximum,
                   const BucketRanges* ranges,
-                  HistogramBase::AtomicCount* counts,
-                  HistogramBase::AtomicCount* logged_counts,
-                  uint32_t counts_size,
+                  const DelayedPersistentAllocation& counts,
+                  const DelayedPersistentAllocation& logged_counts,
                   HistogramSamples::Metadata* meta,
                   HistogramSamples::Metadata* logged_meta);
 
@@ -432,6 +449,55 @@ class BASE_EXPORT LinearHistogram : public Histogram {
 
 //------------------------------------------------------------------------------
 
+// ScaledLinearHistogram is a wrapper around a linear histogram that scales the
+// counts down by some factor. Remainder values are kept locally but lost when
+// uploaded or serialized. The integral counts are rounded up/down so should
+// average to the correct value when many reports are added.
+//
+// This is most useful when adding many counts at once via AddCount() that can
+// cause overflows of the 31-bit counters, usually with an enum as the value.
+class BASE_EXPORT ScaledLinearHistogram {
+  using AtomicCount = Histogram::AtomicCount;
+  using Sample = Histogram::Sample;
+
+ public:
+  // Currently only works with "exact" linear histograms: minimum=1, maximum=N,
+  // and bucket_count=N+1.
+  ScaledLinearHistogram(const char* name,
+                        Sample minimum,
+                        Sample maximum,
+                        uint32_t bucket_count,
+                        int32_t scale,
+                        int32_t flags);
+
+  ~ScaledLinearHistogram();
+
+  // Like AddCount() but actually accumulates |count|/|scale| and increments
+  // the accumulated remainder by |count|%|scale|. An additional increment
+  // is done when the remainder has grown sufficiently large.
+  void AddScaledCount(Sample value, int count);
+
+  int32_t scale() const { return scale_; }
+  LinearHistogram* histogram() { return histogram_; }
+
+ private:
+  // Pointer to the underlying histogram. Ownership of it remains with
+  // the statistics-recorder.
+  LinearHistogram* const histogram_;
+
+  // The scale factor of the sample counts.
+  const int32_t scale_;
+
+  // A vector of "remainder" counts indexed by bucket number. These values
+  // may be negative as the scaled count is actually bumped once the
+  // remainder is 1/2 way to the scale value (thus "rounding").
+  std::vector<AtomicCount> remainders_;
+
+  DISALLOW_COPY_AND_ASSIGN(ScaledLinearHistogram);
+};
+
+//------------------------------------------------------------------------------
+
 // BooleanHistogram is a histogram for booleans.
 class BASE_EXPORT BooleanHistogram : public LinearHistogram {
  public:
@@ -444,10 +510,10 @@ class BASE_EXPORT BooleanHistogram : public LinearHistogram {
 
   // Create a histogram using data in persistent storage.
   static std::unique_ptr<HistogramBase> PersistentCreate(
-      const std::string& name,
+      const char* name,
       const BucketRanges* ranges,
-      HistogramBase::AtomicCount* counts,
-      HistogramBase::AtomicCount* logged_counts,
+      const DelayedPersistentAllocation& counts,
+      const DelayedPersistentAllocation& logged_counts,
       HistogramSamples::Metadata* meta,
       HistogramSamples::Metadata* logged_meta);
 
@@ -457,11 +523,11 @@ class BASE_EXPORT BooleanHistogram : public LinearHistogram {
   class Factory;
 
  private:
-  BooleanHistogram(const std::string& name, const BucketRanges* ranges);
-  BooleanHistogram(const std::string& name,
+  BooleanHistogram(const char* name, const BucketRanges* ranges);
+  BooleanHistogram(const char* name,
                    const BucketRanges* ranges,
-                   HistogramBase::AtomicCount* counts,
-                   HistogramBase::AtomicCount* logged_counts,
+                   const DelayedPersistentAllocation& counts,
+                   const DelayedPersistentAllocation& logged_counts,
                    HistogramSamples::Metadata* meta,
                    HistogramSamples::Metadata* logged_meta);
 
@@ -494,11 +560,10 @@ class BASE_EXPORT CustomHistogram : public Histogram {
 
   // Create a histogram using data in persistent storage.
   static std::unique_ptr<HistogramBase> PersistentCreate(
-      const std::string& name,
+      const char* name,
       const BucketRanges* ranges,
-      HistogramBase::AtomicCount* counts,
-      HistogramBase::AtomicCount* logged_counts,
-      uint32_t counts_size,
+      const DelayedPersistentAllocation& counts,
+      const DelayedPersistentAllocation& logged_counts,
       HistogramSamples::Metadata* meta,
       HistogramSamples::Metadata* logged_meta);
 
@@ -510,25 +575,23 @@ class BASE_EXPORT CustomHistogram : public Histogram {
   // This function ensures that a guard bucket exists right after any
   // valid sample value (unless the next higher sample is also a valid value),
   // so that invalid samples never fall into the same bucket as valid samples.
-  // TODO(kaiwang): Change name to ArrayToCustomEnumRanges.
-  static std::vector<Sample> ArrayToCustomRanges(const Sample* values,
-                                                 uint32_t num_values);
+  static std::vector<Sample> ArrayToCustomEnumRanges(
+      base::span<const Sample> values);
+
  protected:
   class Factory;
 
-  CustomHistogram(const std::string& name,
-                  const BucketRanges* ranges);
+  CustomHistogram(const char* name, const BucketRanges* ranges);
 
-  CustomHistogram(const std::string& name,
+  CustomHistogram(const char* name,
                   const BucketRanges* ranges,
-                  HistogramBase::AtomicCount* counts,
-                  HistogramBase::AtomicCount* logged_counts,
-                  uint32_t counts_size,
+                  const DelayedPersistentAllocation& counts,
+                  const DelayedPersistentAllocation& logged_counts,
                   HistogramSamples::Metadata* meta,
                   HistogramSamples::Metadata* logged_meta);
 
   // HistogramBase implementation:
-  bool SerializeInfoImpl(base::Pickle* pickle) const override;
+  void SerializeInfoImpl(base::Pickle* pickle) const override;
 
   double GetBucketSize(Count current, uint32_t i) const override;
 

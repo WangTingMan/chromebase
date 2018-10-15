@@ -1,0 +1,25 @@
+From 8fbafc974b92d26780d7e2a8c36856ff689e8f6b Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Thu, 27 Sep 2018 19:10:56 +0000
+Subject: [PATCH] Add missing include for condition variable in base/test/test_mock_time_task_runner.h
+
+Change-Id: Ia6b77632aab5df842c8878fba6fc96bf405a28de
+Reviewed-on: https://chromium-review.googlesource.com/1249488
+Reviewed-by: Luis Hector Chavez <lhchavez@chromium.org>
+Reviewed-by: Gabriel Charette <gab@chromium.org>
+Commit-Queue: Gabriel Charette <gab@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#594806}
+---
+
+diff --git a/base/test/test_mock_time_task_runner.h b/base/test/test_mock_time_task_runner.h
+index dd7274c..dcfbcbd 100644
+--- a/base/test/test_mock_time_task_runner.h
++++ b/base/test/test_mock_time_task_runner.h
+@@ -17,6 +17,7 @@
+ #include "base/macros.h"
+ #include "base/run_loop.h"
+ #include "base/single_thread_task_runner.h"
++#include "base/synchronization/condition_variable.h"
+ #include "base/synchronization/lock.h"
+ #include "base/test/test_pending_task.h"
+ #include "base/threading/thread_checker_impl.h"

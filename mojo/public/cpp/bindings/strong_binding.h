@@ -38,7 +38,7 @@ using StrongBindingPtr = base::WeakPtr<StrongBinding<Interface>>;
 // To use, call StrongBinding<T>::Create() (see below) or the helper
 // MakeStrongBinding function:
 //
-//   mojo::MakeStrongBinding(base::MakeUnique<FooImpl>(),
+//   mojo::MakeStrongBinding(std::make_unique<FooImpl>(),
 //                           std::move(foo_request));
 //
 template <typename Interface>
@@ -59,17 +59,32 @@ class StrongBinding {
   //
   // This method may only be called after this StrongBinding has been bound to a
   // message pipe.
-  void set_connection_error_handler(const base::Closure& error_handler) {
+  void set_connection_error_handler(base::OnceClosure error_handler) {
     DCHECK(binding_.is_bound());
-    connection_error_handler_ = error_handler;
+    connection_error_handler_ = std::move(error_handler);
     connection_error_with_reason_handler_.Reset();
   }
 
   void set_connection_error_with_reason_handler(
-      const ConnectionErrorWithReasonCallback& error_handler) {
+      ConnectionErrorWithReasonCallback error_handler) {
     DCHECK(binding_.is_bound());
-    connection_error_with_reason_handler_ = error_handler;
+    connection_error_with_reason_handler_ = std::move(error_handler);
     connection_error_handler_.Reset();
+  }
+
+  // Stops processing incoming messages until
+  // ResumeIncomingMethodCallProcessing().
+  // Outgoing messages are still sent.
+  //
+  // No errors are detected on the message pipe while paused.
+  //
+  // This method may only be called if the object has been bound to a message
+  // pipe and there are no associated interfaces running.
+  void PauseIncomingMethodCallProcessing() {
+    binding_.PauseIncomingMethodCallProcessing();
+  }
+  void ResumeIncomingMethodCallProcessing() {
+    binding_.ResumeIncomingMethodCallProcessing();
   }
 
   // Forces the binding to close. This destroys the StrongBinding instance.
@@ -97,15 +112,17 @@ class StrongBinding {
 
   void OnConnectionError(uint32_t custom_reason,
                          const std::string& description) {
-    if (!connection_error_handler_.is_null())
-      connection_error_handler_.Run();
-    else if (!connection_error_with_reason_handler_.is_null())
-      connection_error_with_reason_handler_.Run(custom_reason, description);
+    if (connection_error_handler_) {
+      std::move(connection_error_handler_).Run();
+    } else if (connection_error_with_reason_handler_) {
+      std::move(connection_error_with_reason_handler_)
+          .Run(custom_reason, description);
+    }
     Close();
   }
 
   std::unique_ptr<Interface> impl_;
-  base::Closure connection_error_handler_;
+  base::OnceClosure connection_error_handler_;
   ConnectionErrorWithReasonCallback connection_error_with_reason_handler_;
   Binding<Interface> binding_;
   base::WeakPtrFactory<StrongBinding> weak_factory_;

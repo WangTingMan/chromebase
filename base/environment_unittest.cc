@@ -14,11 +14,22 @@ typedef PlatformTest EnvironmentTest;
 
 namespace base {
 
+namespace {
+
+// PATH env variable is not set on Fuchsia by default, while PWD is not set on
+// Windows.
+#if defined(OS_FUCHSIA)
+constexpr char kValidEnvironmentVariable[] = "PWD";
+#else
+constexpr char kValidEnvironmentVariable[] = "PATH";
+#endif
+
+}  // namespace
+
 TEST_F(EnvironmentTest, GetVar) {
-  // Every setup should have non-empty PATH...
   std::unique_ptr<Environment> env(Environment::Create());
   std::string env_value;
-  EXPECT_TRUE(env->GetVar("PATH", &env_value));
+  EXPECT_TRUE(env->GetVar(kValidEnvironmentVariable, &env_value));
   EXPECT_NE(env_value, "");
 }
 
@@ -51,9 +62,8 @@ TEST_F(EnvironmentTest, GetVarReverse) {
 }
 
 TEST_F(EnvironmentTest, HasVar) {
-  // Every setup should have PATH...
   std::unique_ptr<Environment> env(Environment::Create());
-  EXPECT_TRUE(env->HasVar("PATH"));
+  EXPECT_TRUE(env->HasVar(kValidEnvironmentVariable));
 }
 
 TEST_F(EnvironmentTest, SetVar) {
@@ -127,39 +137,39 @@ TEST_F(EnvironmentTest, AlterEnvironment) {
 #else
 
 TEST_F(EnvironmentTest, AlterEnvironment) {
-  const char* const empty[] = { NULL };
-  const char* const a2[] = { "A=2", NULL };
+  const char* const empty[] = {nullptr};
+  const char* const a2[] = {"A=2", nullptr};
   EnvironmentMap changes;
   std::unique_ptr<char* []> e;
 
   e = AlterEnvironment(empty, changes);
-  EXPECT_TRUE(e[0] == NULL);
+  EXPECT_TRUE(e[0] == nullptr);
 
   changes["A"] = "1";
   e = AlterEnvironment(empty, changes);
   EXPECT_EQ(std::string("A=1"), e[0]);
-  EXPECT_TRUE(e[1] == NULL);
+  EXPECT_TRUE(e[1] == nullptr);
 
   changes.clear();
   changes["A"] = std::string();
   e = AlterEnvironment(empty, changes);
-  EXPECT_TRUE(e[0] == NULL);
+  EXPECT_TRUE(e[0] == nullptr);
 
   changes.clear();
   e = AlterEnvironment(a2, changes);
   EXPECT_EQ(std::string("A=2"), e[0]);
-  EXPECT_TRUE(e[1] == NULL);
+  EXPECT_TRUE(e[1] == nullptr);
 
   changes.clear();
   changes["A"] = "1";
   e = AlterEnvironment(a2, changes);
   EXPECT_EQ(std::string("A=1"), e[0]);
-  EXPECT_TRUE(e[1] == NULL);
+  EXPECT_TRUE(e[1] == nullptr);
 
   changes.clear();
   changes["A"] = std::string();
   e = AlterEnvironment(a2, changes);
-  EXPECT_TRUE(e[0] == NULL);
+  EXPECT_TRUE(e[0] == nullptr);
 }
 
 #endif

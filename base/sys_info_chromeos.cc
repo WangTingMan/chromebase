@@ -131,16 +131,13 @@ class ChromeOSVersionInfo {
     }
     StringTokenizer tokenizer(version, ".");
     if (tokenizer.GetNext()) {
-      StringToInt(StringPiece(tokenizer.token_begin(), tokenizer.token_end()),
-                  &major_version_);
+      StringToInt(tokenizer.token_piece(), &major_version_);
     }
     if (tokenizer.GetNext()) {
-      StringToInt(StringPiece(tokenizer.token_begin(), tokenizer.token_end()),
-                  &minor_version_);
+      StringToInt(tokenizer.token_piece(), &minor_version_);
     }
     if (tokenizer.GetNext()) {
-      StringToInt(StringPiece(tokenizer.token_begin(), tokenizer.token_end()),
-                  &bugfix_version_);
+      StringToInt(tokenizer.token_piece(), &bugfix_version_);
     }
 
     // Check release name for Chrome OS.
@@ -200,16 +197,6 @@ std::string SysInfo::GetLsbReleaseBoard() {
 }
 
 // static
-std::string SysInfo::GetStrippedReleaseBoard() {
-  std::string board = GetLsbReleaseBoard();
-  const size_t index = board.find("-signed-");
-  if (index != std::string::npos)
-    board.resize(index);
-
-  return base::ToLowerASCII(board);
-}
-
-// static
 Time SysInfo::GetLsbReleaseTime() {
   return GetChromeOSVersionInfo().lsb_release_time();
 }
@@ -224,8 +211,7 @@ void SysInfo::SetChromeOSVersionInfoForTest(const std::string& lsb_release,
                                             const Time& lsb_release_time) {
   std::unique_ptr<Environment> env(Environment::Create());
   env->SetVar(kLsbReleaseKey, lsb_release);
-  env->SetVar(kLsbReleaseTimeKey,
-              DoubleToString(lsb_release_time.ToDoubleT()));
+  env->SetVar(kLsbReleaseTimeKey, NumberToString(lsb_release_time.ToDoubleT()));
   g_chrome_os_version_info.Get().Parse();
 }
 

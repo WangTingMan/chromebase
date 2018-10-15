@@ -6,18 +6,17 @@
 
 #include <stdint.h>
 
-#include <utility>
-
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/single_thread_task_runner.h"
+#include "base/sequenced_task_runner.h"
 #include "base/stl_util.h"
 #include "mojo/public/cpp/bindings/associated_group.h"
 #include "mojo/public/cpp/bindings/associated_group_controller.h"
 #include "mojo/public/cpp/bindings/interface_endpoint_controller.h"
+#include "mojo/public/cpp/bindings/lib/task_runner_helper.h"
 #include "mojo/public/cpp/bindings/lib/validation_util.h"
 #include "mojo/public/cpp/bindings/sync_call_restrictions.h"
 
@@ -27,10 +26,10 @@ namespace mojo {
 
 namespace {
 
-void DCheckIfInvalid(const base::WeakPtr<InterfaceEndpointClient>& client,
-                   const std::string& message) {
-  bool is_valid = client && !client->encountered_error();
-  DCHECK(!is_valid) << message;
+void DetermineIfEndpointIsConnected(
+    const base::WeakPtr<InterfaceEndpointClient>& client,
+    base::OnceCallback<void(bool)> callback) {
+  std::move(callback).Run(client && !client->encountered_error());
 }
 
 // When receiving an incoming message which expects a repsonse,
@@ -41,7 +40,7 @@ class ResponderThunk : public MessageReceiverWithStatus {
  public:
   explicit ResponderThunk(
       const base::WeakPtr<InterfaceEndpointClient>& endpoint_client,
-      scoped_refptr<base::SingleThreadTaskRunner> runner)
+      scoped_refptr<base::SequencedTaskRunner> runner)
       : endpoint_client_(endpoint_client),
         accept_was_invoked_(false),
         task_runner_(std::move(runner)) {}
@@ -52,7 +51,7 @@ class ResponderThunk : public MessageReceiverWithStatus {
       // We raise an error to signal the calling application that an error
       // condition occurred. Without this the calling application would have no
       // way of knowing it should stop waiting for a response.
-      if (task_runner_->RunsTasksOnCurrentThread()) {
+      if (task_runner_->RunsTasksInCurrentSequence()) {
         // Please note that even if this code is run from a different task
         // runner on the same thread as |task_runner_|, it is okay to directly
         // call InterfaceEndpointClient::RaiseError(), because it will raise
@@ -69,8 +68,12 @@ class ResponderThunk : public MessageReceiverWithStatus {
   }
 
   // MessageReceiver implementation:
+  bool PrefersSerializedMessages() override {
+    return endpoint_client_ && endpoint_client_->PrefersSerializedMessages();
+  }
+
   bool Accept(Message* message) override {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
     accept_was_invoked_ = true;
     DCHECK(message->has_flag(Message::kFlagIsResponse));
 
@@ -83,24 +86,25 @@ class ResponderThunk : public MessageReceiverWithStatus {
   }
 
   // MessageReceiverWithStatus implementation:
-  bool IsValid() override {
-    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  bool IsConnected() override {
+    DCHECK(task_runner_->RunsTasksInCurrentSequence());
     return endpoint_client_ && !endpoint_client_->encountered_error();
   }
 
-  void DCheckInvalid(const std::string& message) override {
-    if (task_runner_->RunsTasksOnCurrentThread()) {
-      DCheckIfInvalid(endpoint_client_, message);
+  void IsConnectedAsync(base::OnceCallback<void(bool)> callback) override {
+    if (task_runner_->RunsTasksInCurrentSequence()) {
+      DetermineIfEndpointIsConnected(endpoint_client_, std::move(callback));
     } else {
       task_runner_->PostTask(
-          FROM_HERE, base::Bind(&DCheckIfInvalid, endpoint_client_, message));
+          FROM_HERE, base::BindOnce(&DetermineIfEndpointIsConnected,
+                                    endpoint_client_, std::move(callback)));
     }
- }
+  }
 
  private:
   base::WeakPtr<InterfaceEndpointClient> endpoint_client_;
   bool accept_was_invoked_;
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  scoped_refptr<base::SequencedTaskRunner> task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(ResponderThunk);
 };
@@ -136,7 +140,7 @@ InterfaceEndpointClient::InterfaceEndpointClient(
     MessageReceiverWithResponderStatus* receiver,
     std::unique_ptr<MessageReceiver> payload_validator,
     bool expect_sync_requests,
-    scoped_refptr<base::SingleThreadTaskRunner> runner,
+    scoped_refptr<base::SequencedTaskRunner> runner,
     uint32_t interface_version)
     : expect_sync_requests_(expect_sync_requests),
       handle_(std::move(handle)),
@@ -163,20 +167,19 @@ InterfaceEndpointClient::InterfaceEndpointClient(
 }
 
 InterfaceEndpointClient::~InterfaceEndpointClient() {
-  DCHECK(thread_checker_.CalledOnValidThread());
-
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   if (controller_)
     handle_.group_controller()->DetachEndpointClient(handle_);
 }
 
 AssociatedGroup* InterfaceEndpointClient::associated_group() {
   if (!associated_group_)
-    associated_group_ = base::MakeUnique<AssociatedGroup>(handle_);
+    associated_group_ = std::make_unique<AssociatedGroup>(handle_);
   return associated_group_.get();
 }
 
 ScopedInterfaceEndpointHandle InterfaceEndpointClient::PassHandle() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   DCHECK(!has_pending_responders());
 
   if (!handle_.is_valid())
@@ -199,7 +202,7 @@ void InterfaceEndpointClient::AddFilter(
 }
 
 void InterfaceEndpointClient::RaiseError() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   if (!handle_.pending_association())
     handle_.group_controller()->RaiseError();
@@ -207,14 +210,19 @@ void InterfaceEndpointClient::RaiseError() {
 
 void InterfaceEndpointClient::CloseWithReason(uint32_t custom_reason,
                                               const std::string& description) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   auto handle = PassHandle();
   handle.ResetWithReason(custom_reason, description);
 }
 
+bool InterfaceEndpointClient::PrefersSerializedMessages() {
+  auto* controller = handle_.group_controller();
+  return controller && controller->PrefersSerializedMessages();
+}
+
 bool InterfaceEndpointClient::Accept(Message* message) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   DCHECK(!message->has_flag(Message::kFlagExpectsResponse));
   DCHECK(!handle_.pending_association());
 
@@ -237,7 +245,7 @@ bool InterfaceEndpointClient::Accept(Message* message) {
 bool InterfaceEndpointClient::AcceptWithResponder(
     Message* message,
     std::unique_ptr<MessageReceiver> responder) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   DCHECK(message->has_flag(Message::kFlagExpectsResponse));
   DCHECK(!handle_.pending_association());
 
@@ -270,7 +278,7 @@ bool InterfaceEndpointClient::AcceptWithResponder(
 
   bool response_received = false;
   sync_responses_.insert(std::make_pair(
-      request_id, base::MakeUnique<SyncResponseInfo>(&response_received)));
+      request_id, std::make_unique<SyncResponseInfo>(&response_received)));
 
   base::WeakPtr<InterfaceEndpointClient> weak_self =
       weak_ptr_factory_.GetWeakPtr();
@@ -280,8 +288,13 @@ bool InterfaceEndpointClient::AcceptWithResponder(
     DCHECK(base::ContainsKey(sync_responses_, request_id));
     auto iter = sync_responses_.find(request_id);
     DCHECK_EQ(&response_received, iter->second->response_received);
-    if (response_received)
+    if (response_received) {
       ignore_result(responder->Accept(&iter->second->response));
+    } else {
+      DVLOG(1) << "Mojo sync call returns without receiving a response. "
+               << "Typcially it is because the interface has been "
+               << "disconnected.";
+    }
     sync_responses_.erase(iter);
   }
 
@@ -289,13 +302,13 @@ bool InterfaceEndpointClient::AcceptWithResponder(
 }
 
 bool InterfaceEndpointClient::HandleIncomingMessage(Message* message) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   return filters_.Accept(message);
 }
 
 void InterfaceEndpointClient::NotifyError(
     const base::Optional<DisconnectReason>& reason) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
 
   if (encountered_error_)
     return;
@@ -309,16 +322,14 @@ void InterfaceEndpointClient::NotifyError(
 
   control_message_proxy_.OnConnectionError();
 
-  if (!error_handler_.is_null()) {
-    base::Closure error_handler = std::move(error_handler_);
-    error_handler.Run();
-  } else if (!error_with_reason_handler_.is_null()) {
-    ConnectionErrorWithReasonCallback error_with_reason_handler =
-        std::move(error_with_reason_handler_);
+  if (error_handler_) {
+    std::move(error_handler_).Run();
+  } else if (error_with_reason_handler_) {
     if (reason) {
-      error_with_reason_handler.Run(reason->custom_reason, reason->description);
+      std::move(error_with_reason_handler_)
+          .Run(reason->custom_reason, reason->description);
     } else {
-      error_with_reason_handler.Run(0, std::string());
+      std::move(error_with_reason_handler_).Run(0, std::string());
     }
   }
 }
@@ -374,7 +385,7 @@ bool InterfaceEndpointClient::HandleValidatedMessage(Message* message) {
 
   if (message->has_flag(Message::kFlagExpectsResponse)) {
     std::unique_ptr<MessageReceiverWithStatus> responder =
-        base::MakeUnique<ResponderThunk>(weak_ptr_factory_.GetWeakPtr(),
+        std::make_unique<ResponderThunk>(weak_ptr_factory_.GetWeakPtr(),
                                          task_runner_);
     if (mojo::internal::ControlMessageHandler::IsControlMessage(message)) {
       return control_message_handler_.AcceptWithResponder(message,

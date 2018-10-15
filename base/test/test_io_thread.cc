@@ -5,6 +5,7 @@
 #include "base/test/test_io_thread.h"
 
 #include "base/logging.h"
+#include "base/message_loop/message_loop.h"
 
 namespace base {
 
@@ -37,9 +38,8 @@ void TestIOThread::Stop() {
   io_thread_started_ = false;
 }
 
-void TestIOThread::PostTask(const tracked_objects::Location& from_here,
-                            const base::Closure& task) {
-  task_runner()->PostTask(from_here, task);
+void TestIOThread::PostTask(const Location& from_here, base::OnceClosure task) {
+  task_runner()->PostTask(from_here, std::move(task));
 }
 
 }  // namespace base
