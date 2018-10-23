@@ -331,6 +331,7 @@ libchromeAndroidSrc = [
 cc_library {
     name: "libchrome",
     host_supported: true,
+    recovery_available: true,
     vendor_available: true,
     defaults: ["libchrome-defaults"],
     srcs: libchromeCommonSrc,
