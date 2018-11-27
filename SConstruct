@@ -335,12 +335,14 @@ env.Append(
   CPPPATH=['files'],
   CCFLAGS=['-g']
 )
-for key in Split('CC CXX AR RANLIB LD NM CFLAGS CXXFLAGS LDFLAGS'):
+for key in Split('CC CXX AR RANLIB LD NM CFLAGS CXXFLAGS'):
   value = os.environ.get(key)
   if value:
     env[key] = Split(value)
 if os.environ.has_key('CPPFLAGS'):
   env['CCFLAGS'] += Split(os.environ['CPPFLAGS'])
+if os.environ.has_key('LDFLAGS'):
+  env['LINKFLAGS'] += Split(os.environ['LDFLAGS'])
 
 env['CCFLAGS'] += ['-DOS_CHROMEOS',
                    '-DUSE_NSS_CERTS',
