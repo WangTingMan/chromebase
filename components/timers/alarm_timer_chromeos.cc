@@ -22,7 +22,7 @@ namespace timers {
 
 AlarmTimer::AlarmTimer(bool retain_user_task, bool is_repeating)
     : base::Timer(retain_user_task, is_repeating),
-      alarm_fd_(timerfd_create(CLOCK_REALTIME_ALARM, 0)),
+      alarm_fd_(timerfd_create(CLOCK_REALTIME_ALARM, TFD_CLOEXEC)),
       weak_factory_(this) {}
 
 AlarmTimer::~AlarmTimer() {
