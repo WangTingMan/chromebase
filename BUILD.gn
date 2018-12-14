@@ -13,7 +13,11 @@ group("all") {
 
 # Suppressing warning in base/strings/stringprintf.cc.
 config("base_core_config") {
-  cflags = [ "-Wno-format-nonliteral" ]
+  cflags = [
+    "-Wno-format-nonliteral",
+    # This is for _exit(1) in base/debug/debugger_posix.cc.
+    "-Wno-unreachable-code",
+  ]
 }
 
 libbase_sublibs = [
