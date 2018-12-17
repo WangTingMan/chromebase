@@ -414,6 +414,10 @@ foreach(attr, libbase_sublibs) {
       configs += [ ":" + attr.name + "-pkg-config" ]
     }
     configs += [ "//common-mk:visibility_default" ]
+    if (buildtype == "static_library") {
+      configs -= [ "//common-mk:use_thin_archive" ]
+      configs += [ "//common-mk:nouse_thin_archive" ]
+    }
     if (defined(attr.configs)) {
       configs += attr.configs
     }
@@ -506,7 +510,7 @@ generate_pkg_config("libchrome-test") {
       requires_private += attr.pkg_deps
     }
   }
-  libs = [ "base-${libbase_ver}" ]
+  libs = [ "base-test-${libbase_ver}" ]
   libs_private = []
   foreach(attr, libbase_sublibs) {
     if (defined(attr.testonly) && attr.testonly) {
