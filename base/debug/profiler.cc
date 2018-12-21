@@ -63,7 +63,7 @@ bool IsProfilingSupported() {
 
 #else
 
-void StartProfiling(const std::string&) {
+void StartProfiling(const std::string& name) {
 }
 
 void StopProfiling() {

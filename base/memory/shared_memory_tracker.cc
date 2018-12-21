@@ -48,7 +48,6 @@ void SharedMemoryTracker::DecrementMemoryUsage(
 
 bool SharedMemoryTracker::OnMemoryDump(const trace_event::MemoryDumpArgs& args,
                                        trace_event::ProcessMemoryDump* pmd) {
-  ALLOW_UNUSED_PARAM(args);
   std::unordered_map<SharedMemory::UniqueId, size_t, SharedMemory::UniqueIdHash>
       sizes;
   {

@@ -15,6 +15,26 @@
 // Common defaults
 // ========================================================
 
+// Using Chrome header files directly could cause -Wunused-parameter errors,
+// and this is workaround. Please find the document in include_generator.py
+// for details.
+gensrcs {
+    name: "libchrome-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: [
+        "base/**/*.h",
+        "build/**/*.h",
+        "components/**/*.h",
+        "device/**/*.h",
+        "testing/**/*.h",
+        "third_party/**/*.h",
+        "ui/**/*.h",
+    ],
+    output_extension: "h",
+}
+
 cc_defaults {
     name: "libchrome-defaults",
     // Set clang to "true" to force clang or "false" to force gcc.
@@ -23,12 +43,20 @@ cc_defaults {
     cflags: [
         "-Wall",
         "-Werror",
+        "-Wno-deprecated-declarations",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
     ],
     include_dirs: [
         "external/valgrind/include",
         "external/valgrind",
     ],
-    export_include_dirs: ["."],
+
+    // Note: Although the generated header files are exported here, in building
+    // libchrome, "." has priority (unlike building projects using libchrome),
+    // so the raw header files are used for them.
+    generated_headers: ["libchrome-include"],
+    export_generated_headers: ["libchrome-include"],
     target: {
         host: {
             cflags: [
@@ -37,16 +65,7 @@ cc_defaults {
             ],
         },
         darwin: {
-            cflags: [
-                "-D_FILE_OFFSET_BITS=64",
-                "-Wno-deprecated-declarations",
-            ],
-            host_ldlibs: [
-                "-framework AppKit",
-                "-framework CoreFoundation",
-                "-framework Foundation",
-                "-framework Security",
-            ],
+            enabled: false,
         },
     },
 }
@@ -55,9 +74,13 @@ cc_defaults {
     name: "libchrome-test-defaults",
     defaults: ["libchrome-defaults"],
     cflags: [
-        "-Wno-unused-parameter",
         "-Wno-unused-function",
-        "-Wno-missing-field-initializers",
+        "-Wno-unused-variable",
+    ],
+
+    clang_cflags: [
+        // Temporarily suppress the warnings http://b/38232827
+        "-Wno-error=unused-lambda-capture",
     ],
 }
 
@@ -65,6 +88,8 @@ libchromeCommonSrc = [
     "base/at_exit.cc",
     "base/base64.cc",
     "base/base64url.cc",
+    "base/base_paths.cc",
+    "base/base_paths_posix.cc",
     "base/base_switches.cc",
     "base/bind_helpers.cc",
     "base/build_time.cc",
@@ -77,9 +102,9 @@ libchromeCommonSrc = [
     "base/debug/debugger.cc",
     "base/debug/debugger_posix.cc",
     "base/debug/dump_without_crashing.cc",
+    "base/debug/proc_maps_linux.cc",
     "base/debug/profiler.cc",
     "base/debug/stack_trace.cc",
-    "base/debug/stack_trace_posix.cc",
     "base/debug/task_annotator.cc",
     "base/environment.cc",
     "base/feature_list.cc",
@@ -116,7 +141,6 @@ libchromeCommonSrc = [
     "base/memory/ref_counted.cc",
     "base/memory/ref_counted_memory.cc",
     "base/memory/shared_memory_helper.cc",
-    "base/memory/shared_memory_tracker.cc",
     "base/memory/singleton.cc",
     "base/memory/weak_ptr.cc",
     "base/message_loop/incoming_task_queue.cc",
@@ -140,6 +164,7 @@ libchromeCommonSrc = [
     "base/metrics/sample_vector.cc",
     "base/metrics/sparse_histogram.cc",
     "base/metrics/statistics_recorder.cc",
+    "base/path_service.cc",
     "base/pending_task.cc",
     "base/pickle.cc",
     "base/posix/global_descriptors.cc",
@@ -150,7 +175,6 @@ libchromeCommonSrc = [
     "base/process/launch.cc",
     "base/process/launch_posix.cc",
     "base/process/memory.cc",
-    "base/process/memory_linux.cc",
     "base/process/process_handle.cc",
     "base/process/process_handle_posix.cc",
     "base/process/process_iterator.cc",
@@ -236,6 +260,7 @@ libchromeCommonSrc = [
     "base/trace_event/memory_allocator_dump.cc",
     "base/trace_event/memory_allocator_dump_guid.cc",
     "base/trace_event/memory_dump_manager.cc",
+    "base/trace_event/memory_dump_provider_info.cc",
     "base/trace_event/memory_dump_request_args.cc",
     "base/trace_event/memory_dump_scheduler.cc",
     "base/trace_event/memory_dump_session_state.cc",
@@ -246,6 +271,7 @@ libchromeCommonSrc = [
     "base/trace_event/process_memory_totals.cc",
     "base/trace_event/trace_buffer.cc",
     "base/trace_event/trace_config.cc",
+    "base/trace_event/trace_config_category_filter.cc",
     "base/trace_event/trace_event_argument.cc",
     "base/trace_event/trace_event_filter.cc",
     "base/trace_event/trace_event_impl.cc",
@@ -255,19 +281,39 @@ libchromeCommonSrc = [
     "base/trace_event/trace_log_constants.cc",
     "base/tracked_objects.cc",
     "base/tracking_info.cc",
+    "base/unguessable_token.cc",
     "base/values.cc",
     "base/version.cc",
     "base/vlog.cc",
+    "device/bluetooth/bluetooth_advertisement.cc",
+    "device/bluetooth/bluetooth_uuid.cc",
+    "device/bluetooth/bluez/bluetooth_service_attribute_value_bluez.cc",
+    "ui/gfx/geometry/insets.cc",
+    "ui/gfx/geometry/insets_f.cc",
+    "ui/gfx/geometry/point.cc",
+    "ui/gfx/geometry/point_conversions.cc",
+    "ui/gfx/geometry/point_f.cc",
+    "ui/gfx/geometry/rect.cc",
+    "ui/gfx/geometry/rect_f.cc",
+    "ui/gfx/geometry/size.cc",
+    "ui/gfx/geometry/size_conversions.cc",
+    "ui/gfx/geometry/size_f.cc",
+    "ui/gfx/geometry/vector2d.cc",
+    "ui/gfx/geometry/vector2d_f.cc",
+    "ui/gfx/range/range.cc",
+    "ui/gfx/range/range_f.cc",
 ]
 
 libchromeLinuxSrc = [
-    "base/allocator/allocator_shim.cc",
     "base/files/file_path_watcher_linux.cc",
     "base/files/file_util_linux.cc",
     "base/memory/shared_memory_posix.cc",
+    "base/memory/shared_memory_tracker.cc",
     "base/posix/unix_domain_socket_linux.cc",
     "base/process/internal_linux.cc",
+    "base/process/memory_linux.cc",
     "base/process/process_handle_linux.cc",
+    "base/process/process_info_linux.cc",
     "base/process/process_iterator_linux.cc",
     "base/process/process_metrics_linux.cc",
     "base/strings/sys_string_conversions_posix.cc",
@@ -277,38 +323,24 @@ libchromeLinuxSrc = [
     "components/timers/alarm_timer_chromeos.cc",
 ]
 
-libchromeMacSrc = [
-    "base/files/file_path_watcher_fsevents.cc",
-    "base/files/file_path_watcher_kqueue.cc",
-    "base/files/file_path_watcher_mac.cc",
-    "base/files/file_util_mac.mm",
-    "base/mac/bundle_locations.mm",
-    "base/mac/foundation_util.mm",
-    "base/mac/mach_logging.cc",
-    "base/mac/scoped_mach_port.cc",
-    "base/mac/scoped_mach_vm.cc",
-    "base/mac/scoped_nsautorelease_pool.mm",
-    "base/mac/sdk_forward_declarations.mm",
-    "base/memory/shared_memory_mac.cc",
-    "base/memory/shared_memory_handle_mac.cc",
-    "base/message_loop/message_pump_mac.mm",
-    "base/process/launch_mac.cc",
-    "base/process/port_provider_mac.cc",
-    "base/process/process_handle_mac.cc",
-    "base/process/process_iterator_mac.cc",
-    "base/process/process_metrics_mac.cc",
-    "base/strings/sys_string_conversions_mac.mm",
-    "base/sys_info_mac.mm",
-    "base/time/time_mac.cc",
-    "base/threading/platform_thread_mac.mm",
+libchromeLinuxGlibcSrc = [
+    "base/allocator/allocator_shim.cc",
+    "base/allocator/allocator_shim_default_dispatch_to_glibc.cc",
+    "base/debug/stack_trace_posix.cc",
 ]
 
+libchromeAndroidSrc = [
+    "base/debug/stack_trace_android.cc",
+    "base/memory/shared_memory_android.cc",
+    "base/sys_info_chromeos.cc",
+]
 
 // libchrome static+shared for host and device
 // ========================================================
 cc_library {
     name: "libchrome",
     host_supported: true,
+    vendor_available: true,
     defaults: ["libchrome-defaults"],
     srcs: libchromeCommonSrc,
 
@@ -323,38 +355,36 @@ cc_library {
         "libgtest_prod",
     ],
     target: {
+        linux: {
+            srcs: libchromeLinuxSrc,
+        },
+        linux_glibc: {
+            srcs: libchromeLinuxGlibcSrc,
+        },
         android: {
-            srcs: libchromeLinuxSrc + [
-                "base/allocator/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
-                "base/memory/shared_memory_android.cc",
-                "base/sys_info_chromeos.cc",
-            ],
+            srcs: libchromeAndroidSrc,
             shared_libs: [
                 "liblog",
                 "libcutils",
             ],
-            ldflags: [
-                "-Wl,-wrap,calloc",
-                "-Wl,-wrap,free",
-                "-Wl,-wrap,malloc",
-                "-Wl,-wrap,memalign",
-                "-Wl,-wrap,realloc",
-            ],
-        },
-        linux: {
-            srcs: libchromeLinuxSrc + [
-                "base/allocator/allocator_shim_default_dispatch_to_glibc.cc"
-            ],
-            host_ldlibs: ["-lrt"],
-        },
-        darwin: {
-            srcs: libchromeMacSrc,
         },
     },
 }
 
 // libchrome-crypto shared library for device
 // ========================================================
+
+// Similar to libchrome, generate wrapped header files. See comments for
+// libchrome-include for the details.
+gensrcs {
+    name: "libchrome-crypto-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: ["crypto/**/*.h"],
+    output_extension: "h",
+}
+
 cc_library_shared {
     name: "libchrome-crypto",
     defaults: ["libchrome-defaults"],
@@ -366,7 +396,9 @@ cc_library_shared {
         "crypto/sha2.cc",
     ],
 
-    cflags: ["-Wno-unused-parameter"],
+    generated_headers: ["libchrome-crypto-include"],
+    export_generated_headers: ["libchrome-crypto-include"],
+
     shared_libs: [
         "libchrome",
         "libcrypto",
@@ -380,6 +412,7 @@ cc_library_static {
     name: "libchrome_test_helpers",
     defaults: ["libchrome-test-defaults"],
     shared_libs: ["libchrome"],
+    host_supported: true,
 
     srcs: [
         "base/test/gtest_util.cc",
@@ -390,7 +423,6 @@ cc_library_static {
         "base/test/test_switches.cc",
         "base/test/test_timeouts.cc",
     ],
-
 }
 
 // Helpers needed for unit tests (for host).
@@ -401,11 +433,6 @@ cc_library_host_static {
     shared_libs: ["libchrome"],
 
     srcs: ["base/test/simple_test_clock.cc"],
-    target: {
-        darwin: {
-            enabled: false,
-        },
-    },
 }
 
 // Host and target unit tests. Run (from repo root) with:
@@ -485,6 +512,7 @@ cc_test {
         "base/pickle_unittest.cc",
         "base/posix/file_descriptor_shuffle_unittest.cc",
         "base/posix/unix_domain_socket_linux_unittest.cc",
+        "base/process/process_info_unittest.cc",
         "base/process/process_metrics_unittest.cc",
         "base/profiler/tracked_time_unittest.cc",
         "base/rand_util_unittest.cc",
@@ -492,7 +520,7 @@ cc_test {
         "base/scoped_generic_unittest.cc",
         "base/security_unittest.cc",
         "base/sequence_checker_unittest.cc",
-	"base/sequence_token_unittest.cc",
+        "base/sequence_token_unittest.cc",
         "base/sha1_unittest.cc",
         "base/stl_util_unittest.cc",
         "base/strings/pattern_unittest.cc",
@@ -569,6 +597,7 @@ cc_test {
         "base/vlog_unittest.cc",
         "testing/multiprocess_func_list.cc",
         "testrunner.cc",
+        "ui/gfx/range/range_unittest.cc",
     ],
 
     cflags: ["-DUNIT_TEST"],
@@ -590,12 +619,6 @@ cc_test {
                 "libchrome-crypto",
             ],
             cflags: ["-DDONT_EMBED_BUILD_METADATA"],
-        },
-        linux: {
-            host_ldlibs: ["-lrt"],
-        },
-        darwin: {
-            enabled: false,
         },
     },
 }

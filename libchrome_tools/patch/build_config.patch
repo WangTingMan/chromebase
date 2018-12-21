@@ -1,0 +1,53 @@
+--- a/build/build_config.h
++++ b/build/build_config.h
+@@ -16,6 +16,40 @@
+ #ifndef BUILD_BUILD_CONFIG_H_
+ #define BUILD_BUILD_CONFIG_H_
+ 
++// A brief primer on #defines:
++//
++// - __ANDROID__ is automatically defined by the Android toolchain (see
++//   https://goo.gl/v61lXa). It's not defined when building host code.
++// - __ANDROID_HOST__ is defined via -D by Android.mk when building host code
++//   within an Android checkout.
++// - ANDROID is defined via -D when building code for either Android targets or
++//   hosts. Use __ANDROID__ and __ANDROID_HOST__ instead.
++// - OS_ANDROID is a Chrome-specific define used to build Chrome for Android
++//   within the NDK.
++
++// Android targets and hosts don't use tcmalloc.
++#if defined(__ANDROID__) || defined(__ANDROID_HOST__)
++#define NO_TCMALLOC
++#endif  // defined(__ANDROID__) || defined(__ANDROID_HOST__)
++
++// Use the Chrome OS version of the code for both Android targets and Chrome OS builds.
++#if !defined(__ANDROID_HOST__)
++#define OS_CHROMEOS 1
++#endif  // !defined(__ANDROID_HOST__)
++
++#if defined(__ANDROID__)  // Android targets
++
++#define __linux__ 1
++
++#elif !defined(__ANDROID_HOST__)  // Chrome OS
++
++// TODO: Remove these once the GLib MessageLoopForUI isn't being used:
++// https://crbug.com/361635
++#define USE_GLIB 1
++#define USE_OZONE 1
++
++#endif  // defined(__ANDROID__)
++
+ // A set of macros to use for platform detection.
+ #if defined(__native_client__)
+ // __native_client__ must be first, so that other OS_ defines are not set.
+@@ -28,8 +62,7 @@
+ #else
+ #define OS_NACL_SFI
+ #endif
+-#elif defined(ANDROID)
+-#define OS_ANDROID 1
++// Don't set OS_ANDROID; it's only used when building Chrome for Android.
+ #elif defined(__APPLE__)
+ // only include TargetConditions after testing ANDROID as some android builds
+ // on mac don't have this header available and it's not needed unless the target

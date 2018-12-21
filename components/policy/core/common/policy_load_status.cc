@@ -4,7 +4,6 @@
 
 #include "components/policy/core/common/policy_load_status.h"
 
-#include "base/bind.h"
 #include "base/metrics/histogram.h"
 #include "base/strings/stringprintf.h"
 #include "components/policy/core/common/policy_types.h"
@@ -17,27 +16,23 @@ const char kHistogramName[] = "Enterprise.PolicyLoadStatus";
 
 }  // namespace
 
-PolicyLoadStatusSampler::PolicyLoadStatusSampler() {
+PolicyLoadStatusSample::PolicyLoadStatusSample()
+    : histogram_(base::LinearHistogram::FactoryGet(
+          kHistogramName, 1, POLICY_LOAD_STATUS_SIZE,
+          POLICY_LOAD_STATUS_SIZE + 1,
+          base::Histogram::kUmaTargetedHistogramFlag)) {
   Add(POLICY_LOAD_STATUS_STARTED);
 }
 
-PolicyLoadStatusSampler::~PolicyLoadStatusSampler() {}
-
-void PolicyLoadStatusSampler::Add(PolicyLoadStatus status) {
-  status_bits_[status] = true;
+PolicyLoadStatusSample::~PolicyLoadStatusSample() {
+  for (int i = 0; i < POLICY_LOAD_STATUS_SIZE; ++i) {
+    if (status_bits_[i])
+      histogram_->Add(i);
+  }
 }
 
-PolicyLoadStatusUmaReporter::PolicyLoadStatusUmaReporter() {}
-
-PolicyLoadStatusUmaReporter::~PolicyLoadStatusUmaReporter() {
-  base::HistogramBase* histogram(base::LinearHistogram::FactoryGet(
-      kHistogramName, 1, POLICY_LOAD_STATUS_SIZE, POLICY_LOAD_STATUS_SIZE + 1,
-      base::Histogram::kUmaTargetedHistogramFlag));
-
-  for (int i = 0; i < POLICY_LOAD_STATUS_SIZE; ++i) {
-    if (GetStatusSet()[i])
-      histogram->Add(i);
-  }
+void PolicyLoadStatusSample::Add(PolicyLoadStatus status) {
+  status_bits_[status] = true;
 }
 
 }  // namespace policy

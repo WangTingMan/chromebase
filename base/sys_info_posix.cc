@@ -85,7 +85,10 @@ bool IsStatsZeroIfUnlimited(const base::FilePath& path) {
   if (HANDLE_EINTR(statfs(path.value().c_str(), &stats)) != 0)
     return false;
 
-  switch (static_cast<uint32_t>(stats.f_type)) {
+  // In some platforms, |statfs_buf.f_type| is declared as signed, but some of
+  // the values will overflow it, causing narrowing warnings. Cast to the
+  // largest possible unsigned integer type to avoid it.
+  switch (static_cast<uintmax_t>(stats.f_type)) {
     case TMPFS_MAGIC:
     case HUGETLBFS_MAGIC:
     case RAMFS_MAGIC:
@@ -180,6 +183,30 @@ std::string SysInfo::OperatingSystemVersion() {
     return std::string();
   }
   return std::string(info.release);
+}
+#endif
+
+#if !defined(OS_MACOSX) && !defined(OS_ANDROID) && !defined(OS_CHROMEOS)
+// static
+void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
+                                            int32_t* minor_version,
+                                            int32_t* bugfix_version) {
+  struct utsname info;
+  if (uname(&info) < 0) {
+    NOTREACHED();
+    *major_version = 0;
+    *minor_version = 0;
+    *bugfix_version = 0;
+    return;
+  }
+  int num_read = sscanf(info.release, "%d.%d.%d", major_version, minor_version,
+                        bugfix_version);
+  if (num_read < 1)
+    *major_version = 0;
+  if (num_read < 2)
+    *minor_version = 0;
+  if (num_read < 3)
+    *bugfix_version = 0;
 }
 #endif
 

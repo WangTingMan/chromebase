@@ -29,6 +29,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
+#include "base/path_service.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/stl_util.h"
 #include "base/strings/string_split.h"
@@ -49,7 +50,6 @@
 #if defined(OS_ANDROID)
 #include "base/android/content_uri_utils.h"
 #include "base/os_compat_android.h"
-#include "base/path_service.h"
 #endif
 
 #if !defined(OS_IOS)
@@ -628,7 +628,7 @@ bool CreateTemporaryDirInDir(const FilePath& base_dir,
   return CreateTemporaryDirInDirImpl(base_dir, mkdtemp_template, new_dir);
 }
 
-bool CreateNewTempDirectory(const FilePath::StringType& /*prefix*/,
+bool CreateNewTempDirectory(const FilePath::StringType& prefix,
                             FilePath* new_temp_path) {
   FilePath tmpdir;
   if (!GetTempDir(&tmpdir))
@@ -934,8 +934,6 @@ bool GetShmemTempDir(bool executable, FilePath* path) {
     *path = FilePath("/dev/shm");
     return true;
   }
-#else
-  (void)executable;  // Avoid unused warning when !defined(OS_LINUX).
 #endif
   return GetTempDir(path);
 }

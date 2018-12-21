@@ -130,7 +130,7 @@ class Histogram::Factory {
   // Perform any required datafill on the just-created histogram.  If
   // overridden, be sure to call the "super" version -- this method may not
   // always remain empty.
-  virtual void FillHistogram(HistogramBase* /*histogram*/) {}
+  virtual void FillHistogram(HistogramBase* histogram) {}
 
   // These values are protected (instead of private) because they need to
   // be accessible to methods of sub-classes in order to avoid passing
@@ -534,7 +534,6 @@ Histogram::~Histogram() {
 }
 
 bool Histogram::PrintEmptyBucket(uint32_t index) const {
-  ALLOW_UNUSED_PARAM(index);
   return true;
 }
 
@@ -1139,7 +1138,6 @@ bool CustomHistogram::SerializeInfoImpl(Pickle* pickle) const {
 }
 
 double CustomHistogram::GetBucketSize(Count current, uint32_t i) const {
-  ALLOW_UNUSED_PARAM(i);
   // If this is a histogram of enum values, normalizing the bucket count
   // by the bucket range is not helpful, so just return the bucket count.
   return current;

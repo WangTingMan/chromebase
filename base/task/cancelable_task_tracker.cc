@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "base/task/cancelable_task_tracker.h"
+
 #include <stddef.h>
 
 #include <utility>
@@ -31,7 +32,7 @@ void RunIfNotCanceledThenUntrack(const CancellationFlag* flag,
 }
 
 bool IsCanceled(const CancellationFlag* flag,
-                base::ScopedClosureRunner* /*cleanup_runner*/) {
+                base::ScopedClosureRunner* cleanup_runner) {
   return flag->IsSet();
 }
 

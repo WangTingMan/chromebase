@@ -12,14 +12,6 @@
 #include "base/threading/simple_thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-// Duplicated from base/threading/non_thread_safe.h so that we can be
-// good citizens there and undef the macro.
-#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON))
-#define ENABLE_NON_THREAD_SAFE 1
-#else
-#define ENABLE_NON_THREAD_SAFE 0
-#endif
-
 namespace base {
 
 namespace {

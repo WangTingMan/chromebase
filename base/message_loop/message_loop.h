@@ -320,6 +320,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // Runs the specified PendingTask.
   void RunTask(PendingTask* pending_task);
 
+  bool nesting_allowed() const { return allow_nesting_; }
+
   // Disallow nesting. After this is called, running a nested RunLoop or calling
   // Add/RemoveNestingObserver() on this MessageLoop will crash.
   void DisallowNesting() { allow_nesting_ = false; }
@@ -557,7 +559,8 @@ static_assert(sizeof(MessageLoop) == sizeof(MessageLoopForUI),
 //
 class BASE_EXPORT MessageLoopForIO : public MessageLoop {
  public:
-  MessageLoopForIO();
+  MessageLoopForIO() : MessageLoop(TYPE_IO) {
+  }
 
   // Returns the MessageLoopForIO of the current thread.
   static MessageLoopForIO* current() {

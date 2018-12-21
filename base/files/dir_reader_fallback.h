@@ -11,7 +11,7 @@ class DirReaderFallback {
  public:
   // Open a directory. If |IsValid| is true, then |Next| can be called to start
   // the iteration at the beginning of the directory.
-  explicit DirReaderFallback(const char* /* directory_path */) {}
+  explicit DirReaderFallback(const char* directory_path) {}
 
   // After construction, IsValid returns true iff the directory was
   // successfully opened.

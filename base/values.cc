@@ -69,7 +69,7 @@ std::unique_ptr<Value> CopyWithoutEmptyChildren(const Value& node) {
           static_cast<const DictionaryValue&>(node));
 
     default:
-      return node.CreateDeepCopy();
+      return MakeUnique<Value>(node);
   }
 }
 
@@ -91,11 +91,11 @@ Value::Value(const Value& that) {
   InternalCopyConstructFrom(that);
 }
 
-Value::Value(Value&& that) {
+Value::Value(Value&& that) noexcept {
   InternalMoveConstructFrom(std::move(that));
 }
 
-Value::Value() : type_(Type::NONE) {}
+Value::Value() noexcept : type_(Type::NONE) {}
 
 Value::Value(Type type) : type_(type) {
   // Initialize with the default value.
@@ -149,7 +149,7 @@ Value::Value(const std::string& in_string) : type_(Type::STRING) {
   DCHECK(IsStringUTF8(*string_value_));
 }
 
-Value::Value(std::string&& in_string) : type_(Type::STRING) {
+Value::Value(std::string&& in_string) noexcept : type_(Type::STRING) {
   string_value_.Init(std::move(in_string));
   DCHECK(IsStringUTF8(*string_value_));
 }
@@ -168,32 +168,26 @@ Value::Value(const std::vector<char>& in_blob) : type_(Type::BINARY) {
   binary_value_.Init(in_blob);
 }
 
-Value::Value(std::vector<char>&& in_blob) : type_(Type::BINARY) {
+Value::Value(std::vector<char>&& in_blob) noexcept : type_(Type::BINARY) {
   binary_value_.Init(std::move(in_blob));
 }
 
 Value& Value::operator=(const Value& that) {
-  if (this != &that) {
-    if (type_ == that.type_) {
-      InternalCopyAssignFromSameType(that);
-    } else {
-      InternalCleanup();
-      InternalCopyConstructFrom(that);
-    }
+  if (type_ == that.type_) {
+    InternalCopyAssignFromSameType(that);
+  } else {
+    // This is not a self assignment because the type_ doesn't match.
+    InternalCleanup();
+    InternalCopyConstructFrom(that);
   }
 
   return *this;
 }
 
-Value& Value::operator=(Value&& that) {
-  if (this != &that) {
-    if (type_ == that.type_) {
-      InternalMoveAssignFromSameType(std::move(that));
-    } else {
-      InternalCleanup();
-      InternalMoveConstructFrom(std::move(that));
-    }
-  }
+Value& Value::operator=(Value&& that) noexcept {
+  DCHECK(this != &that) << "attempt to self move assign.";
+  InternalCleanup();
+  InternalMoveConstructFrom(std::move(that));
 
   return *this;
 }
@@ -347,112 +341,122 @@ bool Value::GetAsDictionary(const DictionaryValue** out_value) const {
 }
 
 Value* Value::DeepCopy() const {
-  // This method should only be getting called for null Values--all subclasses
-  // need to provide their own implementation;.
-  switch (type()) {
-    case Type::NONE:
-      return CreateNullValue().release();
-
-    case Type::BOOLEAN:
-      return new Value(bool_value_);
-    case Type::INTEGER:
-      return new Value(int_value_);
-    case Type::DOUBLE:
-      return new Value(double_value_);
-    case Type::STRING:
-      return new Value(*string_value_);
-    // For now, make BinaryValues for backward-compatibility. Convert to
-    // Value when that code is deleted.
-    case Type::BINARY:
-      return new Value(*binary_value_);
-
-    // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
-    // are completely inlined.
-    case Type::DICTIONARY: {
-      DictionaryValue* result = new DictionaryValue;
-
-      for (const auto& current_entry : **dict_ptr_) {
-        result->SetWithoutPathExpansion(current_entry.first,
-                                        current_entry.second->CreateDeepCopy());
-      }
-
-      return result;
-    }
-
-    case Type::LIST: {
-      ListValue* result = new ListValue;
-
-      for (const auto& entry : *list_)
-        result->Append(entry->CreateDeepCopy());
-
-      return result;
-    }
-
-    default:
-      NOTREACHED();
-      return nullptr;
-  }
+  return new Value(*this);
 }
 
 std::unique_ptr<Value> Value::CreateDeepCopy() const {
-  return WrapUnique(DeepCopy());
+  return MakeUnique<Value>(*this);
 }
 
-bool Value::Equals(const Value* other) const {
-  if (other->type() != type())
+bool operator==(const Value& lhs, const Value& rhs) {
+  if (lhs.type_ != rhs.type_)
     return false;
 
-  switch (type()) {
-    case Type::NONE:
+  switch (lhs.type_) {
+    case Value::Type::NONE:
       return true;
-    case Type::BOOLEAN:
-      return bool_value_ == other->bool_value_;
-    case Type::INTEGER:
-      return int_value_ == other->int_value_;
-    case Type::DOUBLE:
-      return double_value_ == other->double_value_;
-    case Type::STRING:
-      return *string_value_ == *(other->string_value_);
-    case Type::BINARY:
-      return *binary_value_ == *(other->binary_value_);
+    case Value::Type::BOOLEAN:
+      return lhs.bool_value_ == rhs.bool_value_;
+    case Value::Type::INTEGER:
+      return lhs.int_value_ == rhs.int_value_;
+    case Value::Type::DOUBLE:
+      return lhs.double_value_ == rhs.double_value_;
+    case Value::Type::STRING:
+      return *lhs.string_value_ == *rhs.string_value_;
+    case Value::Type::BINARY:
+      return *lhs.binary_value_ == *rhs.binary_value_;
     // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
     // are completely inlined.
-    case Type::DICTIONARY: {
-      if ((*dict_ptr_)->size() != (*other->dict_ptr_)->size())
+    case Value::Type::DICTIONARY:
+      if ((*lhs.dict_ptr_)->size() != (*rhs.dict_ptr_)->size())
         return false;
-
-      return std::equal(std::begin(**dict_ptr_), std::end(**dict_ptr_),
-                        std::begin(**(other->dict_ptr_)),
-                        [](const DictStorage::value_type& lhs,
-                           const DictStorage::value_type& rhs) {
-                          if (lhs.first != rhs.first)
-                            return false;
-
-                          return lhs.second->Equals(rhs.second.get());
+      return std::equal(std::begin(**lhs.dict_ptr_), std::end(**lhs.dict_ptr_),
+                        std::begin(**rhs.dict_ptr_),
+                        [](const Value::DictStorage::value_type& u,
+                           const Value::DictStorage::value_type& v) {
+                          return std::tie(u.first, *u.second) ==
+                                 std::tie(v.first, *v.second);
                         });
-    }
-    case Type::LIST: {
-      if (list_->size() != other->list_->size())
+    case Value::Type::LIST:
+      if (lhs.list_->size() != rhs.list_->size())
         return false;
-
-      return std::equal(std::begin(*list_), std::end(*list_),
-                        std::begin(*(other->list_)),
-                        [](const ListStorage::value_type& lhs,
-                           const ListStorage::value_type& rhs) {
-                          return lhs->Equals(rhs.get());
-                        });
-    }
+      return std::equal(
+          std::begin(*lhs.list_), std::end(*lhs.list_), std::begin(*rhs.list_),
+          [](const Value::ListStorage::value_type& u,
+             const Value::ListStorage::value_type& v) { return *u == *v; });
   }
 
   NOTREACHED();
   return false;
 }
 
+bool operator!=(const Value& lhs, const Value& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator<(const Value& lhs, const Value& rhs) {
+  if (lhs.type_ != rhs.type_)
+    return lhs.type_ < rhs.type_;
+
+  switch (lhs.type_) {
+    case Value::Type::NONE:
+      return false;
+    case Value::Type::BOOLEAN:
+      return lhs.bool_value_ < rhs.bool_value_;
+    case Value::Type::INTEGER:
+      return lhs.int_value_ < rhs.int_value_;
+    case Value::Type::DOUBLE:
+      return lhs.double_value_ < rhs.double_value_;
+    case Value::Type::STRING:
+      return *lhs.string_value_ < *rhs.string_value_;
+    case Value::Type::BINARY:
+      return *lhs.binary_value_ < *rhs.binary_value_;
+    // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
+    // are completely inlined.
+    case Value::Type::DICTIONARY:
+      return std::lexicographical_compare(
+          std::begin(**lhs.dict_ptr_), std::end(**lhs.dict_ptr_),
+          std::begin(**rhs.dict_ptr_), std::end(**rhs.dict_ptr_),
+          [](const Value::DictStorage::value_type& u,
+             const Value::DictStorage::value_type& v) {
+            return std::tie(u.first, *u.second) < std::tie(v.first, *v.second);
+          });
+    case Value::Type::LIST:
+      return std::lexicographical_compare(
+          std::begin(*lhs.list_), std::end(*lhs.list_), std::begin(*rhs.list_),
+          std::end(*rhs.list_),
+          [](const Value::ListStorage::value_type& u,
+             const Value::ListStorage::value_type& v) { return *u < *v; });
+  }
+
+  NOTREACHED();
+  return false;
+}
+
+bool operator>(const Value& lhs, const Value& rhs) {
+  return rhs < lhs;
+}
+
+bool operator<=(const Value& lhs, const Value& rhs) {
+  return !(rhs < lhs);
+}
+
+bool operator>=(const Value& lhs, const Value& rhs) {
+  return !(lhs < rhs);
+}
+
+bool Value::Equals(const Value* other) const {
+  DCHECK(other);
+  return *this == *other;
+}
+
 // static
 bool Value::Equals(const Value* a, const Value* b) {
-  if ((a == NULL) && (b == NULL)) return true;
-  if ((a == NULL) ^  (b == NULL)) return false;
-  return a->Equals(b);
+  if ((a == NULL) && (b == NULL))
+    return true;
+  if ((a == NULL) ^ (b == NULL))
+    return false;
+  return *a == *b;
 }
 
 void Value::InternalCopyFundamentalValue(const Value& that) {
@@ -494,14 +498,23 @@ void Value::InternalCopyConstructFrom(const Value& that) {
       binary_value_.Init(*that.binary_value_);
       return;
     // DictStorage and ListStorage are move-only types due to the presence of
-    // unique_ptrs. This is why the call to |CreateDeepCopy| is necessary here.
+    // unique_ptrs. This is why the explicit copy of every element is necessary
+    // here.
     // TODO(crbug.com/646113): Clean this up when DictStorage and ListStorage
     // can be copied directly.
     case Type::DICTIONARY:
-      dict_ptr_.Init(std::move(*that.CreateDeepCopy()->dict_ptr_));
+      dict_ptr_.Init(MakeUnique<DictStorage>());
+      for (const auto& it : **that.dict_ptr_) {
+        (*dict_ptr_)
+            ->emplace_hint((*dict_ptr_)->end(), it.first,
+                           MakeUnique<Value>(*it.second));
+      }
       return;
     case Type::LIST:
-      list_.Init(std::move(*that.CreateDeepCopy()->list_));
+      list_.Init();
+      list_->reserve(that.list_->size());
+      for (const auto& it : *that.list_)
+        list_->push_back(MakeUnique<Value>(*it));
       return;
   }
 }
@@ -533,6 +546,8 @@ void Value::InternalMoveConstructFrom(Value&& that) {
 }
 
 void Value::InternalCopyAssignFromSameType(const Value& that) {
+  // TODO(crbug.com/646113): make this a DCHECK once base::Value does not have
+  // subclasses.
   CHECK_EQ(type_, that.type_);
 
   switch (type_) {
@@ -550,40 +565,15 @@ void Value::InternalCopyAssignFromSameType(const Value& that) {
       *binary_value_ = *that.binary_value_;
       return;
     // DictStorage and ListStorage are move-only types due to the presence of
-    // unique_ptrs. This is why the call to |CreateDeepCopy| is necessary here.
+    // unique_ptrs. This is why the explicit call to the copy constructor is
+    // necessary here.
     // TODO(crbug.com/646113): Clean this up when DictStorage and ListStorage
     // can be copied directly.
     case Type::DICTIONARY:
-      *dict_ptr_ = std::move(*that.CreateDeepCopy()->dict_ptr_);
+      *dict_ptr_ = std::move(*Value(that).dict_ptr_);
       return;
     case Type::LIST:
-      *list_ = std::move(*that.CreateDeepCopy()->list_);
-      return;
-  }
-}
-
-void Value::InternalMoveAssignFromSameType(Value&& that) {
-  CHECK_EQ(type_, that.type_);
-
-  switch (type_) {
-    case Type::NONE:
-    case Type::BOOLEAN:
-    case Type::INTEGER:
-    case Type::DOUBLE:
-      InternalCopyFundamentalValue(that);
-      return;
-
-    case Type::STRING:
-      *string_value_ = std::move(*that.string_value_);
-      return;
-    case Type::BINARY:
-      *binary_value_ = std::move(*that.binary_value_);
-      return;
-    case Type::DICTIONARY:
-      *dict_ptr_ = std::move(*that.dict_ptr_);
-      return;
-    case Type::LIST:
-      *list_ = std::move(*that.list_);
+      *list_ = std::move(*Value(that).list_);
       return;
   }
 }
@@ -1049,8 +1039,7 @@ void DictionaryValue::MergeDictionary(const DictionaryValue* dictionary) {
       }
     }
     // All other cases: Make a copy and hook it up.
-    SetWithoutPathExpansion(it.key(),
-                            base::WrapUnique(merge_value->DeepCopy()));
+    SetWithoutPathExpansion(it.key(), MakeUnique<Value>(*merge_value));
   }
 }
 
@@ -1067,11 +1056,11 @@ DictionaryValue::Iterator::Iterator(const Iterator& other) = default;
 DictionaryValue::Iterator::~Iterator() {}
 
 DictionaryValue* DictionaryValue::DeepCopy() const {
-  return static_cast<DictionaryValue*>(Value::DeepCopy());
+  return new DictionaryValue(*this);
 }
 
 std::unique_ptr<DictionaryValue> DictionaryValue::CreateDeepCopy() const {
-  return WrapUnique(DeepCopy());
+  return MakeUnique<DictionaryValue>(*this);
 }
 
 ///////////////////// ListValue ////////////////////
@@ -1237,7 +1226,7 @@ bool ListValue::Remove(size_t index, std::unique_ptr<Value>* out_value) {
 
 bool ListValue::Remove(const Value& value, size_t* index) {
   for (auto it = list_->begin(); it != list_->end(); ++it) {
-    if ((*it)->Equals(&value)) {
+    if (**it == value) {
       size_t previous_index = it - list_->begin();
       list_->erase(it);
 
@@ -1305,9 +1294,8 @@ void ListValue::AppendStrings(const std::vector<string16>& in_values) {
 bool ListValue::AppendIfNotPresent(std::unique_ptr<Value> in_value) {
   DCHECK(in_value);
   for (const auto& entry : *list_) {
-    if (entry->Equals(in_value.get())) {
+    if (*entry == *in_value)
       return false;
-    }
   }
   list_->push_back(std::move(in_value));
   return true;
@@ -1325,7 +1313,7 @@ bool ListValue::Insert(size_t index, std::unique_ptr<Value> in_value) {
 ListValue::const_iterator ListValue::Find(const Value& value) const {
   return std::find_if(list_->begin(), list_->end(),
                       [&value](const std::unique_ptr<Value>& entry) {
-                        return entry->Equals(&value);
+                        return *entry == value;
                       });
 }
 
@@ -1335,11 +1323,11 @@ void ListValue::Swap(ListValue* other) {
 }
 
 ListValue* ListValue::DeepCopy() const {
-  return static_cast<ListValue*>(Value::DeepCopy());
+  return new ListValue(*this);
 }
 
 std::unique_ptr<ListValue> ListValue::CreateDeepCopy() const {
-  return WrapUnique(DeepCopy());
+  return MakeUnique<ListValue>(*this);
 }
 
 ValueSerializer::~ValueSerializer() {

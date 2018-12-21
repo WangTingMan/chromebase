@@ -1,0 +1,156 @@
+# Libchrome does not support/require dmg_fp library. Instead, use standard
+# library.
+
+--- a/base/strings/string_number_conversions.cc
++++ b/base/strings/string_number_conversions.cc
+@@ -15,7 +15,6 @@
+ #include "base/logging.h"
+ #include "base/numerics/safe_math.h"
+ #include "base/scoped_clear_errno.h"
+-#include "base/third_party/dmg_fp/dmg_fp.h"
+ 
+ namespace base {
+ 
+@@ -369,10 +368,18 @@ string16 SizeTToString16(size_t value) {
+ }
+ 
+ std::string DoubleToString(double value) {
+-  // According to g_fmt.cc, it is sufficient to declare a buffer of size 32.
+-  char buffer[32];
+-  dmg_fp::g_fmt(buffer, value);
+-  return std::string(buffer);
++  auto ret = std::to_string(value);
++  // If this returned an integer, don't do anything.
++  if (ret.find('.') == std::string::npos) {
++    return ret;
++  }
++  // Otherwise, it has an annoying tendency to leave trailing zeros.
++  size_t len = ret.size();
++  while (len >= 2 && ret[len - 1] == '0' && ret[len - 2] != '.') {
++    --len;
++  }
++  ret.erase(len);
++  return ret;
+ }
+ 
+ bool StringToInt(const StringPiece& input, int* output) {
+@@ -416,14 +423,10 @@ bool StringToSizeT(const StringPiece16&
+ }
+ 
+ bool StringToDouble(const std::string& input, double* output) {
+-  // Thread-safe?  It is on at least Mac, Linux, and Windows.
+-  ScopedClearErrno clear_errno;
+-
+-  char* endptr = NULL;
+-  *output = dmg_fp::strtod(input.c_str(), &endptr);
++  char* endptr = nullptr;
++  *output = strtod(input.c_str(), &endptr);
+ 
+   // Cases to return false:
+-  //  - If errno is ERANGE, there was an overflow or underflow.
+   //  - If the input string is empty, there was nothing to parse.
+   //  - If endptr does not point to the end of the string, there are either
+   //    characters remaining in the string after a parsed number, or the string
+@@ -431,10 +434,11 @@ bool StringToDouble(const std::string& i
+   //    expected end given the string's stated length to correctly catch cases
+   //    where the string contains embedded NUL characters.
+   //  - If the first character is a space, there was leading whitespace
+-  return errno == 0 &&
+-         !input.empty() &&
++  return !input.empty() &&
+          input.c_str() + input.length() == endptr &&
+-         !isspace(input[0]);
++         !isspace(input[0]) &&
++         *output != std::numeric_limits<double>::infinity() &&
++         *output != -std::numeric_limits<double>::infinity();
+ }
+ 
+ // Note: if you need to add String16ToDouble, first ask yourself if it's
+--- a/base/strings/string_number_conversions.h
++++ b/base/strings/string_number_conversions.h
+@@ -54,6 +54,7 @@ BASE_EXPORT string16 Uint64ToString16(ui
+ BASE_EXPORT std::string SizeTToString(size_t value);
+ BASE_EXPORT string16 SizeTToString16(size_t value);
+ 
++// Deprecated: prefer std::to_string(double) instead.
+ // DoubleToString converts the double to a string format that ignores the
+ // locale. If you want to use locale specific formatting, use ICU.
+ BASE_EXPORT std::string DoubleToString(double value);
+@@ -91,6 +92,7 @@ BASE_EXPORT bool StringToUint64(const St
+ BASE_EXPORT bool StringToSizeT(const StringPiece& input, size_t* output);
+ BASE_EXPORT bool StringToSizeT(const StringPiece16& input, size_t* output);
+ 
++// Deprecated: prefer std::stod() instead.
+ // For floating-point conversions, only conversions of input strings in decimal
+ // form are defined to work.  Behavior with strings representing floating-point
+ // numbers in hexadecimal, and strings representing non-finite values (such as
+--- a/base/strings/string_number_conversions_unittest.cc
++++ b/base/strings/string_number_conversions_unittest.cc
+@@ -752,20 +752,8 @@ TEST(StringNumberConversionsTest, String
+     {"9e999", HUGE_VAL, false},
+     {"9e1999", HUGE_VAL, false},
+     {"9e19999", HUGE_VAL, false},
+-    {"9e99999999999999999999", HUGE_VAL, false},
+-    {"-9e307", -9e307, true},
+-    {"-1.7976e308", -1.7976e308, true},
+-    {"-1.7977e308", -HUGE_VAL, false},
+-    {"-1.797693134862315807e+308", -HUGE_VAL, true},
+-    {"-1.797693134862315808e+308", -HUGE_VAL, false},
+-    {"-9e308", -HUGE_VAL, false},
+-    {"-9e309", -HUGE_VAL, false},
+-    {"-9e999", -HUGE_VAL, false},
+-    {"-9e1999", -HUGE_VAL, false},
+-    {"-9e19999", -HUGE_VAL, false},
+-    {"-9e99999999999999999999", -HUGE_VAL, false},
+-
+-    // Test more exponents.
++    {"9e99999999999999999999", std::numeric_limits<double>::infinity(), false},
++    {"-9e99999999999999999999", -std::numeric_limits<double>::infinity(), false},
+     {"1e-2", 0.01, true},
+     {"42 ", 42.0, false},
+     {" 1e-2", 0.01, false},
+@@ -795,7 +783,8 @@ TEST(StringNumberConversionsTest, String
+   for (size_t i = 0; i < arraysize(cases); ++i) {
+     double output;
+     errno = 1;
+-    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output));
++    EXPECT_EQ(cases[i].success, StringToDouble(cases[i].input, &output))
++        << "for input=" << cases[i].input << "got output=" << output;
+     if (cases[i].success)
+       EXPECT_EQ(1, errno) << i;  // confirm that errno is unchanged.
+     EXPECT_DOUBLE_EQ(cases[i].output, output);
+@@ -816,13 +805,13 @@ TEST(StringNumberConversionsTest, Double
+     double input;
+     const char* expected;
+   } cases[] = {
+-    {0.0, "0"},
++    {0.0, "0.0"},
+     {1.25, "1.25"},
+-    {1.33518e+012, "1.33518e+12"},
+-    {1.33489e+012, "1.33489e+12"},
+-    {1.33505e+012, "1.33505e+12"},
+-    {1.33545e+009, "1335450000"},
+-    {1.33503e+009, "1335030000"},
++    {1.33518e+012, "1335180000000.0"},
++    {1.33489e+012, "1334890000000.0"},
++    {1.33505e+012, "1335050000000.0"},
++    {1.33545e+009, "1335450000.0"},
++    {1.33503e+009, "1335030000.0"},
+   };
+ 
+   for (size_t i = 0; i < arraysize(cases); ++i) {
+@@ -833,12 +822,12 @@ TEST(StringNumberConversionsTest, Double
+   const char input_bytes[8] = {0, 0, 0, 0, '\xee', '\x6d', '\x73', '\x42'};
+   double input = 0;
+   memcpy(&input, input_bytes, arraysize(input_bytes));
+-  EXPECT_EQ("1335179083776", DoubleToString(input));
++  EXPECT_EQ("1335179083776.0", DoubleToString(input));
+   const char input_bytes2[8] =
+       {0, 0, 0, '\xa0', '\xda', '\x6c', '\x73', '\x42'};
+   input = 0;
+   memcpy(&input, input_bytes2, arraysize(input_bytes2));
+-  EXPECT_EQ("1334890332160", DoubleToString(input));
++  EXPECT_EQ("1334890332160.0", DoubleToString(input));
+ }
+ 
+ TEST(StringNumberConversionsTest, HexEncode) {

@@ -13,7 +13,6 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
-
 #endif  // !OS_WIN
 
 #if defined(OS_IOS)

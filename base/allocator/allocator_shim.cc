@@ -23,6 +23,8 @@
 
 #if defined(OS_MACOSX)
 #include <malloc/malloc.h>
+
+#include "base/allocator/allocator_interception_mac.h"
 #endif
 
 // No calls to malloc / new in this file. They would would cause re-entrancy of
@@ -56,7 +58,6 @@ bool CallNewHandler(size_t size) {
 #if defined(OS_WIN)
   return base::allocator::WinCallNewHandler(size);
 #else
-  ALLOW_UNUSED_PARAM(size);
   // TODO(primiano): C++11 has introduced ::get_new_handler() which is supposed
   // to be thread safe and would avoid the spinlock boilerplate here. However
   // it doesn't seem to be available yet in the Linux chroot headers yet.
@@ -130,16 +131,7 @@ void InsertAllocatorDispatch(AllocatorDispatch* dispatch) {
     }
   }
 
-  // This function does not guarantee to be thread-safe w.r.t. concurrent
-  // insertions, but still has to guarantee that all the threads always
-  // see a consistent chain, hence the MemoryBarrier() below.
-  // InsertAllocatorDispatch() is NOT a fastpath, as opposite to malloc(), so
-  // we don't really want this to be a release-store with a corresponding
-  // acquire-load during malloc().
-  subtle::MemoryBarrier();
-
-  subtle::NoBarrier_Store(&g_chain_head,
-                          reinterpret_cast<subtle::AtomicWord>(dispatch));
+  CHECK(false);  // Too many retries, this shouldn't happen.
 }
 
 void RemoveAllocatorDispatchForTesting(AllocatorDispatch* dispatch) {
@@ -307,7 +299,7 @@ ALWAYS_INLINE void ShimFreeDefiniteSize(void* ptr, size_t size, void* context) {
 #include "base/allocator/allocator_shim_override_cpp_symbols.h"
 #endif
 
-#if defined(OS_ANDROID) || defined(__ANDROID__)
+#if defined(OS_ANDROID) || defined(ANDROID)
 // Android does not support symbol interposition. The way malloc symbols are
 // intercepted on Android is by using link-time -wrap flags.
 #include "base/allocator/allocator_shim_override_linker_wrapped_symbols.h"
@@ -336,9 +328,11 @@ void InitializeAllocatorShim() {
   // traversed the shim this will route them to the default malloc zone.
   InitializeDefaultDispatchToMacAllocator();
 
+  MallocZoneFunctions functions = MallocZoneFunctionsToReplaceDefault();
+
   // This replaces the default malloc zone, causing calls to malloc & friends
   // from the codebase to be routed to ShimMalloc() above.
-  OverrideMacSymbols();
+  base::allocator::ReplaceFunctionsForStoredZones(&functions);
 }
 }  // namespace allocator
 }  // namespace base

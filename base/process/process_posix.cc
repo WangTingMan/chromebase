@@ -102,12 +102,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
     return false;
   }
 
-#if defined(ANDROID)
-  struct kevent change;
-  memset(&change, 0, sizeof(change));
-#else
   struct kevent change = {0};
-#endif
   EV_SET(&change, handle, EVFILT_PROC, EV_ADD, NOTE_EXIT, 0, NULL);
   int result = HANDLE_EINTR(kevent(kq.get(), &change, 1, NULL, 0, NULL));
   if (result == -1) {
@@ -131,12 +126,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
   }
 
   result = -1;
-#if defined(ANDROID)
-  struct kevent event;
-  memset(&event, 0, sizeof(event));
-#else
   struct kevent event = {0};
-#endif
 
   while (wait_forever || remaining_delta > base::TimeDelta()) {
     struct timespec remaining_timespec;
@@ -311,7 +301,7 @@ void Process::Close() {
 }
 
 #if !defined(OS_NACL_NONSFI)
-bool Process::Terminate(int /*exit_code*/, bool wait) const {
+bool Process::Terminate(int exit_code, bool wait) const {
   // exit_code isn't supportable.
   DCHECK(IsValid());
   CHECK_GT(process_, 0);
@@ -383,7 +373,7 @@ bool Process::IsProcessBackgrounded() const {
   return false;
 }
 
-bool Process::SetProcessBackgrounded(bool /*value*/) {
+bool Process::SetProcessBackgrounded(bool value) {
   // Not implemented for POSIX systems other than Linux and Mac. With POSIX, if
   // we were to lower the process priority we wouldn't be able to raise it back
   // to its initial priority.

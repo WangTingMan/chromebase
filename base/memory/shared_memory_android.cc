@@ -8,12 +8,7 @@
 #include <sys/mman.h>
 
 #include "base/logging.h"
-
-#if defined(__ANDROID__)
-#include <cutils/ashmem.h>
-#else
 #include "third_party/ashmem/ashmem.h"
-#endif
 
 namespace base {
 
@@ -57,13 +52,13 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   return true;
 }
 
-bool SharedMemory::Delete(const std::string&) {
+bool SharedMemory::Delete(const std::string& name) {
   // Like on Windows, this is intentionally returning true as ashmem will
   // automatically releases the resource when all FDs on it are closed.
   return true;
 }
 
-bool SharedMemory::Open(const std::string&, bool /*read_only*/) {
+bool SharedMemory::Open(const std::string& name, bool read_only) {
   // ashmem doesn't support name mapping
   NOTIMPLEMENTED();
   return false;

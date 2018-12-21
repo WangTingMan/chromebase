@@ -19,8 +19,10 @@
 #include "base/memory/ref_counted_memory.h"
 #include "base/memory/singleton.h"
 #include "base/message_loop/message_loop.h"
+#include "base/process/process_info.h"
 #include "base/process/process_metrics.h"
 #include "base/stl_util.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/stringprintf.h"
@@ -301,7 +303,7 @@ void TraceLog::ThreadLocalEventBuffer::WillDestroyCurrentMessageLoop() {
   delete this;
 }
 
-bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs&,
+bool TraceLog::ThreadLocalEventBuffer::OnMemoryDump(const MemoryDumpArgs& args,
                                                     ProcessMemoryDump* pmd) {
   if (!chunk_)
     return true;
@@ -396,7 +398,6 @@ void TraceLog::InitializeThreadLocalEventBufferIfSupported() {
 
 bool TraceLog::OnMemoryDump(const MemoryDumpArgs& args,
                             ProcessMemoryDump* pmd) {
-  ALLOW_UNUSED_PARAM(args);
   // TODO(ssid): Use MemoryDumpArgs to create light dumps when requested
   // (crbug.com/499731).
   TraceEventMemoryOverhead overhead;
@@ -1404,7 +1405,6 @@ std::string TraceLog::EventToConsoleMessage(unsigned char phase,
 void TraceLog::EndFilteredEvent(const unsigned char* category_group_enabled,
                                 const char* name,
                                 TraceEventHandle handle) {
-  ALLOW_UNUSED_PARAM(handle);
   const char* category_name = GetCategoryGroupName(category_group_enabled);
   ForEachCategoryFilter(
       category_group_enabled,
@@ -1509,8 +1509,18 @@ void TraceLog::AddMetadataEventsWhileLocked() {
                             process_name_);
   }
 
+#if !defined(OS_NACL) && !defined(OS_IOS)
+  Time process_creation_time = CurrentProcessInfo::CreationTime();
+  if (!process_creation_time.is_null()) {
+    TimeDelta process_uptime = Time::Now() - process_creation_time;
+    InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),
+                            current_thread_id, "process_uptime_seconds",
+                            "uptime", process_uptime.InSeconds());
+  }
+#endif  // !defined(OS_NACL) && !defined(OS_IOS)
+
   if (!process_labels_.empty()) {
-    std::vector<std::string> labels;
+    std::vector<base::StringPiece> labels;
     for (const auto& it : process_labels_)
       labels.push_back(it.second);
     InitializeMetadataEvent(AddEventToThreadSharedChunkWhileLocked(NULL, false),

@@ -379,7 +379,7 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
  */
 
 PRTimeParameters
-PR_GMTParameters(const PRExplodedTime* /*gmt*/)
+PR_GMTParameters(const PRExplodedTime *gmt)
 {
     PRTimeParameters retVal = { 0, 0 };
     return retVal;

@@ -207,7 +207,7 @@ class LoggingLock {
     UnlockLogging();
   }
 
-  static void Init(LogLockingState lock_log, const PathChar* /*new_log_file*/) {
+  static void Init(LogLockingState lock_log, const PathChar* new_log_file) {
     if (initialized)
       return;
     lock_log_file = lock_log;
@@ -474,7 +474,7 @@ template std::string* MakeCheckOpString<unsigned int, unsigned long>(
 template std::string* MakeCheckOpString<std::string, std::string>(
     const std::string&, const std::string&, const char* name);
 
-void MakeCheckOpValueString(std::ostream* os, std::nullptr_t) {
+void MakeCheckOpValueString(std::ostream* os, std::nullptr_t p) {
   (*os) << "nullptr";
 }
 
@@ -796,7 +796,6 @@ void LogMessage::Init(const char* file, int line) {
     gettimeofday(&tv, nullptr);
     time_t t = tv.tv_sec;
     struct tm local_time;
-	memset(&local_time, 0, sizeof(local_time));
     localtime_r(&t, &local_time);
     struct tm* tm_time = &local_time;
     stream_ << std::setfill('0')
