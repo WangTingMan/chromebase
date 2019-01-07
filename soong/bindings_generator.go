@@ -157,6 +157,10 @@ type mojomGenerationProperties struct {
 
 	// list of typemaps modules that will be imported
 	Typemaps []string
+
+	// If true, set --use_once_callback flag to the generator.
+	// This works only on C++ generation.
+	Use_once_callback bool
 }
 
 // extractSources adds any necessary dependencies to satisfy filegroup or
@@ -190,6 +194,9 @@ func (p *mojomGenerationProperties) flags(ctx android.ModuleContext) string {
 	}
 	if p.Flags != "" {
 		flags = append(flags, p.Flags)
+	}
+	if p.Use_once_callback {
+		flags = append(flags, "--use_once_callback")
 	}
 
 	return strings.Join(flags, " ")
