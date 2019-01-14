@@ -469,16 +469,16 @@ generate_pkg_config("libchrome") {
       requires_private += attr.pkg_deps
     }
   }
-  libs = [ "base-${libbase_ver}" ]
+  libs = [ "-lbase-${libbase_ver}" ]
   libs_private = []
   foreach(attr, libbase_sublibs) {
     if (!defined(attr.testonly) || !attr.testonly) {
-      libs_private += [ attr.output_name ]
-    }
-  }
-  foreach(attr, libbase_sublibs) {
-    if ((!defined(attr.testonly) || !attr.testonly) && defined(attr.libs)) {
-      libs_private += attr.libs
+      libs_private += [ "-l" + attr.output_name ]
+      if (defined(attr.libs)) {
+        foreach(lib, attr.libs) {
+          libs_private += [ "-l" + lib ]
+        }
+      }
     }
   }
   cflags = libchrome_exported_cflags
@@ -516,16 +516,14 @@ generate_pkg_config("libchrome-test") {
       requires_private += attr.pkg_deps
     }
   }
-  libs = [ "base-test-${libbase_ver}" ]
+  libs = [ "-lbase-test-${libbase_ver}" ]
   libs_private = []
   foreach(attr, libbase_sublibs) {
     if (defined(attr.testonly) && attr.testonly) {
-      libs_private += [ attr.output_name ]
-    }
-  }
-  foreach(attr, libbase_sublibs) {
-    if (defined(attr.testonly) && attr.testonly && defined(attr.libs)) {
-      libs_private += attr.libs
+      libs_private += [ "-l" + attr.output_name ]
+      if (defined(attr.libs)) {
+        libs_private += [ "-l" + lib ]
+      }
     }
   }
   cflags = libchrome_exported_cflags
