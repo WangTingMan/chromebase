@@ -18,11 +18,10 @@
 // Using Chrome header files directly could cause -Wunused-parameter errors,
 // and this is workaround. Please find the document in include_generator.py
 // for details.
-gensrcs {
-    name: "libchrome-include",
-    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
-    tool_files: ["libchrome_tools/include_generator.py"],
-    export_include_dirs: ["."],
+// Note: gensrcs does not support exclude_srcs, so filegroup rule is
+// introduced.
+filegroup {
+    name: "libchrome-include-sources",
     srcs: [
         "base/**/*.h",
         "build/**/*.h",
@@ -32,6 +31,17 @@ gensrcs {
         "third_party/**/*.h",
         "ui/**/*.h",
     ],
+    exclude_srcs: [
+        "base/android/**/*",
+    ],
+}
+
+gensrcs {
+    name: "libchrome-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: [":libchrome-include-sources"],
     output_extension: "h",
 }
 
@@ -621,4 +631,416 @@ cc_test {
             cflags: ["-DDONT_EMBED_BUILD_METADATA"],
         },
     },
+}
+
+filegroup {
+    name: "libmojo_mojom_files",
+    srcs: [
+        "ipc/ipc.mojom",
+        "mojo/common/file.mojom",
+        "mojo/common/file_path.mojom",
+        "mojo/common/string16.mojom",
+        "mojo/common/text_direction.mojom",
+        "mojo/common/time.mojom",
+        "mojo/common/unguessable_token.mojom",
+        "mojo/common/values.mojom",
+        "mojo/common/version.mojom",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom",
+        "ui/gfx/geometry/mojo/geometry.mojom",
+        "ui/gfx/range/mojo/range.mojom",
+    ],
+}
+
+filegroup {
+    name: "libmojo_mojo_sources",
+    srcs: [
+        "mojo/**/*.cc",
+    ],
+    exclude_srcs: [
+        // Unused in Chrome. Looks like mistakenly checked in.
+        // TODO(hidehiko): Remove this after the file is removed in Chrome
+        // repository. http://crrev.com/c/644531
+        "mojo/public/cpp/system/message.cc",
+
+        // No WTF support.
+        "mojo/public/cpp/bindings/lib/string_traits_wtf.cc",
+
+        // Exclude windows/mac/ios files.
+        "**/*_win.cc",
+        "mojo/edk/system/mach_port_relay.cc",
+
+        // Exclude js binding related files.
+        "mojo/edk/js/**/*",
+        "mojo/public/js/**/*",
+
+        // Exclude tests.
+        // Note that mojo/edk/embedder/test_embedder.cc needs to be included
+        // for Mojo support. cf) b/62071944.
+        "**/*_unittest.cc",
+        "**/*_unittests.cc",
+        "**/*_perftest.cc",
+        "mojo/android/javatests/**/*",
+        "mojo/edk/system/core_test_base.cc",
+        "mojo/edk/system/test_utils.cc",
+        "mojo/edk/test/**/*",
+        "mojo/public/c/system/tests/**/*",
+        "mojo/public/cpp/bindings/tests/**/*",
+        "mojo/public/cpp/system/tests/**/*",
+        "mojo/public/cpp/test_support/**/*",
+        "mojo/public/tests/**/*",
+    ],
+}
+
+// Python in Chrome repository requires still Python 2.
+python_defaults {
+    name: "libmojo_scripts",
+    version: {
+        py2: {
+            enabled: true,
+        },
+        py3: {
+            enabled: false,
+        },
+    },
+}
+
+python_binary_host {
+    name: "jni_generator",
+    main: "base/android/jni_generator/jni_generator.py",
+    srcs: [
+        "base/android/jni_generator/jni_generator.py",
+        "build/**/*.py",
+        "third_party/catapult/devil/devil/**/*.py",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+python_binary_host {
+    name: "mojom_bindings_generator",
+    main: "mojo/public/tools/bindings/mojom_bindings_generator.py",
+    srcs: [
+        "mojo/public/tools/bindings/**/*.py",
+        "build/**/*.py",
+        "third_party/catapult/devil/**/*.py",
+        "third_party/jinja2/**/*.py",
+        "third_party/markupsafe/**/*.py",
+        "third_party/ply/**/*.py",
+    ],
+    data: [
+        "mojo/public/tools/bindings/generators/cpp_templates/*.tmpl",
+        "mojo/public/tools/bindings/generators/java_templates/*.tmpl",
+        "mojo/public/tools/bindings/generators/js_templates/*.tmpl",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+cc_prebuilt_binary {
+    name: "mojom_source_generator_sh",
+    srcs: ["libchrome_tools/mojom_source_generator.sh"],
+    host_supported: true,
+}
+
+genrule {
+    name: "libmojo_mojom_headers",
+    cmd: "$(location mojom_source_generator_sh)" +
+    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
+    "    --package=external/libchrome" +
+    "    --output_dir=$(genDir)" +
+    "    --bytecode_path=$(genDir)" +
+    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --generators=c++" +
+    "    --use_new_wrapper_types" +
+    "    $(in)",
+
+    tools: [
+        "mojom_bindings_generator",
+        "mojom_source_generator_sh",
+    ],
+
+    tool_files: [
+        // This file was copied from out/Release in a Chrome checkout.
+        // TODO(lhchavez): Generate this file instead of hardcoding it.
+        "gen/mojo/common/common_custom_types__type_mappings",
+    ],
+
+    srcs: [":libmojo_mojom_files"],
+
+    out: [
+        "ipc/ipc.mojom.h",
+        "ipc/ipc.mojom-shared.h",
+        "ipc/ipc.mojom-shared-internal.h",
+        "mojo/common/file.mojom.h",
+        "mojo/common/file.mojom-shared.h",
+        "mojo/common/file.mojom-shared-internal.h",
+        "mojo/common/file_path.mojom.h",
+        "mojo/common/file_path.mojom-shared.h",
+        "mojo/common/file_path.mojom-shared-internal.h",
+        "mojo/common/string16.mojom.h",
+        "mojo/common/string16.mojom-shared.h",
+        "mojo/common/string16.mojom-shared-internal.h",
+        "mojo/common/text_direction.mojom.h",
+        "mojo/common/text_direction.mojom-shared.h",
+        "mojo/common/text_direction.mojom-shared-internal.h",
+        "mojo/common/time.mojom.h",
+        "mojo/common/time.mojom-shared.h",
+        "mojo/common/time.mojom-shared-internal.h",
+        "mojo/common/unguessable_token.mojom.h",
+        "mojo/common/unguessable_token.mojom-shared.h",
+        "mojo/common/unguessable_token.mojom-shared-internal.h",
+        "mojo/common/values.mojom.h",
+        "mojo/common/values.mojom-shared.h",
+        "mojo/common/values.mojom-shared-internal.h",
+        "mojo/common/version.mojom.h",
+        "mojo/common/version.mojom-shared.h",
+        "mojo/common/version.mojom-shared-internal.h",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom.h",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared.h",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared-internal.h",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom.h",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared.h",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared-internal.h",
+        "ui/gfx/geometry/mojo/geometry.mojom.h",
+        "ui/gfx/geometry/mojo/geometry.mojom-shared.h",
+        "ui/gfx/geometry/mojo/geometry.mojom-shared-internal.h",
+        "ui/gfx/range/mojo/range.mojom.h",
+        "ui/gfx/range/mojo/range.mojom-shared.h",
+        "ui/gfx/range/mojo/range.mojom-shared-internal.h",
+    ],
+}
+
+genrule {
+    name: "libmojo_mojom_srcs",
+    cmd: "$(location mojom_source_generator_sh)" +
+    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
+    "    --package=external/libchrome" +
+    "    --output_dir=$(genDir)" +
+    "    --bytecode_path=$(genDir)" +
+    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --generators=c++" +
+    "    --use_new_wrapper_types" +
+    "    $(in)",
+
+    tools: [
+        "mojom_bindings_generator",
+        "mojom_source_generator_sh",
+    ],
+
+    tool_files: [
+        // This file was copied from out/Release in a Chrome checkout.
+        // TODO(lhchavez): Generate this file instead of hardcoding it.
+        "gen/mojo/common/common_custom_types__type_mappings",
+        "libchrome_tools/mojom_source_generator.sh",
+    ],
+
+    srcs: [":libmojo_mojom_files"],
+
+    out: [
+        "ipc/ipc.mojom.cc",
+        "ipc/ipc.mojom-shared.cc",
+        "mojo/common/file.mojom.cc",
+        "mojo/common/file.mojom-shared.cc",
+        "mojo/common/string16.mojom.cc",
+        "mojo/common/string16.mojom-shared.cc",
+        "mojo/common/text_direction.mojom.cc",
+        "mojo/common/text_direction.mojom-shared.cc",
+        "mojo/common/time.mojom.cc",
+        "mojo/common/time.mojom-shared.cc",
+        "mojo/common/unguessable_token.mojom.cc",
+        "mojo/common/unguessable_token.mojom-shared.cc",
+        "mojo/common/version.mojom.cc",
+        "mojo/common/version.mojom-shared.cc",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom.cc",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom-shared.cc",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom-shared.cc",
+        "ui/gfx/geometry/mojo/geometry.mojom.cc",
+        "ui/gfx/geometry/mojo/geometry.mojom-shared.cc",
+        "ui/gfx/range/mojo/range.mojom.cc",
+        "ui/gfx/range/mojo/range.mojom-shared.cc",
+    ],
+}
+
+// TODO(hidehiko): Remove JNI for ContextUtils, after cleaning up the
+// depended code.
+genrule {
+    name: "libmojo_jni_headers",
+    cmd: "$(location libchrome_tools/jni_generator_helper.sh)" +
+    "    --jni_generator=$(location jni_generator)" +
+    "    --output_dir=$(genDir)/jni" +
+    "    --includes=base/android/jni_generator/jni_generator_helper.h" +
+    "    --ptr_type=long" +
+    "    --native_exports_optional" +
+    "    $(in)",
+
+    tools: [
+        "jni_generator",
+    ],
+
+    tool_files: [
+        "libchrome_tools/jni_generator_helper.sh",
+    ],
+
+    srcs: [
+        "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/ContextUtils.java",
+        "mojo/android/system/src/org/chromium/mojo/system/impl/BaseRunLoop.java",
+        "mojo/android/system/src/org/chromium/mojo/system/impl/CoreImpl.java",
+        "mojo/android/system/src/org/chromium/mojo/system/impl/WatcherImpl.java",
+    ],
+
+    out: [
+        "jni/BuildInfo_jni.h",
+        "jni/ContextUtils_jni.h",
+        "jni/BaseRunLoop_jni.h",
+        "jni/CoreImpl_jni.h",
+        "jni/WatcherImpl_jni.h",
+    ],
+}
+
+cc_library_shared {
+    name: "libmojo",
+
+    generated_headers: [
+        "libmojo_jni_headers",
+        "libmojo_mojom_headers",
+    ],
+
+    generated_sources: [
+        "libmojo_mojom_srcs",
+    ],
+
+    export_generated_headers: [
+        "libmojo_jni_headers",
+        "libmojo_mojom_headers",
+    ],
+
+    srcs: [
+        "base/android/build_info.cc",
+        "base/android/context_utils.cc",
+        "base/android/jni_android.cc",
+        "base/android/jni_string.cc",
+        "base/android/scoped_java_ref.cc",
+        "ipc/ipc_message.cc",
+        "ipc/ipc_message_attachment.cc",
+        "ipc/ipc_message_attachment_set.cc",
+        "ipc/ipc_message_utils.cc",
+        "ipc/ipc_mojo_handle_attachment.cc",
+        "ipc/ipc_mojo_message_helper.cc",
+        "ipc/ipc_mojo_param_traits.cc",
+        "ipc/ipc_platform_file_attachment_posix.cc",
+        ":libmojo_mojo_sources",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+        "-Wno-missing-field-initializers",
+        "-DMOJO_EDK_LEGACY_PROTOCOL",
+    ],
+
+    // We also pass NO_ASHMEM to make base::SharedMemory avoid using it and prefer
+    // the POSIX versions.
+    cppflags: [
+        "-Wno-sign-promo",
+        "-Wno-non-virtual-dtor",
+        "-Wno-ignored-qualifiers",
+        "-Wno-extra",
+        "-DNO_ASHMEM",
+    ],
+
+    shared_libs: [
+        "libevent",
+        "liblog",
+        "libchrome",
+        "libchrome-crypto",
+    ],
+
+    export_include_dirs: ["."],
+}
+
+genrule {
+    name: "libmojo_mojom_java_srcs",
+    cmd: "$(location mojom_source_generator_sh)" +
+    "    --mojom_bindings_generator=$(location mojom_bindings_generator)" +
+    "    --package=external/libchrome" +
+    "    --output_dir=$(genDir)" +
+    "    --bytecode_path=$(genDir)" +
+    "    --typemap=$(location gen/mojo/common/common_custom_types__type_mappings)" +
+    "    --generators=java" +
+    "    --use_new_wrapper_types" +
+    "    $(in)",
+
+    tools: [
+        "mojom_bindings_generator",
+        "mojom_source_generator_sh",
+    ],
+
+    tool_files: [
+        // This file was copied from out/Release in a Chrome checkout.
+        // TODO(lhchavez): Generate this file instead of hardcoding it.
+        "gen/mojo/common/common_custom_types__type_mappings",
+    ],
+
+    srcs: [":libmojo_mojom_files"],
+
+    out: [
+        "src/org/chromium/gfx/mojom/InsetsF.java",
+        "src/org/chromium/gfx/mojom/Insets.java",
+        "src/org/chromium/gfx/mojom/PointF.java",
+        "src/org/chromium/gfx/mojom/Point.java",
+        "src/org/chromium/gfx/mojom/RangeF.java",
+        "src/org/chromium/gfx/mojom/Range.java",
+        "src/org/chromium/gfx/mojom/RectF.java",
+        "src/org/chromium/gfx/mojom/Rect.java",
+        "src/org/chromium/gfx/mojom/SizeF.java",
+        "src/org/chromium/gfx/mojom/Size.java",
+        "src/org/chromium/gfx/mojom/Vector2dF.java",
+        "src/org/chromium/gfx/mojom/Vector2d.java",
+        "src/org/chromium/IPC/mojom/ChannelBootstrap_Internal.java",
+        "src/org/chromium/IPC/mojom/ChannelBootstrap.java",
+        "src/org/chromium/IPC/mojom/Channel_Internal.java",
+        "src/org/chromium/IPC/mojom/Channel.java",
+        "src/org/chromium/IPC/mojom/GenericInterface_Internal.java",
+        "src/org/chromium/IPC/mojom/GenericInterface.java",
+        "src/org/chromium/IPC/mojom/IpcConstants.java",
+        "src/org/chromium/IPC/mojom/SerializedHandle.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/FlushForTesting.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/InterfaceControlMessagesConstants.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/QueryVersion.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/QueryVersionResult.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RequireVersion.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunInput.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunMessageParams.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunOrClosePipeInput.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunOrClosePipeMessageParams.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunOutput.java",
+        "src/org/chromium/mojo/bindings/interfacecontrol/RunResponseMessageParams.java",
+        "src/org/chromium/mojo/bindings/pipecontrol/DisconnectReason.java",
+        "src/org/chromium/mojo/bindings/pipecontrol/PeerAssociatedEndpointClosedEvent.java",
+        "src/org/chromium/mojo/bindings/pipecontrol/PipeControlMessagesConstants.java",
+        "src/org/chromium/mojo/bindings/pipecontrol/RunOrClosePipeInput.java",
+        "src/org/chromium/mojo/bindings/pipecontrol/RunOrClosePipeMessageParams.java",
+        "src/org/chromium/mojo/common/mojom/File.java",
+        "src/org/chromium/mojo/common/mojom/String16.java",
+        "src/org/chromium/mojo/common/mojom/TextDirection.java",
+        "src/org/chromium/mojo/common/mojom/TimeDelta.java",
+        "src/org/chromium/mojo/common/mojom/Time.java",
+        "src/org/chromium/mojo/common/mojom/TimeTicks.java",
+        "src/org/chromium/mojo/common/mojom/UnguessableToken.java",
+        "src/org/chromium/mojo/common/mojom/Version.java",
+    ],
+}
+
+java_library {
+    name: "android.mojo",
+
+    srcs: [
+        ":libmojo_mojom_java_srcs",
+        "base/android/java/src/**/*.java",
+        "mojo/android/system/src/**/*.java",
+        "mojo/public/java/system/src/**/*.java",
+        "mojo/public/java/bindings/src/**/*.java",
+    ],
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
@@ -9,11 +10,38 @@ group("all") {
     ":libchrome",
     ":libchrome-test",
   ]
+  # Create libmojo only when crypto is available. See also the comment for the
+  # target.
+  if (use.crypto) {
+    deps += [ ":libmojo" ]
+  }
 }
 
-# Suppressing warning in base/strings/stringprintf.cc.
+config("libchrome_config") {
+  # TODO(hidehiko): Consolidate with build_config.h.
+  defines = [
+    "OS_CHROMEOS",
+    "USE_NSS_CERTS",
+    "USE_SYSTEM_LIBEVENT",
+    "NO_TCMALLOC",
+    "MOJO_EDK_LEGACY_PROTOCOL",
+  ]
+  include_dirs = [ "." ]
+  cflags = [
+    "-Wno-deprecated-register",
+    "-Wno-narrowing",
+    "-Wno-unused-local-typedefs",
+    "-Xclang-only=-Wno-char-subscripts",
+  ]
+  # Address sanitizer builds do not support -z,defs.
+  if (!use.asan) {
+    ldflags = [ "-Wl,-z,defs" ]
+  }
+}
+
 config("base_core_config") {
   cflags = [
+    # Suppressing warning in base/strings/stringprintf.cc.
     "-Wno-format-nonliteral",
     # This is for _exit(1) in base/debug/debugger_posix.cc.
     "-Wno-unreachable-code",
@@ -395,25 +423,6 @@ foreach(attr, libbase_sublibs) {
       deps = attr.deps
     }
 
-    # TODO(hidehiko): Consolidate with build_config.h.
-    defines = [
-      "OS_CHROMEOS",
-      "USE_NSS_CERTS",
-      "USE_SYSTEM_LIBEVENT",
-      "NO_TCMALLOC",
-    ]
-    include_dirs = [ "." ]
-    cflags = [
-      "-Wno-deprecated-register",
-      "-Wno-narrowing",
-      "-Wno-unused-local-typedefs",
-      "-Xclang-only=-Wno-char-subscripts",
-    ]
-    # Address sanitizer builds do not support -z,defs.
-    if (!use.asan) {
-      ldflags = [ "-Wl,-z,defs" ]
-    }
-
     if (defined(attr.libs)) {
       libs = attr.libs
     }
@@ -421,7 +430,10 @@ foreach(attr, libbase_sublibs) {
     if (defined(attr.pkg_deps)) {
       configs += [ ":" + attr.name + "-pkg-config" ]
     }
-    configs += [ "//common-mk:visibility_default" ]
+    configs += [
+      ":libchrome_config",
+      "//common-mk:visibility_default"
+    ]
     if (buildtype == "static_library") {
       configs -= [ "//common-mk:use_thin_archive" ]
       configs += [ "//common-mk:nouse_thin_archive" ]
@@ -529,4 +541,152 @@ generate_pkg_config("libchrome-test") {
     }
   }
   cflags = libchrome_exported_cflags
+}
+
+# libmojo depends on crypto/, so it is available only when crypto is usable.
+if (use.crypto) {
+  generate_mojom_bindings_gen("mojom_bindings_gen") {
+    mojom_bindings_generator = "mojo/public/tools/bindings/mojom_bindings_generator.py"
+    sources = [
+      "ipc/ipc.mojom",
+      "mojo/common/file.mojom",
+      "mojo/common/file_path.mojom",
+      "mojo/common/string16.mojom",
+      "mojo/common/text_direction.mojom",
+      "mojo/common/time.mojom",
+      "mojo/common/unguessable_token.mojom",
+      "mojo/common/values.mojom",
+      "mojo/common/version.mojom",
+      "mojo/public/interfaces/bindings/pipe_control_messages.mojom",
+      "mojo/public/interfaces/bindings/interface_control_messages.mojom",
+    ]
+  }
+
+  # Probably we should consider build libmojo as a part of libchrome.
+  # crbug.com/924035.
+  static_library("mojo") {
+    output_name = "mojo-${libbase_ver}"
+    deps = [ ":base-core", ":base-crypto", ":mojom_bindings_gen" ]
+    # TODO(hidehiko): Consolidate with build_config.h.
+    configs -= [
+      "//common-mk:use_thin_archive",
+      "//common-mk:pie",
+    ]
+    configs += [
+      ":libchrome_config",
+      "//common-mk:visibility_default",
+      "//common-mk:nouse_thin_archive",
+      "//common-mk:pic",
+    ]
+    sources = [
+      "ipc/ipc_message.cc",
+      "ipc/ipc_message_attachment.cc",
+      "ipc/ipc_message_attachment_set.cc",
+      "ipc/ipc_message_utils.cc",
+      "ipc/ipc_mojo_handle_attachment.cc",
+      "ipc/ipc_mojo_message_helper.cc",
+      "ipc/ipc_mojo_param_traits.cc",
+      "ipc/ipc_platform_file_attachment_posix.cc",
+      "mojo/common/common_custom_types_struct_traits.cc",
+      "mojo/common/data_pipe_drainer.cc",
+      "mojo/common/data_pipe_utils.cc",
+      "mojo/common/values_struct_traits.cc",
+      "mojo/edk/embedder/connection_params.cc",
+      "mojo/edk/embedder/embedder.cc",
+      "mojo/edk/embedder/entrypoints.cc",
+      "mojo/edk/embedder/named_platform_handle_utils_posix.cc",
+      "mojo/edk/embedder/pending_process_connection.cc",
+      "mojo/edk/embedder/platform_channel_pair.cc",
+      "mojo/edk/embedder/platform_channel_pair_posix.cc",
+      "mojo/edk/embedder/platform_channel_utils_posix.cc",
+      "mojo/edk/embedder/platform_handle.cc",
+      "mojo/edk/embedder/platform_handle_utils_posix.cc",
+      "mojo/edk/embedder/platform_shared_buffer.cc",
+      "mojo/edk/embedder/scoped_ipc_support.cc",
+      "mojo/edk/embedder/test_embedder.cc",
+      "mojo/edk/system/broker_host.cc",
+      "mojo/edk/system/broker_posix.cc",
+      "mojo/edk/system/channel.cc",
+      "mojo/edk/system/channel_posix.cc",
+      "mojo/edk/system/configuration.cc",
+      "mojo/edk/system/core.cc",
+      "mojo/edk/system/data_pipe_consumer_dispatcher.cc",
+      "mojo/edk/system/data_pipe_control_message.cc",
+      "mojo/edk/system/data_pipe_producer_dispatcher.cc",
+      "mojo/edk/system/dispatcher.cc",
+      "mojo/edk/system/handle_table.cc",
+      "mojo/edk/system/mapping_table.cc",
+      "mojo/edk/system/message_for_transit.cc",
+      "mojo/edk/system/message_pipe_dispatcher.cc",
+      "mojo/edk/system/node_channel.cc",
+      "mojo/edk/system/node_controller.cc",
+      "mojo/edk/system/platform_handle_dispatcher.cc",
+      "mojo/edk/system/ports/event.cc",
+      "mojo/edk/system/ports/message.cc",
+      "mojo/edk/system/ports/message_queue.cc",
+      "mojo/edk/system/ports/name.cc",
+      "mojo/edk/system/ports/node.cc",
+      "mojo/edk/system/ports/port.cc",
+      "mojo/edk/system/ports/port_ref.cc",
+      "mojo/edk/system/ports_message.cc",
+      "mojo/edk/system/request_context.cc",
+      "mojo/edk/system/shared_buffer_dispatcher.cc",
+      "mojo/edk/system/watch.cc",
+      "mojo/edk/system/watcher_dispatcher.cc",
+      "mojo/edk/system/watcher_set.cc",
+      "mojo/public/c/system/set_thunks_for_app.cc",
+      "mojo/public/c/system/thunks.cc",
+      "mojo/public/cpp/bindings/lib/array_internal.cc",
+      "mojo/public/cpp/bindings/lib/associated_binding.cc",
+      "mojo/public/cpp/bindings/lib/associated_group.cc",
+      "mojo/public/cpp/bindings/lib/associated_group_controller.cc",
+      "mojo/public/cpp/bindings/lib/associated_interface_ptr.cc",
+      "mojo/public/cpp/bindings/lib/binding_state.cc",
+      "mojo/public/cpp/bindings/lib/connector.cc",
+      "mojo/public/cpp/bindings/lib/control_message_handler.cc",
+      "mojo/public/cpp/bindings/lib/control_message_proxy.cc",
+      "mojo/public/cpp/bindings/lib/filter_chain.cc",
+      "mojo/public/cpp/bindings/lib/fixed_buffer.cc",
+      "mojo/public/cpp/bindings/lib/interface_endpoint_client.cc",
+      "mojo/public/cpp/bindings/lib/message.cc",
+      "mojo/public/cpp/bindings/lib/message_buffer.cc",
+      "mojo/public/cpp/bindings/lib/message_builder.cc",
+      "mojo/public/cpp/bindings/lib/message_header_validator.cc",
+      "mojo/public/cpp/bindings/lib/multiplex_router.cc",
+      "mojo/public/cpp/bindings/lib/native_struct.cc",
+      "mojo/public/cpp/bindings/lib/native_struct_data.cc",
+      "mojo/public/cpp/bindings/lib/native_struct_serialization.cc",
+      "mojo/public/cpp/bindings/lib/pipe_control_message_handler.cc",
+      "mojo/public/cpp/bindings/lib/pipe_control_message_proxy.cc",
+      "mojo/public/cpp/bindings/lib/scoped_interface_endpoint_handle.cc",
+      "mojo/public/cpp/bindings/lib/serialization_context.cc",
+      "mojo/public/cpp/bindings/lib/string_traits_string16.cc",
+      "mojo/public/cpp/bindings/lib/sync_call_restrictions.cc",
+      "mojo/public/cpp/bindings/lib/sync_event_watcher.cc",
+      "mojo/public/cpp/bindings/lib/sync_handle_registry.cc",
+      "mojo/public/cpp/bindings/lib/sync_handle_watcher.cc",
+      "mojo/public/cpp/bindings/lib/validation_context.cc",
+      "mojo/public/cpp/bindings/lib/validation_errors.cc",
+      "mojo/public/cpp/bindings/lib/validation_util.cc",
+      "mojo/public/cpp/system/buffer.cc",
+      "mojo/public/cpp/system/platform_handle.cc",
+      "mojo/public/cpp/system/simple_watcher.cc",
+      "mojo/public/cpp/system/wait.cc",
+      "mojo/public/cpp/system/wait_set.cc",
+      "mojo/public/cpp/system/watcher.cc",
+    ] + get_target_outputs(":mojom_bindings_gen")
+  }
+
+  generate_pkg_config("libmojo") {
+    deps = [ ":mojo" ]
+    output_name = "libmojo-${libbase_ver}"
+    description = "Chrome Mojo IPC library"
+    version = "${libbase_ver}"
+    libs = [ "-lmojo-${libbase_ver}" ]
+    cflags = [
+      "-I/usr/lib/base-${libbase_ver}",
+      "-Wno-cast-qual",
+      "-Wno-cast-align",
+    ]
+  }
 }
