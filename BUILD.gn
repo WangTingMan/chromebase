@@ -10,9 +10,7 @@ group("all") {
     ":libchrome",
     ":libchrome-test",
   ]
-  # Create libmojo only when crypto is available. See also the comment for the
-  # target.
-  if (use.crypto) {
+  if (use.mojo) {
     deps += [ ":libmojo" ]
   }
 }
@@ -543,8 +541,7 @@ generate_pkg_config("libchrome-test") {
   cflags = libchrome_exported_cflags
 }
 
-# libmojo depends on crypto/, so it is available only when crypto is usable.
-if (use.crypto) {
+if (use.mojo) {
   generate_mojom_bindings_gen("mojom_bindings_gen") {
     mojom_bindings_generator = "mojo/public/tools/bindings/mojom_bindings_generator.py"
     sources = [
