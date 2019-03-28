@@ -13,10 +13,10 @@
 #include "base/no_destructor.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/numerics/safe_math.h"
-#include "base/trace_event/memory_allocator_dump.h"
-#include "base/trace_event/memory_dump_manager.h"
-#include "base/trace_event/memory_dump_provider.h"
-#include "base/trace_event/trace_event.h"
+// #include "base/trace_event/memory_allocator_dump.h"
+// #include "base/trace_event/memory_dump_manager.h"
+// #include "base/trace_event/memory_dump_provider.h"
+// #include "base/trace_event/trace_event.h"
 #include "mojo/core/core.h"
 #include "mojo/core/node_channel.h"
 #include "mojo/core/node_controller.h"
@@ -271,12 +271,36 @@ void DecrementMessageCount() {
   base::subtle::NoBarrier_AtomicIncrement(&g_message_count, -1);
 }
 
-class MessageMemoryDumpProvider : public base::trace_event::MemoryDumpProvider {
- public:
-  MessageMemoryDumpProvider() {
-    base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
-        this, "MojoMessages", nullptr);
-  }
+// class MessageMemoryDumpProvider : public base::trace_event::MemoryDumpProvider {
+//  public:
+//   MessageMemoryDumpProvider() {
+//     base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
+//         this, "MojoMessages", nullptr);
+//   }
+
+//   ~MessageMemoryDumpProvider() override {
+//     base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
+//         this);
+//   }
+
+//  private:
+//   // base::trace_event::MemoryDumpProvider:
+//   bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
+//                     base::trace_event::ProcessMemoryDump* pmd) override {
+//     auto* dump = pmd->CreateAllocatorDump("mojo/messages");
+//     dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+//                     base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+//                     base::subtle::NoBarrier_Load(&g_message_count));
+//     return true;
+//   }
+
+//   DISALLOW_COPY_AND_ASSIGN(MessageMemoryDumpProvider);
+// };
+
+// void EnsureMemoryDumpProviderExists() {
+//   static base::NoDestructor<MessageMemoryDumpProvider> provider;
+//   ALLOW_UNUSED_LOCAL(provider);
+// }
 
   ~MessageMemoryDumpProvider() override {
     base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
@@ -648,7 +672,7 @@ void UserMessageImpl::FailHandleSerializationForTesting(bool fail) {
 
 UserMessageImpl::UserMessageImpl(ports::UserMessageEvent* message_event)
     : ports::UserMessage(&kUserMessageTypeInfo), message_event_(message_event) {
-  EnsureMemoryDumpProviderExists();
+  // EnsureMemoryDumpProviderExists();
   IncrementMessageCount();
 }
 
@@ -667,7 +691,7 @@ UserMessageImpl::UserMessageImpl(ports::UserMessageEvent* message_event,
       header_size_(header_size),
       user_payload_(user_payload),
       user_payload_size_(user_payload_size) {
-  EnsureMemoryDumpProviderExists();
+  // EnsureMemoryDumpProviderExists();
   IncrementMessageCount();
 }
 

@@ -20,6 +20,7 @@ class BASE_EXPORT TaskAnnotator {
  public:
   class ObserverForTesting {
    public:
+    virtual ~ObserverForTesting() = default;
     // Invoked just before RunTask() in the scope in which the task is about to
     // be executed.
     virtual void BeforeRunTask(const PendingTask* pending_task) = 0;

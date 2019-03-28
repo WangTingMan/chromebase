@@ -352,7 +352,7 @@ class BASE_EXPORT Value {
 
   // Estimates dynamic memory usage.
   // See base/trace_event/memory_usage_estimator.h for more info.
-  size_t EstimateMemoryUsage() const;
+  // size_t EstimateMemoryUsage() const;
 
  protected:
   // TODO(crbug.com/646113): Make these private once DictionaryValue and

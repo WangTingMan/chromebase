@@ -253,7 +253,8 @@ void CheckException(JNIEnv* env) {
   }
 
   // Now, feel good about it and die.
-  LOG(FATAL) << "Please include Java exception stack in crash report";
+  if (java_throwable)
+    LOG(FATAL) << GetJavaExceptionInfo(env, java_throwable);
 }
 
 std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {

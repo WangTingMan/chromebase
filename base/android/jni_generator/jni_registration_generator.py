@@ -316,7 +316,7 @@ def main(argv):
                           help='The output file path.')
   arg_parser.add_argument('--no_register_java',
                           help='A list of Java files which should be ignored '
-                          'by the parser.')
+                          'by the parser.', default=[])
   args = arg_parser.parse_args(build_utils.ExpandFileArgs(argv[1:]))
   args.sources_files = build_utils.ParseGnList(args.sources_files)
 

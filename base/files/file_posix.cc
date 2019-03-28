@@ -275,7 +275,7 @@ int File::Write(int64_t offset, const char* data, int size) {
   int bytes_written = 0;
   int rv;
   do {
-#if defined(OS_ANDROID)
+#if _FILE_OFFSET_BITS != 64 || defined(__BIONIC__)
     // In case __USE_FILE_OFFSET64 is not used, we need to call pwrite64()
     // instead of pwrite().
     static_assert(sizeof(int64_t) == sizeof(off64_t),

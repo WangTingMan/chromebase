@@ -8,35 +8,35 @@
 
 #include <limits>
 
-#include "base/trace_event/memory_dump_manager.h"
+// #include "base/trace_event/memory_dump_manager.h"
 
 namespace mojo {
 namespace core {
 
 namespace {
 
-const char* GetNameForDispatcherType(Dispatcher::Type type) {
-  switch (type) {
-    case Dispatcher::Type::UNKNOWN:
-      return "unknown";
-    case Dispatcher::Type::MESSAGE_PIPE:
-      return "message_pipe";
-    case Dispatcher::Type::DATA_PIPE_PRODUCER:
-      return "data_pipe_producer";
-    case Dispatcher::Type::DATA_PIPE_CONSUMER:
-      return "data_pipe_consumer";
-    case Dispatcher::Type::SHARED_BUFFER:
-      return "shared_buffer";
-    case Dispatcher::Type::WATCHER:
-      return "watcher";
-    case Dispatcher::Type::PLATFORM_HANDLE:
-      return "platform_handle";
-    case Dispatcher::Type::INVITATION:
-      return "invitation";
-  }
-  NOTREACHED();
-  return "unknown";
-}
+// const char* GetNameForDispatcherType(Dispatcher::Type type) {
+//   switch (type) {
+//     case Dispatcher::Type::UNKNOWN:
+//       return "unknown";
+//     case Dispatcher::Type::MESSAGE_PIPE:
+//       return "message_pipe";
+//     case Dispatcher::Type::DATA_PIPE_PRODUCER:
+//       return "data_pipe_producer";
+//     case Dispatcher::Type::DATA_PIPE_CONSUMER:
+//       return "data_pipe_consumer";
+//     case Dispatcher::Type::SHARED_BUFFER:
+//       return "shared_buffer";
+//     case Dispatcher::Type::WATCHER:
+//       return "watcher";
+//     case Dispatcher::Type::PLATFORM_HANDLE:
+//       return "platform_handle";
+//     case Dispatcher::Type::INVITATION:
+//       return "invitation";
+//   }
+//   NOTREACHED();
+//   return "unknown";
+// }
 
 }  // namespace
 
@@ -158,18 +158,38 @@ void HandleTable::GetActiveHandlesForTest(std::vector<MojoHandle>* handles) {
 }
 
 // MemoryDumpProvider implementation.
-bool HandleTable::OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
-                               base::trace_event::ProcessMemoryDump* pmd) {
-  // Create entries for all relevant dispatcher types to ensure they are present
-  // in the final dump.
-  std::map<Dispatcher::Type, int> handle_count;
-  handle_count[Dispatcher::Type::MESSAGE_PIPE];
-  handle_count[Dispatcher::Type::DATA_PIPE_PRODUCER];
-  handle_count[Dispatcher::Type::DATA_PIPE_CONSUMER];
-  handle_count[Dispatcher::Type::SHARED_BUFFER];
-  handle_count[Dispatcher::Type::WATCHER];
-  handle_count[Dispatcher::Type::PLATFORM_HANDLE];
-  handle_count[Dispatcher::Type::INVITATION];
+// bool HandleTable::OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
+//                                base::trace_event::ProcessMemoryDump* pmd) {
+//   // Create entries for all relevant dispatcher types to ensure they are present
+//   // in the final dump.
+//   std::map<Dispatcher::Type, int> handle_count;
+//   handle_count[Dispatcher::Type::MESSAGE_PIPE];
+//   handle_count[Dispatcher::Type::DATA_PIPE_PRODUCER];
+//   handle_count[Dispatcher::Type::DATA_PIPE_CONSUMER];
+//   handle_count[Dispatcher::Type::SHARED_BUFFER];
+//   handle_count[Dispatcher::Type::WATCHER];
+//   handle_count[Dispatcher::Type::PLATFORM_HANDLE];
+//   handle_count[Dispatcher::Type::INVITATION];
+
+//   // Count the number of each dispatcher type.
+//   {
+//     base::AutoLock lock(GetLock());
+//     for (const auto& entry : handles_) {
+//       ++handle_count[entry.second.dispatcher->GetType()];
+//     }
+//   }
+
+//   for (const auto& entry : handle_count) {
+//     base::trace_event::MemoryAllocatorDump* inner_dump =
+//         pmd->CreateAllocatorDump(std::string("mojo/") +
+//                                  GetNameForDispatcherType(entry.first));
+//     inner_dump->AddScalar(
+//         base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+//         base::trace_event::MemoryAllocatorDump::kUnitsObjects, entry.second);
+//   }
+
+//   return true;
+// }
 
   // Count the number of each dispatcher type.
   {

@@ -266,13 +266,15 @@ void FileDataPipeProducer::WriteFromPath(const base::FilePath& path,
 
 void FileDataPipeProducer::InitializeNewRequest(CompletionCallback callback) {
   DCHECK(!file_sequence_state_);
-  auto file_task_runner = base::CreateSequencedTaskRunnerWithTraits(
-      {base::MayBlock(), base::TaskPriority::BACKGROUND});
-  file_sequence_state_ = new FileSequenceState(
-      std::move(producer_), file_task_runner,
-      base::BindOnce(&FileDataPipeProducer::OnWriteComplete,
-                     weak_factory_.GetWeakPtr(), std::move(callback)),
-      base::SequencedTaskRunnerHandle::Get(), std::move(observer_));
+
+  LOG(FATAL) << "unsupported in libchrome";
+  // auto file_task_runner = base::CreateSequencedTaskRunnerWithTraits(
+  //     {base::MayBlock(), base::TaskPriority::BACKGROUND});
+  // file_sequence_state_ = new FileSequenceState(
+  //     std::move(producer_), file_task_runner,
+  //     base::BindOnce(&FileDataPipeProducer::OnWriteComplete,
+  //                    weak_factory_.GetWeakPtr(), std::move(callback)),
+  //     base::SequencedTaskRunnerHandle::Get(), std::move(observer_));
 }
 
 void FileDataPipeProducer::OnWriteComplete(

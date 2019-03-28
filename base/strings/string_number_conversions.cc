@@ -368,13 +368,20 @@ std::string NumberToString(double value) {
 }
 
 base::string16 NumberToString16(double value) {
-  // According to g_fmt.cc, it is sufficient to declare a buffer of size 32.
-  char buffer[32];
-  dmg_fp::g_fmt(buffer, value);
+  auto tmp = std::to_string(value);
+  base::string16 ret(tmp.c_str(), tmp.c_str() + tmp.length());
 
-  // The number will be ASCII. This creates the string using the "input
-  // iterator" variant which promotes from 8-bit to 16-bit via "=".
-  return base::string16(&buffer[0], &buffer[strlen(buffer)]);
+  // If this returned an integer, don't do anything.
+  if (ret.find('.') == std::string::npos) {
+    return ret;
+  }
+  // Otherwise, it has an annoying tendency to leave trailing zeros.
+  size_t len = ret.size();
+  while (len >= 2 && ret[len - 1] == '0' && ret[len - 2] != '.') {
+    --len;
+  }
+  ret.erase(len);
+  return ret;
 }
 
 bool StringToInt(StringPiece input, int* output) {

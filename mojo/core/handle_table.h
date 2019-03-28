@@ -13,7 +13,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/synchronization/lock.h"
-#include "base/trace_event/memory_dump_provider.h"
+// #include "base/trace_event/memory_dump_provider.h"
 #include "mojo/core/dispatcher.h"
 #include "mojo/core/system_impl_export.h"
 #include "mojo/public/c/system/types.h"
@@ -21,8 +21,7 @@
 namespace mojo {
 namespace core {
 
-class MOJO_SYSTEM_IMPL_EXPORT HandleTable
-    : public base::trace_event::MemoryDumpProvider {
+class MOJO_SYSTEM_IMPL_EXPORT HandleTable {
  public:
   HandleTable();
   ~HandleTable() override;
@@ -58,11 +57,11 @@ class MOJO_SYSTEM_IMPL_EXPORT HandleTable
   void GetActiveHandlesForTest(std::vector<MojoHandle>* handles);
 
  private:
-  FRIEND_TEST_ALL_PREFIXES(HandleTableTest, OnMemoryDump);
+  // FRIEND_TEST_ALL_PREFIXES(HandleTableTest, OnMemoryDump);
 
   // MemoryDumpProvider implementation.
-  bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
-                    base::trace_event::ProcessMemoryDump* pmd) override;
+  // bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
+  //                   base::trace_event::ProcessMemoryDump* pmd) override;
 
   struct Entry {
     Entry();

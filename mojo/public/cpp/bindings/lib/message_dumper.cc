@@ -22,9 +22,33 @@ base::FilePath& DumpDirectory() {
   return *dump_directory;
 }
 
-void WriteMessage(uint32_t identifier,
-                  const mojo::MessageDumper::MessageEntry& entry) {
-  static uint64_t num = 0;
+// void WriteMessage(uint32_t identifier,
+//                   const mojo::MessageDumper::MessageEntry& entry) {
+//   static uint64_t num = 0;
+
+//   if (!entry.interface_name)
+//     return;
+
+//   base::FilePath message_directory =
+//       DumpDirectory()
+//           .AppendASCII(entry.interface_name)
+//           .AppendASCII(base::NumberToString(identifier));
+
+//   if (!base::DirectoryExists(message_directory) &&
+//       !base::CreateDirectory(message_directory)) {
+//     LOG(ERROR) << "Failed to create" << message_directory.value();
+//     return;
+//   }
+
+//   std::string filename =
+//       base::NumberToString(num++) + "." + entry.method_name + ".mojomsg";
+//   base::FilePath path = message_directory.AppendASCII(filename);
+//   base::File file(path,
+//                   base::File::FLAG_WRITE | base::File::FLAG_CREATE_ALWAYS);
+
+//   file.WriteAtCurrentPos(reinterpret_cast<const char*>(entry.data_bytes.data()),
+//                          static_cast<int>(entry.data_bytes.size()));
+// }
 
   if (!entry.interface_name)
     return;
@@ -71,17 +95,17 @@ MessageDumper::MessageDumper() : identifier_(base::RandUint64()) {}
 MessageDumper::~MessageDumper() {}
 
 bool MessageDumper::Accept(mojo::Message* message) {
-  MessageEntry entry(message->data(), message->data_num_bytes(),
-                     message->interface_name(), message->method_name());
+  // MessageEntry entry(message->data(), message->data_num_bytes(),
+  //                    "unknown interface", "unknown name");
 
-  static base::NoDestructor<scoped_refptr<base::TaskRunner>> task_runner(
-      base::CreateSequencedTaskRunnerWithTraits(
-          {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
-           base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN}));
+  // static base::NoDestructor<scoped_refptr<base::TaskRunner>> task_runner(
+  //     base::CreateSequencedTaskRunnerWithTraits(
+  //         {base::MayBlock(), base::TaskPriority::USER_BLOCKING,
+  //          base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN}));
 
-  (*task_runner)
-      ->PostTask(FROM_HERE,
-                 base::BindOnce(&WriteMessage, identifier_, std::move(entry)));
+  // (*task_runner)
+  //     ->PostTask(FROM_HERE,
+  //                base::BindOnce(&WriteMessage, identifier_, std::move(entry)));
   return true;
 }
 

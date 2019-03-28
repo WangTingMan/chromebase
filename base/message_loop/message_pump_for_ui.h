@@ -18,9 +18,9 @@
 #include "base/message_loop/message_pump.h"
 #elif defined(OS_NACL) || defined(OS_AIX)
 // No MessagePumpForUI, see below.
-#elif defined(USE_GLIB)
+#elif defined(USE_GLIB) && !defined(ANDROID)
 #include "base/message_loop/message_pump_glib.h"
-#elif defined(OS_LINUX) || defined(OS_BSD)
+#elif defined(OS_LINUX) || defined(OS_BSD)|| defined(ANDROID)
 #include "base/message_loop/message_pump_libevent.h"
 #elif defined(OS_FUCHSIA)
 #include "base/message_loop/message_pump_fuchsia.h"
@@ -44,9 +44,9 @@ using MessagePumpForUI = MessagePump;
 #elif defined(OS_NACL) || defined(OS_AIX)
 // Currently NaCl and AIX don't have a MessagePumpForUI.
 // TODO(abarth): Figure out if we need this.
-#elif defined(USE_GLIB)
+#elif defined(USE_GLIB) && !defined(ANDROID)
 using MessagePumpForUI = MessagePumpGlib;
-#elif defined(OS_LINUX) || defined(OS_BSD)
+#elif defined(OS_LINUX) || defined(OS_BSD) || defined(ANDROID)
 using MessagePumpForUI = MessagePumpLibevent;
 #elif defined(OS_FUCHSIA)
 using MessagePumpForUI = MessagePumpFuchsia;

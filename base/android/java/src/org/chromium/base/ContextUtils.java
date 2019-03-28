@@ -100,9 +100,10 @@ public class ContextUtils {
         // that use Robolectric and set the application context manually. Instead of changing all
         // tests that do so, the call was put here instead.
         // TODO(mheikal): Require param to be of type Application
-        if (appContext instanceof Application) {
-            ApplicationStatus.initialize((Application) appContext);
-        }
+        // Disabled on libchrome
+        // if (appContext instanceof Application) {
+        //     ApplicationStatus.initialize((Application) appContext);
+        // }
         initJavaSideApplicationContext(appContext);
         Holder.sSharedPreferences = fetchAppSharedPreferences();
     }

@@ -28,6 +28,10 @@
 #include "base/time/time.h"
 #include "build/build_config.h"
 
+// Just in libchrome
+namespace brillo {
+class BaseMessageLoop;
+}
 namespace base {
 
 class ThreadTaskRunnerHandle;
@@ -214,6 +218,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
   void BindToCurrentThread();
 
  private:
+  //only in libchrome
+  friend class brillo::BaseMessageLoop;
   friend class internal::IncomingTaskQueue;
   friend class MessageLoopCurrent;
   friend class MessageLoopCurrentForIO;
