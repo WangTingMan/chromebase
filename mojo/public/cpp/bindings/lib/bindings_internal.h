@@ -8,8 +8,9 @@
 #include <stdint.h>
 
 #include <functional>
+#include <type_traits>
 
-#include "base/template_util.h"
+#include "mojo/public/cpp/bindings/enum_traits.h"
 #include "mojo/public/cpp/bindings/interface_id.h"
 #include "mojo/public/cpp/bindings/lib/template_util.h"
 #include "mojo/public/cpp/system/core.h"
@@ -34,8 +35,6 @@ class InterfaceRequestDataView;
 template <typename K, typename V>
 class MapDataView;
 
-class NativeStructDataView;
-
 class StringDataView;
 
 namespace internal {
@@ -53,8 +52,6 @@ class Array_Data;
 
 template <typename K, typename V>
 class Map_Data;
-
-class NativeStruct_Data;
 
 using String_Data = Array_Data<char>;
 
@@ -299,14 +296,6 @@ struct MojomTypeTraits<MapDataView<K, V>, false> {
 };
 
 template <>
-struct MojomTypeTraits<NativeStructDataView, false> {
-  using Data = internal::NativeStruct_Data;
-  using DataAsArrayElement = Pointer<Data>;
-
-  static const MojomTypeCategory category = MojomTypeCategory::STRUCT;
-};
-
-template <>
 struct MojomTypeTraits<StringDataView, false> {
   using Data = String_Data;
   using DataAsArrayElement = Pointer<Data>;
@@ -325,10 +314,18 @@ struct EnumHashImpl {
   static_assert(std::is_enum<T>::value, "Incorrect hash function.");
 
   size_t operator()(T input) const {
-    using UnderlyingType = typename base::underlying_type<T>::type;
+    using UnderlyingType = typename std::underlying_type<T>::type;
     return std::hash<UnderlyingType>()(static_cast<UnderlyingType>(input));
   }
 };
+
+template <typename MojomType, typename T>
+T ConvertEnumValue(MojomType input) {
+  T output;
+  bool result = EnumTraits<MojomType, T>::FromMojom(input, &output);
+  DCHECK(result);
+  return output;
+}
 
 }  // namespace internal
 }  // namespace mojo

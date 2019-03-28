@@ -5,6 +5,7 @@
 #include "base/process/process.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <stdint.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
@@ -14,7 +15,7 @@
 #include "base/logging.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/process/kill.h"
-#include "base/third_party/dynamic_annotations/dynamic_annotations.h"
+#include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
 #if defined(OS_MACOSX)
@@ -91,10 +92,9 @@ bool WaitpidWithTimeout(base::ProcessHandle handle,
 // Using kqueue on Mac so that we can wait on non-child processes.
 // We can't use kqueues on child processes because we need to reap
 // our own children using wait.
-static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
-                                         base::TimeDelta wait) {
+bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
+                                  base::TimeDelta wait) {
   DCHECK_GT(handle, 0);
-  DCHECK_GT(wait, base::TimeDelta());
 
   base::ScopedFD kq(kqueue());
   if (!kq.is_valid()) {
@@ -128,7 +128,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
   result = -1;
   struct kevent event = {0};
 
-  while (wait_forever || remaining_delta > base::TimeDelta()) {
+  do {
     struct timespec remaining_timespec;
     struct timespec* remaining_timespec_ptr;
     if (wait_forever) {
@@ -148,7 +148,7 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
     } else {
       break;
     }
-  }
+  } while (wait_forever || remaining_delta > base::TimeDelta());
 
   if (result < 0) {
     DPLOG(ERROR) << "kevent (wait " << handle << ")";
@@ -181,9 +181,16 @@ static bool WaitForSingleNonChildProcess(base::ProcessHandle handle,
 bool WaitForExitWithTimeoutImpl(base::ProcessHandle handle,
                                 int* exit_code,
                                 base::TimeDelta timeout) {
-  base::ProcessHandle parent_pid = base::GetParentProcessId(handle);
-  base::ProcessHandle our_pid = base::GetCurrentProcessHandle();
-  if (parent_pid != our_pid) {
+  const base::ProcessHandle our_pid = base::GetCurrentProcessHandle();
+  if (handle == our_pid) {
+    // We won't be able to wait for ourselves to exit.
+    return false;
+  }
+
+  const base::ProcessHandle parent_pid = base::GetParentProcessId(handle);
+  const bool exited = (parent_pid < 0);
+
+  if (!exited && parent_pid != our_pid) {
 #if defined(OS_MACOSX)
     // On Mac we can wait on non child processes.
     return WaitForSingleNonChildProcess(handle, timeout);
@@ -195,7 +202,7 @@ bool WaitForExitWithTimeoutImpl(base::ProcessHandle handle,
 
   int status;
   if (!WaitpidWithTimeout(handle, &status, timeout))
-    return false;
+    return exited;
   if (WIFSIGNALED(status)) {
     if (exit_code)
       *exit_code = -1;
@@ -206,7 +213,7 @@ bool WaitForExitWithTimeoutImpl(base::ProcessHandle handle,
       *exit_code = WEXITSTATUS(status);
     return true;
   }
-  return false;
+  return exited;
 }
 #endif  // !defined(OS_NACL_NONSFI)
 
@@ -217,15 +224,13 @@ namespace base {
 Process::Process(ProcessHandle handle) : process_(handle) {
 }
 
-Process::~Process() {
-}
+Process::~Process() = default;
 
 Process::Process(Process&& other) : process_(other.process_) {
   other.Close();
 }
 
 Process& Process::operator=(Process&& other) {
-  DCHECK_NE(this, &other);
   process_ = other.process_;
   other.Close();
   return *this;
@@ -257,12 +262,12 @@ Process Process::DeprecatedGetProcessFromHandle(ProcessHandle handle) {
   return Process(handle);
 }
 
-#if !defined(OS_LINUX) && !defined(OS_MACOSX)
+#if !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_AIX)
 // static
 bool Process::CanBackgroundProcesses() {
   return false;
 }
-#endif  // !defined(OS_LINUX) && !defined(OS_MACOSX)
+#endif  // !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_AIX)
 
 // static
 void Process::TerminateCurrentProcessImmediately(int exit_code) {
@@ -306,52 +311,20 @@ bool Process::Terminate(int exit_code, bool wait) const {
   DCHECK(IsValid());
   CHECK_GT(process_, 0);
 
-  bool result = kill(process_, SIGTERM) == 0;
-  if (result && wait) {
-    int tries = 60;
+  bool did_terminate = kill(process_, SIGTERM) == 0;
 
-    if (RunningOnValgrind()) {
-      // Wait for some extra time when running under Valgrind since the child
-      // processes may take some time doing leak checking.
-      tries *= 2;
-    }
-
-    unsigned sleep_ms = 4;
-
-    // The process may not end immediately due to pending I/O
-    bool exited = false;
-    while (tries-- > 0) {
-      pid_t pid = HANDLE_EINTR(waitpid(process_, NULL, WNOHANG));
-      if (pid == process_) {
-        exited = true;
-        break;
-      }
-      if (pid == -1) {
-        if (errno == ECHILD) {
-          // The wait may fail with ECHILD if another process also waited for
-          // the same pid, causing the process state to get cleaned up.
-          exited = true;
-          break;
-        }
-        DPLOG(ERROR) << "Error waiting for process " << process_;
-      }
-
-      usleep(sleep_ms * 1000);
-      const unsigned kMaxSleepMs = 1000;
-      if (sleep_ms < kMaxSleepMs)
-        sleep_ms *= 2;
-    }
-
-    // If we're waiting and the child hasn't died by now, force it
-    // with a SIGKILL.
-    if (!exited)
-      result = kill(process_, SIGKILL) == 0;
+  if (wait && did_terminate) {
+    if (WaitForExitWithTimeout(TimeDelta::FromSeconds(60), nullptr))
+      return true;
+    did_terminate = kill(process_, SIGKILL) == 0;
+    if (did_terminate)
+      return WaitForExit(nullptr);
   }
 
-  if (!result)
+  if (!did_terminate)
     DPLOG(ERROR) << "Unable to terminate process " << process_;
 
-  return result;
+  return did_terminate;
 }
 #endif  // !defined(OS_NACL_NONSFI)
 
@@ -360,13 +333,25 @@ bool Process::WaitForExit(int* exit_code) const {
 }
 
 bool Process::WaitForExitWithTimeout(TimeDelta timeout, int* exit_code) const {
+  if (!timeout.is_zero())
+    internal::AssertBaseSyncPrimitivesAllowed();
+
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedProcessWaitActivity process_activity(this);
 
-  return WaitForExitWithTimeoutImpl(Handle(), exit_code, timeout);
+  int local_exit_code = 0;
+  bool exited = WaitForExitWithTimeoutImpl(Handle(), &local_exit_code, timeout);
+  if (exited) {
+    Exited(local_exit_code);
+    if (exit_code)
+      *exit_code = local_exit_code;
+  }
+  return exited;
 }
 
-#if !defined(OS_LINUX) && !defined(OS_MACOSX)
+void Process::Exited(int exit_code) const {}
+
+#if !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_AIX)
 bool Process::IsProcessBackgrounded() const {
   // See SetProcessBackgrounded().
   DCHECK(IsValid());
@@ -380,7 +365,7 @@ bool Process::SetProcessBackgrounded(bool value) {
   NOTIMPLEMENTED();
   return false;
 }
-#endif  // !defined(OS_LINUX) && !defined(OS_MACOSX)
+#endif  // !defined(OS_LINUX) && !defined(OS_MACOSX) && !defined(OS_AIX)
 
 int Process::GetPriority() const {
   DCHECK(IsValid());

@@ -259,14 +259,24 @@ class ThreadPriorityTestThread : public FunctionTestThread {
 
 // Test changing a created thread's priority (which has different semantics on
 // some platforms).
-TEST(PlatformThreadTest, ThreadPriorityCurrentThread) {
+#if defined(OS_FUCHSIA)
+// TODO(crbug.com/851759): Thread priorities are not implemented in Fuchsia.
+#define MAYBE_ThreadPriorityCurrentThread DISABLED_ThreadPriorityCurrentThread
+#else
+#define MAYBE_ThreadPriorityCurrentThread ThreadPriorityCurrentThread
+#endif
+TEST(PlatformThreadTest, MAYBE_ThreadPriorityCurrentThread) {
   const bool increase_priority_allowed =
       PlatformThread::CanIncreaseCurrentThreadPriority();
-  if (increase_priority_allowed) {
-    // Bump the priority in order to verify that new threads are started with
-    // normal priority.
+
+// Bump the priority in order to verify that new threads are started with normal
+// priority. Skip this on Mac since this platform doesn't allow changing the
+// priority of the main thread. Also skip this on platforms that don't allow
+// increasing the priority of a thread.
+#if !defined(OS_MACOSX)
+  if (increase_priority_allowed)
     PlatformThread::SetCurrentThreadPriority(ThreadPriority::DISPLAY);
-  }
+#endif
 
   // Toggle each supported priority on the thread and confirm it affects it.
   for (size_t i = 0; i < arraysize(kThreadPriorityTestValues); ++i) {
@@ -290,10 +300,10 @@ TEST(PlatformThreadTest, ThreadPriorityCurrentThread) {
   }
 }
 
-// Test for a function defined in platform_thread_internal_posix.cc. On OSX and
-// iOS, platform_thread_internal_posix.cc is not compiled, so these platforms
-// are excluded here, too.
-#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_IOS)
+// This tests internal PlatformThread APIs used under some POSIX platforms,
+// with the exception of Mac OS X, iOS and Fuchsia.
+#if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_IOS) && \
+    !defined(OS_FUCHSIA)
 TEST(PlatformThreadTest, GetNiceValueToThreadPriority) {
   using internal::NiceValueToThreadPriority;
   using internal::kThreadPriorityToNiceValueMap;
@@ -348,6 +358,16 @@ TEST(PlatformThreadTest, GetNiceValueToThreadPriority) {
   EXPECT_EQ(ThreadPriority::REALTIME_AUDIO,
             NiceValueToThreadPriority(kLowestNiceValue));
 }
-#endif
+#endif  // defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_IOS) &&
+        // !defined(OS_FUCHSIA)
+
+TEST(PlatformThreadTest, SetHugeThreadName) {
+  // Construct an excessively long thread name.
+  std::string long_name(1024, 'a');
+
+  // SetName has no return code, so just verify that implementations
+  // don't [D]CHECK().
+  PlatformThread::SetName(long_name);
+}
 
 }  // namespace base

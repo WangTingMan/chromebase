@@ -11,7 +11,7 @@ namespace base {
 
 TestPendingTask::TestPendingTask() : nestability(NESTABLE) {}
 
-TestPendingTask::TestPendingTask(const tracked_objects::Location& location,
+TestPendingTask::TestPendingTask(const Location& location,
                                  OnceClosure task,
                                  TimeTicks post_time,
                                  TimeDelta delay,
@@ -36,8 +36,10 @@ bool TestPendingTask::ShouldRunBefore(const TestPendingTask& other) const {
   return GetTimeToRun() < other.GetTimeToRun();
 }
 
-TestPendingTask::~TestPendingTask() {}
+TestPendingTask::~TestPendingTask() = default;
 
+// Unsupported in libchrome.
+#if 0
 void TestPendingTask::AsValueInto(base::trace_event::TracedValue* state) const {
   state->SetInteger("run_at", GetTimeToRun().ToInternalValue());
   state->SetString("posting_function", location.ToString());
@@ -61,10 +63,14 @@ TestPendingTask::AsValue() const {
   AsValueInto(state.get());
   return std::move(state);
 }
+#endif
 
 std::string TestPendingTask::ToString() const {
   std::string output("TestPendingTask(");
+// Unsupported in libchrome.
+#if 0
   AsValue()->AppendAsTraceFormat(&output);
+#endif
   output += ")";
   return output;
 }

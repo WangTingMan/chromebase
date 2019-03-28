@@ -8,17 +8,21 @@
 #include <algorithm>
 
 #if defined(OS_WIN)
+#include <windows.h>
 #include "winbase.h"
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
 #include <sys/mman.h>
 #endif
 
 #include "base/files/memory_mapped_file.h"
 #include "base/logging.h"
 #include "base/memory/shared_memory.h"
-#include "base/metrics/histogram_macros.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/metrics/sparse_histogram.h"
+#include "base/numerics/safe_conversions.h"
+#include "base/sys_info.h"
 #include "base/threading/thread_restrictions.h"
+#include "build/build_config.h"
 
 namespace {
 
@@ -162,6 +166,11 @@ void PersistentMemoryAllocator::Iterator::Reset() {
 }
 
 void PersistentMemoryAllocator::Iterator::Reset(Reference starting_after) {
+  if (starting_after == 0) {
+    Reset();
+    return;
+  }
+
   last_record_.store(starting_after, std::memory_order_relaxed);
   record_count_.store(0, std::memory_order_relaxed);
 
@@ -311,6 +320,11 @@ PersistentMemoryAllocator::PersistentMemoryAllocator(Memory memory,
       mem_type_(memory.type),
       mem_size_(static_cast<uint32_t>(size)),
       mem_page_(static_cast<uint32_t>((page_size ? page_size : size))),
+#if defined(OS_NACL)
+      vm_page_size_(4096U),  // SysInfo is not built for NACL.
+#else
+      vm_page_size_(SysInfo::VMAllocationGranularity()),
+#endif
       readonly_(readonly),
       corrupt_(0),
       allocs_histogram_(nullptr),
@@ -336,9 +350,9 @@ PersistentMemoryAllocator::PersistentMemoryAllocator(Memory memory,
 
   // These atomics operate inter-process and so must be lock-free. The local
   // casts are to make sure it can be evaluated at compile time to a constant.
-  CHECK(((SharedMetadata*)0)->freeptr.is_lock_free());
-  CHECK(((SharedMetadata*)0)->flags.is_lock_free());
-  CHECK(((BlockHeader*)0)->next.is_lock_free());
+  CHECK(((SharedMetadata*)nullptr)->freeptr.is_lock_free());
+  CHECK(((SharedMetadata*)nullptr)->flags.is_lock_free());
+  CHECK(((BlockHeader*)nullptr)->next.is_lock_free());
   CHECK(corrupt_.is_lock_free());
 
   if (shared_meta()->cookie != kGlobalCookie) {
@@ -718,6 +732,28 @@ PersistentMemoryAllocator::Reference PersistentMemoryAllocator::AllocateImpl(
       return kReferenceNull;
     }
 
+    // Make sure the memory exists by writing to the first byte of every memory
+    // page it touches beyond the one containing the block header itself.
+    // As the underlying storage is often memory mapped from disk or shared
+    // space, sometimes things go wrong and those address don't actually exist
+    // leading to a SIGBUS (or Windows equivalent) at some arbitrary location
+    // in the code. This should concentrate all those failures into this
+    // location for easy tracking and, eventually, proper handling.
+    volatile char* mem_end = reinterpret_cast<volatile char*>(block) + size;
+    volatile char* mem_begin = reinterpret_cast<volatile char*>(
+        (reinterpret_cast<uintptr_t>(block) + sizeof(BlockHeader) +
+         (vm_page_size_ - 1)) &
+        ~static_cast<uintptr_t>(vm_page_size_ - 1));
+    for (volatile char* memory = mem_begin; memory < mem_end;
+         memory += vm_page_size_) {
+      // It's required that a memory segment start as all zeros and thus the
+      // newly allocated block is all zeros at this point. Thus, writing a
+      // zero to it allows testing that the memory exists without actually
+      // changing its contents. The compiler doesn't know about the requirement
+      // and so cannot optimize-away these writes.
+      *memory = 0;
+    }
+
     // Load information into the block header. There is no "release" of the
     // data here because this memory can, currently, be seen only by the thread
     // performing the allocation. When it comes time to share this, the thread
@@ -931,17 +967,17 @@ LocalPersistentMemoryAllocator::AllocateLocalMemory(size_t size) {
       ::VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   if (address)
     return Memory(address, MEM_VIRTUAL);
-  UMA_HISTOGRAM_SPARSE_SLOWLY("UMA.LocalPersistentMemoryAllocator.Failures.Win",
-                              ::GetLastError());
-#elif defined(OS_POSIX)
+  UmaHistogramSparse("UMA.LocalPersistentMemoryAllocator.Failures.Win",
+                     ::GetLastError());
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   // MAP_ANON is deprecated on Linux but MAP_ANONYMOUS is not universal on Mac.
   // MAP_SHARED is not available on Linux <2.4 but required on Mac.
   address = ::mmap(nullptr, size, PROT_READ | PROT_WRITE,
                    MAP_ANON | MAP_SHARED, -1, 0);
   if (address != MAP_FAILED)
     return Memory(address, MEM_VIRTUAL);
-  UMA_HISTOGRAM_SPARSE_SLOWLY(
-      "UMA.LocalPersistentMemoryAllocator.Failures.Posix", errno);
+  UmaHistogramSparse("UMA.LocalPersistentMemoryAllocator.Failures.Posix",
+                     errno);
 #else
 #error This architecture is not (yet) supported.
 #endif
@@ -969,7 +1005,7 @@ void LocalPersistentMemoryAllocator::DeallocateLocalMemory(void* memory,
 #if defined(OS_WIN)
   BOOL success = ::VirtualFree(memory, 0, MEM_DECOMMIT);
   DCHECK(success);
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   int result = ::munmap(memory, size);
   DCHECK_EQ(0, result);
 #else
@@ -994,7 +1030,7 @@ SharedPersistentMemoryAllocator::SharedPersistentMemoryAllocator(
           read_only),
       shared_memory_(std::move(memory)) {}
 
-SharedPersistentMemoryAllocator::~SharedPersistentMemoryAllocator() {}
+SharedPersistentMemoryAllocator::~SharedPersistentMemoryAllocator() = default;
 
 // static
 bool SharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(
@@ -1019,14 +1055,9 @@ FilePersistentMemoryAllocator::FilePersistentMemoryAllocator(
           id,
           name,
           read_only),
-      mapped_file_(std::move(file)) {
-  // Ensure the disk-copy of the data reflects the fully-initialized memory as
-  // there is no guarantee as to what order the pages might be auto-flushed by
-  // the OS in the future.
-  Flush(true);
-}
+      mapped_file_(std::move(file)) {}
 
-FilePersistentMemoryAllocator::~FilePersistentMemoryAllocator() {}
+FilePersistentMemoryAllocator::~FilePersistentMemoryAllocator() = default;
 
 // static
 bool FilePersistentMemoryAllocator::IsFileAcceptable(
@@ -1037,12 +1068,13 @@ bool FilePersistentMemoryAllocator::IsFileAcceptable(
 
 void FilePersistentMemoryAllocator::FlushPartial(size_t length, bool sync) {
   if (sync)
-    ThreadRestrictions::AssertIOAllowed();
+    AssertBlockingAllowed();
   if (IsReadonly())
     return;
 
 #if defined(OS_WIN)
-  // Windows doesn't support a synchronous flush.
+  // Windows doesn't support asynchronous flush.
+  AssertBlockingAllowed();
   BOOL success = ::FlushViewOfFile(data(), length);
   DPCHECK(success);
 #elif defined(OS_MACOSX)
@@ -1051,7 +1083,7 @@ void FilePersistentMemoryAllocator::FlushPartial(size_t length, bool sync) {
   int result =
       ::msync(const_cast<void*>(data()), length, sync ? MS_SYNC : MS_ASYNC);
   DCHECK_NE(EINVAL, result);
-#elif defined(OS_POSIX)
+#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   // On POSIX, "invalidate" forces _other_ processes to recognize what has
   // been written to disk and so is applicable to "flush".
   int result = ::msync(const_cast<void*>(data()), length,
@@ -1062,5 +1094,111 @@ void FilePersistentMemoryAllocator::FlushPartial(size_t length, bool sync) {
 #endif
 }
 #endif  // !defined(OS_NACL)
+
+//----- DelayedPersistentAllocation --------------------------------------------
+
+// Forwarding constructors.
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    subtle::Atomic32* ref,
+    uint32_t type,
+    size_t size,
+    bool make_iterable)
+    : DelayedPersistentAllocation(
+          allocator,
+          reinterpret_cast<std::atomic<Reference>*>(ref),
+          type,
+          size,
+          0,
+          make_iterable) {}
+
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    subtle::Atomic32* ref,
+    uint32_t type,
+    size_t size,
+    size_t offset,
+    bool make_iterable)
+    : DelayedPersistentAllocation(
+          allocator,
+          reinterpret_cast<std::atomic<Reference>*>(ref),
+          type,
+          size,
+          offset,
+          make_iterable) {}
+
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    std::atomic<Reference>* ref,
+    uint32_t type,
+    size_t size,
+    bool make_iterable)
+    : DelayedPersistentAllocation(allocator,
+                                  ref,
+                                  type,
+                                  size,
+                                  0,
+                                  make_iterable) {}
+
+// Real constructor.
+DelayedPersistentAllocation::DelayedPersistentAllocation(
+    PersistentMemoryAllocator* allocator,
+    std::atomic<Reference>* ref,
+    uint32_t type,
+    size_t size,
+    size_t offset,
+    bool make_iterable)
+    : allocator_(allocator),
+      type_(type),
+      size_(checked_cast<uint32_t>(size)),
+      offset_(checked_cast<uint32_t>(offset)),
+      make_iterable_(make_iterable),
+      reference_(ref) {
+  DCHECK(allocator_);
+  DCHECK_NE(0U, type_);
+  DCHECK_LT(0U, size_);
+  DCHECK(reference_);
+}
+
+DelayedPersistentAllocation::~DelayedPersistentAllocation() = default;
+
+void* DelayedPersistentAllocation::Get() const {
+  // Relaxed operations are acceptable here because it's not protecting the
+  // contents of the allocation in any way.
+  Reference ref = reference_->load(std::memory_order_acquire);
+  if (!ref) {
+    ref = allocator_->Allocate(size_, type_);
+    if (!ref)
+      return nullptr;
+
+    // Store the new reference in its proper location using compare-and-swap.
+    // Use a "strong" exchange to ensure no false-negatives since the operation
+    // cannot be retried.
+    Reference existing = 0;  // Must be mutable; receives actual value.
+    if (reference_->compare_exchange_strong(existing, ref,
+                                            std::memory_order_release,
+                                            std::memory_order_relaxed)) {
+      if (make_iterable_)
+        allocator_->MakeIterable(ref);
+    } else {
+      // Failure indicates that something else has raced ahead, performed the
+      // allocation, and stored its reference. Purge the allocation that was
+      // just done and use the other one instead.
+      DCHECK_EQ(type_, allocator_->GetType(existing));
+      DCHECK_LE(size_, allocator_->GetAllocSize(existing));
+      allocator_->ChangeType(ref, 0, type_, /*clear=*/false);
+      ref = existing;
+    }
+  }
+
+  char* mem = allocator_->GetAsArray<char>(ref, type_, size_);
+  if (!mem) {
+    // This should never happen but be tolerant if it does as corruption from
+    // the outside is something to guard against.
+    NOTREACHED();
+    return nullptr;
+  }
+  return mem + offset_;
+}
 
 }  // namespace base

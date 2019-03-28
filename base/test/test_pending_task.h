@@ -10,7 +10,8 @@
 #include "base/callback.h"
 #include "base/location.h"
 #include "base/time/time.h"
-#include "base/trace_event/trace_event_argument.h"
+// Unsupported in libchrome.
+// #include "base/trace_event/trace_event_argument.h"
 
 namespace base {
 
@@ -22,7 +23,7 @@ struct TestPendingTask {
 
   TestPendingTask();
   TestPendingTask(TestPendingTask&& other);
-  TestPendingTask(const tracked_objects::Location& location,
+  TestPendingTask(const Location& location,
                   OnceClosure task,
                   TimeTicks post_time,
                   TimeDelta delay,
@@ -52,16 +53,19 @@ struct TestPendingTask {
   //   - std::sort.
   bool ShouldRunBefore(const TestPendingTask& other) const;
 
-  tracked_objects::Location location;
+  Location location;
   OnceClosure task;
   TimeTicks post_time;
   TimeDelta delay;
   TestNestability nestability;
 
+// Unsupported in libchrome.
+#if 0
   // Functions for using test pending task with tracing, useful in unit
   // testing.
   void AsValueInto(base::trace_event::TracedValue* state) const;
   std::unique_ptr<base::trace_event::ConvertableToTraceFormat> AsValue() const;
+#endif
   std::string ToString() const;
 
  private:

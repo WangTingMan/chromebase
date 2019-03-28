@@ -4,6 +4,9 @@
 
 #include "mojo/public/cpp/bindings/sync_event_watcher.h"
 
+#include <algorithm>
+
+#include "base/containers/stack_container.h"
 #include "base/logging.h"
 
 namespace mojo {
@@ -16,19 +19,20 @@ SyncEventWatcher::SyncEventWatcher(base::WaitableEvent* event,
       destroyed_(new base::RefCountedData<bool>(false)) {}
 
 SyncEventWatcher::~SyncEventWatcher() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   if (registered_)
-    registry_->UnregisterEvent(event_);
+    registry_->UnregisterEvent(event_, callback_);
   destroyed_->data = true;
 }
 
 void SyncEventWatcher::AllowWokenUpBySyncWatchOnSameThread() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   IncrementRegisterCount();
 }
 
-bool SyncEventWatcher::SyncWatch(const bool* should_stop) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+bool SyncEventWatcher::SyncWatch(const bool** stop_flags,
+                                 size_t num_stop_flags) {
+  DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   IncrementRegisterCount();
   if (!registered_) {
     DecrementRegisterCount();
@@ -38,8 +42,14 @@ bool SyncEventWatcher::SyncWatch(const bool* should_stop) {
   // This object may be destroyed during the Wait() call. So we have to preserve
   // the boolean that Wait uses.
   auto destroyed = destroyed_;
-  const bool* should_stop_array[] = {should_stop, &destroyed->data};
-  bool result = registry_->Wait(should_stop_array, 2);
+
+  constexpr size_t kFlagStackCapacity = 4;
+  base::StackVector<const bool*, kFlagStackCapacity> should_stop_array;
+  should_stop_array.container().push_back(&destroyed->data);
+  std::copy(stop_flags, stop_flags + num_stop_flags,
+            std::back_inserter(should_stop_array.container()));
+  bool result = registry_->Wait(should_stop_array.container().data(),
+                                should_stop_array.container().size());
 
   // This object has been destroyed.
   if (destroyed->data)
@@ -51,15 +61,17 @@ bool SyncEventWatcher::SyncWatch(const bool* should_stop) {
 
 void SyncEventWatcher::IncrementRegisterCount() {
   register_request_count_++;
-  if (!registered_)
-    registered_ = registry_->RegisterEvent(event_, callback_);
+  if (!registered_) {
+    registry_->RegisterEvent(event_, callback_);
+    registered_ = true;
+  }
 }
 
 void SyncEventWatcher::DecrementRegisterCount() {
   DCHECK_GT(register_request_count_, 0u);
   register_request_count_--;
   if (register_request_count_ == 0 && registered_) {
-    registry_->UnregisterEvent(event_);
+    registry_->UnregisterEvent(event_, callback_);
     registered_ = false;
   }
 }

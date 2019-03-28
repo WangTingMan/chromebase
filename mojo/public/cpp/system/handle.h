@@ -39,9 +39,9 @@ namespace mojo {
 // |ScopedHandleBase<HandleType>| is a templated scoped wrapper, for the handle
 // types above (in the same sense that a C++11 |unique_ptr<T>| is a scoped
 // wrapper for a |T*|). It provides lifetime management, closing its owned
-// handle on destruction. It also provides (emulated) move semantics, again
-// along the lines of C++11's |unique_ptr| (and exactly like Chromium's
-// |scoped_ptr|).
+// handle on destruction. It also provides move semantics, again along the lines
+// of C++11's |unique_ptr|. A moved-from |ScopedHandleBase<HandleType>| sets its
+// handle value to MOJO_HANDLE_INVALID.
 //
 // |ScopedHandle| is just (a typedef of) a |ScopedHandleBase<Handle>|.
 // Similarly, |ScopedMessagePipeHandle| is just a
@@ -84,8 +84,9 @@ class ScopedHandleBase {
       : handle_(other.release()) {}
 
   // Move-only constructor and operator=.
-  ScopedHandleBase(ScopedHandleBase&& other) : handle_(other.release()) {}
-  ScopedHandleBase& operator=(ScopedHandleBase&& other) {
+  ScopedHandleBase(ScopedHandleBase&& other) noexcept
+      : handle_(other.release()) {}
+  ScopedHandleBase& operator=(ScopedHandleBase&& other) noexcept {
     if (&other != this) {
       CloseIfNecessary();
       handle_ = other.release();
@@ -94,7 +95,10 @@ class ScopedHandleBase {
   }
 
   const HandleType& get() const { return handle_; }
-  const HandleType* operator->() const { return &handle_; }
+  const HandleType* operator->() const {
+    DCHECK(handle_.is_valid());
+    return &handle_;
+  }
 
   template <typename PassedHandleType>
   static ScopedHandleBase<HandleType> From(
@@ -120,6 +124,8 @@ class ScopedHandleBase {
   }
 
   bool is_valid() const { return handle_.is_valid(); }
+
+  explicit operator bool() const { return handle_; }
 
   bool operator==(const ScopedHandleBase& other) const {
     return handle_.value() == other.get().value();
@@ -159,6 +165,8 @@ class Handle {
   }
 
   bool is_valid() const { return value_ != kInvalidHandleValue; }
+
+  explicit operator bool() const { return value_ != kInvalidHandleValue; }
 
   const MojoHandle& value() const { return value_; }
   MojoHandle* mutable_value() { return &value_; }

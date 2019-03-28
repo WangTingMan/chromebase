@@ -26,7 +26,7 @@
        break;
 --- a/base/sys_info_posix.cc
 +++ b/base/sys_info_posix.cc
-@@ -85,7 +85,10 @@ bool IsStatsZeroIfUnlimited(const base::
+@@ -90,7 +90,10 @@ bool IsStatsZeroIfUnlimited(const base::FilePath& path) {
    if (HANDLE_EINTR(statfs(path.value().c_str(), &stats)) != 0)
      return false;
  

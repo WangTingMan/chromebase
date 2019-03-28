@@ -7,50 +7,78 @@
 #include <limits>
 
 #include "base/logging.h"
+#include "mojo/public/cpp/bindings/message.h"
 #include "mojo/public/cpp/system/core.h"
 
 namespace mojo {
 namespace internal {
 
-SerializedHandleVector::SerializedHandleVector() {}
+SerializationContext::SerializationContext() = default;
 
-SerializedHandleVector::~SerializedHandleVector() {
-  for (auto handle : handles_) {
-    if (handle.is_valid()) {
-      MojoResult rv = MojoClose(handle.value());
-      DCHECK_EQ(rv, MOJO_RESULT_OK);
-    }
-  }
-}
+SerializationContext::~SerializationContext() = default;
 
-Handle_Data SerializedHandleVector::AddHandle(mojo::Handle handle) {
-  Handle_Data data;
+void SerializationContext::AddHandle(mojo::ScopedHandle handle,
+                                     Handle_Data* out_data) {
   if (!handle.is_valid()) {
-    data.value = kEncodedInvalidHandleValue;
+    out_data->value = kEncodedInvalidHandleValue;
   } else {
     DCHECK_LT(handles_.size(), std::numeric_limits<uint32_t>::max());
-    data.value = static_cast<uint32_t>(handles_.size());
-    handles_.push_back(handle);
+    out_data->value = static_cast<uint32_t>(handles_.size());
+    handles_.emplace_back(std::move(handle));
   }
-  return data;
 }
 
-mojo::Handle SerializedHandleVector::TakeHandle(
+void SerializationContext::AddInterfaceInfo(
+    mojo::ScopedMessagePipeHandle handle,
+    uint32_t version,
+    Interface_Data* out_data) {
+  AddHandle(ScopedHandle::From(std::move(handle)), &out_data->handle);
+  out_data->version = version;
+}
+
+void SerializationContext::AddAssociatedEndpoint(
+    ScopedInterfaceEndpointHandle handle,
+    AssociatedEndpointHandle_Data* out_data) {
+  if (!handle.is_valid()) {
+    out_data->value = kEncodedInvalidHandleValue;
+  } else {
+    DCHECK_LT(associated_endpoint_handles_.size(),
+              std::numeric_limits<uint32_t>::max());
+    out_data->value =
+        static_cast<uint32_t>(associated_endpoint_handles_.size());
+    associated_endpoint_handles_.emplace_back(std::move(handle));
+  }
+}
+
+void SerializationContext::AddAssociatedInterfaceInfo(
+    ScopedInterfaceEndpointHandle handle,
+    uint32_t version,
+    AssociatedInterface_Data* out_data) {
+  AddAssociatedEndpoint(std::move(handle), &out_data->handle);
+  out_data->version = version;
+}
+
+void SerializationContext::TakeHandlesFromMessage(Message* message) {
+  handles_.swap(*message->mutable_handles());
+  associated_endpoint_handles_.swap(
+      *message->mutable_associated_endpoint_handles());
+}
+
+mojo::ScopedHandle SerializationContext::TakeHandle(
     const Handle_Data& encoded_handle) {
   if (!encoded_handle.is_valid())
-    return mojo::Handle();
+    return mojo::ScopedHandle();
   DCHECK_LT(encoded_handle.value, handles_.size());
-  return FetchAndReset(&handles_[encoded_handle.value]);
+  return std::move(handles_[encoded_handle.value]);
 }
 
-void SerializedHandleVector::Swap(std::vector<mojo::Handle>* other) {
-  handles_.swap(*other);
-}
-
-SerializationContext::SerializationContext() {}
-
-SerializationContext::~SerializationContext() {
-  DCHECK(!custom_contexts || custom_contexts->empty());
+mojo::ScopedInterfaceEndpointHandle
+SerializationContext::TakeAssociatedEndpointHandle(
+    const AssociatedEndpointHandle_Data& encoded_handle) {
+  if (!encoded_handle.is_valid())
+    return mojo::ScopedInterfaceEndpointHandle();
+  DCHECK_LT(encoded_handle.value, associated_endpoint_handles_.size());
+  return std::move(associated_endpoint_handles_[encoded_handle.value]);
 }
 
 }  // namespace internal

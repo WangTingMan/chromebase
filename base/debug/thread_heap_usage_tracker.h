@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "base/allocator/features.h"
+#include "base/allocator/buildflags.h"
 #include "base/base_export.h"
 #include "base/threading/thread_checker.h"
 
@@ -82,7 +82,7 @@ class BASE_EXPORT ThreadHeapUsageTracker {
   static ThreadHeapUsage GetUsageSnapshot();
 
   // Enables the heap intercept. May only be called once, and only if the heap
-  // shim is available, e.g. if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM) is
+  // shim is available, e.g. if BUILDFLAG(USE_ALLOCATOR_SHIM) is
   // true.
   static void EnableHeapTracking();
 

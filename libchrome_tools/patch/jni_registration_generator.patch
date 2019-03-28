@@ -1,0 +1,13 @@
+diff --git a/base/android/jni_generator/jni_registration_generator.py b/base/android/jni_generator/jni_registration_generator.py
+index dec56ee..8c545f6 100755
+--- a/base/android/jni_generator/jni_registration_generator.py
++++ b/base/android/jni_generator/jni_registration_generator.py
+@@ -316,7 +316,7 @@ def main(argv):
+                           help='The output file path.')
+   arg_parser.add_argument('--no_register_java',
+                           help='A list of Java files which should be ignored '
+-                          'by the parser.')
++                          'by the parser.', default=[])
+   args = arg_parser.parse_args(build_utils.ExpandFileArgs(argv[1:]))
+   args.sources_files = build_utils.ParseGnList(args.sources_files)
+ 

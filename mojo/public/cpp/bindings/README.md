@@ -1,19 +1,23 @@
-# ![Mojo Graphic](https://goo.gl/6CdlbH) Mojo C++ Bindings API
-This document is a subset of the [Mojo documentation](/mojo).
+# Mojo C++ Bindings API
+This document is a subset of the [Mojo documentation](/mojo/README.md).
 
 [TOC]
 
 ## Overview
 The Mojo C++ Bindings API leverages the
-[C++ System API](/mojo/public/cpp/system) to provide a more natural set of
-primitives for communicating over Mojo message pipes. Combined with generated
-code from the [Mojom IDL and bindings generator](/mojo/public/tools/bindings),
-users can easily connect interface clients and implementations across arbitrary
-intra- and inter-process bounaries.
+[C++ System API](/mojo/public/cpp/system/README.md) to provide a more natural
+set of primitives for communicating over Mojo message pipes. Combined with
+generated code from the
+[Mojom IDL and bindings generator](/mojo/public/tools/bindings/README.md), users
+can easily connect interface clients and implementations across arbitrary intra-
+and inter-process bounaries.
 
 This document provides a detailed guide to bindings API usage with example code
 snippets. For a detailed API references please consult the headers in
-[//mojo/public/cpp/bindings](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/).
+[//mojo/public/cpp/bindings](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/README.md).
+
+For a simplified guide targeted at Chromium developers, see [this
+link](/docs/mojo_guide.md).
 
 ## Getting Started
 
@@ -47,6 +51,12 @@ mojom("interfaces") {
 }
 ```
 
+Ensure that any target that needs this interface depends on it, e.g. with a line like:
+
+```
+   deps += [ '//services/db/public/interfaces' ]
+```
+
 If we then build this target:
 
 ```
@@ -57,8 +67,8 @@ This will produce several generated source files, some of which are relevant to
 C++ bindings. Two of these files are:
 
 ```
-out/gen/services/business/public/interfaces/factory.mojom.cc
-out/gen/services/business/public/interfaces/factory.mojom.h
+out/gen/services/db/public/interfaces/db.mojom.cc
+out/gen/services/db/public/interfaces/db.mojom.h
 ```
 
 You can include the above generated header in your sources in order to use the
@@ -143,58 +153,49 @@ routed to some implementation which will **bind** it. The `InterfaceRequest<T>`
 doesn't actually *do* anything other than hold onto a pipe endpoint and carry
 useful compile-time type information.
 
-![Diagram illustrating InterfacePtr and InterfaceRequest on either end of a message pipe](https://docs.google.com/drawings/d/17d5gvErbQ6DthEBMS7I1WhCh9bz0n12pvNjydzuRfTI/pub?w=600&h=100)
+![Diagram illustrating InterfacePtr and InterfaceRequest on either end of a message pipe](https://docs.google.com/drawings/d/1_Ocprq7EGgTKcSE_WlOn_RBfXcr5C3FJyIbWhwzwNX8/pub?w=608&h=100)
 
 So how do we create a strongly-typed message pipe?
 
 ### Creating Interface Pipes
 
-One way to do this is by manually creating a pipe and binding each end:
+One way to do this is by manually creating a pipe and wrapping each end with a
+strongly-typed object:
 
 ``` cpp
 #include "sample/logger.mojom.h"
 
 mojo::MessagePipe pipe;
-sample::mojom::LoggerPtr logger;
-sample::mojom::LoggerRequest request;
-
-logger.Bind(sample::mojom::LoggerPtrInfo(std::move(pipe.handle0), 0u));
-request.Bind(std::move(pipe.handle1));
+sample::mojom::LoggerPtr logger(
+    sample::mojom::LoggerPtrInfo(std::move(pipe.handle0), 0));
+sample::mojom::LoggerRequest request(std::move(pipe.handle1));
 ```
 
-That's pretty verbose, but the C++ Bindings library provides more convenient
-ways to accomplish the same thing. [interface_request.h](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/interface_request.h)
+That's pretty verbose, but the C++ Bindings library provides a more convenient
+way to accomplish the same thing. [interface_request.h](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/interface_request.h)
 defines a `MakeRequest` function:
 
 ``` cpp
 sample::mojom::LoggerPtr logger;
-sample::mojom::LoggerRequest request = mojo::MakeRequest(&logger);
+auto request = mojo::MakeRequest(&logger);
 ```
 
-and the `InterfaceRequest<T>` constructor can also take an explicit
-`InterfacePtr<T>*` output argument:
-
-``` cpp
-sample::mojom::LoggerPtr logger;
-sample::mojom::LoggerRequest request(&logger);
-```
-
-Both of these last two snippets are equivalent to the first one.
+This second snippet is equivalent to the first one.
 
 *** note
 **NOTE:** In the first example above you may notice usage of the `LoggerPtrInfo`
 type, which is a generated alias for `mojo::InterfacePtrInfo<Logger>`. This is
 similar to an `InterfaceRequest<T>` in that it merely holds onto a pipe handle
 and cannot actually read or write messages on the pipe. Both this type and
-`InterfaceRequest<T>` are safe to move freely from thread to thread, whereas a
-bound `InterfacePtr<T>` is bound to a single thread.
+`InterfaceRequest<T>` are safe to move freely from sequence to sequence, whereas
+a bound `InterfacePtr<T>` is bound to a single sequence.
 
 An `InterfacePtr<T>` may be unbound by calling its `PassInterface()` method,
 which returns a new `InterfacePtrInfo<T>`. Conversely, an `InterfacePtr<T>` may
 bind (and thus take ownership of) an `InterfacePtrInfo<T>` so that interface
 calls can be made on the pipe.
 
-The thread-bound nature of `InterfacePtr<T>` is necessary to support safe
+The sequence-bound nature of `InterfacePtr<T>` is necessary to support safe
 dispatch of its [message responses](#Receiving-Responses) and
 [connection error notifications](#Connection-Errors).
 ***
@@ -210,7 +211,7 @@ logger->Log("Hello!");
 
 This actually writes a `Log` message to the pipe.
 
-![Diagram illustrating a message traveling on a pipe from LoggerPtr to LoggerRequest](https://docs.google.com/a/google.com/drawings/d/1jWEc6jJIP2ed77Gg4JJ3EVC7hvnwcImNqQJywFwpT8g/pub?w=648&h=123)
+![Diagram illustrating a message traveling on a pipe from LoggerPtr to LoggerRequest](https://docs.google.com/drawings/d/11vnOpNP3UBLlWg4KplQuIU3r_e1XqwDFETD-O_bV-2w/pub?w=635&h=112)
 
 But as mentioned above, `InterfaceRequest` *doesn't actually do anything*, so
 that message will just sit on the pipe forever. We need a way to read messages
@@ -260,7 +261,7 @@ class LoggerImpl : public sample::mojom::Logger {
 
 Now we can construct a `LoggerImpl` over our pending `LoggerRequest`, and the
 previously queued `Log` message will be dispatched ASAP on the `LoggerImpl`'s
-thread:
+sequence:
 
 ``` cpp
 LoggerImpl impl(std::move(request));
@@ -277,7 +278,7 @@ motion by the above line of code:
 3. The `Log` message is read and deserialized, causing the `Binding` to invoke
    the `Logger::Log` implementation on its bound `LoggerImpl`.
 
-![Diagram illustrating the progression of binding a request, reading a pending message, and dispatching it](https://docs.google.com/drawings/d/1c73-PegT4lmjfHoxhWrHTQXRvzxgb0wdeBa35WBwZ3Q/pub?w=550&h=500)
+![Diagram illustrating the progression of binding a request, reading a pending message, and dispatching it](https://docs.google.com/drawings/d/1F2VvfoOINGuNibomqeEU8KekYCtxYVFC00146CFGGQY/pub?w=550&h=500)
 
 As a result, our implementation will eventually log the client's `"Hello!"`
 message via `LOG(ERROR)`.
@@ -314,9 +315,9 @@ class Logger {
 
   virtual void Log(const std::string& message) = 0;
 
-  using GetTailCallback = base::Callback<void(const std::string& message)>;
+  using GetTailCallback = base::OnceCallback<void(const std::string& message)>;
 
-  virtual void GetTail(const GetTailCallback& callback) = 0;
+  virtual void GetTail(GetTailCallback callback) = 0;
 }
 
 }  // namespace mojom
@@ -344,8 +345,8 @@ class LoggerImpl : public sample::mojom::Logger {
     lines_.push_back(message);
   }
 
-  void GetTail(const GetTailCallback& callback) override {
-    callback.Run(lines_.back());
+  void GetTail(GetTailCallback callback) override {
+    std::move(callback).Run(lines_.back());
   }
 
  private:
@@ -363,7 +364,7 @@ void OnGetTail(const std::string& message) {
   LOG(ERROR) << "Tail was: " << message;
 }
 
-logger->GetTail(base::Bind(&OnGetTail));
+logger->GetTail(base::BindOnce(&OnGetTail));
 ```
 
 Behind the scenes, the implementation-side callback is actually serializing the
@@ -375,10 +376,18 @@ parameters.
 
 ### Connection Errors
 
-If there are no remaining messages available on a pipe and the remote end has
-been closed, a connection error will be triggered on the local end. Connection
-errors may also be triggered by automatic forced local pipe closure due to
-*e.g.* a validation error when processing a received message.
+If a pipe is disconnected, both endpoints will be able to observe the connection
+error (unless the disconnection is caused by closing/destroying an endpoint, in
+which case that endpoint won't get such a notification). If there are remaining
+incoming messages for an endpoint on disconnection, the connection error won't
+be triggered until the messages are drained.
+
+Pipe disconnecition may be caused by:
+* Mojo system-level causes: process terminated, resource exhausted, etc.
+* The bindings close the pipe due to a validation error when processing a
+  received message.
+* The peer endpoint is closed. For example, the remote side is a bound
+  `mojo::InterfacePtr<T>` and it is destroyed.
 
 Regardless of the underlying cause, when a connection error is encountered on
 a binding endpoint, that endpoint's **connection error handler** (if set) is
@@ -398,7 +407,7 @@ invocation:
 ``` cpp
 sample::mojom::LoggerPtr logger;
 LoggerImpl impl(mojo::MakeRequest(&logger));
-impl.set_connection_error_handler(base::Bind([] { LOG(ERROR) << "Bye."; }));
+impl.set_connection_error_handler(base::BindOnce([] { LOG(ERROR) << "Bye."; }));
 logger->Log("OK cool");
 logger.reset();  // Closes the client end.
 ```
@@ -415,7 +424,7 @@ handler within its constructor:
 LoggerImpl::LoggerImpl(sample::mojom::LoggerRequest request)
     : binding_(this, std::move(request)) {
   binding_.set_connection_error_handler(
-      base::Bind(&LoggerImpl::OnError, base::Unretained(this)));
+      base::BindOnce(&LoggerImpl::OnError, base::Unretained(this)));
 }
 
 void LoggerImpl::OnError() {
@@ -426,6 +435,39 @@ void LoggerImpl::OnError() {
 
 The use of `base::Unretained` is *safe* because the error handler will never be
 invoked beyond the lifetime of `binding_`, and `this` owns `binding_`.
+
+### A Note About Endpoint Lifetime and Callbacks
+Once a `mojo::InterfacePtr<T>` is destroyed, it is guaranteed that pending
+callbacks as well as the connection error handler (if registered) won't be
+called.
+
+Once a `mojo::Binding<T>` is destroyed, it is guaranteed that no more method
+calls are dispatched to the implementation and the connection error handler (if
+registered) won't be called.
+
+### Best practices for dealing with process crashes and callbacks
+A common situation when calling mojo interface methods that take a callback is
+that the caller wants to know if the other endpoint is torn down (e.g. because
+of a crash). In that case, the consumer usually wants to know if the response
+callback won't be run. There are different solutions for this problem, depending
+on how the `InterfacePtr<T>` is held:
+1. The consumer owns the `InterfacePtr<T>`: `set_connection_error_handler`
+   should be used.
+2. The consumer doesn't own the `InterfacePtr<T>`: there are two helpers
+   depending on the behavior that the caller wants. If the caller wants to
+   ensure that an error handler is run, then
+   [**`mojo::WrapCallbackWithDropHandler`**](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/callback_helpers.h?l=46)
+   should be used. If the caller wants the callback to always be run, then
+   [**`mojo::WrapCallbackWithDefaultInvokeIfNotRun`**](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/callback_helpers.h?l=40)
+   helper should be used. With both of these helpers, usual callback care should
+   be followed to ensure that the callbacks don't run after the consumer is
+   destructed (e.g. because the owner of the `InterfacePtr<T>` outlives the
+   consumer). This includes using
+   [**`base::WeakPtr`**](https://cs.chromium.org/chromium/src/base/memory/weak_ptr.h?l=5)
+   or
+   [**`base::RefCounted`**](https://cs.chromium.org/chromium/src/base/memory/ref_counted.h?l=246).
+   It should also be noted that with these helpers, the callbacks could be run
+   synchronously while the InterfacePtr<T> is reset or destroyed.
 
 ### A Note About Ordering
 
@@ -457,13 +499,228 @@ pipe, but the impl-side won't notice this until it receives the sent `Log`
 message. Thus the `impl` above will first log our message and *then* see a
 connection error and break out of the run loop.
 
+## Types
+
+### Enums
+
+[Mojom enums](/mojo/public/tools/bindings/README.md#Enumeration-Types) translate
+directly to equivalent strongly-typed C++11 enum classes with `int32_t` as the
+underlying type. The typename and value names are identical between Mojom and
+C++. Mojo also always defines a special enumerator `kMaxValue` that shares the
+value of the highest enumerator: this makes it easy to record Mojo enums in
+histograms and interoperate with legacy IPC.
+
+For example, consider the following Mojom definition:
+
+```cpp
+module business.mojom;
+
+enum Department {
+  kEngineering,
+  kMarketing,
+  kSales,
+};
+```
+
+This translates to the following C++ definition:
+
+```cpp
+namespace business {
+namespace mojom {
+
+enum class Department : int32_t {
+  kEngineering,
+  kMarketing,
+  kSales,
+  kMaxValue = kSales,
+};
+
+}  // namespace mojom
+}  // namespace business
+```
+
+### Structs
+
+[Mojom structs](mojo/public/tools/bindings/README.md#Structs) can be used to
+define logical groupings of fields into a new composite type. Every Mojom struct
+elicits the generation of an identically named, representative C++ class, with
+identically named public fields of corresponding C++ types, and several helpful
+public methods.
+
+For example, consider the following Mojom struct:
+
+```cpp
+module business.mojom;
+
+struct Employee {
+  int64 id;
+  string username;
+  Department department;
+};
+```
+
+This would generate a C++ class like so:
+
+```cpp
+namespace business {
+namespace mojom {
+
+class Employee;
+
+using EmployeePtr = mojo::StructPtr<Employee>;
+
+class Employee {
+ public:
+  // Default constructor - applies default values, potentially ones specified
+  // explicitly within the Mojom.
+  Employee();
+
+  // Value constructor - an explicit argument for every field in the struct, in
+  // lexical Mojom definition order.
+  Employee(int64_t id, const std::string& username, Department department);
+
+  // Creates a new copy of this struct value
+  EmployeePtr Clone();
+
+  // Tests for equality with another struct value of the same type.
+  bool Equals(const Employee& other);
+
+  // Equivalent public fields with names identical to the Mojom.
+  int64_t id;
+  std::string username;
+  Department department;
+};
+
+}  // namespace mojom
+}  // namespace business
+```
+
+Note when used as a message parameter or as a field within another Mojom struct,
+a `struct` type is wrapped by the move-only `mojo::StructPtr` helper, which is
+roughly equivalent to a `std::unique_ptr` with some additional utility methods.
+This allows struct values to be nullable and struct types to be potentially
+self-referential.
+
+Every genereated struct class has a static `New()` method which returns a new
+`mojo::StructPtr<T>` wrapping a new instance of the class constructed by
+forwarding the arguments from `New`. For example:
+
+```cpp
+mojom::EmployeePtr e1 = mojom::Employee::New();
+e1->id = 42;
+e1->username = "mojo";
+e1->department = mojom::Department::kEngineering;
+```
+
+is equivalent to
+
+```cpp
+auto e1 = mojom::Employee::New(42, "mojo", mojom::Department::kEngineering);
+```
+
+Now if we define an interface like:
+
+```cpp
+interface EmployeeManager {
+  AddEmployee(Employee e);
+};
+```
+
+We'll get this C++ interface to implement:
+
+```cpp
+class EmployeeManager {
+ public:
+  virtual ~EmployeManager() {}
+
+  virtual void AddEmployee(EmployeePtr e) = 0;
+};
+```
+
+And we can send this message from C++ code as follows:
+
+```cpp
+mojom::EmployeManagerPtr manager = ...;
+manager->AddEmployee(
+    Employee::New(42, "mojo", mojom::Department::kEngineering));
+
+// or
+auto e = Employee::New(42, "mojo", mojom::Department::kEngineering);
+manager->AddEmployee(std::move(e));
+```
+
+### Unions
+
+Similarly to [structs](#Structs), tagged unions generate an identically named,
+representative C++ class which is typically wrapped in a `mojo::StructPtr<T>`.
+
+Unlike structs, all generated union fields are private and must be retrieved and
+manipulated using accessors. A field `foo` is accessible by `foo()` and
+settable by `set_foo()`. There is also a boolean `is_foo()` for each field which
+indicates whether the union is currently taking on the value of field `foo` in
+exclusion to all other union fields.
+
+Finally, every generated union class also has a nested `Tag` enum class which
+enumerates all of the named union fields. A Mojom union value's current type can
+be determined by calling the `which()` method which returns a `Tag`.
+
+For example, consider the following Mojom definitions:
+
+```cpp
+union Value {
+  int64 int_value;
+  float32 float_value;
+  string string_value;
+};
+
+interface Dictionary {
+  AddValue(string key, Value value);
+};
+```
+
+This generates a the following C++ interface:
+
+```cpp
+class Value {
+ public:
+  virtual ~Value() {}
+
+  virtual void AddValue(const std::string& key, ValuePtr value) = 0;
+};
+```
+
+And we can use it like so:
+
+```cpp
+ValuePtr value = Value::New();
+value->set_int_value(42);
+CHECK(value->is_int_value());
+CHECK_EQ(value->which(), Value::Tag::INT_VALUE);
+
+value->set_float_value(42);
+CHECK(value->is_float_value());
+CHECK_EQ(value->which(), Value::Tag::FLOAT_VALUE);
+
+value->set_string_value("bananas");
+CHECK(value->is_string_value());
+CHECK_EQ(value->which(), Value::Tag::STRING_VALUE);
+```
+
+Finally, note that if a union value is not currently occupied by a given field,
+attempts to access that field will DCHECK:
+
+```cpp
+ValuePtr value = Value::New();
+value->set_int_value(42);
+LOG(INFO) << "Value is " << value->string_value();  // DCHECK!
+```
+
 ### Sending Interfaces Over Interfaces
 
-Now we know how to create interface pipes and use their Ptr and Request
-endpoints in some interesting ways. This still doesn't add up to interesting
-IPC! The bread and butter of Mojo IPC is the ability to transfer interface
-endpoints across other interfaces, so let's take a look at how to accomplish
-that.
+We know how to create interface pipes and use their Ptr and Request endpoints
+in some interesting ways. This still doesn't add up to interesting IPC! The
+bread and butter of Mojo IPC is the ability to transfer interface endpoints
+across other interfaces, so let's take a look at how to accomplish that.
 
 #### Sending Interface Requests
 
@@ -482,7 +739,7 @@ interface Database {
 ```
 
 As noted in the
-[Mojom IDL documentation](/mojo/public/tools/bindings#Primitive-Types),
+[Mojom IDL documentation](/mojo/public/tools/bindings/README.md#Primitive-Types),
 the `Table&` syntax denotes a `Table` interface request. This corresponds
 precisely to the `InterfaceRequest<T>` type discussed in the sections above, and
 in fact the generated code for these interfaces is approximately:
@@ -545,7 +802,7 @@ class DatabaseImpl : public db::mojom::Database {
 
   // db::mojom::Database:
   void AddTable(db::mojom::TableRequest table) {
-    tables_.emplace_back(base::MakeUnique<TableImpl>(std::move(table)));
+    tables_.emplace_back(std::make_unique<TableImpl>(std::move(table)));
   }
 
  private:
@@ -620,7 +877,7 @@ pipes.
 A **strong binding** exists as a standalone object which owns its interface
 implementation and automatically cleans itself up when its bound interface
 endpoint detects an error. The
-[**`MakeStrongBinding`**](https://cs.chromim.org/chromium/src//mojo/public/cpp/bindings/strong_binding.h)
+[**`MakeStrongBinding`**](https://cs.chromium.org/chromium/src/mojo/public/cpp/bindings/strong_binding.h)
 function is used to create such a binding.
 .
 
@@ -640,14 +897,14 @@ class LoggerImpl : public sample::mojom::Logger {
 };
 
 db::mojom::LoggerPtr logger;
-mojo::MakeStrongBinding(base::MakeUnique<DatabaseImpl>(),
+mojo::MakeStrongBinding(std::make_unique<LoggerImpl>(),
                         mojo::MakeRequest(&logger));
 
 logger->Log("NOM NOM NOM MESSAGES");
 ```
 
 Now as long as `logger` remains open somewhere in the system, the bound
-`DatabaseImpl` on the other end will remain alive.
+`LoggerImpl` on the other end will remain alive.
 
 ### Binding Sets
 
@@ -744,9 +1001,182 @@ class TableImpl : public db::mojom::Table {
 
 ## Associated Interfaces
 
-See [this document](https://www.chromium.org/developers/design-documents/mojo/associated-interfaces).
+Associated interfaces are interfaces which:
 
-TODO: Move the above doc into the repository markdown docs.
+* enable running multiple interfaces over a single message pipe while
+  preserving message ordering.
+* make it possible for the bindings to access a single message pipe from
+  multiple sequences.
+
+### Mojom
+
+A new keyword `associated` is introduced for interface pointer/request
+fields. For example:
+
+``` cpp
+interface Bar {};
+
+struct Qux {
+  associated Bar bar3;
+};
+
+interface Foo {
+  // Uses associated interface pointer.
+  SetBar(associated Bar bar1);
+  // Uses associated interface request.
+  GetBar(associated Bar& bar2);
+  // Passes a struct with associated interface pointer.
+  PassQux(Qux qux);
+  // Uses associated interface pointer in callback.
+  AsyncGetBar() => (associated Bar bar4);
+};
+```
+
+It means the interface impl/client will communicate using the same
+message pipe over which the associated interface pointer/request is
+passed.
+
+### Using associated interfaces in C++
+
+When generating C++ bindings, the associated interface pointer of `Bar` is
+mapped to `BarAssociatedPtrInfo` (which is an alias of
+`mojo::AssociatedInterfacePtrInfo<Bar>`); associated interface request to
+`BarAssociatedRequest` (which is an alias of
+`mojo::AssociatedInterfaceRequest<Bar>`).
+
+``` cpp
+// In mojom:
+interface Foo {
+  ...
+  SetBar(associated Bar bar1);
+  GetBar(associated Bar& bar2);
+  ...
+};
+
+// In C++:
+class Foo {
+  ...
+  virtual void SetBar(BarAssociatedPtrInfo bar1) = 0;
+  virtual void GetBar(BarAssociatedRequest bar2) = 0;
+  ...
+};
+```
+
+#### Passing associated interface requests
+
+Assume you have already got an `InterfacePtr<Foo> foo_ptr`, and you would like
+to call `GetBar()` on it. You can do:
+
+``` cpp
+BarAssociatedPtrInfo bar_ptr_info;
+BarAssociatedRequest bar_request = MakeRequest(&bar_ptr_info);
+foo_ptr->GetBar(std::move(bar_request));
+
+// BarAssociatedPtr is an alias of AssociatedInterfacePtr<Bar>.
+BarAssociatedPtr bar_ptr;
+bar_ptr.Bind(std::move(bar_ptr_info));
+bar_ptr->DoSomething();
+```
+
+First, the code creates an associated interface of type `Bar`. It looks very
+similar to what you would do to setup a non-associated interface. An
+important difference is that one of the two associated endpoints (either
+`bar_request` or `bar_ptr_info`) must be sent over another interface. That is
+how the interface is associated with an existing message pipe.
+
+It should be noted that you cannot call `bar_ptr->DoSomething()` before passing
+`bar_request`. This is required by the FIFO-ness guarantee: at the receiver
+side, when the message of `DoSomething` call arrives, we want to dispatch it to
+the corresponding `AssociatedBinding<Bar>` before processing any subsequent
+messages. If `bar_request` is in a subsequent message, message dispatching gets
+into a deadlock. On the other hand, as soon as `bar_request` is sent, `bar_ptr`
+is usable. There is no need to wait until `bar_request` is bound to an
+implementation at the remote side.
+
+A `MakeRequest` overload which takes an `AssociatedInterfacePtr` pointer
+(instead of an `AssociatedInterfacePtrInfo` pointer) is provided to make the
+code a little shorter. The following code achieves the same purpose:
+
+``` cpp
+BarAssociatedPtr bar_ptr;
+foo_ptr->GetBar(MakeRequest(&bar_ptr));
+bar_ptr->DoSomething();
+```
+
+The implementation of `Foo` looks like this:
+
+``` cpp
+class FooImpl : public Foo {
+  ...
+  void GetBar(BarAssociatedRequest bar2) override {
+    bar_binding_.Bind(std::move(bar2));
+    ...
+  }
+  ...
+
+  Binding<Foo> foo_binding_;
+  AssociatedBinding<Bar> bar_binding_;
+};
+```
+
+In this example, `bar_binding_`'s lifespan is tied to that of `FooImpl`. But you
+don't have to do that. You can, for example, pass `bar2` to another sequence to
+bind to an `AssociatedBinding<Bar>` there.
+
+When the underlying message pipe is disconnected (e.g., `foo_ptr` or
+`foo_binding_` is destroyed), all associated interface endpoints (e.g.,
+`bar_ptr` and `bar_binding_`) will receive a connection error.
+
+#### Passing associated interface pointers
+
+Similarly, assume you have already got an `InterfacePtr<Foo> foo_ptr`, and you
+would like to call `SetBar()` on it. You can do:
+
+``` cpp
+AssociatedBind<Bar> bar_binding(some_bar_impl);
+BarAssociatedPtrInfo bar_ptr_info;
+BarAssociatedRequest bar_request = MakeRequest(&bar_ptr_info);
+foo_ptr->SetBar(std::move(bar_ptr_info));
+bar_binding.Bind(std::move(bar_request));
+```
+
+The following code achieves the same purpose:
+
+``` cpp
+AssociatedBind<Bar> bar_binding(some_bar_impl);
+BarAssociatedPtrInfo bar_ptr_info;
+bar_binding.Bind(&bar_ptr_info);
+foo_ptr->SetBar(std::move(bar_ptr_info));
+```
+
+### Performance considerations
+
+When using associated interfaces on different sequences than the master sequence
+(where the master interface lives):
+
+* Sending messages: send happens directly on the calling sequence. So there
+  isn't sequence hopping.
+* Receiving messages: associated interfaces bound on a different sequence from
+  the master interface incur an extra sequence hop during dispatch.
+
+Therefore, performance-wise associated interfaces are better suited for
+scenarios where message receiving happens on the master sequence.
+
+### Testing
+
+Associated interfaces need to be associated with a master interface before
+they can be used. This means one end of the associated interface must be sent
+over one end of the master interface, or over one end of another associated
+interface which itself already has a master interface.
+
+If you want to test an associated interface endpoint without first
+associating it, you can use `mojo::MakeIsolatedRequest()`. This will create
+working associated interface endpoints which are not actually associated with
+anything else.
+
+### Read more
+
+* [Design: Mojo Associated Interfaces](https://docs.google.com/document/d/1nq3J_HbS-gvVfIoEhcVyxm1uY-9G_7lhD-4Kyxb1WIY/edit)
 
 ## Synchronous Calls
 
@@ -808,9 +1238,9 @@ viral concept: if `gfx::mojom::Rect` is mapped to `gfx::Rect` anywhere, the
 mapping needs to apply *everywhere*.
 
 For this reason we have a few global typemap configurations defined in
-[chromium_bindings_configuration.gni](https://cs.chromium.com/chromium/src/mojo/public/tools/bindings/chromium_bindings_configuration.gni)
+[chromium_bindings_configuration.gni](https://cs.chromium.org/chromium/src/mojo/public/tools/bindings/chromium_bindings_configuration.gni)
 and
-[blink_bindings_configuration.gni](https://cs.chromium.com/chromium/src/mojo/public/tools/bindings/blink_bindings_configuration.gni). These configure the two supported [variants](#Variants) of Mojom generated
+[blink_bindings_configuration.gni](https://cs.chromium.org/chromium/src/mojo/public/tools/bindings/blink_bindings_configuration.gni). These configure the two supported [variants](#Variants) of Mojom generated
 bindings in the repository. Read more on this in the sections that follow.
 
 For now, let's take a look at how to express the mapping from `gfx::mojom::Rect`
@@ -910,7 +1340,10 @@ Let's place this `geometry.typemap` file alongside our Mojom file:
 mojom = "//ui/gfx/geometry/mojo/geometry.mojom"
 public_headers = [ "//ui/gfx/geometry/rect.h" ]
 traits_headers = [ "//ui/gfx/geometry/mojo/geometry_struct_traits.h" ]
-sources = [ "//ui/gfx/geometry/mojo/geometry_struct_traits.cc" ]
+sources = [
+  "//ui/gfx/geometry/mojo/geometry_struct_traits.cc",
+  "//ui/gfx/geometry/mojo/geometry_struct_traits.h",
+]
 public_deps = [ "//ui/gfx/geometry" ]
 type_mappings = [
   "gfx.mojom.Rect=gfx::Rect",
@@ -928,8 +1361,9 @@ Let's look at each of the variables above:
   here.
 * `traits_headers`: Headers which contain the relevant `StructTraits`
   specialization(s) for any type mappings described by this file.
-* `sources`: Any private implementation sources needed for the `StructTraits`
-  definition.
+* `sources`: Any implementation sources and headers needed for the
+  `StructTraits` definition. These sources are compiled directly into the
+  generated C++ bindings target for a `mojom` file applying this typemap.
 * `public_deps`: Target dependencies exposed by the `public_headers` and
   `traits_headers`.
 * `deps`: Target dependencies exposed by `sources` but not already covered by
@@ -952,6 +1386,10 @@ Let's look at each of the variables above:
       `StructTraits` definition for this type mapping must define additional
       `IsNull` and `SetToNull` methods. See
       [Specializing Nullability](#Specializing-Nullability) below.
+    * `force_serialize`: The typemap is incompatible with lazy serialization
+      (e.g. consider a typemap to a `base::StringPiece`, where retaining a
+      copy is unsafe). Any messages carrying the type will be forced down the
+      eager serailization path.
 
 
 Now that we have the typemap file we need to add it to a local list of typemaps
@@ -966,7 +1404,7 @@ typemaps = [
 
 And finally we can reference this file in the global default (Chromium) bindings
 configuration by adding it to `_typemap_imports` in
-[chromium_bindings_configuration.gni](https://cs.chromium.com/chromium/src/mojo/public/tools/bindings/chromium_bindings_configuration.gni):
+[chromium_bindings_configuration.gni](https://cs.chromium.org/chromium/src/mojo/public/tools/bindings/chromium_bindings_configuration.gni):
 
 ```
 _typemap_imports = [
@@ -1103,6 +1541,7 @@ class StructTraits
 Generated `ReadFoo` methods always convert `multi_word_field_name` fields to
 `ReadMultiWordFieldName` methods.
 
+<a name="Blink-Type-Mapping"></a>
 ### Variants
 
 By now you may have noticed that additional C++ sources are generated when a
@@ -1152,8 +1591,8 @@ out/gen/sample/db.mojom-shared-internal.h
 ```
 
 Including either variant's header (`db.mojom.h` or `db.mojom-blink.h`)
-implicitly includes the shared header, but you have on some occasions wish to
-include *only* the shared header in some instances.
+implicitly includes the shared header, but may wish to include *only* the shared
+header in some instances.
 
 Finally, note that for `mojom` GN targets, there is implicitly a corresponding
 `mojom_{variant}` target defined for any supported bindings configuration. So
@@ -1175,7 +1614,7 @@ depend on `"//sample:interfaces_blink"`.
 ## Versioning Considerations
 
 For general documentation of versioning in the Mojom IDL see
-[Versioning](/mojo/public/tools/bindings#Versioning).
+[Versioning](/mojo/public/tools/bindings/README.md#Versiwoning).
 
 This section briefly discusses some C++-specific considerations relevant to
 versioned Mojom types.
@@ -1223,6 +1662,10 @@ generates the function in the same namespace as the generated C++ enum type:
 ```cpp
 inline bool IsKnownEnumValue(Department value);
 ```
+
+### Using Mojo Bindings in Chrome
+
+See [Converting Legacy Chrome IPC To Mojo](/ipc/README.md).
 
 ### Additional Documentation
 

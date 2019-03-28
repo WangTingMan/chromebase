@@ -1,6 +1,3 @@
-#ifdef ANDROID
-  #include "include/valgrind.h"
-#else
 /* -*- c -*-
    ----------------------------------------------------------------
 
@@ -4793,5 +4790,3 @@ VALGRIND_PRINTF_BACKTRACE(const char *format, ...)
 #undef PLAT_ppc64_aix5
 
 #endif   /* __VALGRIND_H */
-
-#endif

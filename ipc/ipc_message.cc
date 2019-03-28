@@ -21,7 +21,7 @@
 
 namespace {
 
-base::StaticAtomicSequenceNumber g_ref_num;
+base::AtomicSequenceNumber g_ref_num;
 
 // Create a reference number for identifying IPC messages in traces. The return
 // values has the reference number stored in the upper 24 bits, leaving the low
@@ -44,13 +44,12 @@ namespace IPC {
 
 //------------------------------------------------------------------------------
 
-Message::~Message() {
-}
+Message::~Message() = default;
 
 Message::Message() : base::Pickle(sizeof(Header)) {
   header()->routing = header()->type = 0;
   header()->flags = GetRefNumUpper24();
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) || defined(OS_FUCHSIA)
   header()->num_fds = 0;
   header()->pad = 0;
 #endif
@@ -63,7 +62,7 @@ Message::Message(int32_t routing_id, uint32_t type, PriorityValue priority)
   header()->type = type;
   DCHECK((priority & 0xffffff00) == 0);
   header()->flags = priority | GetRefNumUpper24();
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) || defined(OS_FUCHSIA)
   header()->num_fds = 0;
   header()->pad = 0;
 #endif
@@ -82,7 +81,7 @@ Message::Message(const Message& other) : base::Pickle(other) {
 
 void Message::Init() {
   dispatch_error_ = false;
-#ifdef IPC_MESSAGE_LOG_ENABLED
+#if BUILDFLAG(IPC_MESSAGE_LOG_ENABLED)
   received_time_ = 0;
   dont_log_ = false;
   log_data_ = NULL;
@@ -109,7 +108,7 @@ void Message::EnsureMessageAttachmentSet() {
     attachment_set_ = new MessageAttachmentSet;
 }
 
-#ifdef IPC_MESSAGE_LOG_ENABLED
+#if BUILDFLAG(IPC_MESSAGE_LOG_ENABLED)
 void Message::set_sent_time(int64_t time) {
   DCHECK((header()->flags & HAS_SENT_TIME_BIT) == 0);
   header()->flags |= HAS_SENT_TIME_BIT;
@@ -128,12 +127,12 @@ int64_t Message::sent_time() const {
 void Message::set_received_time(int64_t time) const {
   received_time_ = time;
 }
-#endif
+#endif  // BUILDFLAG(IPC_MESSAGE_LOG_ENABLED)
 
 Message::NextMessageInfo::NextMessageInfo()
     : message_size(0), message_found(false), pickle_end(nullptr),
       message_end(nullptr) {}
-Message::NextMessageInfo::~NextMessageInfo() {}
+Message::NextMessageInfo::~NextMessageInfo() = default;
 
 // static
 void Message::FindNext(const char* range_start,
@@ -168,12 +167,9 @@ bool Message::WriteAttachment(
     scoped_refptr<base::Pickle::Attachment> attachment) {
   size_t index;
   bool success = attachment_set()->AddAttachment(
-      make_scoped_refptr(static_cast<MessageAttachment*>(attachment.get())),
+      base::WrapRefCounted(static_cast<MessageAttachment*>(attachment.get())),
       &index);
   DCHECK(success);
-
-  // NOTE: If you add more data to the pickle, make sure to update
-  // PickleSizer::AddAttachment.
 
   // Write the index of the descriptor so that we don't have to
   // keep the current descriptor as extra decoding state when deserialising.

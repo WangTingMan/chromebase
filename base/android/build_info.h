@@ -8,6 +8,7 @@
 #include <jni.h>
 
 #include <string>
+#include <vector>
 
 #include "base/base_export.h"
 #include "base/macros.h"
@@ -27,15 +28,14 @@ enum SdkVersion {
   SDK_VERSION_LOLLIPOP = 21,
   SDK_VERSION_LOLLIPOP_MR1 = 22,
   SDK_VERSION_MARSHMALLOW = 23,
-  SDK_VERSION_NOUGAT = 24
+  SDK_VERSION_NOUGAT = 24,
+  SDK_VERSION_NOUGAT_MR1 = 25,
+  SDK_VERSION_OREO = 26,
 };
 
 // BuildInfo is a singleton class that stores android build and device
 // information. It will be called from Android specific code and gets used
 // primarily in crash reporting.
-
-// It is also used to store the last java exception seen during JNI.
-// TODO(nileshagrawal): Find a better place to store this info.
 class BASE_EXPORT BuildInfo {
  public:
 
@@ -79,6 +79,12 @@ class BASE_EXPORT BuildInfo {
     return gms_version_code_;
   }
 
+  const char* host_package_name() const { return host_package_name_; }
+
+  const char* host_version_code() const { return host_version_code_; }
+
+  const char* host_package_label() const { return host_package_label_; }
+
   const char* package_version_code() const {
     return package_version_code_;
   }
@@ -87,54 +93,68 @@ class BASE_EXPORT BuildInfo {
     return package_version_name_;
   }
 
-  const char* package_label() const {
-    return package_label_;
-  }
-
   const char* package_name() const {
     return package_name_;
   }
+
+  // Will be empty string if no app id is assigned.
+  const char* firebase_app_id() const { return firebase_app_id_; }
+
+  const char* custom_themes() const { return custom_themes_; }
+
+  const char* resources_version() const { return resources_version_; }
 
   const char* build_type() const {
     return build_type_;
   }
 
+  const char* board() const { return board_; }
+
+  const char* installer_package_name() const { return installer_package_name_; }
+
+  const char* abi_name() const { return abi_name_; }
+
+  std::string extracted_file_suffix() const { return extracted_file_suffix_; }
+
   int sdk_int() const {
     return sdk_int_;
   }
 
-  const char* java_exception_info() const {
-    return java_exception_info_;
-  }
-
-  void SetJavaExceptionInfo(const std::string& info);
-
-  void ClearJavaExceptionInfo();
+  bool is_at_least_p() const { return is_at_least_p_; }
 
  private:
   friend struct BuildInfoSingletonTraits;
 
-  explicit BuildInfo(JNIEnv* env);
+  explicit BuildInfo(const std::vector<std::string>& params);
 
   // Const char* is used instead of std::strings because these values must be
   // available even if the process is in a crash state. Sadly
   // std::string.c_str() doesn't guarantee that memory won't be allocated when
   // it is called.
+  const char* const brand_;
   const char* const device_;
+  const char* const android_build_id_;
   const char* const manufacturer_;
   const char* const model_;
-  const char* const brand_;
-  const char* const android_build_id_;
-  const char* const android_build_fp_;
-  const char* const gms_version_code_;
+  const int sdk_int_;
+  const char* const build_type_;
+  const char* const board_;
+  const char* const host_package_name_;
+  const char* const host_version_code_;
+  const char* const host_package_label_;
+  const char* const package_name_;
   const char* const package_version_code_;
   const char* const package_version_name_;
-  const char* const package_label_;
-  const char* const package_name_;
-  const char* const build_type_;
-  const int sdk_int_;
-  // This is set via set_java_exception_info, not at constructor time.
-  const char* java_exception_info_;
+  const char* const android_build_fp_;
+  const char* const gms_version_code_;
+  const char* const installer_package_name_;
+  const char* const abi_name_;
+  const char* const firebase_app_id_;
+  const char* const custom_themes_;
+  const char* const resources_version_;
+  // Not needed by breakpad.
+  const std::string extracted_file_suffix_;
+  const int is_at_least_p_;
 
   DISALLOW_COPY_AND_ASSIGN(BuildInfo);
 };

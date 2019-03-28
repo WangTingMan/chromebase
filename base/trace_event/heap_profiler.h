@@ -5,6 +5,22 @@
 #ifndef BASE_TRACE_EVENT_HEAP_PROFILER_H
 #define BASE_TRACE_EVENT_HEAP_PROFILER_H
 
+// Replace with stub implementation.
+#if 1
+#define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
+  trace_event_internal::HeapProfilerScopedTaskExecutionTracker
+
+namespace trace_event_internal {
+
+class HeapProfilerScopedTaskExecutionTracker {
+ public:
+  explicit HeapProfilerScopedTaskExecutionTracker(const char*) {}
+};
+
+}  // namespace trace_event_internal
+
+#else
+
 #include "base/compiler_specific.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 
@@ -24,6 +40,11 @@
 // Scoped tracker for task execution context in the heap profiler.
 #define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
   trace_event_internal::HeapProfilerScopedTaskExecutionTracker
+
+// Scoped tracker that tracks the given program counter as a native stack frame
+// in the heap profiler.
+#define TRACE_HEAP_PROFILER_API_SCOPED_WITH_PROGRAM_COUNTER \
+  trace_event_internal::HeapProfilerScopedStackFrame
 
 // A scoped ignore event used to tell heap profiler to ignore all the
 // allocations in the scope. It is useful to exclude allocations made for
@@ -62,6 +83,31 @@ class HeapProfilerScopedTaskExecutionTracker {
   const char* context_;
 };
 
+class HeapProfilerScopedStackFrame {
+ public:
+  inline explicit HeapProfilerScopedStackFrame(const void* program_counter)
+      : program_counter_(program_counter) {
+    using base::trace_event::AllocationContextTracker;
+    if (UNLIKELY(AllocationContextTracker::capture_mode() ==
+                 AllocationContextTracker::CaptureMode::MIXED_STACK)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PushNativeStackFrame(program_counter_);
+    }
+  }
+
+  inline ~HeapProfilerScopedStackFrame() {
+    using base::trace_event::AllocationContextTracker;
+    if (UNLIKELY(AllocationContextTracker::capture_mode() ==
+                 AllocationContextTracker::CaptureMode::MIXED_STACK)) {
+      AllocationContextTracker::GetInstanceForCurrentThread()
+          ->PopNativeStackFrame(program_counter_);
+    }
+  }
+
+ private:
+  const void* const program_counter_;
+};
+
 class BASE_EXPORT HeapProfilerScopedIgnore {
  public:
   inline HeapProfilerScopedIgnore() {
@@ -86,4 +132,5 @@ class BASE_EXPORT HeapProfilerScopedIgnore {
 
 }  // namespace trace_event_internal
 
+#endif
 #endif  // BASE_TRACE_EVENT_HEAP_PROFILER_H

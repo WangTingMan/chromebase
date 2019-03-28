@@ -171,23 +171,20 @@ public class RouterImpl implements Router {
         assert messageWithHeader.getHeader().hasFlag(MessageHeader.MESSAGE_EXPECTS_RESPONSE_FLAG);
 
         // Compute a request id for being able to route the response.
-        // TODO(lhchavez): Remove this hack. See b/28986534 for details.
-        synchronized (mResponders) {
-            long requestId = mNextRequestId++;
-            // Reserve 0 in case we want it to convey special meaning in the future.
-            if (requestId == 0) {
-                requestId = mNextRequestId++;
-            }
-            if (mResponders.containsKey(requestId)) {
-                throw new IllegalStateException("Unable to find a new request identifier.");
-            }
-            messageWithHeader.setRequestId(requestId);
-            if (!mConnector.accept(messageWithHeader)) {
-                return false;
-            }
-            // Only keep the responder is the message has been accepted.
-            mResponders.put(requestId, responder);
+        long requestId = mNextRequestId++;
+        // Reserve 0 in case we want it to convey special meaning in the future.
+        if (requestId == 0) {
+            requestId = mNextRequestId++;
         }
+        if (mResponders.containsKey(requestId)) {
+            throw new IllegalStateException("Unable to find a new request identifier.");
+        }
+        messageWithHeader.setRequestId(requestId);
+        if (!mConnector.accept(messageWithHeader)) {
+            return false;
+        }
+        // Only keep the responder is the message has been accepted.
+        mResponders.put(requestId, responder);
         return true;
     }
 
@@ -230,15 +227,11 @@ public class RouterImpl implements Router {
             return false;
         } else if (header.hasFlag(MessageHeader.MESSAGE_IS_RESPONSE_FLAG)) {
             long requestId = header.getRequestId();
-            MessageReceiver responder;
-            // TODO(lhchavez): Remove this hack. See b/28986534 for details.
-            synchronized (mResponders) {
-                responder = mResponders.get(requestId);
-                if (responder == null) {
-                    return false;
-                }
-                mResponders.remove(requestId);
+            MessageReceiver responder = mResponders.get(requestId);
+            if (responder == null) {
+                return false;
             }
+            mResponders.remove(requestId);
             return responder.accept(message);
         } else {
             if (mIncomingMessageReceiver != null) {

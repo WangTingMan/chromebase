@@ -4,6 +4,44 @@
 
 import("../../../tools/bindings/mojom.gni")
 
+group("test_data_deps") {
+  testonly = true
+  data_deps = [
+    ":test_interfaces_js_data_deps",
+    ":test_associated_interfaces_js_data_deps",
+    ":validation_test_data",
+    ":validation_test_data_list",
+  ]
+}
+
+copy("validation_test_data") {
+  testonly = true
+  sources = [
+    "data/validation",
+  ]
+  outputs = [
+    "$root_gen_dir/layout_test_data/{{source_root_relative_dir}}/{{source_file_part}}",
+  ]
+}
+
+action_foreach("validation_test_data_list") {
+  testonly = true
+  script = "//mojo/public/tools/bindings/gen_data_files_list.py"
+  inputs = mojom_generator_sources
+  sources = [
+    "data/validation",
+  ]
+  outputs = [
+    "$root_gen_dir/layout_test_data/{{source_root_relative_dir}}/{{source_file_part}}_index.txt",
+  ]
+  args = [
+    "-d",
+    rebase_path(sources[0], root_build_dir),
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
 mojom("test_interfaces") {
   testonly = true
   sources = [
@@ -20,6 +58,7 @@ mojom("test_interfaces") {
     "test_bad_messages.mojom",
     "test_constants.mojom",
     "test_data_view.mojom",
+    "test_name_generator.mojom",
     "test_native_types.mojom",
     "test_structs.mojom",
     "test_sync_methods.mojom",
@@ -31,6 +70,15 @@ mojom("test_interfaces") {
     ":test_mojom_import",
     ":test_mojom_import2",
   ]
+
+  # TODO(crbug.com/714018): Convert the implementation to use OnceCallback.
+  use_once_callback = false
+
+  support_lazy_serialization = true
+
+  # Validation tests require precise message content matching, so we avoid
+  # scrambling message IDs for test interfaces.
+  scramble_message_ids = false
 }
 
 component("test_export_component") {
@@ -148,6 +196,11 @@ mojom("test_struct_traits_interfaces") {
   sources = [
     "struct_with_traits.mojom",
   ]
+
+  # TODO(crbug.com/714018): Convert the implementation to use OnceCallback.
+  use_once_callback = false
+
+  support_lazy_serialization = true
 }
 
 mojom("test_associated_interfaces") {
@@ -162,6 +215,13 @@ mojom("test_associated_interfaces") {
   public_deps = [
     ":test_interfaces",
   ]
+
+  # TODO(crbug.com/714018): Convert the implementation to use OnceCallback.
+  use_once_callback = false
+
+  # Validation tests require precise message content matching, so we avoid
+  # scrambling message IDs for test interfaces.
+  scramble_message_ids = false
 }
 
 mojom("versioning_test_service_interfaces") {
@@ -184,6 +244,9 @@ mojom("test_wtf_types") {
   sources = [
     "test_wtf_types.mojom",
   ]
+
+  # TODO(crbug.com/714018): Convert the implementation to use OnceCallback.
+  use_once_callback = false
 }
 
 mojom("test_no_sources") {
@@ -198,7 +261,6 @@ mojom("echo") {
   testonly = true
   sources = [
     "echo.mojom",
-    "echo_import.mojom",
+    "echo_import/echo_import.mojom",
   ]
-  use_new_js_bindings = true
 }

@@ -16,14 +16,14 @@ namespace {
 
 std::unique_ptr<PersistentHistogramAllocator> CreateHistogramAllocator(
     size_t bytes) {
-  return MakeUnique<PersistentHistogramAllocator>(
-      MakeUnique<LocalPersistentMemoryAllocator>(bytes, 0, ""));
+  return std::make_unique<PersistentHistogramAllocator>(
+      std::make_unique<LocalPersistentMemoryAllocator>(bytes, 0, ""));
 }
 
 std::unique_ptr<PersistentHistogramAllocator> DuplicateHistogramAllocator(
     PersistentHistogramAllocator* original) {
-  return MakeUnique<PersistentHistogramAllocator>(
-      MakeUnique<PersistentMemoryAllocator>(
+  return std::make_unique<PersistentHistogramAllocator>(
+      std::make_unique<PersistentMemoryAllocator>(
           const_cast<void*>(original->data()), original->length(), 0,
           original->Id(), original->Name(), false));
 }
@@ -164,14 +164,14 @@ TEST(PersistentSampleMapIteratorTest, IterateTest) {
   std::unique_ptr<SampleCountIterator> it = samples.Iterator();
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
   EXPECT_EQ(1, min);
   EXPECT_EQ(2, max);
   EXPECT_EQ(100, count);
-  EXPECT_FALSE(it->GetBucketIndex(NULL));
+  EXPECT_FALSE(it->GetBucketIndex(nullptr));
 
   it->Next();
   it->Get(&min, &max, &count);
@@ -214,7 +214,7 @@ TEST(PersistentSampleMapIteratorTest, SkipEmptyRanges) {
   EXPECT_FALSE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
 
   it->Get(&min, &max, &count);
@@ -245,7 +245,7 @@ TEST(PersistentSampleMapIteratorDeathTest, IterateDoneTest) {
   EXPECT_TRUE(it->Done());
 
   HistogramBase::Sample min;
-  HistogramBase::Sample max;
+  int64_t max;
   HistogramBase::Count count;
   EXPECT_DCHECK_DEATH(it->Get(&min, &max, &count));
 

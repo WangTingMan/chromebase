@@ -37,12 +37,15 @@ using StrongAssociatedBindingPtr =
 // To use, call StrongAssociatedBinding<T>::Create() (see below) or the helper
 // MakeStrongAssociatedBinding function:
 //
-//   mojo::MakeStrongAssociatedBinding(base::MakeUnique<FooImpl>(),
+//   mojo::MakeStrongAssociatedBinding(std::make_unique<FooImpl>(),
 //                                     std::move(foo_request));
 //
 template <typename Interface>
 class StrongAssociatedBinding {
  public:
+  using ImplPointerType =
+      typename AssociatedBinding<Interface>::ImplPointerType;
+
   // Create a new StrongAssociatedBinding instance. The instance owns itself,
   // cleaning up only in the event of a pipe connection error. Returns a WeakPtr
   // to the new StrongAssociatedBinding instance.
@@ -58,16 +61,16 @@ class StrongAssociatedBinding {
   //
   // This method may only be called after this StrongAssociatedBinding has been
   // bound to a message pipe.
-  void set_connection_error_handler(const base::Closure& error_handler) {
+  void set_connection_error_handler(base::OnceClosure error_handler) {
     DCHECK(binding_.is_bound());
-    connection_error_handler_ = error_handler;
+    connection_error_handler_ = std::move(error_handler);
     connection_error_with_reason_handler_.Reset();
   }
 
   void set_connection_error_with_reason_handler(
-      const ConnectionErrorWithReasonCallback& error_handler) {
+      ConnectionErrorWithReasonCallback error_handler) {
     DCHECK(binding_.is_bound());
-    connection_error_with_reason_handler_ = error_handler;
+    connection_error_with_reason_handler_ = std::move(error_handler);
     connection_error_handler_.Reset();
   }
 
@@ -81,6 +84,11 @@ class StrongAssociatedBinding {
   // verify that no message was sent on a message pipe in response to some
   // stimulus.
   void FlushForTesting() { binding_.FlushForTesting(); }
+
+  // Allows test code to swap the interface implementation.
+  ImplPointerType SwapImplForTesting(ImplPointerType new_impl) {
+    return binding_.SwapImplForTesting(new_impl);
+  }
 
  private:
   StrongAssociatedBinding(std::unique_ptr<Interface> impl,
@@ -96,15 +104,17 @@ class StrongAssociatedBinding {
 
   void OnConnectionError(uint32_t custom_reason,
                          const std::string& description) {
-    if (!connection_error_handler_.is_null())
-      connection_error_handler_.Run();
-    else if (!connection_error_with_reason_handler_.is_null())
-      connection_error_with_reason_handler_.Run(custom_reason, description);
+    if (connection_error_handler_) {
+      std::move(connection_error_handler_).Run();
+    } else if (connection_error_with_reason_handler_) {
+      std::move(connection_error_with_reason_handler_)
+          .Run(custom_reason, description);
+    }
     Close();
   }
 
   std::unique_ptr<Interface> impl_;
-  base::Closure connection_error_handler_;
+  base::OnceClosure connection_error_handler_;
   ConnectionErrorWithReasonCallback connection_error_with_reason_handler_;
   AssociatedBinding<Interface> binding_;
   base::WeakPtrFactory<StrongAssociatedBinding> weak_factory_;

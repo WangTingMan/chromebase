@@ -1,0 +1,112 @@
+From 580fcef90ab970ad37ea9f7059373f773b3e55d2 Mon Sep 17 00:00:00 2001
+From: Jakub Pawlowski <jpawlowski@google.com>
+Date: Fri, 03 Aug 2018 08:46:10 +0000
+Subject: [PATCH] Fix data_types_definition.tmpl
+
+This template can generate code that does not compile, if there are
+multiple fields with different versions where at least one has version 0
+and end up being laid out in a way that does not match the ordinal order
+
+Sample Mojo file:
+// Describes ARC package.
+struct ArcPackageInfo {
+  string package_name;
+  int32 package_version;
+  int64 last_backup_android_id;
+  int64 last_backup_time;
+  bool sync;  // true if package installation should be synced
+  [MinVersion=11] bool system;  // true if package is system package.
+  // true if package registers VPNService intent.
+  [MinVersion=25] bool vpn_provider;
+};
+
+Sample badly generated code (no closing "}" for last if):
+
+    @SuppressWarnings("unchecked")
+    public static ArcPackageInfo decode(org.chromium.mojo.bindings.Decoder decoder0) {
+        if (decoder0 == null) {
+            return null;
+        }
+        decoder0.increaseStackDepth();
+        ArcPackageInfo result;
+        try {
+            org.chromium.mojo.bindings.DataHeader mainDataHeader = decoder0.readAndValidateDataHeader(VERSION_ARRAY);
+            final int elementsOrVersion = mainDataHeader.elementsOrVersion;
+            result = new ArcPackageInfo(elementsOrVersion);
+                {
+
+                result.packageName = decoder0.readString(8, false);
+                }
+                {
+
+                result.packageVersion = decoder0.readInt(16);
+                }
+                {
+
+                result.sync = decoder0.readBoolean(20, 0);
+                }
+            if (elementsOrVersion >= 11) {
+                {
+
+                result.system = decoder0.readBoolean(20, 1);
+                }
+            }
+            if (elementsOrVersion >= 25) {
+                {
+
+                result.vpnProvider = decoder0.readBoolean(20, 2);
+                }
+            }
+            if (elementsOrVersion >= 0) {
+                {
+
+                result.lastBackupAndroidId = decoder0.readLong(24);
+                }
+                {
+
+                result.lastBackupTime = decoder0.readLong(32);
+                }
+        } finally {
+            decoder0.decreaseStackDepth();
+        }
+        return result;
+    }
+
+Change-Id: I4c1b573a71b20cc6a0828a2cceff6bbfbb4ac5bc
+Reviewed-on: https://chromium-review.googlesource.com/1158702
+Reviewed-by: Luis Hector Chavez <lhchavez@chromium.org>
+Reviewed-by: Ken Rockot <rockot@chromium.org>
+Commit-Queue: Jakub x Jakub Pawlowski <jpawlowski@google.com>
+Cr-Commit-Position: refs/heads/master@{#580480}
+---
+
+diff --git a/mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl b/mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl
+index 59c6fee..7af57bd 100644
+--- a/mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl
++++ b/mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl
+@@ -175,6 +175,7 @@
+             org.chromium.mojo.bindings.DataHeader mainDataHeader = decoder0.readAndValidateDataHeader(VERSION_ARRAY);
+             final int elementsOrVersion = mainDataHeader.elementsOrVersion;
+             result = new {{struct|name}}(elementsOrVersion);
++
+ {%- set prev_ver = [0] %}
+ {%- for byte in struct.bytes %}
+ {%-   for packed_field in byte.packed_fields %}
+@@ -183,7 +184,9 @@
+             }
+ {%-       endif %}
+ {%-       set _ = prev_ver.append(packed_field.min_version) %}
++{%-       if prev_ver[-1] != 0 %}
+             if (elementsOrVersion >= {{packed_field.min_version}}) {
++{%-       endif %}
+ {%-     endif %}
+                 {
+                     {{decode('result.' ~ packed_field.field|name, packed_field.field.kind, 8+packed_field.offset, packed_field.bit)|indent(16)}}
+@@ -193,6 +196,7 @@
+ {%- if prev_ver[-1] != 0 %}
+             }
+ {%- endif %}
++
+         } finally {
+             decoder0.decreaseStackDepth();
+         }
