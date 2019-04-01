@@ -35,6 +35,7 @@ var (
 			"${mojomBindingsGenerator}",
 		},
 		Description: "Mojo pickles generation $in => $out",
+		Restat:      true,
 	}, "package", "flags", "outDir")
 
 	generateMojomSrcsRule = pctx.StaticRule("generateMojomSrcsRule", blueprint.RuleParams{
@@ -52,6 +53,7 @@ var (
 			"${mojomBindingsGenerator}",
 		},
 		Description: "Mojo sources generation $in => $out",
+		Restat:      true,
 	}, "mojomGenerator", "package", "flags", "outDir", "templateDir")
 
 	mergeSrcjarsRule = pctx.StaticRule("mergeSrcjarsRule", blueprint.RuleParams{
