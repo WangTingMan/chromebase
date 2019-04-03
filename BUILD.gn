@@ -31,8 +31,8 @@ config("libchrome_config") {
     "-Wno-unused-local-typedefs",
     "-Xclang-only=-Wno-char-subscripts",
   ]
-  # Address sanitizer builds do not support -z,defs.
-  if (!use.asan) {
+  # Address sanitizer + coverage builds do not support -z,defs.
+  if (!(use.asan || use.coverage)) {
     ldflags = [ "-Wl,-z,defs" ]
   }
 }
