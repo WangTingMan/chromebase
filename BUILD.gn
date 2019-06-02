@@ -24,6 +24,10 @@ config("libchrome_config") {
     "NO_TCMALLOC",
     "MOJO_EDK_LEGACY_PROTOCOL",
   ]
+  if (use.asan) {
+    defines += [ "LEAK_SANITIZER" ]
+  }
+
   include_dirs = [ "." ]
   cflags = [
     "-Wno-deprecated-register",
@@ -468,6 +472,10 @@ libchrome_exported_cflags = [
     "-Wno-unused-local-typedefs",
     "-DBASE_VER=${libbase_ver}",
 ]
+
+if (use.asan) {
+  libchrome_exported_cflags += [ "-DLEAK_SANITIZER" ]
+}
 
 generate_pkg_config("libchrome") {
   deps = [ ":base" ]
