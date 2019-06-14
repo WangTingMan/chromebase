@@ -11,6 +11,7 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
 #ifdef OPENSSL_IS_BORINGSSL
 #include <openssl/mem.h>
 #endif
@@ -51,9 +52,11 @@ using ScopedECDSA_SIG = ScopedOpenSSL<ECDSA_SIG, ECDSA_SIG_free>;
 using ScopedEC_GROUP = ScopedOpenSSL<EC_GROUP, EC_GROUP_free>;
 using ScopedEC_KEY = ScopedOpenSSL<EC_KEY, EC_KEY_free>;
 using ScopedEC_POINT = ScopedOpenSSL<EC_POINT, EC_POINT_free>;
+using ScopedEVP_CIPHER_CTX = ScopedOpenSSL<EVP_CIPHER_CTX, EVP_CIPHER_CTX_free>;
 using ScopedEVP_MD_CTX = ScopedOpenSSL<EVP_MD_CTX, EVP_MD_CTX_free>;
 using ScopedEVP_PKEY = ScopedOpenSSL<EVP_PKEY, EVP_PKEY_free>;
 using ScopedEVP_PKEY_CTX = ScopedOpenSSL<EVP_PKEY_CTX, EVP_PKEY_CTX_free>;
+using ScopedHMAC_CTX = ScopedOpenSSL<HMAC_CTX, HMAC_CTX_free>;
 using ScopedNETSCAPE_SPKI = ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free>;
 using ScopedRSA = ScopedOpenSSL<RSA, RSA_free>;
 using ScopedX509 = ScopedOpenSSL<X509, X509_free>;
