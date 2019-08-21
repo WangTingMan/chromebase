@@ -15,6 +15,7 @@
 #include <openssl/mem.h>
 #endif
 #include <openssl/rsa.h>
+#include <openssl/x509.h>
 #include <stdint.h>
 
 #include <memory>
@@ -52,7 +53,9 @@ using ScopedEC_POINT = ScopedOpenSSL<EC_POINT, EC_POINT_free>;
 using ScopedEVP_MD_CTX = ScopedOpenSSL<EVP_MD_CTX, EVP_MD_CTX_destroy>;
 using ScopedEVP_PKEY = ScopedOpenSSL<EVP_PKEY, EVP_PKEY_free>;
 using ScopedEVP_PKEY_CTX = ScopedOpenSSL<EVP_PKEY_CTX, EVP_PKEY_CTX_free>;
+using ScopedNETSCAPE_SPKI = ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free>;
 using ScopedRSA = ScopedOpenSSL<RSA, RSA_free>;
+using ScopedX509 = ScopedOpenSSL<X509, X509_free>;
 
 // The bytes must have been allocated with OPENSSL_malloc.
 using ScopedOpenSSLBytes = std::unique_ptr<uint8_t, OpenSSLFree>;
