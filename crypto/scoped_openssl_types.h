@@ -39,9 +39,7 @@ struct OpenSSLFree {
 };
 
 // Several typedefs are provided for crypto-specific primitives, for
-// short-hand and prevalence. Note that OpenSSL types related to X.509 are
-// intentionally not included, as crypto/ does not generally deal with
-// certificates or PKI.
+// short-hand and prevalence.
 using ScopedBIGNUM = ScopedOpenSSL<BIGNUM, BN_free>;
 using ScopedEC_Key = ScopedOpenSSL<EC_KEY, EC_KEY_free>;
 using ScopedBIO = ScopedOpenSSL<BIO, BIO_free_all>;
