@@ -355,7 +355,12 @@ if (use.dbus) {
       name = "base-dbus"
       output_name = name + "-${libbase_ver}"
       deps = [ ":base-core" ]
-      pkg_deps = [ "dbus-1", "protobuf-lite" ]
+      pkg_deps = [ "dbus-1" ]
+      if (use.fuzzer) {
+          pkg_deps += [ "protobuf" ]
+      } else {
+          pkg_deps += [ "protobuf-lite" ]
+      }
       sources = [
         "dbus/bus.cc",
         "dbus/dbus_statistics.cc",
@@ -376,7 +381,12 @@ if (use.dbus) {
       name = "base-dbus_test_support"
       output_name = name + "-${libbase_ver}"
       testonly = true
-      pkg_deps = [ "dbus-1", "protobuf-lite" ]
+      pkg_deps = [ "dbus-1" ]
+      if (use.fuzzer) {
+          pkg_deps += [ "protobuf" ]
+      } else {
+          pkg_deps += [ "protobuf-lite" ]
+      }
       sources = [
         "dbus/mock_bus.cc",
         "dbus/mock_exported_object.cc",
