@@ -1774,7 +1774,7 @@ TEST_P(MessageLoopTypedTest, NestableTasksAllowedManually) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    ,
+    All,
     MessageLoopTypedTest,
     ::testing::Values(MessageLoopTypedTestParams(
                           MessageLoop::TYPE_DEFAULT,
@@ -2227,7 +2227,7 @@ TEST_P(MessageLoopTest, SequenceLocalStorageDifferentMessageLoops) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    ,
+    All,
     MessageLoopTest,
     ::testing::Values(TaskSchedulerAvailability::NO_TASK_SCHEDULER
                       // Unsupported in libchrome
