@@ -15,6 +15,11 @@
 #include <string.h>
 #include <openssl/engine.h>
 
+const unsigned char* ASN1_STRING_get0_data(const ASN1_STRING* x)
+{
+  return x->data;
+}
+
 void BIO_set_data(BIO* a, void* ptr)
 {
     a->ptr = ptr;

@@ -14,6 +14,7 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
+#include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
@@ -28,6 +29,8 @@
 extern "C"
 {
 #endif
+
+CRYPTO_EXPORT const unsigned char* ASN1_STRING_get0_data(const ASN1_STRING* x);
 
 CRYPTO_EXPORT void BIO_set_data(BIO* a, void* ptr);
 CRYPTO_EXPORT void* BIO_get_data(BIO* a);
