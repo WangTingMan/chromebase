@@ -67,39 +67,64 @@ KEEP_EXCLUDE = [
 ]
 
 
+def _want_file(path):
+    """Returns whether the path wants to be a new file."""
+    wanted = False
+    for want_file_regex in WANT:
+        if want_file_regex.match(path):
+            wanted = True
+            break
+    for exclude_file_regex in WANT_EXCLUDE:
+        if exclude_file_regex.match(path):
+            wanted = False
+            break
+    return wanted
+
+
+def _keep_file(path):
+    """Returns whether the path wants to be kept untouched in local files."""
+    keep = False
+    for keep_file_regex in KEEP:
+        if keep_file_regex.match(path):
+            keep = True
+            break
+    for exclude_file_regex in KEEP_EXCLUDE:
+        if exclude_file_regex.match(path):
+            keep = False
+            break
+    return keep
+
+
 def filter_file(our_files, upstream_files):
-    """
-    Generates a list of files we want based on hard-coded rules.
+    """Generates a list of files we want based on hard-coded rules.
 
     File list must be a list of GitFile.
 
-    our_files: files in Chromium OS libchrome repository.
-    upstream_files: files in Chromium browser repository.
+    Args:
+        our_files: files in Chromium OS libchrome repository.
+        upstream_files: files in Chromium browser repository.
     """
 
     files = []
     for upstream_file in upstream_files:
-        wanted = False
-        for want_file_regex in WANT:
-            if want_file_regex.match(upstream_file.path):
-                wanted = True
-                break
-        for exclude_file_regex in WANT_EXCLUDE:
-            if exclude_file_regex.match(upstream_file.path):
-                wanted = False
-                break
-        if wanted:
+      if _want_file(upstream_file.path):
             files.append(upstream_file)
     for our_file in our_files:
-        keep = False
-        for keep_file_regex in KEEP:
-            if keep_file_regex.match(our_file.path):
-                keep = True
-                break
-        for exclude_file_regex in KEEP_EXCLUDE:
-            if exclude_file_regex.match(our_file.path):
-                keep = False
-                break
-        if keep:
+      if _keep_file(our_file.path):
             files.append(our_file)
     return files
+
+
+def filter_diff(diff):
+    """Returns a subset of diff, after running filters.
+
+    Args:
+        diff: diff to filter. diff contains list of utils.GitDiffTree
+    """
+    filtered = []
+    for change in diff:
+        path = change.file.path
+        if _want_file(path):
+            assert not _keep_file(path)
+            filtered.append(change)
+    return filtered

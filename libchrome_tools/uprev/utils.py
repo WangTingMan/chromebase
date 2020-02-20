@@ -23,13 +23,22 @@ GitFile = collections.namedtuple(
     ['path', 'mode', 'id',]
 )
 
+GitDiffTree = collections.namedtuple(
+    'GitDiffTree',
+    ['op', 'file',]
+)
+
+
+GIT_DIFFTREE_RE_LINE = re.compile(rb'^:([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*)\t(.*)$')
+
 
 def _reverse(files):
-    """
-    Creates a reverse map from file path to file.
-    Assert if a file path exist only once in files.
+    """Creates a reverse map from file path to file.
 
-    files: list of files.
+    Asserts if a file path exist only once in files.
+
+    Args:
+        files: list of files.
     """
     files_map = {}
     for i in files:
@@ -40,10 +49,10 @@ def _reverse(files):
 
 
 def get_file_list(commit):
-    """
-    Gets list of files of a commit
+    """Gets a list of the files of the commit.
 
-    commit: commit hash or refs
+    Args:
+        commit: commit hash or refs.
     """
 
     output = subprocess.check_output(['git', 'ls-tree', '-r',
@@ -65,13 +74,58 @@ def get_file_list(commit):
     return files
 
 
-def gen_op(current_files, target_files):
+def git_difftree(treeish1, treeish2):
+    """Gets diffs between treeish1 and treeish2.
+
+    It returns a list of GitDiffTree, each GitDiffTree contains an ADD, DEL or
+    REP operation and a GitFile.
+
+    Args:
+        treeish1, treeish2: treeish to diff.
+            treeish can be tree hash or commit hash. If treeish1 is None, it
+            generate difftrees with its parent.
     """
+    out = None
+    if treeish1 is None:
+        # Remove first line since it's tree hash printed.
+        out = subprocess.check_output(['git', 'diff-tree', '-r',
+                                       treeish2]).strip(b'\n')[1:]
+    else:
+        out = subprocess.check_output(['git', 'diff-tree', '-r',
+                                       treeish1, treeish2]).split(b'\n')
+    diff = []
+    for line in out:
+        if not line:
+            continue
+        match = GIT_DIFFTREE_RE_LINE.match(line)
+        oldmode, newmode, oldhash, newhash, typeofchange, path = match.groups()
+        assert typeofchange in b'ADMT', (treeish1, treeish2, line)
+        if typeofchange == b'A':
+            diff.append(
+                GitDiffTree(DiffOperations.ADD,
+                            GitFile(path, newmode, newhash)))
+        elif typeofchange == b'D':
+            diff.append(
+                GitDiffTree(DiffOperations.DEL,
+                            GitFile(path, oldmode, oldhash)))
+        elif typeofchange == b'M' or typeofchange == b'T':
+            diff.append(
+                GitDiffTree(DiffOperations.REP,
+                            GitFile(path, newmode, newhash)))
+        else:
+            raise Exception(b"Unsupported type: " + line)
+    return diff
+
+
+def gen_op(current_files, target_files):
+    """Returns an operation list to convert files to target_files.
+
     Generates list of operations (add/delete/replace files) if we want to
     convert current_files in directory to target_files
 
-    current_files: list of files in current directory.
-    target_files: list of files we want it to be in current directory.
+    Args:
+        current_files: list of files in current directory.
+        target_files: list of files we want it to be in current directory.
     """
     current_file_map = _reverse(current_files)
     target_file_map = _reverse(target_files)
@@ -88,9 +142,7 @@ def gen_op(current_files, target_files):
 
 
 def git_mktree(files):
-    """
-    Returns a git tree object hash after mktree recursively
-    """
+    """Returns a git tree object hash after mktree recursively."""
 
     def recursive_default_dict():
         return collections.defaultdict(recursive_default_dict)
@@ -129,11 +181,11 @@ def git_mktree(files):
 
 
 def git_commit(tree, parents):
-    """
-    Create commit
+    """Creates a commit.
 
-    tree: tree object id
-    parents: parent commit id
+    Args:
+        tree: tree object id.
+        parents: parent commit id.
     """
     parent_args = []
     for parent in parents:
@@ -142,3 +194,34 @@ def git_commit(tree, parents):
     return subprocess.check_output(
         ['git', 'commit-tree', tree] + parent_args,
         stdin=subprocess.DEVNULL).strip(b'\n')
+
+
+def git_revlist(from_commit, to_commit):
+    """Returns a list of commits and their parents.
+
+    Each item in the list is a tuple, containing two elements.
+    The first element is the commit hash; the second element is a list of parent
+    commits' hash.
+    """
+
+    commits = []
+    ret = None
+    if from_commit is None:
+        ret = subprocess.check_output(['git', 'rev-list', to_commit,
+                                       '--topo-order', '--parents'])
+    else:
+        # b'...'.join() later requires all variable to be binary-typed.
+        if type(from_commit) == str:
+            from_commit = from_commit.encode('ascii')
+        if type(to_commit) == str:
+            to_commit = to_commit.encode('ascii')
+        commit_range = b'...'.join([from_commit, to_commit])
+        ret = subprocess.check_output(['git', 'rev-list', commit_range,
+                                       '--topo-order', '--parents'])
+    ret = ret.split(b'\n')
+    for line in ret:
+        if not line:
+            continue
+        hashes = line.split(b' ')
+        commits.append((hashes[0], hashes[1:]))
+    return list(reversed(commits))
