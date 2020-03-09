@@ -6,6 +6,7 @@
 # Missing files can be added if needed.
 
 import("//common-mk/mojom_bindings_generator.gni")
+import("//common-mk/mojom_type_mappings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
@@ -569,6 +570,28 @@ generate_pkg_config("libchrome-test") {
 }
 
 if (use.mojo) {
+  generate_mojom_type_mappings("mojom_type_mappings") {
+    mojom_type_mappings_generator = "libchrome_tools/mojom_generate_type_mappings.py"
+    sources = [
+      "mojo/public/cpp/base/big_buffer.typemap",
+      "mojo/public/cpp/base/big_string.typemap",
+      "mojo/public/cpp/base/file.typemap",
+      "mojo/public/cpp/base/file_error.typemap",
+      "mojo/public/cpp/base/file_info.typemap",
+      "mojo/public/cpp/base/file_path.typemap",
+      "mojo/public/cpp/base/memory_allocator_dump_cross_process_uid.typemap",
+      "mojo/public/cpp/base/process_id.typemap",
+      "mojo/public/cpp/base/read_only_buffer.typemap",
+      "mojo/public/cpp/base/ref_counted_memory.typemap",
+      "mojo/public/cpp/base/shared_memory.typemap",
+      "mojo/public/cpp/base/string16.typemap",
+      "mojo/public/cpp/base/text_direction.typemap",
+      "mojo/public/cpp/base/thread_priority.typemap",
+      "mojo/public/cpp/base/time.typemap",
+      "mojo/public/cpp/base/unguessable_token.typemap",
+      "mojo/public/cpp/base/values.typemap",
+    ]
+  }
   generate_mojom_bindings_gen("mojom_bindings_gen") {
     mojom_bindings_generator = "mojo/public/tools/bindings/mojom_bindings_generator.py"
     sources = [
@@ -579,6 +602,7 @@ if (use.mojo) {
       "mojo/public/mojom/base/file_error.mojom",
       "mojo/public/mojom/base/file_info.mojom",
       "mojo/public/mojom/base/file_path.mojom",
+      "mojo/public/mojom/base/memory_allocator_dump_cross_process_uid.mojom",
       "mojo/public/mojom/base/process_id.mojom",
       "mojo/public/mojom/base/read_only_buffer.mojom",
       "mojo/public/mojom/base/ref_counted_memory.mojom",
@@ -609,7 +633,7 @@ if (use.mojo) {
   # crbug.com/924035.
   static_library("mojo") {
     output_name = "mojo-${libbase_ver}"
-    deps = [ ":base-core", ":base-crypto", ":mojom_bindings_gen", ":mojom_bindings_native_gen" ]
+    deps = [ ":base-core", ":base-crypto", ":mojom_bindings_gen", ":mojom_bindings_native_gen", ":mojom_type_mappings" ]
     # TODO(hidehiko): Consolidate with build_config.h.
     configs -= [
       "//common-mk:use_thin_archive",
@@ -743,7 +767,7 @@ if (use.mojo) {
       "mojo/public/cpp/system/simple_watcher.cc",
       "mojo/public/cpp/system/file_data_pipe_producer.cc",
       "mojo/public/cpp/system/message_pipe.cc",
-    ] + get_target_outputs(":mojom_bindings_gen") + get_target_outputs(":mojom_bindings_native_gen")
+    ] + get_target_outputs(":mojom_bindings_gen") + get_target_outputs(":mojom_bindings_native_gen") + get_target_outputs(":mojom_type_mappings")
   }
 
   generate_pkg_config("libmojo") {

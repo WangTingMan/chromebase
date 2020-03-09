@@ -28,11 +28,26 @@ import os
 import subprocess
 import sys
 
-from build import gn_helpers
 
+try:
+    # ../build cannot be loaded if cwd is other directories
+    # e.g. when emerge libchrome
+    sys.path.append(os.path.join(os.path.dirname(sys.argv[0]), '..'))
+    from build import gn_helpers
+except ImportError:
+    # gn_helpers is located at the same directory when building other packages
+    # in system directory.
+    import gn_helpers
+
+# script in libchrome repositority is used when emerge libchrome.
 _GENERATE_TYPE_MAPPINGS_PATH = os.path.join(
     os.path.dirname(__file__),
     '../mojo/public/tools/bindings/generate_type_mappings.py')
+if not os.path.isfile(_GENERATE_TYPE_MAPPINGS_PATH):
+    # use system script in the same dir when building other packages.
+    _GENERATE_TYPE_MAPPINGS_PATH = os.path.join(
+        os.path.dirname(__file__),
+        'generate_type_mappings.py')
 
 def _read_typemap_config(path):
   """Reads .typemap file.
@@ -59,7 +74,7 @@ def _generate_type_mappings(input_paths, output):
     input_paths: a list of file paths for .typemap files.
     output: a path to output __type_mappings file.
   """
-  command = [sys.executable, _GENERATE_TYPE_MAPPINGS_PATH, '--output', output]
+  command = [_GENERATE_TYPE_MAPPINGS_PATH, '--output', output]
 
   # TODO(hidehiko): Add dependency handling.
 
