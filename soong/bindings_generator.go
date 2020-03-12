@@ -12,6 +12,7 @@ import (
 )
 
 func init() {
+	android.RegisterModuleType("generate_mojom_downgraded_files", mojomDowngradedFilesFactory)
 	android.RegisterModuleType("generate_mojom_pickles", mojomPicklesFactory)
 	android.RegisterModuleType("generate_mojom_headers", mojomHeadersFactory)
 	android.RegisterModuleType("generate_mojom_srcs", mojomSrcsFactory)
@@ -22,7 +23,18 @@ var (
 	pctx = android.NewPackageContext("android/soong/external/libchrome")
 
 	mojomBindingsGenerator = pctx.HostBinToolVariable("mojomBindingsGenerator", "mojom_bindings_generator")
+	mojomTypesDowngrader   = pctx.HostBinToolVariable("mojomTypesDowngrader", "mojom_types_downgrader")
 	mergeZips              = pctx.HostBinToolVariable("mergeZips", "merge_zips")
+
+	downgradeMojomTypesRule = pctx.StaticRule("downgradeMojomTypesRule", blueprint.RuleParams{
+		Command: `${mojomTypesDowngrader}
+		${in}
+		--outdir ${outDir}`,
+		CommandDeps: []string{
+			"${mojomTypesDowngrader}",
+		},
+		Description: "Downgrade mojom files $in => $out",
+	}, "outDir")
 
 	generateMojomPicklesRule = pctx.StaticRule("generateMojomPicklesRule", blueprint.RuleParams{
 		Command: `${mojomBindingsGenerator}
@@ -65,6 +77,72 @@ var (
 	})
 )
 
+type mojomDowngradedFilesProperties struct {
+	// list of input files
+	Srcs []string
+}
+
+type mojomDowngradedFiles struct {
+	android.ModuleBase
+
+	properties mojomDowngradedFilesProperties
+
+	generatedSrcs android.Paths
+	outDir        android.Path
+}
+
+var _ genrule.SourceFileGenerator = (*mojomDowngradedFiles)(nil)
+
+func (m *mojomDowngradedFiles) DepsMutator(ctx android.BottomUpMutatorContext) {
+	android.ExtractSourcesDeps(ctx, m.properties.Srcs)
+}
+
+func (m *mojomDowngradedFiles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
+	m.outDir = android.PathForModuleGen(ctx, "")
+
+	for _, in := range ctx.ExpandSources(m.properties.Srcs, nil) {
+		if !strings.HasSuffix(in.Rel(), ".mojom") {
+			ctx.PropertyErrorf("srcs", "Source is not a .mojom file: %s", in.Rel())
+			continue
+		}
+
+		out := android.PathForModuleGen(ctx, in.Rel())
+		m.generatedSrcs = append(m.generatedSrcs, out)
+
+		ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+			Rule:   downgradeMojomTypesRule,
+			Input:  in,
+			Output: out,
+			Args: map[string]string{
+				"outDir":  path.Dir(out.String()),
+			},
+		})
+	}
+}
+
+func (m *mojomDowngradedFiles) GeneratedHeaderDirs() android.Paths {
+	return nil
+}
+
+func (m *mojomDowngradedFiles) GeneratedDeps() android.Paths {
+	return append(android.Paths{}, m.generatedSrcs...)
+}
+
+func (m *mojomDowngradedFiles) GeneratedSourceFiles() android.Paths {
+	return append(android.Paths{}, m.generatedSrcs...)
+}
+
+func (m *mojomDowngradedFiles) Srcs() android.Paths {
+	return append(android.Paths{}, m.generatedSrcs...)
+}
+
+func mojomDowngradedFilesFactory() android.Module {
+	m := &mojomDowngradedFiles{}
+	m.AddProperties(&m.properties)
+	android.InitAndroidModule(m)
+	return m
+}
+
 type mojomPicklesProperties struct {
 	// list of input files
 	Srcs []string
@@ -88,13 +166,14 @@ func (m *mojomPickles) DepsMutator(ctx android.BottomUpMutatorContext) {
 func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	m.outDir = android.PathForModuleGen(ctx, "")
 
-	packagePath := android.PathForModuleSrc(ctx, "")
-
 	for _, in := range ctx.ExpandSources(m.properties.Srcs, nil) {
 		if !strings.HasSuffix(in.Rel(), ".mojom") {
 			ctx.PropertyErrorf("srcs", "Source is not a .mojom file: %s", in.Rel())
 			continue
 		}
+
+		srcRoot := strings.TrimSuffix(in.String(), in.Rel())
+
 		relStem := strings.TrimSuffix(in.Rel(), ".mojom")
 
 		out := android.PathForModuleGen(ctx, relStem+".p")
@@ -105,9 +184,8 @@ func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 			Input:  in,
 			Output: out,
 			Args: map[string]string{
-				"package": packagePath.Rel(),
+				"package": srcRoot,
 				"outDir":  m.outDir.String(),
-				"flags":   fmt.Sprintf("-I=%s:%s", packagePath, packagePath),
 			},
 		})
 	}
@@ -237,7 +315,6 @@ func (p *mojomGenerationProperties) generateBuildActions(
 	mojomGenerator string,
 	descriptions []mojomSrcsRuleDescription,
 ) android.Paths {
-	packageName := android.PathForModuleSrc(ctx, "").Rel()
 	outDir := android.PathForModuleGen(ctx, "")
 	implicitDeps := p.implicitDeps(ctx)
 	templateDir := p.templateDir(ctx)
@@ -249,6 +326,7 @@ func (p *mojomGenerationProperties) generateBuildActions(
 			continue
 		}
 		relStem := strings.TrimSuffix(in.Rel(), ".mojom")
+		srcRoot := strings.TrimSuffix(in.String(), in.Rel())
 
 		for _, description := range descriptions {
 			outs := android.WritablePaths{}
@@ -264,7 +342,7 @@ func (p *mojomGenerationProperties) generateBuildActions(
 				Outputs:   outs,
 				Args: map[string]string{
 					"mojomGenerator": mojomGenerator,
-					"package":        packageName,
+					"package":        srcRoot,
 					"flags":          fmt.Sprintf("%s %s", p.flags(ctx), description.extraFlags),
 					"outDir":         outDir.String(),
 					"templateDir":    templateDir,
