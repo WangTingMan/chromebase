@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# List cc files not in BUILD.gn, and not excluded by patterns in BUILD.IGNORE
+# This list can be run by human for sanity check that no imporant things are
+# ignored after each uprev.
+
+cd $(dirname $0)/..
+find . -name '*.cc' \
+ | sed -e 's/^\.\///g' \
+ | xargs -n 1 -P 1 bash -c \
+   'for i in $(cat BUILD.IGNORE); do grep $i <(echo $0) >/dev/null && exit; done; echo $0' \
+ | xargs -n 1 -P 1 sh -c 'grep $0 BUILD.gn >/dev/null || echo $0'
+
