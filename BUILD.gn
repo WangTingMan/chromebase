@@ -311,6 +311,7 @@ libbase_sublibs = [
     output_name = name + "-${libbase_ver}"
     testonly = true
     sources = [
+      "base/test/scoped_task_environment.cc",
       "base/test/simple_test_clock.cc",
       "base/test/simple_test_tick_clock.cc",
       "base/test/test_file_util.cc",
