@@ -485,6 +485,8 @@ cc_defaults {
     // so the raw header files are used for them.
     generated_headers: ["libchrome-include"],
     export_generated_headers: ["libchrome-include"],
+    header_libs: ["jni_headers"],
+    export_header_lib_headers: ["jni_headers"],
     target: {
         host: {
             cflags: [
