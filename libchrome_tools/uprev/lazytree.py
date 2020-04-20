@@ -82,6 +82,28 @@ class LazyTree:
         components = path.split(b'/')
         self._remove(components)
 
+    def _get(self, components):
+        """Returns a file at components in utils.GitFile from self tree.
+
+        Args:
+            components: path in list instead of separated by /.
+        """
+        self._loadtree()
+        if len(components) == 1:
+            return self._files[components[0]]
+
+        dirname, components = components[0], components[1:]
+        return self._subtrees[dirname]._get(components)
+
+    def __getitem__(self, path):
+        """Returns a file at path in utils.GitFile from tree.
+
+        Args:
+            path: path of the file to read.
+        """
+        components = path.split(b'/')
+        return self._get(components)
+
     def _set(self, components, f):
         """Adds or replace a file.
 

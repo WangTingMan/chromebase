@@ -28,6 +28,11 @@ GitDiffTree = collections.namedtuple(
     ['op', 'file',]
 )
 
+GitBlameLine = collections.namedtuple(
+    'GitBlameLine',
+    ['data', 'commit', 'old_line', 'new_line',]
+)
+
 
 GIT_DIFFTREE_RE_LINE = re.compile(rb'^:([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*)\t(.*)$')
 
@@ -89,7 +94,7 @@ def git_difftree(treeish1, treeish2):
     if treeish1 is None:
         # Remove first line since it's tree hash printed.
         out = subprocess.check_output(['git', 'diff-tree', '-r',
-                                       treeish2]).strip(b'\n')[1:]
+                                       treeish2]).split(b'\n')[1:]
     else:
         out = subprocess.check_output(['git', 'diff-tree', '-r',
                                        treeish1, treeish2]).split(b'\n')
@@ -180,12 +185,14 @@ def git_mktree(files):
     return _mktree([], tree)
 
 
-def git_commit(tree, parents):
+def git_commit(tree, parents, message=b"", extra_env={}):
     """Creates a commit.
 
     Args:
         tree: tree object id.
         parents: parent commit id.
+        message: commit message.
+        extra_env: extra environment variables passed to git.
     """
     parent_args = []
     for parent in parents:
@@ -193,7 +200,8 @@ def git_commit(tree, parents):
         parent_args.append(parent)
     return subprocess.check_output(
         ['git', 'commit-tree', tree] + parent_args,
-        stdin=subprocess.DEVNULL).strip(b'\n')
+        input=message,
+        env=dict(os.environ, **extra_env)).strip(b'\n')
 
 
 def git_revlist(from_commit, to_commit):
@@ -225,3 +233,29 @@ def git_revlist(from_commit, to_commit):
         hashes = line.split(b' ')
         commits.append((hashes[0], hashes[1:]))
     return list(reversed(commits))
+
+
+def git_blame(commit, filepath):
+    """Returns line-by-line git blame.
+
+    Return value is represented by a list of GitBlameLine.
+
+    Args:
+        commit: commit hash to blame at.
+        filepath: file to blame.
+    """
+    output = subprocess.check_output(['git', 'blame', '-p',
+                                      commit, filepath])
+    commit, old_line, new_line = None, None, None
+    blames = []
+    COMMIT_LINE_PREFIX = re.compile(b'^[0-9a-f]* ')
+    for line in output.split(b'\n'):
+        if not line:
+            continue
+        if line[0] == ord(b'\t'):
+            assert commit != None
+            blames.append(GitBlameLine(line[1:], commit, old_line, new_line))
+            commit, old_line, new_line = None, None, None
+        elif COMMIT_LINE_PREFIX.match(line):
+            commit, old_line, new_line = line.split(b' ', 3)[0:3]
+    return blames
