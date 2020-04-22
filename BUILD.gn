@@ -770,7 +770,7 @@ if (use.mojo) {
       "mojo/public/cpp/system/simple_watcher.cc",
       "mojo/public/cpp/system/file_data_pipe_producer.cc",
       "mojo/public/cpp/system/message_pipe.cc",
-    ] + get_target_outputs(":mojom_bindings_gen") + get_target_outputs(":mojom_bindings_native_gen") + get_target_outputs(":mojom_type_mappings")
+    ] + get_target_outputs(":mojom_bindings_gen") + get_target_outputs(":mojom_bindings_native_gen")
   }
 
   generate_pkg_config("libmojo") {
