@@ -23,6 +23,12 @@ template <typename... Args> void Ignore(Args&&... args) {}
 #define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(...) \
   INTERNAL_IGNORE(__VA_ARGS__)
 #define TRACE_ID_MANGLE(val) (val)
+#define INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(...) INTERNAL_IGNORE(__VA_ARGS__)
+#define INTERNAL_TRACE_EVENT_GET_CATEGORY_ENABLED(...) \
+    INTERNAL_IGNORE(__VA_ARGS__)
+#define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE(...) \
+    false
+#define INTERNAL_TRACE_EVENT_ADD(...) INTERNAL_IGNORE(__VA_ARGS__)
 
 namespace base {
 namespace trace_event {

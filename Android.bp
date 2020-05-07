@@ -30,6 +30,17 @@ filegroup {
         "base/allocator/allocator_shim_override_libc_symbols.h",
         "base/allocator/allocator_shim_override_linker_wrapped_symbols.h",
         "base/allocator/buildflags.h",
+        "base/android/android_hardware_buffer_compat.h",
+        "base/android/build_info.h",
+        "base/android/content_uri_utils.h",
+        "base/android/java_exception_reporter.h",
+        "base/android/jni_android.h",
+        "base/android/jni_array.h",
+        "base/android/jni_string.h",
+        "base/android/path_utils.h",
+        "base/android/scoped_hardware_buffer_handle.h",
+        "base/android/scoped_java_ref.h",
+        "base/android/sys_utils.h",
         "base/at_exit.h",
         "base/atomic_ref_count.h",
         "base/atomic_sequence_num.h",
@@ -43,6 +54,7 @@ filegroup {
         "base/base64url.h",
         "base/base_export.h",
         "base/base_paths.h",
+        "base/base_paths_android.h",
         "base/base_paths_posix.h",
         "base/base_switches.h",
         "base/big_endian.h",
@@ -213,6 +225,7 @@ filegroup {
         "base/observer_list.h",
         "base/observer_list_threadsafe.h",
         "base/optional.h",
+        "base/os_compat_android.h",
         "base/path_service.h",
         "base/pending_task.h",
         "base/pickle.h",
@@ -416,7 +429,6 @@ filegroup {
         "base/vlog.h",
         "build/build_config.h",
         "build/buildflag.h",
-        "components/timers/alarm_timer_chromeos.h",
         "device/bluetooth/bluetooth_advertisement.h",
         "device/bluetooth/bluetooth_common.h",
         "device/bluetooth/bluetooth_export.h",
@@ -566,12 +578,10 @@ libchromeCommonSrc = [
     "base/md5.cc",
     "base/memory/aligned_memory.cc",
     "base/memory/platform_shared_memory_region.cc",
-    "base/memory/platform_shared_memory_region_posix.cc",
     "base/memory/read_only_shared_memory_region.cc",
     "base/memory/ref_counted.cc",
     "base/memory/ref_counted_memory.cc",
     "base/memory/shared_memory_handle.cc",
-    "base/memory/shared_memory_handle_posix.cc",
     "base/memory/shared_memory_helper.cc",
     "base/memory/shared_memory_mapping.cc",
     "base/memory/unsafe_shared_memory_region.cc",
@@ -726,19 +736,36 @@ libchromeLinuxSrc = [
     "base/sys_info_linux.cc",
     "base/threading/platform_thread_internal_posix.cc",
     "base/threading/platform_thread_linux.cc",
-    "components/timers/alarm_timer_chromeos.cc",
 ]
 
 libchromeLinuxGlibcSrc = [
     "base/allocator/allocator_shim.cc",
     "base/allocator/allocator_shim_default_dispatch_to_glibc.cc",
     "base/debug/stack_trace_posix.cc",
+    "base/memory/platform_shared_memory_region_posix.cc",
+    "base/memory/shared_memory_handle_posix.cc",
 ]
 
 libchromeAndroidSrc = [
+    "base/android/android_hardware_buffer_compat.cc",
+    "base/android/build_info.cc",
+    "base/android/content_uri_utils.cc",
+    "base/android/java_exception_reporter.cc",
+    "base/android/jni_android.cc",
+    "base/android/jni_array.cc",
+    "base/android/jni_string.cc",
+    "base/android/path_utils.cc",
+    "base/android/scoped_java_ref.cc",
+    "base/android/scoped_hardware_buffer_handle.cc",
+    "base/android/sys_utils.cc",
+    "base/base_paths_android.cc",
     "base/debug/stack_trace_android.cc",
+    "base/memory/platform_shared_memory_region_android.cc",
     "base/memory/shared_memory_android.cc",
-    "base/sys_info_chromeos.cc",
+    "base/memory/shared_memory_handle_android.cc",
+    "base/os_compat_android.cc",
+    "base/sys_info_android.cc",
+    "base/time/time_android.cc",
 ]
 
 // libchrome static+shared for host and device
@@ -760,6 +787,13 @@ cc_library {
     static_libs: [
         "libgtest_prod",
         "libmodpb64",
+    ],
+    generated_headers: [
+        "libmojo_jni_headers",
+        "libmojo_jni_registration_headers",
+    ],
+    export_generated_headers: [
+        "libmojo_jni_registration_headers",
     ],
     target: {
         linux: {
@@ -1241,7 +1275,10 @@ genrule {
 
     srcs: [
         "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/ContentUriUtils.java",
         "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
+        "base/android/java/src/org/chromium/base/PathUtils.java",
+        "base/android/java/src/org/chromium/base/SysUtils.java",
         "base/android/java/src/org/chromium/base/ThreadUtils.java",
         "mojo/public/java/system/src/org/chromium/mojo/system/impl/BaseRunLoop.java",
         "mojo/public/java/system/src/org/chromium/mojo/system/impl/CoreImpl.java",
@@ -1251,8 +1288,11 @@ genrule {
     out: [
         "jni/BaseRunLoop_jni.h",
         "jni/BuildInfo_jni.h",
+        "jni/ContentUriUtils_jni.h",
         "jni/CoreImpl_jni.h",
         "jni/JavaExceptionReporter_jni.h",
+        "jni/PathUtils_jni.h",
+        "jni/SysUtils_jni.h",
         "jni/WatcherImpl_jni.h",
     ],
 }
