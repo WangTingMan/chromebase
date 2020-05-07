@@ -569,6 +569,7 @@ MULTIPROCESS_TEST_MAIN(ChildMain) {
 
 }  // namespace
 
+#if !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
 TEST(ProcessMetricsTest, GetChildOpenFdCount) {
   ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -585,6 +586,7 @@ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
   EXPECT_EQ(0, metrics->GetOpenFdCount());
   ASSERT_TRUE(child.Terminate(0, true));
 }
+#endif  // !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
 #endif  // defined(OS_LINUX)
 
 #if defined(OS_ANDROID) || defined(OS_LINUX)

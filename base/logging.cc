@@ -772,8 +772,9 @@ LogMessage::~LogMessage() {
         priority = ANDROID_LOG_FATAL;
         break;
     }
+#if 0 // This is for building Chromium browser on Android.
     __android_log_write(priority, "chromium", str_newline.c_str());
-#endif
+#endif  // 0
     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
     fflush(stderr);
   } else if (severity_ >= kAlwaysPrintErrorLevel) {

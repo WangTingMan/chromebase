@@ -250,7 +250,7 @@ class BASE_EXPORT RunLoop {
  private:
   FRIEND_TEST_ALL_PREFIXES(MessageLoopTypedTest, RunLoopQuitOrderAfter);
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) && 0
   // Android doesn't support the blocking RunLoop::Run, so it calls
   // BeforeRun and AfterRun directly.
   friend class base::MessagePumpForUI;

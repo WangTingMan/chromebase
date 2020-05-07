@@ -5,6 +5,12 @@
 #ifndef BASE_TRACE_EVENT_TRACE_EVENT_H_
 #define BASE_TRACE_EVENT_TRACE_EVENT_H_
 
+#define INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(...) INTERNAL_IGNORE(__VA_ARGS__)
+#define INTERNAL_TRACE_EVENT_GET_CATEGORY_ENABLED(...) \
+    INTERNAL_IGNORE(__VA_ARGS__)
+#define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE(...) \
+    false
+#define INTERNAL_TRACE_EVENT_ADD(...) INTERNAL_IGNORE(__VA_ARGS__)
 // This header file defines implementation details of how the trace macros in
 // trace_event_common.h collect and store trace events. Anything not
 // implementation-specific should go in trace_event_common.h instead of here.

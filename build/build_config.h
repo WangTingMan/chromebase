@@ -16,6 +16,10 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
+// - OS_ANDROID is a define used to build Chrome for Android within the NDK and
+//   to build Android targets.
+#define OS_ANDROID 1
+#define OS_CHROMEOS 1
 // A set of macros to use for platform detection.
 #if defined(__native_client__)
 // __native_client__ must be first, so that other OS_ defines are not set.

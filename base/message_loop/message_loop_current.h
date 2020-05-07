@@ -190,7 +190,7 @@ class BASE_EXPORT MessageLoopCurrent {
   MessageLoop* const current_;
 };
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_ANDROID)
 
 // ForUI extension of MessageLoopCurrent.
 class BASE_EXPORT MessageLoopCurrentForUI : public MessageLoopCurrent {
@@ -241,7 +241,7 @@ class BASE_EXPORT MessageLoopCurrentForUI : public MessageLoopCurrent {
   MessagePumpForUI* const pump_;
 };
 
-#endif  // !defined(OS_NACL)
+#endif  // !defined(OS_NACL) && !defined(OS_ANDROID)
 
 // ForIO extension of MessageLoopCurrent.
 class BASE_EXPORT MessageLoopCurrentForIO : public MessageLoopCurrent {
