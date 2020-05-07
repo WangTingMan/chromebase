@@ -7,7 +7,7 @@
 #include "base/logging.h"
 #include "base/time/time.h"
 
-#ifdef __ANDROID__
+#if defined(OS_ANDROID)
 #include <cutils/properties.h>
 #endif
 
@@ -20,7 +20,7 @@ Time GetBuildTime() {
   //
   // __DATE__ is exactly "Mmm DD YYYY".
   // __TIME__ is exactly "hh:mm:ss".
-#if defined(__ANDROID__)
+#if defined(OS_ANDROID)
   char kDateTime[PROPERTY_VALUE_MAX];
   property_get("ro.build.date", kDateTime, "Sep 02 2008 08:00:00 PST");
 #elif defined(DONT_EMBED_BUILD_METADATA) && !defined(OFFICIAL_BUILD)
