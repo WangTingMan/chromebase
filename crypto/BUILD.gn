@@ -219,9 +219,7 @@ config("platform_config") {
 # according to the state of the crypto flags. A target just wanting to depend
 # on the current SSL library should just depend on this.
 group("platform") {
-  public_deps = [
-    "//third_party/boringssl",
-  ]
+  public_deps = [ "//third_party/boringssl" ]
 
   # Link in NSS if it is used for the platform certificate library
   # (use_nss_certs).

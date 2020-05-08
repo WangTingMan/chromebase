@@ -40,6 +40,7 @@ config("libchrome_config") {
     "-Wno-unused-local-typedefs",
     "-Xclang-only=-Wno-char-subscripts",
   ]
+
   # Address sanitizer + coverage builds do not support -z,defs.
   if (!(use.asan || use.coverage)) {
     ldflags = [ "-Wl,-z,defs" ]
@@ -50,6 +51,7 @@ config("base_core_config") {
   cflags = [
     # Suppressing warning in base/strings/stringprintf.cc.
     "-Wno-format-nonliteral",
+
     # This is for _exit(1) in base/debug/debugger_posix.cc.
     "-Wno-unreachable-code",
   ]
@@ -59,8 +61,15 @@ libbase_sublibs = [
   {
     name = "base-core"
     output_name = name + "-${libbase_ver}"
-    libs = [ "pthread", "rt", "modp_b64" ]
-    pkg_deps = [ "glib-2.0", "libevent" ]
+    libs = [
+      "pthread",
+      "rt",
+      "modp_b64",
+    ]
+    pkg_deps = [
+      "glib-2.0",
+      "libevent",
+    ]
     configs = [ ":base_core_config" ]
     sources = [
       "base/allocator/allocator_extension.cc",
@@ -130,8 +139,8 @@ libbase_sublibs = [
       "base/memory/shared_memory_handle.cc",
       "base/memory/shared_memory_handle_posix.cc",
       "base/memory/shared_memory_helper.cc",
-      "base/memory/shared_memory_posix.cc",
       "base/memory/shared_memory_mapping.cc",
+      "base/memory/shared_memory_posix.cc",
       "base/memory/unsafe_shared_memory_region.cc",
       "base/memory/weak_ptr.cc",
       "base/memory/writable_shared_memory_region.cc",
@@ -162,8 +171,8 @@ libbase_sublibs = [
       "base/metrics/sample_vector.cc",
       "base/metrics/sparse_histogram.cc",
       "base/metrics/statistics_recorder.cc",
-      "base/path_service.cc",
       "base/observer_list_threadsafe.cc",
+      "base/path_service.cc",
       "base/pending_task.cc",
       "base/pickle.cc",
       "base/posix/file_descriptor_shuffle.cc",
@@ -191,8 +200,8 @@ libbase_sublibs = [
       "base/rand_util_posix.cc",
       "base/run_loop.cc",
       "base/sequence_checker_impl.cc",
-      "base/sequenced_task_runner.cc",
       "base/sequence_token.cc",
+      "base/sequenced_task_runner.cc",
       "base/sha1.cc",
       "base/strings/nullable_string16.cc",
       "base/strings/pattern.cc",
@@ -219,8 +228,8 @@ libbase_sublibs = [
       "base/sys_info_chromeos.cc",
       "base/sys_info_linux.cc",
       "base/sys_info_posix.cc",
-      "base/task_runner.cc",
       "base/task/cancelable_task_tracker.cc",
+      "base/task_runner.cc",
       "base/task_scheduler/delayed_task_manager.cc",
       "base/task_scheduler/environment_config.cc",
       "base/task_scheduler/lazy_task_runner.cc",
@@ -240,9 +249,9 @@ libbase_sublibs = [
       "base/task_scheduler/task.cc",
       "base/task_scheduler/task_scheduler.cc",
       "base/task_scheduler/task_scheduler_impl.cc",
-      "base/task_scheduler/task_traits.cc",
       "base/task_scheduler/task_tracker.cc",
       "base/task_scheduler/task_tracker_posix.cc",
+      "base/task_scheduler/task_traits.cc",
       "base/third_party/dynamic_annotations/dynamic_annotations.c",
       "base/third_party/icu/icu_utf.cc",
       "base/third_party/nspr/prtime.cc",
@@ -263,8 +272,6 @@ libbase_sublibs = [
       "base/threading/thread_local_storage_posix.cc",
       "base/threading/thread_restrictions.cc",
       "base/threading/thread_task_runner_handle.cc",
-      "base/timer/elapsed_timer.cc",
-      "base/timer/timer.cc",
       "base/time/clock.cc",
       "base/time/default_clock.cc",
       "base/time/default_tick_clock.cc",
@@ -274,6 +281,8 @@ libbase_sublibs = [
       "base/time/time_exploded_posix.cc",
       "base/time/time_now_posix.cc",
       "base/time/time_override.cc",
+      "base/timer/elapsed_timer.cc",
+      "base/timer/timer.cc",
       "base/unguessable_token.cc",
       "base/value_iterators.cc",
       "base/values.cc",
@@ -288,8 +297,8 @@ libbase_sublibs = [
     deps = [ ":base-core" ]
     libs = [ "dl" ]
     sources = [
-      "base/native_library_posix.cc",
       "base/native_library.cc",
+      "base/native_library_posix.cc",
       "base/scoped_native_library.cc",
     ]
   },
@@ -324,7 +333,7 @@ libbase_sublibs = [
       "base/test/test_switches.cc",
       "base/test/test_timeouts.cc",
     ]
-  }
+  },
 ]
 
 if (use.crypto) {
@@ -332,8 +341,14 @@ if (use.crypto) {
     {
       name = "base-crypto"
       output_name = name + "-${libbase_ver}"
-      deps = [ ":base-core", ":base-dl" ]
-      pkg_deps = [ "nss", "openssl" ]
+      deps = [
+        ":base-core",
+        ":base-dl",
+      ]
+      pkg_deps = [
+        "nss",
+        "openssl",
+      ]
       sources = [
         "crypto/hmac.cc",
         "crypto/hmac_nss.cc",
@@ -354,10 +369,11 @@ if (use.crypto) {
         "crypto/symmetric_key_nss.cc",
         "crypto/third_party/nss/rsawrapr.c",
         "crypto/third_party/nss/sha512.cc",
+
         # Added to libchrome only (not upstream) to support OpenSSL 1.1 API
         "crypto/libcrypto-compat.c",
       ]
-    }
+    },
   ]
 }
 
@@ -369,9 +385,9 @@ if (use.dbus) {
       deps = [ ":base-core" ]
       pkg_deps = [ "dbus-1" ]
       if (use.fuzzer) {
-          pkg_deps += [ "protobuf" ]
+        pkg_deps += [ "protobuf" ]
       } else {
-          pkg_deps += [ "protobuf-lite" ]
+        pkg_deps += [ "protobuf-lite" ]
       }
       sources = [
         "dbus/bus.cc",
@@ -395,9 +411,9 @@ if (use.dbus) {
       testonly = true
       pkg_deps = [ "dbus-1" ]
       if (use.fuzzer) {
-          pkg_deps += [ "protobuf" ]
+        pkg_deps += [ "protobuf" ]
       } else {
-          pkg_deps += [ "protobuf-lite" ]
+        pkg_deps += [ "protobuf-lite" ]
       }
       sources = [
         "dbus/mock_bus.cc",
@@ -457,7 +473,7 @@ foreach(attr, libbase_sublibs) {
     }
     configs += [
       ":libchrome_config",
-      "//common-mk:visibility_default"
+      "//common-mk:visibility_default",
     ]
     if (buildtype == "static_library") {
       configs -= [ "//common-mk:use_thin_archive" ]
@@ -480,20 +496,26 @@ action("base") {
   script = "//common-mk/write_args.py"
   outputs = [ "${root_out_dir}/lib/lib${target_name}-${libbase_ver}.so" ]
   args = [ "--output" ] + outputs + [ "--" ] + [
-    "GROUP", "(", "AS_NEEDED", "(",
-  ]
+           "GROUP",
+           "(",
+           "AS_NEEDED",
+           "(",
+         ]
   foreach(attr, libbase_sublibs) {
     if (!defined(attr.testonly) || !attr.testonly) {
       args += [ "-l" + attr.output_name ]
     }
   }
-  args += [ ")", ")" ]
+  args += [
+    ")",
+    ")",
+  ]
 }
 
 libchrome_exported_cflags = [
-    "-I/usr/include/base-${libbase_ver}",
-    "-Wno-unused-local-typedefs",
-    "-DBASE_VER=${libbase_ver}",
+  "-I/usr/include/base-${libbase_ver}",
+  "-Wno-unused-local-typedefs",
+  "-DBASE_VER=${libbase_ver}",
 ]
 
 if (use.asan) {
@@ -507,8 +529,7 @@ generate_pkg_config("libchrome") {
   version = "${libbase_ver}"
   requires_private = []
   foreach(attr, libbase_sublibs) {
-    if ((!defined(attr.testonly) || !attr.testonly)
-        && defined(attr.pkg_deps)) {
+    if ((!defined(attr.testonly) || !attr.testonly) && defined(attr.pkg_deps)) {
       requires_private += attr.pkg_deps
     }
   }
@@ -538,14 +559,20 @@ action("base-test") {
   script = "//common-mk/write_args.py"
   outputs = [ "${root_out_dir}/lib${target_name}-${libbase_ver}.a" ]
   args = [ "--output" ] + outputs + [ "--" ] + [
-    "GROUP", "(", "AS_NEEDED", "(",
-  ]
+           "GROUP",
+           "(",
+           "AS_NEEDED",
+           "(",
+         ]
   foreach(attr, libbase_sublibs) {
     if (defined(attr.testonly) && attr.testonly) {
       args += [ "-l" + attr.output_name ]
     }
   }
-  args += [ ")", ")" ]
+  args += [
+    ")",
+    ")",
+  ]
 }
 
 generate_pkg_config("libchrome-test") {
@@ -574,7 +601,8 @@ generate_pkg_config("libchrome-test") {
 
 if (use.mojo) {
   generate_mojom_type_mappings("mojom_type_mappings") {
-    mojom_type_mappings_generator = "libchrome_tools/mojom_generate_type_mappings.py"
+    mojom_type_mappings_generator =
+        "libchrome_tools/mojom_generate_type_mappings.py"
     sources = [
       "mojo/public/cpp/base/big_buffer.typemap",
       "mojo/public/cpp/base/big_string.typemap",
@@ -596,7 +624,8 @@ if (use.mojo) {
     ]
   }
   generate_mojom_bindings_gen("mojom_bindings_gen") {
-    mojom_bindings_generator = "mojo/public/tools/bindings/mojom_bindings_generator.py"
+    mojom_bindings_generator =
+        "mojo/public/tools/bindings/mojom_bindings_generator.py"
     typemaps = get_target_outputs(":mojom_type_mappings")
     sources = [
       "ipc/ipc.mojom",
@@ -623,7 +652,8 @@ if (use.mojo) {
   }
 
   generate_mojom_bindings_gen("mojom_bindings_native_gen") {
-    mojom_bindings_generator = "mojo/public/tools/bindings/mojom_bindings_generator.py"
+    mojom_bindings_generator =
+        "mojo/public/tools/bindings/mojom_bindings_generator.py"
     sources = [
       "mojo/public/interfaces/bindings/interface_control_messages.mojom",
       "mojo/public/interfaces/bindings/native_struct.mojom",
@@ -637,7 +667,14 @@ if (use.mojo) {
   # crbug.com/924035.
   static_library("mojo") {
     output_name = "mojo-${libbase_ver}"
-    deps = [ ":base-core", ":base-crypto", ":mojom_bindings_gen", ":mojom_bindings_native_gen", ":mojom_type_mappings" ]
+    deps = [
+      ":base-core",
+      ":base-crypto",
+      ":mojom_bindings_gen",
+      ":mojom_bindings_native_gen",
+      ":mojom_type_mappings",
+    ]
+
     # TODO(hidehiko): Consolidate with build_config.h.
     configs -= [
       "//common-mk:use_thin_archive",
@@ -649,129 +686,131 @@ if (use.mojo) {
       "//common-mk:nouse_thin_archive",
       "//common-mk:pic",
     ]
-    sources = [
-      "ipc/ipc_message.cc",
-      "ipc/ipc_message_attachment.cc",
-      "ipc/ipc_message_attachment_set.cc",
-      "ipc/ipc_message_utils.cc",
-      "ipc/ipc_mojo_handle_attachment.cc",
-      "ipc/ipc_mojo_message_helper.cc",
-      "ipc/ipc_mojo_param_traits.cc",
-      "ipc/ipc_platform_file_attachment_posix.cc",
-      "mojo/core/invitation_dispatcher.cc",
-      "mojo/core/connection_params.cc",
-      "mojo/core/channel_posix.cc",
-      "mojo/core/platform_handle_dispatcher.cc",
-      "mojo/core/mojo_core.cc",
-      "mojo/core/channel.cc",
-      "mojo/core/entrypoints.cc",
-      "mojo/core/broker_posix.cc",
-      "mojo/core/data_pipe_producer_dispatcher.cc",
-      "mojo/core/broker_host.cc",
-      "mojo/core/watcher_dispatcher.cc",
-      "mojo/core/request_context.cc",
-      "mojo/core/configuration.cc",
-      "mojo/core/node_channel.cc",
-      "mojo/core/shared_buffer_dispatcher.cc",
-      "mojo/core/watch.cc",
-      "mojo/core/embedder/scoped_ipc_support.cc",
-      "mojo/core/embedder/embedder.cc",
-      "mojo/core/message_pipe_dispatcher.cc",
-      "mojo/core/handle_table.cc",
-      "mojo/core/core.cc",
-      "mojo/core/ports/event.cc",
-      "mojo/core/ports/name.cc",
-      "mojo/core/ports/port.cc",
-      "mojo/core/ports/message_queue.cc",
-      "mojo/core/ports/port_locker.cc",
-      "mojo/core/ports/node.cc",
-      "mojo/core/ports/user_message.cc",
-      "mojo/core/ports/port_ref.cc",
-      "mojo/core/data_pipe_consumer_dispatcher.cc",
-      "mojo/core/scoped_process_handle.cc",
-      "mojo/core/node_controller.cc",
-      "mojo/core/watcher_set.cc",
-      "mojo/core/dispatcher.cc",
-      "mojo/core/platform_handle_in_transit.cc",
-      "mojo/core/platform_handle_utils.cc",
-      "mojo/core/platform_shared_memory_mapping.cc",
-      "mojo/core/user_message_impl.cc",
-      "mojo/core/data_pipe_control_message.cc",
-      "mojo/public/c/system/thunks.cc",
-      "mojo/public/cpp/base/big_string_mojom_traits.cc",
-      "mojo/public/cpp/base/shared_memory_mojom_traits.cc",
-      "mojo/public/cpp/base/unguessable_token_mojom_traits.cc",
-      "mojo/public/cpp/base/ref_counted_memory_mojom_traits.cc",
-      "mojo/public/cpp/base/big_buffer.cc",
-      "mojo/public/cpp/base/read_only_buffer_mojom_traits.cc",
-      "mojo/public/cpp/base/string16_mojom_traits.cc",
-      "mojo/public/cpp/base/big_buffer_mojom_traits.cc",
-      "mojo/public/cpp/base/file_info_mojom_traits.cc",
-      "mojo/public/cpp/base/time_mojom_traits.cc",
-      "mojo/public/cpp/base/thread_priority_mojom_traits.cc",
-      "mojo/public/cpp/base/text_direction_mojom_traits.cc",
-      "mojo/public/cpp/base/values_mojom_traits.cc",
-      "mojo/public/cpp/base/file_path_mojom_traits.cc",
-      "mojo/public/cpp/base/process_id_mojom_traits.cc",
-      "mojo/public/cpp/base/file_mojom_traits.cc",
-      "mojo/public/cpp/bindings/lib/serialization_context.cc",
-      "mojo/public/cpp/bindings/lib/associated_interface_ptr_state.cc",
-      "mojo/public/cpp/bindings/lib/array_internal.cc",
-      "mojo/public/cpp/bindings/lib/interface_ptr_state.cc",
-      "mojo/public/cpp/bindings/lib/buffer.cc",
-      "mojo/public/cpp/bindings/lib/sync_call_restrictions.cc",
-      "mojo/public/cpp/bindings/lib/multiplex_router.cc",
-      "mojo/public/cpp/bindings/lib/sync_handle_watcher.cc",
-      "mojo/public/cpp/bindings/lib/validation_errors.cc",
-      "mojo/public/cpp/bindings/lib/scoped_interface_endpoint_handle.cc",
-      "mojo/public/cpp/bindings/lib/message_dumper.cc",
-      "mojo/public/cpp/bindings/lib/sync_event_watcher.cc",
-      "mojo/public/cpp/bindings/lib/task_runner_helper.cc",
-      "mojo/public/cpp/bindings/lib/sequence_local_sync_event_watcher.cc",
-      "mojo/public/cpp/bindings/lib/validation_context.cc",
-      "mojo/public/cpp/bindings/lib/associated_group.cc",
-      "mojo/public/cpp/bindings/lib/native_struct_serialization.cc",
-      "mojo/public/cpp/bindings/lib/validation_util.cc",
-      "mojo/public/cpp/bindings/lib/pipe_control_message_handler.cc",
-      "mojo/public/cpp/bindings/lib/filter_chain.cc",
-      "mojo/public/cpp/bindings/lib/message.cc",
-      "mojo/public/cpp/bindings/lib/unserialized_message_context.cc",
-      "mojo/public/cpp/bindings/lib/pipe_control_message_proxy.cc",
-      "mojo/public/cpp/bindings/lib/control_message_proxy.cc",
-      "mojo/public/cpp/bindings/lib/control_message_handler.cc",
-      "mojo/public/cpp/bindings/lib/connector.cc",
-      "mojo/public/cpp/bindings/lib/interface_endpoint_client.cc",
-      "mojo/public/cpp/bindings/lib/sync_handle_registry.cc",
-      "mojo/public/cpp/bindings/lib/associated_binding.cc",
-      "mojo/public/cpp/bindings/lib/message_header_validator.cc",
-      "mojo/public/cpp/bindings/lib/associated_group_controller.cc",
-      "mojo/public/cpp/bindings/lib/associated_interface_ptr.cc",
-      "mojo/public/cpp/bindings/lib/fixed_buffer.cc",
-      "mojo/public/cpp/bindings/lib/message_internal.cc",
-      "mojo/public/cpp/bindings/lib/binding_state.cc",
-      "mojo/public/cpp/platform/platform_channel_endpoint.cc",
-      "mojo/public/cpp/platform/platform_handle.cc",
-      "mojo/public/cpp/platform/named_platform_channel.cc",
-      "mojo/public/cpp/platform/platform_channel.cc",
-      "mojo/public/cpp/platform/platform_channel_server_endpoint.cc",
-      "mojo/public/cpp/platform/socket_utils_posix.cc",
-      "mojo/public/cpp/platform/named_platform_channel_posix.cc",
-      "mojo/public/cpp/system/buffer.cc",
-      "mojo/public/cpp/system/platform_handle.cc",
-      "mojo/public/cpp/system/wait.cc",
-      "mojo/public/cpp/system/wait_set.cc",
-      "mojo/public/cpp/system/data_pipe_utils.cc",
-      "mojo/public/cpp/system/scope_to_message_pipe.cc",
-      "mojo/public/cpp/system/handle_signal_tracker.cc",
-      "mojo/public/cpp/system/trap.cc",
-      "mojo/public/cpp/system/isolated_connection.cc",
-      "mojo/public/cpp/system/string_data_pipe_producer.cc",
-      "mojo/public/cpp/system/data_pipe_drainer.cc",
-      "mojo/public/cpp/system/invitation.cc",
-      "mojo/public/cpp/system/simple_watcher.cc",
-      "mojo/public/cpp/system/file_data_pipe_producer.cc",
-      "mojo/public/cpp/system/message_pipe.cc",
-    ] + get_target_outputs(":mojom_bindings_gen") + get_target_outputs(":mojom_bindings_native_gen")
+    sources =
+        [
+          "ipc/ipc_message.cc",
+          "ipc/ipc_message_attachment.cc",
+          "ipc/ipc_message_attachment_set.cc",
+          "ipc/ipc_message_utils.cc",
+          "ipc/ipc_mojo_handle_attachment.cc",
+          "ipc/ipc_mojo_message_helper.cc",
+          "ipc/ipc_mojo_param_traits.cc",
+          "ipc/ipc_platform_file_attachment_posix.cc",
+          "mojo/core/invitation_dispatcher.cc",
+          "mojo/core/connection_params.cc",
+          "mojo/core/channel_posix.cc",
+          "mojo/core/platform_handle_dispatcher.cc",
+          "mojo/core/mojo_core.cc",
+          "mojo/core/channel.cc",
+          "mojo/core/entrypoints.cc",
+          "mojo/core/broker_posix.cc",
+          "mojo/core/data_pipe_producer_dispatcher.cc",
+          "mojo/core/broker_host.cc",
+          "mojo/core/watcher_dispatcher.cc",
+          "mojo/core/request_context.cc",
+          "mojo/core/configuration.cc",
+          "mojo/core/node_channel.cc",
+          "mojo/core/shared_buffer_dispatcher.cc",
+          "mojo/core/watch.cc",
+          "mojo/core/embedder/scoped_ipc_support.cc",
+          "mojo/core/embedder/embedder.cc",
+          "mojo/core/message_pipe_dispatcher.cc",
+          "mojo/core/handle_table.cc",
+          "mojo/core/core.cc",
+          "mojo/core/ports/event.cc",
+          "mojo/core/ports/name.cc",
+          "mojo/core/ports/port.cc",
+          "mojo/core/ports/message_queue.cc",
+          "mojo/core/ports/port_locker.cc",
+          "mojo/core/ports/node.cc",
+          "mojo/core/ports/user_message.cc",
+          "mojo/core/ports/port_ref.cc",
+          "mojo/core/data_pipe_consumer_dispatcher.cc",
+          "mojo/core/scoped_process_handle.cc",
+          "mojo/core/node_controller.cc",
+          "mojo/core/watcher_set.cc",
+          "mojo/core/dispatcher.cc",
+          "mojo/core/platform_handle_in_transit.cc",
+          "mojo/core/platform_handle_utils.cc",
+          "mojo/core/platform_shared_memory_mapping.cc",
+          "mojo/core/user_message_impl.cc",
+          "mojo/core/data_pipe_control_message.cc",
+          "mojo/public/c/system/thunks.cc",
+          "mojo/public/cpp/base/big_string_mojom_traits.cc",
+          "mojo/public/cpp/base/shared_memory_mojom_traits.cc",
+          "mojo/public/cpp/base/unguessable_token_mojom_traits.cc",
+          "mojo/public/cpp/base/ref_counted_memory_mojom_traits.cc",
+          "mojo/public/cpp/base/big_buffer.cc",
+          "mojo/public/cpp/base/read_only_buffer_mojom_traits.cc",
+          "mojo/public/cpp/base/string16_mojom_traits.cc",
+          "mojo/public/cpp/base/big_buffer_mojom_traits.cc",
+          "mojo/public/cpp/base/file_info_mojom_traits.cc",
+          "mojo/public/cpp/base/time_mojom_traits.cc",
+          "mojo/public/cpp/base/thread_priority_mojom_traits.cc",
+          "mojo/public/cpp/base/text_direction_mojom_traits.cc",
+          "mojo/public/cpp/base/values_mojom_traits.cc",
+          "mojo/public/cpp/base/file_path_mojom_traits.cc",
+          "mojo/public/cpp/base/process_id_mojom_traits.cc",
+          "mojo/public/cpp/base/file_mojom_traits.cc",
+          "mojo/public/cpp/bindings/lib/serialization_context.cc",
+          "mojo/public/cpp/bindings/lib/associated_interface_ptr_state.cc",
+          "mojo/public/cpp/bindings/lib/array_internal.cc",
+          "mojo/public/cpp/bindings/lib/interface_ptr_state.cc",
+          "mojo/public/cpp/bindings/lib/buffer.cc",
+          "mojo/public/cpp/bindings/lib/sync_call_restrictions.cc",
+          "mojo/public/cpp/bindings/lib/multiplex_router.cc",
+          "mojo/public/cpp/bindings/lib/sync_handle_watcher.cc",
+          "mojo/public/cpp/bindings/lib/validation_errors.cc",
+          "mojo/public/cpp/bindings/lib/scoped_interface_endpoint_handle.cc",
+          "mojo/public/cpp/bindings/lib/message_dumper.cc",
+          "mojo/public/cpp/bindings/lib/sync_event_watcher.cc",
+          "mojo/public/cpp/bindings/lib/task_runner_helper.cc",
+          "mojo/public/cpp/bindings/lib/sequence_local_sync_event_watcher.cc",
+          "mojo/public/cpp/bindings/lib/validation_context.cc",
+          "mojo/public/cpp/bindings/lib/associated_group.cc",
+          "mojo/public/cpp/bindings/lib/native_struct_serialization.cc",
+          "mojo/public/cpp/bindings/lib/validation_util.cc",
+          "mojo/public/cpp/bindings/lib/pipe_control_message_handler.cc",
+          "mojo/public/cpp/bindings/lib/filter_chain.cc",
+          "mojo/public/cpp/bindings/lib/message.cc",
+          "mojo/public/cpp/bindings/lib/unserialized_message_context.cc",
+          "mojo/public/cpp/bindings/lib/pipe_control_message_proxy.cc",
+          "mojo/public/cpp/bindings/lib/control_message_proxy.cc",
+          "mojo/public/cpp/bindings/lib/control_message_handler.cc",
+          "mojo/public/cpp/bindings/lib/connector.cc",
+          "mojo/public/cpp/bindings/lib/interface_endpoint_client.cc",
+          "mojo/public/cpp/bindings/lib/sync_handle_registry.cc",
+          "mojo/public/cpp/bindings/lib/associated_binding.cc",
+          "mojo/public/cpp/bindings/lib/message_header_validator.cc",
+          "mojo/public/cpp/bindings/lib/associated_group_controller.cc",
+          "mojo/public/cpp/bindings/lib/associated_interface_ptr.cc",
+          "mojo/public/cpp/bindings/lib/fixed_buffer.cc",
+          "mojo/public/cpp/bindings/lib/message_internal.cc",
+          "mojo/public/cpp/bindings/lib/binding_state.cc",
+          "mojo/public/cpp/platform/platform_channel_endpoint.cc",
+          "mojo/public/cpp/platform/platform_handle.cc",
+          "mojo/public/cpp/platform/named_platform_channel.cc",
+          "mojo/public/cpp/platform/platform_channel.cc",
+          "mojo/public/cpp/platform/platform_channel_server_endpoint.cc",
+          "mojo/public/cpp/platform/socket_utils_posix.cc",
+          "mojo/public/cpp/platform/named_platform_channel_posix.cc",
+          "mojo/public/cpp/system/buffer.cc",
+          "mojo/public/cpp/system/platform_handle.cc",
+          "mojo/public/cpp/system/wait.cc",
+          "mojo/public/cpp/system/wait_set.cc",
+          "mojo/public/cpp/system/data_pipe_utils.cc",
+          "mojo/public/cpp/system/scope_to_message_pipe.cc",
+          "mojo/public/cpp/system/handle_signal_tracker.cc",
+          "mojo/public/cpp/system/trap.cc",
+          "mojo/public/cpp/system/isolated_connection.cc",
+          "mojo/public/cpp/system/string_data_pipe_producer.cc",
+          "mojo/public/cpp/system/data_pipe_drainer.cc",
+          "mojo/public/cpp/system/invitation.cc",
+          "mojo/public/cpp/system/simple_watcher.cc",
+          "mojo/public/cpp/system/file_data_pipe_producer.cc",
+          "mojo/public/cpp/system/message_pipe.cc",
+        ] + get_target_outputs(":mojom_bindings_gen") +
+        get_target_outputs(":mojom_bindings_native_gen")
   }
 
   generate_pkg_config("libmojo") {
