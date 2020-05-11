@@ -41,8 +41,6 @@ WANT_EXCLUDE = [
     re.compile(rb'base/(.*/)?(ios|win|fuchsia|mac|openbsd|freebsd|nacl)/.*'),
     re.compile(rb'.*_(ios|win|mac|fuchsia|openbsd|freebsd|nacl)[_./]'),
     re.compile(rb'.*/(ios|win|mac|fuchsia|openbsd|freebsd|nacl)_'),
-    re.compile(rb'base/test/android'),
-    re.compile(rb'base/android/javatests'),
     re.compile(rb'dbus/(test_serv(er|ice)\.cc|test_service\.h)$')
 ]
 
