@@ -36,6 +36,7 @@ config("libchrome_config") {
   cflags = [
     "-Wno-deprecated-register",
     "-Wno-narrowing",
+    "-Wno-unreachable-code-return",
     "-Wno-unused-local-typedefs",
     "-Xclang-only=-Wno-char-subscripts",
   ]
