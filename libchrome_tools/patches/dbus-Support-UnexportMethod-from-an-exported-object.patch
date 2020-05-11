@@ -1,0 +1,194 @@
+From fb915ed71679feafd4ed53deb2c5ba84862a9e57 Mon Sep 17 00:00:00 2001
+From: Sonny Sasaka <sonnysasaka@chromium.org>
+Date: Mon, 10 Dec 2018 14:03:49 -0800
+Subject: [PATCH] dbus: Support UnexportMethod from an exported object.
+
+Currently there is no way to override a method handler that is already
+registered to an ExportedObject. A support to do so is required to
+correctly implement Chrome OS Bluetooth dispatcher which needs to
+add/remove an interface to an exported object dynamically. Therefore
+this CL adds methods to allow method handlers to be unexported so
+another handler can be exported afterwards.
+
+Bug: 883039
+---
+ dbus/exported_object.cc     | 50 +++++++++++++++++++++++++++++++++++++
+ dbus/exported_object.h      | 34 +++++++++++++++++++++++++
+ dbus/mock_exported_object.h |  7 ++++++
+ 3 files changed, 91 insertions(+)
+
+diff --git a/dbus/exported_object.cc b/dbus/exported_object.cc
+index 5fa1b916f251..727a5707b869 100644
+--- a/dbus/exported_object.cc
++++ b/dbus/exported_object.cc
+@@ -68,6 +68,22 @@ bool ExportedObject::ExportMethodAndBlock(
+   return true;
+ }
+ 
++bool ExportedObject::UnexportMethodAndBlock(const std::string& interface_name,
++                                            const std::string& method_name) {
++  bus_->AssertOnDBusThread();
++
++  const std::string absolute_method_name =
++      GetAbsoluteMemberName(interface_name, method_name);
++  if (method_table_.find(absolute_method_name) == method_table_.end()) {
++    LOG(ERROR) << absolute_method_name << " is not exported";
++    return false;
++  }
++
++  method_table_.erase(absolute_method_name);
++
++  return true;
++}
++
+ void ExportedObject::ExportMethod(const std::string& interface_name,
+                                   const std::string& method_name,
+                                   MethodCallCallback method_call_callback,
+@@ -83,6 +99,18 @@ void ExportedObject::ExportMethod(const std::string& interface_name,
+   bus_->GetDBusTaskRunner()->PostTask(FROM_HERE, task);
+ }
+ 
++void ExportedObject::UnexportMethod(
++    const std::string& interface_name,
++    const std::string& method_name,
++    OnUnexportedCallback on_unexported_calback) {
++  bus_->AssertOnOriginThread();
++
++  base::Closure task =
++      base::Bind(&ExportedObject::UnexportMethodInternal, this, interface_name,
++                 method_name, on_unexported_calback);
++  bus_->GetDBusTaskRunner()->PostTask(FROM_HERE, task);
++}
++
+ void ExportedObject::SendSignal(Signal* signal) {
+   // For signals, the object path should be set to the path to the sender
+   // object, which is this exported object here.
+@@ -141,6 +169,19 @@ void ExportedObject::ExportMethodInternal(
+                                                    success));
+ }
+ 
++void ExportedObject::UnexportMethodInternal(
++    const std::string& interface_name,
++    const std::string& method_name,
++    OnUnexportedCallback on_unexported_calback) {
++  bus_->AssertOnDBusThread();
++
++  const bool success = UnexportMethodAndBlock(interface_name, method_name);
++  bus_->GetOriginTaskRunner()->PostTask(
++      FROM_HERE,
++      base::Bind(&ExportedObject::OnUnexported, this, on_unexported_calback,
++                 interface_name, method_name, success));
++}
++
+ void ExportedObject::OnExported(OnExportedCallback on_exported_callback,
+                                 const std::string& interface_name,
+                                 const std::string& method_name,
+@@ -150,6 +191,15 @@ void ExportedObject::OnExported(OnExportedCallback on_exported_callback,
+   on_exported_callback.Run(interface_name, method_name, success);
+ }
+ 
++void ExportedObject::OnUnexported(OnExportedCallback on_unexported_callback,
++                                  const std::string& interface_name,
++                                  const std::string& method_name,
++                                  bool success) {
++  bus_->AssertOnOriginThread();
++
++  on_unexported_callback.Run(interface_name, method_name, success);
++}
++
+ void ExportedObject::SendSignalInternal(base::TimeTicks start_time,
+                                         DBusMessage* signal_message) {
+   uint32_t serial = 0;
+diff --git a/dbus/exported_object.h b/dbus/exported_object.h
+index 69a63a5e075e..d314083430ef 100644
+--- a/dbus/exported_object.h
++++ b/dbus/exported_object.h
+@@ -60,6 +60,13 @@ class CHROME_DBUS_EXPORT ExportedObject
+                                bool success)>
+       OnExportedCallback;
+ 
++  // Called when method unexporting is done.
++  // |success| indicates whether unexporting was successful or not.
++  typedef base::Callback<void(const std::string& interface_name,
++                              const std::string& method_name,
++                              bool success)>
++      OnUnexportedCallback;
++
+   // Exports the method specified by |interface_name| and |method_name|,
+   // and blocks until exporting is done. Returns true on success.
+   //
+@@ -81,6 +88,11 @@ class CHROME_DBUS_EXPORT ExportedObject
+                                     const std::string& method_name,
+                                     MethodCallCallback method_call_callback);
+ 
++  // Unexports the method specified by |interface_name| and |method_name|,
++  // and blocks until unexporting is done. Returns true on success.
++  virtual bool UnexportMethodAndBlock(const std::string& interface_name,
++                                      const std::string& method_name);
++
+   // Requests to export the method specified by |interface_name| and
+   // |method_name|. See Also ExportMethodAndBlock().
+   //
+@@ -93,6 +105,17 @@ class CHROME_DBUS_EXPORT ExportedObject
+                             MethodCallCallback method_call_callback,
+                             OnExportedCallback on_exported_callback);
+ 
++  // Requests to unexport the method specified by |interface_name| and
++  // |method_name|. See also UnexportMethodAndBlock().
++  //
++  // |on_unexported_callback| is called when the method is unexported or
++  // failed to be unexported, in the origin thread.
++  //
++  // Must be called in the origin thread.
++  virtual void UnexportMethod(const std::string& interface_name,
++                              const std::string& method_name,
++                              OnUnexportedCallback on_unexported_callback);
++
+   // Requests to send the signal from this object. The signal will be sent
+   // synchronously if this method is called from the message loop in the D-Bus
+   // thread and asynchronously otherwise.
+@@ -117,12 +140,23 @@ class CHROME_DBUS_EXPORT ExportedObject
+                             MethodCallCallback method_call_callback,
+                             OnExportedCallback exported_callback);
+ 
++  // Helper function for UnexportMethod().
++  void UnexportMethodInternal(const std::string& interface_name,
++                              const std::string& method_name,
++                              OnUnexportedCallback unexported_callback);
++
+   // Called when the object is exported.
+   void OnExported(OnExportedCallback on_exported_callback,
+                   const std::string& interface_name,
+                   const std::string& method_name,
+                   bool success);
+ 
++  // Called when a method is unexported.
++  void OnUnexported(OnExportedCallback on_unexported_callback,
++                    const std::string& interface_name,
++                    const std::string& method_name,
++                    bool success);
++
+   // Helper function for SendSignal().
+   void SendSignalInternal(base::TimeTicks start_time,
+                           DBusMessage* signal_message);
+diff --git a/dbus/mock_exported_object.h b/dbus/mock_exported_object.h
+index 99c363f9b532..9d5b3a894179 100644
+--- a/dbus/mock_exported_object.h
++++ b/dbus/mock_exported_object.h
+@@ -28,6 +28,13 @@ class MockExportedObject : public ExportedObject {
+                     const std::string& method_name,
+                     MethodCallCallback method_call_callback,
+                     OnExportedCallback on_exported_callback));
++  MOCK_METHOD2(UnexportMethodAndBlock,
++               bool(const std::string& interface_name,
++                    const std::string& method_name));
++  MOCK_METHOD3(UnexportMethod,
++               void(const std::string& interface_name,
++                    const std::string& method_name,
++                    OnUnexportedCallback on_unexported_callback));
+   MOCK_METHOD1(SendSignal, void(Signal* signal));
+   MOCK_METHOD0(Unregister, void());
+ 
+-- 
+2.20.0.rc2.403.gdbc3b29805-goog
+

@@ -1,0 +1,163 @@
+From c2e55024c6a03dcb099270718e70139542d8b0e4 Mon Sep 17 00:00:00 2001
+From: Bing Xue <bingxue@google.com>
+Date: Thu, 1 Aug 2019 15:47:10 -0700
+Subject: [PATCH] Connect to NameOwnerChanged signal when setting callback
+
+In ObjectManager, when ConnectToNameOwnerChangedSignal is called the first time,
+we could have already missed the NameOwnerChanged signal if we get a value from
+UpdateNameOwnerAndBlock. This means NameOwnerChanged callbacks will
+never be called until that service restarts. In ObjectManager we run
+into this problem:
+
+1. ObjectManager::SetupMatchRuleAndFilter is called, calling
+bus_->GetServiceOwnerAndBlock shows empty service name owner.
+
+2. ObjectManager::OnSetupManagerRuleAndFilterComplete callback will call
+object_proxy_->ConnectToSignal, which in turn calls
+ConnectToNameOwnerChangedSignal the first time. At this point,
+UpdateNameOwnerAndBlock calling bus_->GetServiceOwnerAndBlock returns the
+current name owner of the service, this means the NameOwnerChanged signal
+is already sent on system bus.
+
+3. As a result, ObjectManager::NameOwnerChanged is never called while
+the service is already online. This in turn causes GetManagedObject to
+never be called, and the object manager interface never added.
+
+See detailed sample logs in b/138416411.
+
+This CL adds the following:
+
+1. Make SetNameOwnerChangedCallback run
+ConnectToNameOwnerChangedSignal when called. Since ObjectManager calls
+SetNameOwnerChangedCallback before posting SetupMatchRuleAndFilter (in which
+ObjectManager attempts to get the service name owner through a blocking call),
+this removes the time gap described above that causes lost signal.
+
+2. Make dbus thread the only writer to |service_name_owner_|, given that
+connecting to the NameOwnerChanged signal right away in ObjectManager
+ctor causes potential data race in writing to |service_name_owner_| in
+both NameOwnerChanged (on origin thread) and SetupMatchRuleAndFilter (on
+dbus thread).
+
+BUG=b:138416411
+TEST=Manually on device.
+
+Change-Id: Ie95a5b7b303637acadebda151cc478e52b6a1af5
+---
+ dbus/object_manager.cc | 20 +++++++++++++++++---
+ dbus/object_manager.h  |  5 +++++
+ dbus/object_proxy.cc   | 13 +++++++++++++
+ dbus/object_proxy.h    |  3 +++
+ 4 files changed, 38 insertions(+), 3 deletions(-)
+
+diff --git a/dbus/object_manager.cc b/dbus/object_manager.cc
+index 05d4b2ddeabd..44f120864310 100644
+--- a/dbus/object_manager.cc
++++ b/dbus/object_manager.cc
+@@ -187,8 +187,12 @@ bool ObjectManager::SetupMatchRuleAndFilter() {
+   if (!bus_->Connect() || !bus_->SetUpAsyncOperations())
+     return false;
+ 
+-  service_name_owner_ =
+-      bus_->GetServiceOwnerAndBlock(service_name_, Bus::SUPPRESS_ERRORS);
++  // Try to get |service_name_owner_| from dbus if we haven't received any
++  // NameOwnerChanged signals.
++  if (service_name_owner_.empty()) {
++    service_name_owner_ =
++        bus_->GetServiceOwnerAndBlock(service_name_, Bus::SUPPRESS_ERRORS);
++  }
+ 
+   const std::string match_rule =
+       base::StringPrintf(
+@@ -224,6 +228,7 @@ void ObjectManager::OnSetupMatchRuleAndFilterComplete(bool success) {
+   DCHECK(bus_);
+   DCHECK(object_proxy_);
+   DCHECK(setup_success_);
++  bus_->AssertOnOriginThread();
+ 
+   // |object_proxy_| is no longer valid if the Bus was shut down before this
+   // call. Don't initiate any other action from the origin thread.
+@@ -505,9 +510,18 @@ void ObjectManager::RemoveInterface(const ObjectPath& object_path,
+   }
+ }
+ 
++void ObjectManager::UpdateServiceNameOwner(const std::string& new_owner) {
++  bus_->AssertOnDBusThread();
++  service_name_owner_ = new_owner;
++}
++
+ void ObjectManager::NameOwnerChanged(const std::string& old_owner,
+                                      const std::string& new_owner) {
+-  service_name_owner_ = new_owner;
++  bus_->AssertOnOriginThread();
++
++  bus_->GetDBusTaskRunner()->PostTask(
++      FROM_HERE,
++      base::BindOnce(&ObjectManager::UpdateServiceNameOwner, this, new_owner));
+ 
+   if (!old_owner.empty()) {
+     ObjectMap::iterator iter = object_map_.begin();
+diff --git a/dbus/object_manager.h b/dbus/object_manager.h
+index 05388de8e6eb..4b5fb790412d 100644
+--- a/dbus/object_manager.h
++++ b/dbus/object_manager.h
+@@ -317,6 +317,11 @@ class CHROME_DBUS_EXPORT ObjectManager final
+   void NameOwnerChanged(const std::string& old_owner,
+                         const std::string& new_owner);
+ 
++  // Write |new_owner| to |service_name_owner_|. This method makes sure write
++  // happens on the DBus thread, which is the sole writer to
++  // |service_name_owner_|.
++  void UpdateServiceNameOwner(const std::string& new_owner);
++
+   Bus* bus_;
+   std::string service_name_;
+   std::string service_name_owner_;
+diff --git a/dbus/object_proxy.cc b/dbus/object_proxy.cc
+index 7adf8f179471..de5785e98307 100644
+--- a/dbus/object_proxy.cc
++++ b/dbus/object_proxy.cc
+@@ -274,6 +274,10 @@ void ObjectProxy::SetNameOwnerChangedCallback(
+   bus_->AssertOnOriginThread();
+ 
+   name_owner_changed_callback_ = callback;
++
++  bus_->GetDBusTaskRunner()->PostTask(
++      FROM_HERE,
++      base::BindOnce(&ObjectProxy::TryConnectToNameOwnerChangedSignal, this));
+ }
+ 
+ void ObjectProxy::WaitForServiceToBeAvailable(
+@@ -458,6 +462,15 @@ bool ObjectProxy::ConnectToNameOwnerChangedSignal() {
+   return success;
+ }
+ 
++void ObjectProxy::TryConnectToNameOwnerChangedSignal() {
++  bus_->AssertOnDBusThread();
++
++  bool success = ConnectToNameOwnerChangedSignal();
++  LOG_IF(WARNING, !success)
++      << "Failed to connect to NameOwnerChanged signal for object: "
++      << object_path_.value();
++}
++
+ bool ObjectProxy::ConnectToSignalInternal(const std::string& interface_name,
+                                           const std::string& signal_name,
+                                           SignalCallback signal_callback) {
+diff --git a/dbus/object_proxy.h b/dbus/object_proxy.h
+index 22e44f1d64c0..b1bf622a12cb 100644
+--- a/dbus/object_proxy.h
++++ b/dbus/object_proxy.h
+@@ -267,6 +267,9 @@ class CHROME_DBUS_EXPORT ObjectProxy
+   // Connects to NameOwnerChanged signal.
+   bool ConnectToNameOwnerChangedSignal();
+ 
++  // Tries to connect to NameOwnerChanged signal, ignores any error.
++  void TryConnectToNameOwnerChangedSignal();
++
+   // Helper function for ConnectToSignal().
+   bool ConnectToSignalInternal(const std::string& interface_name,
+                                const std::string& signal_name,
+-- 
+2.22.0.770.g0f2c4a37fd-goog
+

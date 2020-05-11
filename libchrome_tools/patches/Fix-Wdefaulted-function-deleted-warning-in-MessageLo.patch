@@ -1,0 +1,38 @@
+From 91fe99136cd57a8eab9c076e4e1699767bcac3fa Mon Sep 17 00:00:00 2001
+From: Hans Wennborg <hans@chromium.org>
+Date: Tue, 2 Oct 2018 16:25:34 +0000
+Subject: [PATCH] Fix -Wdefaulted-function-deleted warning in
+ MessageLoopCurrent
+
+The new Clang warning points out that the class can't be copy
+assigned because the current_ member is const. Copy or move
+constructing it is fine though, and that's all that's needed.
+
+Bug: 890307
+Change-Id: I3f4d5e69485b84166ba4dd2356cc7973a5e58da6
+Reviewed-on: https://chromium-review.googlesource.com/1255613
+Reviewed-by: Daniel Cheng <dcheng@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#595867}
+---
+ base/message_loop/message_loop_current.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/base/message_loop/message_loop_current.h b/base/message_loop/message_loop_current.h
+index d623cbc7f7b2..403d0dcc2ddb 100644
+--- a/base/message_loop/message_loop_current.h
++++ b/base/message_loop/message_loop_current.h
+@@ -38,9 +38,9 @@ class MessageLoop;
+ class BASE_EXPORT MessageLoopCurrent {
+  public:
+   // MessageLoopCurrent is effectively just a disguised pointer and is fine to
+-  // copy around.
++  // copy/move around.
+   MessageLoopCurrent(const MessageLoopCurrent& other) = default;
+-  MessageLoopCurrent& operator=(const MessageLoopCurrent& other) = default;
++  MessageLoopCurrent(MessageLoopCurrent&& other) = default;
+ 
+   // Returns a proxy object to interact with the MessageLoop running the
+   // current thread. It must only be used on the thread it was obtained.
+-- 
+2.22.0.rc2.383.gf4fbbf30c2-goog
+

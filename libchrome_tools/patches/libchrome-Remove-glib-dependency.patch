@@ -1,0 +1,34 @@
+From 15b8bd5660d25591a7c93806c37ab83231d187e8 Mon Sep 17 00:00:00 2001
+From: Hidehiko Abe <hidehiko@chromium.org>
+Date: Thu, 13 Jun 2019 20:28:53 +0900
+Subject: [PATCH] libchrome: Remove glib dependency.
+
+BUG=chromium:361635
+TEST=Ran Pre-CQ.
+
+Change-Id: I17ccd42ae4f027cb515291cd42185ec09fe08144
+---
+ build/build_config.h | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/build/build_config.h b/build/build_config.h
+index d669ea7..c942e17 100644
+--- a/build/build_config.h
++++ b/build/build_config.h
+@@ -41,13 +41,6 @@
+ 
+ #define __linux__ 1
+ 
+-#elif !defined(__ANDROID_HOST__)  // Chrome OS
+-
+-// TODO: Remove these once the GLib MessageLoopForUI isn't being used:
+-// https://crbug.com/361635
+-#define USE_GLIB 1
+-#define USE_OZONE 1
+-
+ #endif  // defined(__ANDROID__)
+ 
+ // A set of macros to use for platform detection.
+-- 
+2.22.0.rc2.383.gf4fbbf30c2-goog
+
