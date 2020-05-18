@@ -77,3 +77,18 @@ index 4e788b7..a541e48 100644
 -- 
 2.26.1.301.g55bc3eb7cb9-goog
 
+diff --git a/base/test/scoped_task_environment.h b/base/test/scoped_task_environment.h
+index f9523b3138ec..a2cc7f73d8f2 100644
+--- a/base/test/scoped_task_environment.h
++++ b/base/test/scoped_task_environment.h
+@@ -81,6 +81,10 @@ class ScopedTaskEnvironment {
+     IO,
+   };
+ 
++  // To introduce TimeSource::MOCK_TIME behaves same as
++  // MainThreadType::MOCK_TIME.
++  using TimeSource = MainThreadType;
++
+   enum class ExecutionMode {
+     // Tasks are queued and only executed when RunUntilIdle() is explicitly
+     // called.
