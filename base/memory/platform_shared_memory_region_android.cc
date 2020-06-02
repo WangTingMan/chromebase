@@ -6,7 +6,6 @@
 
 #include <sys/mman.h>
 
-#include "base/memory/shared_memory_tracker.h"
 #include "base/posix/eintr_wrapper.h"
 #include "third_party/ashmem/ashmem.h"
 
@@ -153,8 +152,11 @@ PlatformSharedMemoryRegion PlatformSharedMemoryRegion::Create(Mode mode,
 
   UnguessableToken guid = UnguessableToken::Create();
 
+  // trace_event is not supported in libchrome. To avoid includes of more
+  // trace_event code by base/memory/shared_memory_tracker.h, replace
+  // SharedMemoryTracker::GetDumpNameForTracing by the actual implementation.
   ScopedFD fd(ashmem_create_region(
-      SharedMemoryTracker::GetDumpNameForTracing(guid).c_str(), size));
+      ("shared_memory/"+guid.ToString()).c_str(), size));
   if (!fd.is_valid()) {
     DPLOG(ERROR) << "ashmem_create_region failed";
     return {};

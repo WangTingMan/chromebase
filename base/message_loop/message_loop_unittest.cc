@@ -34,7 +34,7 @@
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) && 0
 #include "base/android/java_handler_thread.h"
 #include "base/android/jni_android.h"
 #include "base/test/android/java_handler_thread_helpers.h"
@@ -315,7 +315,7 @@ class MessageLoopTest
   DISALLOW_COPY_AND_ASSIGN(MessageLoopTest);
 };
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) && 0
 void DoNotRun() {
   ASSERT_TRUE(false);
 }
@@ -396,7 +396,7 @@ TEST_P(MessageLoopTest, RunTasksWhileShuttingDownJavaThread) {
   EXPECT_EQ(kNumPosts, observer.num_tasks_started());
   EXPECT_EQ(kNumPosts, observer.num_tasks_processed());
 }
-#endif  // defined(OS_ANDROID)
+#endif  // defined(OS_ANDROID) && 0
 
 #if defined(OS_WIN)
 

@@ -146,7 +146,7 @@ class BASE_EXPORT SharedMemoryHandle {
   int Release();
 #endif
 
-#if defined(OS_ANDROID) || defined(__ANDROID__)
+#if defined(OS_ANDROID)
   // Marks the current file descriptor as read-only, for the purpose of
   // mapping. This is independent of the region's read-only status.
   void SetReadOnly() { read_only_ = true; }
@@ -218,7 +218,7 @@ class BASE_EXPORT SharedMemoryHandle {
       bool ownership_passes_to_ipc_ = false;
     };
   };
-#elif defined(OS_ANDROID) || defined(__ANDROID__)
+#elif defined(OS_ANDROID)
   friend class SharedMemory;
 
   FileDescriptor file_descriptor_;

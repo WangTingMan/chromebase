@@ -30,8 +30,6 @@
 
 #if defined(OS_ANDROID)
 #include "base/os_compat_android.h"
-#endif
-#if defined(OS_ANDROID) || defined(__ANDROID__)
 #include "third_party/ashmem/ashmem.h"
 #endif
 
@@ -83,7 +81,7 @@ bool SharedMemory::CreateAndMapAnonymous(size_t size) {
   return CreateAnonymous(size) && Map(size);
 }
 
-#if !defined(OS_ANDROID) && !defined(__ANDROID__)
+#if !defined(OS_ANDROID)
 
 // Chromium mostly only uses the unique/private shmem as specified by
 // "name == L"". The exception is in the StatsTable.
@@ -255,7 +253,7 @@ bool SharedMemory::Open(const std::string& name, bool read_only) {
       FileDescriptor(readonly_mapped_file, false), 0, shm_.GetGUID());
   return result;
 }
-#endif  // !defined(OS_ANDROID) && !defined(__ANDROID__)
+#endif  // !defined(OS_ANDROID)
 
 bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   if (!shm_.IsValid())
@@ -267,7 +265,7 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   if (memory_)
     return false;
 
-#if defined(OS_ANDROID) || defined(__ANDROID__)
+#if defined(OS_ANDROID)
   // On Android, Map can be called with a size and offset of zero to use the
   // ashmem-determined size.
   if (bytes == 0) {
@@ -280,19 +278,19 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
 
   // Sanity check. This shall catch invalid uses of the SharedMemory APIs
   // but will not protect against direct mmap() attempts.
-  // if (shm_.IsReadOnly()) {
-  //   // Use a DCHECK() to call writable mappings with read-only descriptors
-  //   // in debug builds immediately. Return an error for release builds
-  //   // or during unit-testing (assuming a ScopedLogAssertHandler was installed).
-  //   DCHECK(read_only_)
-  //       << "Trying to map a region writable with a read-only descriptor.";
-  //   if (!read_only_) {
-  //     return false;
-  //   }
-  //   if (!shm_.SetRegionReadOnly()) {  // Ensure the region is read-only.
-  //     return false;
-  //   }
-  // }
+  if (shm_.IsReadOnly()) {
+    // Use a DCHECK() to call writable mappings with read-only descriptors
+    // in debug builds immediately. Return an error for release builds
+    // or during unit-testing (assuming a ScopedLogAssertHandler was installed).
+    DCHECK(read_only_)
+        << "Trying to map a region writable with a read-only descriptor.";
+    if (!read_only_) {
+      return false;
+    }
+    if (!shm_.SetRegionReadOnly()) {  // Ensure the region is read-only.
+      return false;
+    }
+  }
 #endif
 
   memory_ = mmap(nullptr, bytes, PROT_READ | (read_only_ ? 0 : PROT_WRITE),
@@ -339,7 +337,7 @@ SharedMemoryHandle SharedMemory::TakeHandle() {
   return handle_copy;
 }
 
-#if !defined(OS_ANDROID) && !defined(__ANDROID__)
+#if !defined(OS_ANDROID)
 void SharedMemory::Close() {
   if (shm_.IsValid()) {
     shm_.Close();
@@ -379,6 +377,6 @@ SharedMemoryHandle SharedMemory::GetReadOnlyHandle() const {
   CHECK(readonly_shm_.IsValid());
   return readonly_shm_.Duplicate();
 }
-#endif  // !defined(OS_ANDROID) && !defined(__ANDROID__)
+#endif  // !defined(OS_ANDROID)
 
 }  // namespace base
