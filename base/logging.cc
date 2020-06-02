@@ -58,7 +58,7 @@ typedef HANDLE MutexHandle;
 #include <zircon/syscalls.h>
 #endif
 
-#if defined(OS_ANDROID) || defined(__ANDROID__)
+#if defined(OS_ANDROID)
 #include <android/log.h>
 #endif
 
@@ -757,7 +757,7 @@ LogMessage::~LogMessage() {
                        str_newline.c_str());
 #endif  // defined(USE_ASL)
     }
-#elif defined(OS_ANDROID) || defined(__ANDROID__)
+#elif defined(OS_ANDROID)
     android_LogPriority priority =
         (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
     switch (severity_) {
@@ -774,7 +774,7 @@ LogMessage::~LogMessage() {
         priority = ANDROID_LOG_FATAL;
         break;
     }
-#if defined(OS_ANDROID)
+#if 0 // This is for building Chromium browser on Android.
     __android_log_write(priority, "chromium", str_newline.c_str());
 #else
     __android_log_write(
@@ -783,8 +783,8 @@ LogMessage::~LogMessage() {
             base::CommandLine::ForCurrentProcess()->
                 GetProgram().BaseName().value().c_str() : nullptr,
         str_newline.c_str());
+#endif  // 0
 #endif  // defined(OS_ANDROID)
-#endif
     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
     fflush(stderr);
   } else if (severity_ >= kAlwaysPrintErrorLevel) {

@@ -15,3 +15,18 @@
 // third_party/ashmem is Android shared memory. Instead of clone it here,
 // use cutils/ashmem.h directly.
 #include <cutils/ashmem.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+inline int ashmem_get_prot_region(int fd) {
+  int ret = ashmem_valid(fd);
+  if (ret < 0)
+    return ret;
+  return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_GET_PROT_MASK));
+}
+
+#ifdef __cplusplus
+}
+#endif
