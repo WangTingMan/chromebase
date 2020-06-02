@@ -243,6 +243,7 @@ bool MessageLoop::InitMessagePumpForUIFactory(MessagePumpFactory* factory) {
 
 // static
 std::unique_ptr<MessagePump> MessageLoop::CreateMessagePumpForType(Type type) {
+#if !defined(OS_ANDROID)
   if (type == MessageLoop::TYPE_UI) {
     if (message_pump_for_ui_factory_)
       return message_pump_for_ui_factory_();
@@ -257,11 +258,12 @@ std::unique_ptr<MessagePump> MessageLoop::CreateMessagePumpForType(Type type) {
     return std::make_unique<MessagePumpForUI>();
 #endif
   }
+#endif
 
   if (type == MessageLoop::TYPE_IO)
     return std::unique_ptr<MessagePump>(new MessagePumpForIO());
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) && 0
   if (type == MessageLoop::TYPE_JAVA)
     return std::unique_ptr<MessagePump>(new MessagePumpForUI());
 #endif
@@ -360,7 +362,7 @@ void MessageLoop::BindToCurrentThread() {
 
   RunLoop::RegisterDelegateForCurrentThread(this);
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) && 0
   // On Android, attach to the native loop when there is one.
   if (type_ == TYPE_UI || type_ == TYPE_JAVA)
     static_cast<MessagePumpForUI*>(pump_.get())->Attach(this);
@@ -674,7 +676,7 @@ bool MessageLoop::DoIdleWork() {
   return false;
 }
 
-#if !defined(OS_NACL)
+#if !defined(OS_NACL) && !defined(OS_ANDROID)
 
 //------------------------------------------------------------------------------
 // MessageLoopForUI
@@ -724,7 +726,7 @@ void MessageLoopForUI::EnableWmQuit() {
 }
 #endif  // defined(OS_WIN)
 
-#endif  // !defined(OS_NACL)
+#endif  // !defined(OS_NACL) && !defined(OS_ANDROID)
 
 //------------------------------------------------------------------------------
 // MessageLoopForIO
