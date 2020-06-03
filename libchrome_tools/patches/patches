@@ -67,3 +67,6 @@ libchrome-fix-integer-overflow-if-microseconds-is-IN.patch
 # Forward compatibility for r680000
 r680000-forward-compatibility-patch-part-1.patch
 r680000-forward-compatibility-patch-part-2.patch
+
+# Add base/{check_op,notreached}.h for cbor
+Add-header-files-base-check_op-notreached-h.patch
