@@ -50,30 +50,6 @@ base::FilePath& DumpDirectory() {
 //                          static_cast<int>(entry.data_bytes.size()));
 // }
 
-  if (!entry.interface_name)
-    return;
-
-  base::FilePath message_directory =
-      DumpDirectory()
-          .AppendASCII(entry.interface_name)
-          .AppendASCII(base::NumberToString(identifier));
-
-  if (!base::DirectoryExists(message_directory) &&
-      !base::CreateDirectory(message_directory)) {
-    LOG(ERROR) << "Failed to create" << message_directory.value();
-    return;
-  }
-
-  std::string filename =
-      base::NumberToString(num++) + "." + entry.method_name + ".mojomsg";
-  base::FilePath path = message_directory.AppendASCII(filename);
-  base::File file(path,
-                  base::File::FLAG_WRITE | base::File::FLAG_CREATE_ALWAYS);
-
-  file.WriteAtCurrentPos(reinterpret_cast<const char*>(entry.data_bytes.data()),
-                         static_cast<int>(entry.data_bytes.size()));
-}
-
 }  // namespace
 
 namespace mojo {

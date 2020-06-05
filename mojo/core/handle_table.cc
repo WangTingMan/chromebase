@@ -191,26 +191,6 @@ void HandleTable::GetActiveHandlesForTest(std::vector<MojoHandle>* handles) {
 //   return true;
 // }
 
-  // Count the number of each dispatcher type.
-  {
-    base::AutoLock lock(GetLock());
-    for (const auto& entry : handles_) {
-      ++handle_count[entry.second.dispatcher->GetType()];
-    }
-  }
-
-  for (const auto& entry : handle_count) {
-    base::trace_event::MemoryAllocatorDump* inner_dump =
-        pmd->CreateAllocatorDump(std::string("mojo/") +
-                                 GetNameForDispatcherType(entry.first));
-    inner_dump->AddScalar(
-        base::trace_event::MemoryAllocatorDump::kNameObjectCount,
-        base::trace_event::MemoryAllocatorDump::kUnitsObjects, entry.second);
-  }
-
-  return true;
-}
-
 HandleTable::Entry::Entry() {}
 
 HandleTable::Entry::Entry(scoped_refptr<Dispatcher> dispatcher)

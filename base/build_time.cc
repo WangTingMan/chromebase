@@ -4,9 +4,6 @@
 
 #include "base/build_time.h"
 
-// Imports the generated build date, i.e. BUILD_DATE.
-#include "base/generated_build_date.h"
-
 #include "base/logging.h"
 #include "base/time/time.h"
 

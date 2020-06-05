@@ -6,7 +6,6 @@
 
 #include <sys/mman.h>
 
-#include "base/memory/shared_memory_tracker.h"
 #include "base/posix/eintr_wrapper.h"
 #include "third_party/ashmem/ashmem.h"
 

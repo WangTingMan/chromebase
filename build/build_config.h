@@ -58,8 +58,6 @@
 #else
 #define OS_NACL_SFI
 #endif
-#elif defined(ANDROID)
-#define OS_ANDROID 1
 #elif defined(__APPLE__)
 // only include TargetConditions after testing ANDROID as some android builds
 // on mac don't have this header available and it's not needed unless the target

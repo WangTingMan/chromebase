@@ -302,30 +302,6 @@ void DecrementMessageCount() {
 //   ALLOW_UNUSED_LOCAL(provider);
 // }
 
-  ~MessageMemoryDumpProvider() override {
-    base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
-        this);
-  }
-
- private:
-  // base::trace_event::MemoryDumpProvider:
-  bool OnMemoryDump(const base::trace_event::MemoryDumpArgs& args,
-                    base::trace_event::ProcessMemoryDump* pmd) override {
-    auto* dump = pmd->CreateAllocatorDump("mojo/messages");
-    dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
-                    base::trace_event::MemoryAllocatorDump::kUnitsObjects,
-                    base::subtle::NoBarrier_Load(&g_message_count));
-    return true;
-  }
-
-  DISALLOW_COPY_AND_ASSIGN(MessageMemoryDumpProvider);
-};
-
-void EnsureMemoryDumpProviderExists() {
-  static base::NoDestructor<MessageMemoryDumpProvider> provider;
-  ALLOW_UNUSED_LOCAL(provider);
-}
-
 }  // namespace
 
 // static

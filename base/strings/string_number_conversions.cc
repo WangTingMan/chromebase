@@ -16,7 +16,6 @@
 #include "base/numerics/safe_math.h"
 #include "base/scoped_clear_errno.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base/third_party/dmg_fp/dmg_fp.h"
 
 namespace base {
 
@@ -433,14 +432,10 @@ bool StringToSizeT(StringPiece16 input, size_t* output) {
 }
 
 bool StringToDouble(const std::string& input, double* output) {
-  // Thread-safe?  It is on at least Mac, Linux, and Windows.
-  ScopedClearErrno clear_errno;
-
   char* endptr = nullptr;
   *output = strtod(input.c_str(), &endptr);
 
   // Cases to return false:
-  //  - If errno is ERANGE, there was an overflow or underflow.
   //  - If the input string is empty, there was nothing to parse.
   //  - If endptr does not point to the end of the string, there are either
   //    characters remaining in the string after a parsed number, or the string
