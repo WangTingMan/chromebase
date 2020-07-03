@@ -1,0 +1,78 @@
+diff --git a/base/logging.cc b/base/logging.cc
+index 8eabda0..112afb8 100644
+--- a/base/logging.cc
++++ b/base/logging.cc
+@@ -58,7 +58,7 @@ typedef HANDLE MutexHandle;
+ #include <zircon/syscalls.h>
+ #endif
+ 
+-#if defined(OS_ANDROID)
++#if defined(OS_ANDROID) || defined(__ANDROID__)
+ #include <android/log.h>
+ #endif
+ 
+@@ -407,21 +407,23 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
+   // Can log only to the system debug log.
+   CHECK_EQ(settings.logging_dest & ~LOG_TO_SYSTEM_DEBUG_LOG, 0);
+ #endif
+-  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+-  // Don't bother initializing |g_vlog_info| unless we use one of the
+-  // vlog switches.
+-  if (command_line->HasSwitch(switches::kV) ||
+-      command_line->HasSwitch(switches::kVModule)) {
+-    // NOTE: If |g_vlog_info| has already been initialized, it might be in use
+-    // by another thread. Don't delete the old VLogInfo, just create a second
+-    // one. We keep track of both to avoid memory leak warnings.
+-    CHECK(!g_vlog_info_prev);
+-    g_vlog_info_prev = g_vlog_info;
+-
+-    g_vlog_info =
+-        new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
+-                     command_line->GetSwitchValueASCII(switches::kVModule),
+-                     &g_min_log_level);
++  if (base::CommandLine::InitializedForCurrentProcess()) {
++    base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
++    // Don't bother initializing |g_vlog_info| unless we use one of the
++    // vlog switches.
++    if (command_line->HasSwitch(switches::kV) ||
++        command_line->HasSwitch(switches::kVModule)) {
++      // NOTE: If |g_vlog_info| has already been initialized, it might be in use
++      // by another thread. Don't delete the old VLogInfo, just create a second
++      // one. We keep track of both to avoid memory leak warnings.
++      CHECK(!g_vlog_info_prev);
++      g_vlog_info_prev = g_vlog_info;
++
++      g_vlog_info =
++          new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
++                       command_line->GetSwitchValueASCII(switches::kVModule),
++                       &g_min_log_level);
++    }
+   }
+ 
+   g_logging_destination = settings.logging_dest;
+@@ -755,7 +757,7 @@ LogMessage::~LogMessage() {
+                        str_newline.c_str());
+ #endif  // defined(USE_ASL)
+     }
+-#elif defined(OS_ANDROID)
++#elif defined(OS_ANDROID) || defined(__ANDROID__)
+     android_LogPriority priority =
+         (severity_ < 0) ? ANDROID_LOG_VERBOSE : ANDROID_LOG_UNKNOWN;
+     switch (severity_) {
+@@ -772,7 +774,16 @@ LogMessage::~LogMessage() {
+         priority = ANDROID_LOG_FATAL;
+         break;
+     }
++#if defined(OS_ANDROID)
+     __android_log_write(priority, "chromium", str_newline.c_str());
++#else
++    __android_log_write(
++        priority,
++        base::CommandLine::InitializedForCurrentProcess() ?
++            base::CommandLine::ForCurrentProcess()->
++                GetProgram().BaseName().value().c_str() : nullptr,
++        str_newline.c_str());
++#endif  // defined(OS_ANDROID)
+ #endif
+     ignore_result(fwrite(str_newline.data(), str_newline.size(), 1, stderr));
+     fflush(stderr);

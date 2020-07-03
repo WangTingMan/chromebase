@@ -1,0 +1,18 @@
+diff --git a/base/android/java/src/org/chromium/base/ContextUtils.java b/base/android/java/src/org/chromium/base/ContextUtils.java
+index 8284cd1..c648e01 100644
+--- a/base/android/java/src/org/chromium/base/ContextUtils.java
++++ b/base/android/java/src/org/chromium/base/ContextUtils.java
+@@ -100,9 +100,10 @@ public class ContextUtils {
+         // that use Robolectric and set the application context manually. Instead of changing all
+         // tests that do so, the call was put here instead.
+         // TODO(mheikal): Require param to be of type Application
+-        if (appContext instanceof Application) {
+-            ApplicationStatus.initialize((Application) appContext);
+-        }
++        // Disabled on libchrome
++        // if (appContext instanceof Application) {
++        //     ApplicationStatus.initialize((Application) appContext);
++        // }
+         initJavaSideApplicationContext(appContext);
+         Holder.sSharedPreferences = fetchAppSharedPreferences();
+     }

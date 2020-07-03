@@ -1,0 +1,13 @@
+# Use allocator_shim_override_linker_wrapped_symbols.h for ANDROID.
+
+--- a/base/allocator/allocator_shim.cc
++++ b/base/allocator/allocator_shim.cc
+@@ -285,7 +285,7 @@ ALWAYS_INLINE void ShimFreeDefiniteSize(void* ptr, size_t size, void* context) {
+ #include "base/allocator/allocator_shim_override_cpp_symbols.h"
+ #endif
+ 
+-#if defined(OS_ANDROID)
++#if defined(OS_ANDROID) || defined(ANDROID)
+ // Android does not support symbol interposition. The way malloc symbols are
+ // intercepted on Android is by using link-time -wrap flags.
+ #include "base/allocator/allocator_shim_override_linker_wrapped_symbols.h"
