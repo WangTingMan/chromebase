@@ -1,0 +1,74 @@
+--- a/base/process/process_metrics_unittest.cc
++++ b/base/process/process_metrics_unittest.cc
+@@ -569,6 +569,9 @@ MULTIPROCESS_TEST_MAIN(ChildMain) {
+ 
+ }  // namespace
+ 
++// ARC note: don't compile as SpawnMultiProcessTestChild brings in a lot of
++// extra dependency.
++#if !defined(OS_ANDROID) && !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
+ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
+   ScopedTempDir temp_dir;
+   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+@@ -582,9 +585,23 @@ TEST(ProcessMetricsTest, GetChildOpenFdCount) {
+ 
+   std::unique_ptr<ProcessMetrics> metrics(
+       ProcessMetrics::CreateProcessMetrics(child.Handle()));
+-  EXPECT_EQ(0, metrics->GetOpenFdCount());
++  // Try a couple times to observe the child with 0 fds open.
++  // Sometimes we've seen that the child can have 1 remaining
++  // fd shortly after receiving the signal.  Potentially this
++  // is actually the signal file still open in the child.
++  int open_fds = -1;
++  for (int tries = 0; tries < 5; ++tries) {
++    open_fds = metrics->GetOpenFdCount();
++    if (!open_fds) {
++      break;
++    }
++    PlatformThread::Sleep(TimeDelta::FromMilliseconds(1));
++  }
++  EXPECT_EQ(0, open_fds);
+   ASSERT_TRUE(child.Terminate(0, true));
+ }
++#endif  // !defined(__ANDROID__)
++
+ #endif  // defined(OS_LINUX)
+ 
+ #if defined(OS_ANDROID) || defined(OS_LINUX)
+--- a/base/test/multiprocess_test.cc
++++ b/base/test/multiprocess_test.cc
+@@ -13,7 +13,7 @@
+ 
+ namespace base {
+ 
+-#if !defined(OS_ANDROID)
++#if !defined(OS_ANDROID) && !defined(__ANDROID__) && !defined(__ANDROID_HOST__)
+ Process SpawnMultiProcessTestChild(const std::string& procname,
+                                    const CommandLine& base_command_line,
+                                    const LaunchOptions& options) {
+@@ -39,7 +39,7 @@ bool TerminateMultiProcessTestChild(const Process& process,
+   return process.Terminate(exit_code, wait);
+ }
+ 
+-#endif  // !defined(OS_ANDROID)
++#endif  // !OS_ANDROID && !__ANDROID__ && !__ANDROID_HOST__
+ 
+ CommandLine GetMultiProcessTestChildBaseCommandLine() {
+   base::ScopedAllowBlockingForTesting allow_blocking;
+@@ -52,6 +52,8 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
+ 
+ MultiProcessTest::MultiProcessTest() = default;
+ 
++// Don't compile on ARC.
++#if 0
+ Process MultiProcessTest::SpawnChild(const std::string& procname) {
+   LaunchOptions options;
+ #if defined(OS_WIN)
+@@ -64,6 +66,7 @@ Process MultiProcessTest::SpawnChildWithOptions(const std::string& procname,
+                                                 const LaunchOptions& options) {
+   return SpawnMultiProcessTestChild(procname, MakeCmdLine(procname), options);
+ }
++#endif
+ 
+ CommandLine MultiProcessTest::MakeCmdLine(const std::string& procname) {
+   CommandLine command_line = GetMultiProcessTestChildBaseCommandLine();

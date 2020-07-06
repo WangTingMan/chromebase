@@ -1,0 +1,222 @@
+From 9d210ed05abf5e527f1de0b30fff62a8a3ae548f Mon Sep 17 00:00:00 2001
+From: hscham <hscham@chromium.org>
+Date: Mon, 13 Apr 2020 10:36:11 +0900
+Subject: [PATCH] libchrome: r680000 forward compatibility patch part 1
+
+This CL includes:
+- Add header files base/hash/{hash,md5,sha1}.h and
+  base/system/sys_info.h from base/.
+- Add macro PRFilePath.
+- Add JSONReader::{Read,ReadAndReturnError,ReadToValue}Deprecated, alias
+  of the corresponding method without the Deprecated suffix.
+- Add empty class base::CheckedObserver.
+- Add bool operators == and != for base::RepeatingCallback.
+- ScopedClearLastError (up to r758621)
+
+Change-Id: I6ba15f2938c02729e4fd51e5a4a52cb94e7c2a4e
+---
+ base/callback.h            |  8 ++++++++
+ base/files/file_path.h     |  1 +
+ base/hash/hash.h           |  8 ++++++++
+ base/hash/md5.h            | 10 ++++++++++
+ base/hash/sha1.h           | 10 ++++++++++
+ base/json/json_reader.h    | 19 +++++++++++++++++++
+ base/observer_list_types.h | 24 ++++++++++++++++++++++++
+ base/system/sys_info.h     | 10 ++++++++++
+ 8 files changed, 90 insertions(+)
+ create mode 100644 base/hash/hash.h
+ create mode 100644 base/hash/md5.h
+ create mode 100644 base/hash/sha1.h
+ create mode 100644 base/observer_list_types.h
+ create mode 100644 base/system/sys_info.h
+
+diff --git a/base/callback.h b/base/callback.h
+index bcda5af58..22a6f0e3e 100644
+--- a/base/callback.h
++++ b/base/callback.h
+@@ -123,6 +123,14 @@ class RepeatingCallback<R(Args...)> : public internal::CallbackBaseCopyable {
+     return EqualsInternal(other);
+   }
+ 
++  bool operator==(const RepeatingCallback& other) const {
++    return EqualsInternal(other);
++  }
++
++  bool operator!=(const RepeatingCallback& other) const {
++    return !operator==(other);
++  }
++
+   R Run(Args... args) const & {
+     PolymorphicInvoke f =
+         reinterpret_cast<PolymorphicInvoke>(this->polymorphic_invoke());
+diff --git a/base/files/file_path.h b/base/files/file_path.h
+index 2dc15f9d0..36229979d 100644
+--- a/base/files/file_path.h
++++ b/base/files/file_path.h
+@@ -131,6 +131,7 @@
+ #define PRIsFP "ls"
+ #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
+ #define PRIsFP "s"
++#define PRFilePath "s"
+ #endif  // OS_WIN
+ 
+ namespace base {
+diff --git a/base/hash/hash.h b/base/hash/hash.h
+new file mode 100644
+index 000000000..b35a96fd3
+--- /dev/null
++++ b/base/hash/hash.h
+@@ -0,0 +1,8 @@
++// Copyright (c) 2011 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_HASH_HASH_H_
++#define BASE_HASH_HASH_H_
++#include "base/hash.h"
++#endif  // BASE_HASH_HASH_H_
+diff --git a/base/hash/md5.h b/base/hash/md5.h
+new file mode 100644
+index 000000000..821649319
+--- /dev/null
++++ b/base/hash/md5.h
+@@ -0,0 +1,10 @@
++// Copyright (c) 2011 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_HASH_MD5_H_
++#define BASE_HASH_MD5_H_
++
++#include "base/md5.h"
++
++#endif  // BASE_HASH_MD5_H_
+diff --git a/base/hash/sha1.h b/base/hash/sha1.h
+new file mode 100644
+index 000000000..7d3e18212
+--- /dev/null
++++ b/base/hash/sha1.h
+@@ -0,0 +1,10 @@
++// Copyright (c) 2011 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_HASH_SHA1_H_
++#define BASE_HASH_SHA1_H_
++
++#include "base/sha1.h"
++
++#endif  // BASE_HASH_SHA1_H_
+diff --git a/base/json/json_reader.h b/base/json/json_reader.h
+index 2c6bd3e47..05de907ce 100644
+--- a/base/json/json_reader.h
++++ b/base/json/json_reader.h
+@@ -98,6 +98,12 @@ class BASE_EXPORT JSONReader {
+   static std::unique_ptr<Value> Read(StringPiece json,
+                                      int options = JSON_PARSE_RFC,
+                                      int max_depth = kStackMaxDepth);
++  inline static std::unique_ptr<Value> ReadDeprecated(
++      StringPiece json,
++      int options = JSON_PARSE_RFC,
++      int max_depth = kStackMaxDepth){
++    return Read(json, options, max_depth);
++  }
+ 
+   // Reads and parses |json| like Read(). |error_code_out| and |error_msg_out|
+   // are optional. If specified and nullptr is returned, they will be populated
+@@ -110,6 +116,16 @@ class BASE_EXPORT JSONReader {
+       std::string* error_msg_out,
+       int* error_line_out = nullptr,
+       int* error_column_out = nullptr);
++  inline static std::unique_ptr<Value> ReadAndReturnErrorDeprecated(
++      StringPiece json,
++      int options,  // JSONParserOptions
++      int* error_code_out,
++      std::string* error_msg_out,
++      int* error_line_out = nullptr,
++      int* error_column_out = nullptr){
++    return ReadAndReturnError(json, options, error_code_out, error_msg_out,
++                              error_line_out, error_column_out);
++  }
+ 
+   // Converts a JSON parse error code into a human readable message.
+   // Returns an empty string if error_code is JSON_NO_ERROR.
+@@ -117,6 +133,9 @@ class BASE_EXPORT JSONReader {
+ 
+   // Non-static version of Read() above.
+   std::unique_ptr<Value> ReadToValue(StringPiece json);
++  inline std::unique_ptr<Value> ReadToValueDeprecated(StringPiece json) {
++    return JSONReader::ReadToValue(json);
++  }
+ 
+   // Returns the error code if the last call to ReadToValue() failed.
+   // Returns JSON_NO_ERROR otherwise.
+diff --git a/base/observer_list_types.h b/base/observer_list_types.h
+new file mode 100644
+index 000000000..8f3889735
+--- /dev/null
++++ b/base/observer_list_types.h
+@@ -0,0 +1,24 @@
++// Copyright 2018 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_OBSERVER_LIST_TYPES_H_
++#define BASE_OBSERVER_LIST_TYPES_H_
++
++#include "base/base_export.h"
++#include "base/macros.h"
++
++namespace base {
++class BASE_EXPORT CheckedObserver {
++ public:
++  CheckedObserver() {};
++
++ protected:
++  virtual ~CheckedObserver() = default;
++
++  DISALLOW_COPY_AND_ASSIGN(CheckedObserver);
++};
++
++}  // namespace base
++
++#endif  // BASE_OBSERVER_LIST_TYPES_H_
+diff --git a/base/scoped_clear_last_error.h b/base/scoped_clear_last_error.h
+new file mode 100644
+index 0000000..066730d
+--- /dev/null
++++ b/base/scoped_clear_last_error.h
+@@ -0,0 +1,14 @@
++// Copyright (c) 2013 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_SCOPED_CLEAR_LAST_ERROR_H_
++#define BASE_SCOPED_CLEAR_LAST_ERROR_H_
++
++#include "base/scoped_clear_errno.h"
++
++namespace base {
++using ScopedClearLastError = base::ScopedClearErrno;
++}
++
++#endif  // BASE_SCOPED_CLEAR_LAST_ERROR_H_
+diff --git a/base/system/sys_info.h b/base/system/sys_info.h
+new file mode 100644
+index 000000000..60676e0e1
+--- /dev/null
++++ b/base/system/sys_info.h
+@@ -0,0 +1,10 @@
++// Copyright (c) 2012 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_SYSTEM_SYS_INFO_H_
++#define BASE_SYSTEM_SYS_INFO_H_
++
++#include "base/sys_info.h"
++
++#endif  // BASE_SYSTEM_SYS_INFO_H_
+-- 
+2.26.1.301.g55bc3eb7cb9-goog
+
