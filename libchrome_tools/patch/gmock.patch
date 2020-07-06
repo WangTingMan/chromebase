@@ -1,0 +1,6 @@
+# Use system installed gmock library.
+
+--- /dev/null
++++ b/testing/gmock/include/gmock/gmock.h
+@@ -0,0 +1 @@
++#include <gmock/gmock.h>

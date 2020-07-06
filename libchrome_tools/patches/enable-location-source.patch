@@ -1,0 +1,26 @@
+From 8f8b73113f4e785543129c806d0e57bcf13d2314 Mon Sep 17 00:00:00 2001
+From: Qijiang Fan <fqj@chromium.org>
+Date: Wed, 18 Dec 2019 17:47:58 +0900
+Subject: [PATCH 4/4] enable location source
+
+Change-Id: I29fd847bc0fa0ace7a9637417a796b64b32485e3
+---
+ base/debug/debugging_buildflags.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/base/debug/debugging_buildflags.h b/base/debug/debugging_buildflags.h
+index 33e3dd0..a974f83 100644
+--- a/base/debug/debugging_buildflags.h
++++ b/base/debug/debugging_buildflags.h
+@@ -6,7 +6,7 @@
+ #define BUILDFLAG_INTERNAL_ENABLE_PROFILING() (0)
+ #define BUILDFLAG_INTERNAL_ENABLE_MEMORY_TASK_PROFILER() (0)
+ #define BUILDFLAG_INTERNAL_CAN_UNWIND_WITH_FRAME_POINTERS() (0)
+-#define BUILDFLAG_INTERNAL_ENABLE_LOCATION_SOURCE() (0)
++#define BUILDFLAG_INTERNAL_ENABLE_LOCATION_SOURCE() (1)
+ #define BUILDFLAG_INTERNAL_CFI_ENFORCEMENT_TRAP() (0)
+ #define BUILDFLAG_INTERNAL_ENABLE_MUTEX_PRIORITY_INHERITANCE() (0)
+ #endif  // BASE_DEBUG_DEBUGGING_FLAGS_H_
+-- 
+2.24.1.735.g03f4e72817-goog
+
