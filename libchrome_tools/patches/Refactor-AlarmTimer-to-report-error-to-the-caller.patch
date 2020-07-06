@@ -1,0 +1,180 @@
+From 07763c630b9e6ee4538a86d291bfce8357dec934 Mon Sep 17 00:00:00 2001
+From: Hidehiko Abe <hidehiko@chromium.org>
+Date: Thu, 13 Jun 2019 22:12:42 +0900
+Subject: [PATCH] Refactor AlarmTimer to report error to the caller.
+
+This is to address the comment
+https://chromium-review.googlesource.com/c/aosp/platform/external/libchrome/+/1387893/2/components/timers/alarm_timer_chromeos.h#45
+
+Instead of just upstreaming it, which exposes a method unused in Chromium,
+this CL introduces Create() factory method and drops the code to
+fallback in case of timerfd_create failure.
+
+Now, a caller should check whether Create() returns null or not.
+In case of null, to keep the previous behavior, the caller can
+create an instance of the parent class.
+
+Along with the change, in order to run unittest for the class
+without capability CAP_WAKE_ALARM, this CL also introduces CreateForTesting().
+We used to test just fall-back code paths.
+
+In addition, this CL fixes the FD leak on destruction.
+
+This patch modified the original upstream patch, by
+ - keeping the old constructor for backward-compatibility.
+ - keeping CanWakeFromSuspend, and calls of CanWakeFromSuspend from Stop
+   and Reset, for backward-compatibility, so that unittest won't fail
+   due to -1 alarm_fd_ from default constructor when there's no
+   capability to alarm.
+
+BUG=None
+TEST=Build and run components_unittests --gtest_filter=AlarmTimerTest*. Run try.
+
+Change-Id: Ieb9660335120565ccff7f192d7a8192ca1e59ebc
+Reviewed-on: https://chromium-review.googlesource.com/c/1411356
+Reviewed-by: Ryo Hashimoto <hashimoto@chromium.org>
+Reviewed-by: Dmitry Titov <dimich@chromium.org>
+Reviewed-by: Dan Erat <derat@chromium.org>
+Commit-Queue: Hidehiko Abe <hidehiko@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#626151}
+---
+ components/timers/alarm_timer_chromeos.cc | 51 ++++++++++++++---------
+ components/timers/alarm_timer_chromeos.h  | 27 +++++++-----
+ 2 files changed, 49 insertions(+), 29 deletions(-)
+
+diff --git a/components/timers/alarm_timer_chromeos.cc b/components/timers/alarm_timer_chromeos.cc
+index 0b43134..371eb67 100644
+--- a/components/timers/alarm_timer_chromeos.cc
++++ b/components/timers/alarm_timer_chromeos.cc
+@@ -15,13 +15,43 @@
+ #include "base/debug/task_annotator.h"
+ #include "base/files/file_util.h"
+ #include "base/logging.h"
++#include "base/memory/ptr_util.h"
+ #include "base/pending_task.h"
+ #include "base/trace_event/trace_event.h"
+ 
+ namespace timers {
+ 
++// Keep for backward compatibility to uprev r576279.
+ SimpleAlarmTimer::SimpleAlarmTimer()
+     : alarm_fd_(timerfd_create(CLOCK_REALTIME_ALARM, 0)), weak_factory_(this) {}
++// static
++std::unique_ptr<SimpleAlarmTimer> SimpleAlarmTimer::Create() {
++  return CreateInternal(CLOCK_REALTIME_ALARM);
++}
++
++// static
++std::unique_ptr<SimpleAlarmTimer> SimpleAlarmTimer::CreateForTesting() {
++  // For unittest, use CLOCK_REALTIME in order to run the tests without
++  // CAP_WAKE_ALARM.
++  return CreateInternal(CLOCK_REALTIME);
++}
++
++// static
++std::unique_ptr<SimpleAlarmTimer> SimpleAlarmTimer::CreateInternal(
++    int clockid) {
++  base::ScopedFD alarm_fd(timerfd_create(clockid, TFD_CLOEXEC));
++  if (!alarm_fd.is_valid()) {
++    PLOG(ERROR) << "Failed to create timer fd";
++    return nullptr;
++  }
++
++  // Note: std::make_unique<> cannot be used because the constructor is
++  // private.
++  return base::WrapUnique(new SimpleAlarmTimer(std::move(alarm_fd)));
++}
++
++SimpleAlarmTimer::SimpleAlarmTimer(base::ScopedFD alarm_fd)
++    : alarm_fd_(std::move(alarm_fd)), weak_factory_(this) {}
+ 
+ SimpleAlarmTimer::~SimpleAlarmTimer() {
+   DCHECK(origin_task_runner_->RunsTasksInCurrentSequence());
+@@ -80,7 +97,7 @@ void SimpleAlarmTimer::Reset() {
+   alarm_time.it_value.tv_nsec =
+       (delay.InMicroseconds() % base::Time::kMicrosecondsPerSecond) *
+       base::Time::kNanosecondsPerMicrosecond;
+-  if (timerfd_settime(alarm_fd_, 0, &alarm_time, NULL) < 0)
++  if (timerfd_settime(alarm_fd_.get(), 0, &alarm_time, NULL) < 0)
+     PLOG(ERROR) << "Error while setting alarm time.  Timer will not fire";
+ 
+   // The timer is running.
+@@ -97,7 +114,7 @@ void SimpleAlarmTimer::Reset() {
+     base::debug::TaskAnnotator().WillQueueTask("SimpleAlarmTimer::Reset",
+                                                pending_task_.get());
+     alarm_fd_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+-        alarm_fd_,
++        alarm_fd_.get(),
+         base::BindRepeating(&SimpleAlarmTimer::OnAlarmFdReadableWithoutBlocking,
+                             weak_factory_.GetWeakPtr()));
+   }
+@@ -109,7 +126,7 @@ void SimpleAlarmTimer::OnAlarmFdReadableWithoutBlocking() {
+ 
+   // Read from |alarm_fd_| to ack the event.
+   char val[sizeof(uint64_t)];
+-  if (!base::ReadFromFD(alarm_fd_, val, sizeof(uint64_t)))
++  if (!base::ReadFromFD(alarm_fd_.get(), val, sizeof(uint64_t)))
+     PLOG(DFATAL) << "Unable to read from timer file descriptor.";
+ 
+   OnTimerFired();
+diff --git a/components/timers/alarm_timer_chromeos.h b/components/timers/alarm_timer_chromeos.h
+index 1ff689e..e1301e9 100644
+--- a/components/timers/alarm_timer_chromeos.h
++++ b/components/timers/alarm_timer_chromeos.h
+@@ -8,6 +8,7 @@
+ #include <memory>
+ 
+ #include "base/files/file_descriptor_watcher_posix.h"
++#include "base/files/scoped_file.h"
+ #include "base/macros.h"
+ #include "base/memory/scoped_refptr.h"
+ #include "base/memory/weak_ptr.h"
+@@ -24,8 +25,7 @@ namespace timers {
+ // suspended state. For example, this is useful for running tasks that are
+ // needed for maintaining network connectivity, like sending heartbeat messages.
+ // Currently, this feature is only available on Chrome OS systems running linux
+-// version 3.11 or higher. On all other platforms, the SimpleAlarmTimer behaves
+-// exactly the same way as a regular Timer.
++// version 3.11 or higher.
+ //
+ // A SimpleAlarmTimer instance can only be used from the sequence on which it
+ // was instantiated. Start() and Stop() must be called from a thread that
+@@ -36,7 +36,16 @@ namespace timers {
+ // times but not at a regular interval.
+ class SimpleAlarmTimer : public base::RetainingOneShotTimer {
+  public:
+   SimpleAlarmTimer();
++  // Creates the SimpleAlarmTimer instance, or returns null on failure, e.g.,
++  // on a platform without timerfd_* system calls support, or missing
++  // capability (CAP_WAKE_ALARM).
++  static std::unique_ptr<SimpleAlarmTimer> Create();
++
++  // Similar to Create(), but for unittests without capability.
++  // Specifically, uses CLOCK_REALTIME instead of CLOCK_REALTIME_ALARM.
++  static std::unique_ptr<SimpleAlarmTimer> CreateForTesting();
++
+   ~SimpleAlarmTimer() override;
+ 
+   // Timer overrides.
+@@ -44,6 +52,11 @@ class SimpleAlarmTimer : public base::RetainingOneShotTimer {
+   void Reset() override;
+ 
+  private:
++  // Shared implementation of Create and CreateForTesting.
++  static std::unique_ptr<SimpleAlarmTimer> CreateInternal(int clockid);
++
++  explicit SimpleAlarmTimer(base::ScopedFD alarm_fd);
++
+   // Called when |alarm_fd_| is readable without blocking. Reads data from
+   // |alarm_fd_| and calls OnTimerFired().
+   void OnAlarmFdReadableWithoutBlocking();
+@@ -61,5 +74,5 @@ class SimpleAlarmTimer : public base::RetainingOneShotTimer {
+   // Timer file descriptor.
+-  const int alarm_fd_;
++  const base::ScopedFD alarm_fd_;
+ 
+   // Watches |alarm_fd_|.
+   std::unique_ptr<base::FileDescriptorWatcher::Controller> alarm_fd_watcher_;
+-- 
+2.22.0.rc2.383.gf4fbbf30c2-goog
+

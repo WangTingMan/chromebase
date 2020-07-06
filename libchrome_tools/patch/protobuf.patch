@@ -1,0 +1,4 @@
+--- /dev/null
++++ b/third_party/protobuf/src/google/protobuf/message_lite.h
+@@ -0,0 +1 @@
++#include <google/protobuf/message_lite.h>
