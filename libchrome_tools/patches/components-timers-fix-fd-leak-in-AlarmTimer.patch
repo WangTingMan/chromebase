@@ -1,0 +1,102 @@
+From e18f110107399803dd070088c601f9a5540a2a3f Mon Sep 17 00:00:00 2001
+From: Hidehiko Abe <hidehiko@chromium.org>
+Date: Thu, 3 Oct 2019 02:04:53 +0900
+Subject: [PATCH] components/timers: fix fd leak in AlarmTimer
+
+This is fixed upstream but will take a while to roll back
+into Chrome OS.
+
+BUG=chromium:984593
+TEST=enable/disable wifi repeatedly and see that there is no
+     growth of open timerfds
+
+Change-Id: If2af8f8ddf6b9dc31cda36fe5f5454ca0c5819de
+---
+ components/timers/alarm_timer_chromeos.cc |  8 ++++----
+ components/timers/alarm_timer_chromeos.h  | 15 ++++++++-------
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/components/timers/alarm_timer_chromeos.cc b/components/timers/alarm_timer_chromeos.cc
+index 0b43134..f14d889 100644
+--- a/components/timers/alarm_timer_chromeos.cc
++++ b/components/timers/alarm_timer_chromeos.cc
+@@ -80,7 +80,7 @@ void SimpleAlarmTimer::Reset() {
+   alarm_time.it_value.tv_nsec =
+       (delay.InMicroseconds() % base::Time::kMicrosecondsPerSecond) *
+       base::Time::kNanosecondsPerMicrosecond;
+-  if (timerfd_settime(alarm_fd_, 0, &alarm_time, NULL) < 0)
++  if (timerfd_settime(alarm_fd_.get(), 0, &alarm_time, NULL) < 0)
+     PLOG(ERROR) << "Error while setting alarm time.  Timer will not fire";
+ 
+   // The timer is running.
+@@ -97,7 +97,7 @@ void SimpleAlarmTimer::Reset() {
+     base::debug::TaskAnnotator().WillQueueTask("SimpleAlarmTimer::Reset",
+                                                pending_task_.get());
+     alarm_fd_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+-        alarm_fd_,
++        alarm_fd_.get(),
+         base::BindRepeating(&SimpleAlarmTimer::OnAlarmFdReadableWithoutBlocking,
+                             weak_factory_.GetWeakPtr()));
+   }
+@@ -109,7 +109,7 @@ void SimpleAlarmTimer::OnAlarmFdReadableWithoutBlocking() {
+ 
+   // Read from |alarm_fd_| to ack the event.
+   char val[sizeof(uint64_t)];
+-  if (!base::ReadFromFD(alarm_fd_, val, sizeof(uint64_t)))
++  if (!base::ReadFromFD(alarm_fd_.get(), val, sizeof(uint64_t)))
+     PLOG(DFATAL) << "Unable to read from timer file descriptor.";
+ 
+   OnTimerFired();
+@@ -137,7 +137,7 @@ void SimpleAlarmTimer::OnTimerFired() {
+ }
+ 
+ bool SimpleAlarmTimer::CanWakeFromSuspend() const {
+-  return alarm_fd_ != -1;
++  return alarm_fd_.is_valid();
+ }
+ 
+ }  // namespace timers
+diff --git a/components/timers/alarm_timer_chromeos.h b/components/timers/alarm_timer_chromeos.h
+index 1ff689e..100ba81 100644
+--- a/components/timers/alarm_timer_chromeos.h
++++ b/components/timers/alarm_timer_chromeos.h
+@@ -8,6 +8,7 @@
+ #include <memory>
+ 
+ #include "base/files/file_descriptor_watcher_posix.h"
++#include "base/files/scoped_file.h"
+ #include "base/macros.h"
+ #include "base/memory/scoped_refptr.h"
+ #include "base/memory/weak_ptr.h"
+@@ -43,6 +44,12 @@ class SimpleAlarmTimer : public base::RetainingOneShotTimer {
+   void Stop() override;
+   void Reset() override;
+ 
++  // Tracks whether the timer has the ability to wake the system up from
++  // suspend. This is a runtime check because we won't know if the system
++  // supports being woken up from suspend until the constructor actually tries
++  // to set it up.
++  bool CanWakeFromSuspend() const;
++
+  private:
+   // Called when |alarm_fd_| is readable without blocking. Reads data from
+   // |alarm_fd_| and calls OnTimerFired().
+@@ -51,14 +58,8 @@ class SimpleAlarmTimer : public base::RetainingOneShotTimer {
+   // Called when the timer fires. Runs the callback.
+   void OnTimerFired();
+ 
+-  // Tracks whether the timer has the ability to wake the system up from
+-  // suspend. This is a runtime check because we won't know if the system
+-  // supports being woken up from suspend until the constructor actually tries
+-  // to set it up.
+-  bool CanWakeFromSuspend() const;
+-
+   // Timer file descriptor.
+-  const int alarm_fd_;
++  base::ScopedFD alarm_fd_;
+ 
+   // Watches |alarm_fd_|.
+   std::unique_ptr<base::FileDescriptorWatcher::Controller> alarm_fd_watcher_;
+-- 
+2.23.0.581.g78d2f28ef7-goog
+

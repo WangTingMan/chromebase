@@ -1,0 +1,63 @@
+From 28a638ff22f598f6aa9388db6a4cf13fe9f11644 Mon Sep 17 00:00:00 2001
+From: Hirokazu Honda <hiroh@google.com>
+Date: Wed, 1 Aug 2018 17:03:18 +0900
+Subject: [PATCH] ThreadLocalStorage: Add a function to destroy pthread key
+ used in libchrome
+
+MojoProcessSupport needs to destroy pthread key which is globally used in libchrome. The key is
+stored in a local variable in thread_local_storage.cc.
+This adds a function to destroy the key so that MojoProcessSupport can do it.
+
+Bug: 110722333
+Test: No crash in opening DRMInfo.app
+Test: PlayStore still works
+Test: cheets_ContainerSmokeTest and cheets_LoginScreen
+Change-Id: Ib10c83deb5f7ef141d4ab9883e0d2c31d422a1b1
+---
+ base/threading/thread_local_storage.cc | 11 +++++++++++
+ base/threading/thread_local_storage.h  |  7 +++++++
+ 2 files changed, 18 insertions(+)
+
+diff --git a/base/threading/thread_local_storage.cc b/base/threading/thread_local_storage.cc
+index 48c1dd5..90ae69e 100644
+--- a/base/threading/thread_local_storage.cc
++++ b/base/threading/thread_local_storage.cc
+@@ -247,6 +247,17 @@ void PlatformThreadLocalStorage::OnThreadExit() {
+ void PlatformThreadLocalStorage::OnThreadExit(void* value) {
+   OnThreadExitInternal(static_cast<TlsVectorEntry*>(value));
+ }
++
++// static
++void PlatformThreadLocalStorage::ForceFreeTLS() {
++  PlatformThreadLocalStorage::TLSKey key =
++      base::subtle::NoBarrier_AtomicExchange(
++          &g_native_tls_key,
++          PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES);
++  if (key == PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES)
++    return;
++  PlatformThreadLocalStorage::FreeTLS(key);
++}
+ #endif  // defined(OS_WIN)
+ 
+ }  // namespace internal
+diff --git a/base/threading/thread_local_storage.h b/base/threading/thread_local_storage.h
+index fd2a789..c5c7759 100644
+--- a/base/threading/thread_local_storage.h
++++ b/base/threading/thread_local_storage.h
+@@ -75,6 +75,13 @@ class BASE_EXPORT PlatformThreadLocalStorage {
+   // GetTLSValue() to retrieve the value of slot as it has already been reset
+   // in Posix.
+   static void OnThreadExit(void* value);
++  // Normally, Chrome runs as a process, so freeing the TLS is not needed since
++  // the OS will perform that while it's reclaiming the process' memory upon
++  // termination. If, however, this code is used inside a library that is
++  // dynamically loaded and unloaded, the consumer is responsible for calling
++  // this after all Chrome threads have stopped and prior to unloading the
++  // library.
++  static void ForceFreeTLS();
+ #endif
+ };
+ 
+-- 
+2.18.0.345.g5c9ce644c3-goog
+
