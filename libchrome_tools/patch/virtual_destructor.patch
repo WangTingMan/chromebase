@@ -1,0 +1,78 @@
+--- a/base/metrics/histogram.cc
++++ b/base/metrics/histogram.cc
+@@ -94,6 +94,7 @@ class Histogram::Factory {
+           uint32_t bucket_count,
+           int32_t flags)
+     : Factory(name, HISTOGRAM, minimum, maximum, bucket_count, flags) {}
++  virtual ~Factory() = default;
+ 
+   // Create histogram based on construction parameters. Caller takes
+   // ownership of the returned object.
+@@ -741,6 +742,7 @@ class LinearHistogram::Factory : public
+                          bucket_count, flags) {
+     descriptions_ = descriptions;
+   }
++  ~Factory() override = default;
+ 
+  protected:
+   BucketRanges* CreateRanges() override {
+@@ -932,6 +934,7 @@ class BooleanHistogram::Factory : public
+  public:
+   Factory(const std::string& name, int32_t flags)
+     : Histogram::Factory(name, BOOLEAN_HISTOGRAM, 1, 2, 3, flags) {}
++  ~Factory() override = default;
+ 
+  protected:
+   BucketRanges* CreateRanges() override {
+@@ -1020,6 +1023,7 @@ class CustomHistogram::Factory : public
+     : Histogram::Factory(name, CUSTOM_HISTOGRAM, 0, 0, 0, flags) {
+     custom_ranges_ = custom_ranges;
+   }
++  ~Factory() override = default;
+ 
+  protected:
+   BucketRanges* CreateRanges() override {
+--- a/base/metrics/statistics_recorder.h
++++ b/base/metrics/statistics_recorder.h
+@@ -67,6 +67,7 @@ class BASE_EXPORT StatisticsRecorder {
+   // histograms from providers when necessary.
+   class HistogramProvider {
+    public:
++    virtual ~HistogramProvider() {}
+     // Merges all histogram information into the global versions.
+     virtual void MergeHistogramDeltas() = 0;
+   };
+--- a/base/bind_unittest.cc
++++ b/base/bind_unittest.cc
+@@ -69,6 +69,7 @@ static const int kChildValue = 2;
+ 
+ class Parent {
+  public:
++  virtual ~Parent() {}
+   void AddRef() const {}
+   void Release() const {}
+   virtual void VirtualSet() { value = kParentValue; }
+@@ -78,18 +79,23 @@ class Parent {
+ 
+ class Child : public Parent {
+  public:
++  ~Child() override {}
+   void VirtualSet() override { value = kChildValue; }
+   void NonVirtualSet() { value = kChildValue; }
+ };
+ 
+ class NoRefParent {
+  public:
++  virtual ~NoRefParent() {}
+   virtual void VirtualSet() { value = kParentValue; }
+   void NonVirtualSet() { value = kParentValue; }
+   int value;
+ };
+ 
+ class NoRefChild : public NoRefParent {
++ public:
++  ~NoRefChild() override {}
++ private:
+   void VirtualSet() override { value = kChildValue; }
+   void NonVirtualSet() { value = kChildValue; }
+ };

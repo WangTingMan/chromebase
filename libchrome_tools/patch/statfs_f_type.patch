@@ -1,0 +1,40 @@
+# In some platforms, |statfs_buf.f_type| is declared as signed, but some of the
+# values will overflow it, causing narrowing warnings. Cast to the largest
+# possible unsigned integer type to avoid it.
+
+--- a/base/files/file_util_linux.cc
++++ b/base/files/file_util_linux.cc
+@@ -6,6 +6,7 @@
+ 
+ #include <errno.h>
+ #include <linux/magic.h>
++#include <stdint.h>
+ #include <sys/vfs.h>
+ 
+ #include "base/files/file_path.h"
+@@ -23,7 +24,10 @@ bool GetFileSystemType(const FilePath& p
+ 
+   // Not all possible |statfs_buf.f_type| values are in linux/magic.h.
+   // Missing values are copied from the statfs man page.
+-  switch (statfs_buf.f_type) {
++  // In some platforms, |statfs_buf.f_type| is declared as signed, but some of
++  // the values will overflow it, causing narrowing warnings. Cast to the
++  // largest possible unsigned integer type to avoid it.
++  switch (static_cast<uintmax_t>(statfs_buf.f_type)) {
+     case 0:
+       *type = FILE_SYSTEM_0;
+       break;
+--- a/base/sys_info_posix.cc
++++ b/base/sys_info_posix.cc
+@@ -90,7 +90,10 @@ bool IsStatsZeroIfUnlimited(const base::FilePath& path) {
+   if (HANDLE_EINTR(statfs(path.value().c_str(), &stats)) != 0)
+     return false;
+ 
+-  switch (stats.f_type) {
++  // In some platforms, |statfs_buf.f_type| is declared as signed, but some of
++  // the values will overflow it, causing narrowing warnings. Cast to the
++  // largest possible unsigned integer type to avoid it.
++  switch (static_cast<uintmax_t>(stats.f_type)) {
+     case TMPFS_MAGIC:
+     case HUGETLBFS_MAGIC:
+     case RAMFS_MAGIC:
