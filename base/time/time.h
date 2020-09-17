@@ -199,10 +199,8 @@ class BASE_EXPORT TimeDelta {
   double InMicrosecondsF() const;
   int64_t InNanoseconds() const;
 
-  constexpr TimeDelta& operator=(TimeDelta other) {
-    delta_ = other.delta_;
-    return *this;
-  }
+  constexpr TimeDelta& operator=(const TimeDelta&) = default;
+  constexpr TimeDelta(const TimeDelta&) = default;
 
   // Computations with other deltas. Can easily be made constexpr with C++17 but
   // hard to do until then per limitations around
