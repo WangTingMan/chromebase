@@ -1,0 +1,44 @@
+From 6a4ab3d6429ec13e8c875ebc611683bb26453770 Mon Sep 17 00:00:00 2001
+From: Lepton Wu <lepton@chromium.org>
+Date: Tue, 15 Sep 2020 16:58:14 +0000
+Subject: [PATCH] Fix pending_broker_clients handling
+
+We always remove invitee from pending_invitations_ before adding it to
+pending_broker_clients, so the old code actually is buggy and invitees
+in pending_broker_clients_ will never be added as a broker client. Fix
+it by checking peers_ instead of pending_invitations_.
+
+BUG=b:146518063,b:150661600,b:168250032,chromium:1121709
+TEST=manual - Keep running arc.Boot.vm with updated mojo code.
+
+Change-Id: Ib0353944e7d5b9edc04947f8bd2db1442a4ed78d
+Reviewed-on: https://chromium-review.googlesource.com/c/chromium/src/+/2411560
+Commit-Queue: Ken Rockot <rockot@google.com>
+Reviewed-by: Ken Rockot <rockot@google.com>
+Auto-Submit: Lepton Wu <lepton@chromium.org>
+Cr-Commit-Position: refs/heads/master@{#807076}
+---
+ mojo/core/node_controller.cc | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/mojo/core/node_controller.cc b/mojo/core/node_controller.cc
+index 298079f4e234..029bd350b08b 100644
+--- a/mojo/core/node_controller.cc
++++ b/mojo/core/node_controller.cc
+@@ -993,11 +993,8 @@ void NodeController::OnAcceptBrokerClient(const ports::NodeName& from_node,
+   // Feed the broker any pending invitees of our own.
+   while (!pending_broker_clients.empty()) {
+     const ports::NodeName& invitee_name = pending_broker_clients.front();
+-    auto it = pending_invitations_.find(invitee_name);
+-    // If for any reason we don't have a pending invitation for the invitee,
+-    // there's nothing left to do: we've already swapped the relevant state into
+-    // the stack.
+-    if (it != pending_invitations_.end()) {
++    auto it = peers_.find(invitee_name);
++    if (it != peers_.end()) {
+       broker->AddBrokerClient(invitee_name,
+                               it->second->CloneRemoteProcessHandle());
+     }
+-- 
+2.28.0.618.gf4bc123cb7-goog
+
