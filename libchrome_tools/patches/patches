@@ -70,3 +70,6 @@ r680000-forward-compatibility-patch-part-2.patch
 
 # Add base/{check_op,notreached}.h for cbor
 Add-header-files-base-check_op-notreached-h.patch
+
+# Remove after uprev to r807076
+0001-Fix-pending_broker_clients-handling.patch
