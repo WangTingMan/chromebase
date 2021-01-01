@@ -1,0 +1,33 @@
+diff --git a/base/memory/shared_memory_mapping.cc b/base/memory/shared_memory_mapping.cc
+index 005e3fc..2b42928 100644
+--- a/base/memory/shared_memory_mapping.cc
++++ b/base/memory/shared_memory_mapping.cc
+@@ -7,7 +7,8 @@
+ #include <utility>
+ 
+ #include "base/logging.h"
+-#include "base/memory/shared_memory_tracker.h"
++// Unsupported in libchrome
++// #include "base/memory/shared_memory_tracker.h"
+ #include "base/unguessable_token.h"
+ #include "build/build_config.h"
+ 
+@@ -62,14 +63,15 @@ SharedMemoryMapping::SharedMemoryMapping(void* memory,
+                                          size_t mapped_size,
+                                          const UnguessableToken& guid)
+     : memory_(memory), size_(size), mapped_size_(mapped_size), guid_(guid) {
+-  SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
++  // Unsupported in libchrome.
++  // SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
+ }
+ 
+ void SharedMemoryMapping::Unmap() {
+   if (!IsValid())
+     return;
+-
+-  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
++  // Unsupported in libchrome.
++  // SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
+ #if defined(OS_WIN)
+   if (!UnmapViewOfFile(memory_))
+     DPLOG(ERROR) << "UnmapViewOfFile";

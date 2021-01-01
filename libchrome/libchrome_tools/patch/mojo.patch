@@ -1,0 +1,38 @@
+# Local patches for libmojo.
+
+--- a/base/android/jni_android.cc
++++ b/base/android/jni_android.cc
+@@ -253,7 +253,11 @@ void CheckException(JNIEnv* env) {
+   }
+ 
+   // Now, feel good about it and die.
+-  LOG(FATAL) << "Please include Java exception stack in crash report";
++  // TODO(lhchavez): Remove this hack. See b/28814913 for details.
++  if (java_throwable)
++    LOG(FATAL) << GetJavaExceptionInfo(env, java_throwable);
++  else
++    LOG(FATAL) << "Unhandled exception";
+ }
+ 
+ std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
+--- a/build/android/gyp/util/build_utils.py
++++ b/build/android/gyp/util/build_utils.py
+@@ -25,8 +25,16 @@ import zipfile
+ # Some clients do not add //build/android/gyp to PYTHONPATH.
+ import md5_check  # pylint: disable=relative-import
+ 
+-sys.path.append(os.path.join(os.path.dirname(__file__),
+-                             os.pardir, os.pardir, os.pardir))
++# pylib conflicts with mojo/public/tools/bindings/pylib. Prioritize
++# build/android/pylib.
++# PYTHONPATH wouldn't help in this case, because soong put source files under
++# temp directory for each build, so the abspath is unknown until the
++# execution.
++#sys.path.append(os.path.join(os.path.dirname(__file__),
++#                             os.pardir, os.pardir, os.pardir))
++sys.path.insert(0, os.path.join(os.path.dirname(__file__),
++                                os.pardir, os.pardir))
++
+ import gn_helpers
+ 
+ # Definition copied from pylib/constants/__init__.py to avoid adding

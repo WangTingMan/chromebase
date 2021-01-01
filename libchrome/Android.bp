@@ -1,0 +1,962 @@
+// Copyright (C) 2015 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Common defaults
+// ========================================================
+
+// Using Chrome header files directly could cause -Wunused-parameter errors,
+// and this is workaround. Please find the document in include_generator.py
+// for details.
+// Note: gensrcs does not support exclude_srcs, so filegroup rule is
+// introduced.
+filegroup {
+    name: "libchrome-include-sources",
+    srcs: [
+        "base/**/*.h",
+        "build/**/*.h",
+        "components/**/*.h",
+        "device/**/*.h",
+        "testing/**/*.h",
+        "third_party/**/*.h",
+        "ui/**/*.h",
+    ],
+    exclude_srcs: [
+        "base/android/**/*",
+    ],
+}
+
+gensrcs {
+    name: "libchrome-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: [":libchrome-include-sources"],
+    output_extension: "h",
+}
+
+cc_defaults {
+    name: "libchrome-defaults",
+    // Set clang to "true" to force clang or "false" to force gcc.
+    // clang: true,
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-deprecated-declarations",
+        "-Wno-implicit-fallthrough",
+        // memory_mapped_file.cc:80, json_parser.cc:264,
+        // sys_string_conversions_posix.cc:122, and
+        // icu_utf.cc:161,165 have -Wno-implicit-fallthrough.
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+    ],
+
+    // Note: Although the generated header files are exported here, in building
+    // libchrome, "." has priority (unlike building projects using libchrome),
+    // so the raw header files are used for them.
+    generated_headers: ["libchrome-include"],
+    export_generated_headers: ["libchrome-include"],
+    target: {
+        host: {
+            cflags: [
+                "-D__ANDROID_HOST__",
+                "-DDONT_EMBED_BUILD_METADATA",
+            ],
+        },
+        darwin: {
+            enabled: false,
+        },
+    },
+}
+
+cc_defaults {
+    name: "libchrome-test-defaults",
+    defaults: ["libchrome-defaults"],
+    cflags: [
+        "-Wno-unused-function",
+        "-Wno-unused-variable",
+    ],
+
+    clang_cflags: [
+        // Temporarily suppress the warnings http://b/38232827
+        "-Wno-error=unused-lambda-capture",
+    ],
+}
+
+libchromeCommonSrc = [
+    "base/at_exit.cc",
+    "base/barrier_closure.cc",
+    "base/base64.cc",
+    "base/base64url.cc",
+    "base/base_paths.cc",
+    "base/base_paths_posix.cc",
+    "base/base_switches.cc",
+    "base/big_endian.cc",
+    "base/build_time.cc",
+    "base/callback_helpers.cc",
+    "base/callback_internal.cc",
+    "base/command_line.cc",
+    "base/cpu.cc",
+    "base/debug/activity_tracker.cc",
+    "base/debug/alias.cc",
+    "base/debug/crash_logging.cc",
+    "base/debug/debugger.cc",
+    "base/debug/debugger_posix.cc",
+    "base/debug/dump_without_crashing.cc",
+    "base/debug/proc_maps_linux.cc",
+    "base/debug/profiler.cc",
+    "base/debug/stack_trace.cc",
+    "base/debug/task_annotator.cc",
+    "base/environment.cc",
+    "base/feature_list.cc",
+    "base/files/file.cc",
+    "base/files/file_descriptor_watcher_posix.cc",
+    "base/files/file_enumerator.cc",
+    "base/files/file_enumerator_posix.cc",
+    "base/files/file_path.cc",
+    "base/files/file_path_constants.cc",
+    "base/files/file_path_watcher.cc",
+    "base/files/file_posix.cc",
+    "base/files/file_tracing.cc",
+    "base/files/file_util.cc",
+    "base/files/file_util_posix.cc",
+    "base/files/important_file_writer.cc",
+    "base/files/memory_mapped_file.cc",
+    "base/files/memory_mapped_file_posix.cc",
+    "base/files/scoped_file.cc",
+    "base/files/scoped_temp_dir.cc",
+    "base/guid.cc",
+    "base/hash.cc",
+    "base/json/json_file_value_serializer.cc",
+    "base/json/json_parser.cc",
+    "base/json/json_reader.cc",
+    "base/json/json_string_value_serializer.cc",
+    "base/json/json_value_converter.cc",
+    "base/json/json_writer.cc",
+    "base/json/string_escape.cc",
+    "base/lazy_instance_helpers.cc",
+    "base/location.cc",
+    "base/logging.cc",
+    "base/md5.cc",
+    "base/memory/aligned_memory.cc",
+    "base/memory/platform_shared_memory_region.cc",
+    "base/memory/platform_shared_memory_region_posix.cc",
+    "base/memory/read_only_shared_memory_region.cc",
+    "base/memory/ref_counted.cc",
+    "base/memory/ref_counted_memory.cc",
+    "base/memory/shared_memory_handle.cc",
+    "base/memory/shared_memory_handle_posix.cc",
+    "base/memory/shared_memory_helper.cc",
+    "base/memory/shared_memory_mapping.cc",
+    "base/memory/unsafe_shared_memory_region.cc",
+    "base/memory/weak_ptr.cc",
+    "base/memory/writable_shared_memory_region.cc",
+    "base/message_loop/incoming_task_queue.cc",
+    "base/message_loop/message_loop.cc",
+    "base/message_loop/message_loop_current.cc",
+    "base/message_loop/message_loop_task_runner.cc",
+    "base/message_loop/message_pump.cc",
+    "base/message_loop/message_pump_default.cc",
+    "base/message_loop/message_pump_libevent.cc",
+    "base/message_loop/watchable_io_message_pump_posix.cc",
+    "base/metrics/bucket_ranges.cc",
+    "base/metrics/dummy_histogram.cc",
+    "base/metrics/field_trial.cc",
+    "base/metrics/field_trial_param_associator.cc",
+    "base/metrics/histogram.cc",
+    "base/metrics/histogram_base.cc",
+    "base/metrics/histogram_functions.cc",
+    "base/metrics/histogram_samples.cc",
+    "base/metrics/histogram_snapshot_manager.cc",
+    "base/metrics/metrics_hashes.cc",
+    "base/metrics/persistent_histogram_allocator.cc",
+    "base/metrics/persistent_memory_allocator.cc",
+    "base/metrics/persistent_sample_map.cc",
+    "base/metrics/sample_map.cc",
+    "base/metrics/sample_vector.cc",
+    "base/metrics/sparse_histogram.cc",
+    "base/metrics/statistics_recorder.cc",
+    "base/native_library.cc",
+    "base/native_library_posix.cc",
+    "base/observer_list_threadsafe.cc",
+    "base/path_service.cc",
+    "base/pending_task.cc",
+    "base/pickle.cc",
+    "base/posix/file_descriptor_shuffle.cc",
+    "base/posix/global_descriptors.cc",
+    "base/posix/safe_strerror.cc",
+    "base/process/kill.cc",
+    "base/process/kill_posix.cc",
+    "base/process/launch.cc",
+    "base/process/launch_posix.cc",
+    "base/process/memory.cc",
+    "base/process/process_handle.cc",
+    "base/process/process_handle_posix.cc",
+    "base/process/process_iterator.cc",
+    "base/process/process_metrics.cc",
+    "base/process/process_metrics_posix.cc",
+    "base/process/process_posix.cc",
+    "base/rand_util.cc",
+    "base/rand_util_posix.cc",
+    "base/run_loop.cc",
+    "base/scoped_native_library.cc",
+    "base/sequence_checker_impl.cc",
+    "base/sequence_token.cc",
+    "base/sequenced_task_runner.cc",
+    "base/sha1.cc",
+    "base/strings/nullable_string16.cc",
+    "base/strings/pattern.cc",
+    "base/strings/safe_sprintf.cc",
+    "base/strings/string16.cc",
+    "base/strings/string_number_conversions.cc",
+    "base/strings/string_piece.cc",
+    "base/strings/string_split.cc",
+    "base/strings/string_util.cc",
+    "base/strings/string_util_constants.cc",
+    "base/strings/stringprintf.cc",
+    "base/strings/utf_string_conversion_utils.cc",
+    "base/strings/utf_string_conversions.cc",
+    "base/sync_socket_posix.cc",
+    "base/synchronization/atomic_flag.cc",
+    "base/synchronization/condition_variable_posix.cc",
+    "base/synchronization/lock.cc",
+    "base/synchronization/lock_impl_posix.cc",
+    "base/synchronization/waitable_event_posix.cc",
+    "base/sys_info.cc",
+    "base/sys_info_posix.cc",
+    "base/task/cancelable_task_tracker.cc",
+    "base/task_runner.cc",
+    "base/task_scheduler/scheduler_lock_impl.cc",
+    "base/task_scheduler/scoped_set_task_priority_for_current_thread.cc",
+    "base/task_scheduler/sequence.cc",
+    "base/task_scheduler/sequence_sort_key.cc",
+    "base/task_scheduler/task.cc",
+    "base/task_scheduler/task_traits.cc",
+    "base/third_party/dynamic_annotations/dynamic_annotations.c",
+    "base/third_party/icu/icu_utf.cc",
+    "base/third_party/nspr/prtime.cc",
+    "base/threading/platform_thread_posix.cc",
+    "base/threading/post_task_and_reply_impl.cc",
+    "base/threading/scoped_blocking_call.cc",
+    "base/threading/sequence_local_storage_map.cc",
+    "base/threading/sequence_local_storage_slot.cc",
+    "base/threading/sequenced_task_runner_handle.cc",
+    "base/threading/simple_thread.cc",
+    "base/threading/thread.cc",
+    "base/threading/thread_checker_impl.cc",
+    "base/threading/thread_collision_warner.cc",
+    "base/threading/thread_id_name_manager.cc",
+    "base/threading/thread_local_storage.cc",
+    "base/threading/thread_local_storage_posix.cc",
+    "base/threading/thread_restrictions.cc",
+    "base/threading/thread_task_runner_handle.cc",
+    "base/time/clock.cc",
+    "base/time/default_clock.cc",
+    "base/time/default_tick_clock.cc",
+    "base/time/tick_clock.cc",
+    "base/time/time.cc",
+    "base/time/time_conversion_posix.cc",
+    "base/time/time_exploded_posix.cc",
+    "base/time/time_now_posix.cc",
+    "base/time/time_override.cc",
+    "base/timer/elapsed_timer.cc",
+    "base/timer/timer.cc",
+    "base/unguessable_token.cc",
+    "base/value_iterators.cc",
+    "base/values.cc",
+    "base/version.cc",
+    "base/vlog.cc",
+    "device/bluetooth/bluetooth_advertisement.cc",
+    "device/bluetooth/bluetooth_uuid.cc",
+    "device/bluetooth/bluez/bluetooth_service_attribute_value_bluez.cc",
+    "ui/gfx/geometry/insets.cc",
+    "ui/gfx/geometry/insets_f.cc",
+    "ui/gfx/geometry/point.cc",
+    "ui/gfx/geometry/point_conversions.cc",
+    "ui/gfx/geometry/point_f.cc",
+    "ui/gfx/geometry/rect.cc",
+    "ui/gfx/geometry/rect_f.cc",
+    "ui/gfx/geometry/size.cc",
+    "ui/gfx/geometry/size_conversions.cc",
+    "ui/gfx/geometry/size_f.cc",
+    "ui/gfx/geometry/vector2d.cc",
+    "ui/gfx/geometry/vector2d_f.cc",
+    "ui/gfx/range/range.cc",
+    "ui/gfx/range/range_f.cc",
+]
+
+libchromeLinuxSrc = [
+    "base/files/file_path_watcher_linux.cc",
+    "base/files/file_util_linux.cc",
+    "base/memory/shared_memory_posix.cc",
+    "base/posix/unix_domain_socket.cc",
+    "base/process/internal_linux.cc",
+    "base/process/memory_linux.cc",
+    "base/process/process_handle_linux.cc",
+    "base/process/process_info_linux.cc",
+    "base/process/process_iterator_linux.cc",
+    "base/process/process_metrics_linux.cc",
+    "base/strings/sys_string_conversions_posix.cc",
+    "base/sys_info_linux.cc",
+    "base/threading/platform_thread_internal_posix.cc",
+    "base/threading/platform_thread_linux.cc",
+    "components/timers/alarm_timer_chromeos.cc",
+]
+
+libchromeLinuxGlibcSrc = [
+    "base/allocator/allocator_shim.cc",
+    "base/allocator/allocator_shim_default_dispatch_to_glibc.cc",
+    "base/debug/stack_trace_posix.cc",
+]
+
+libchromeAndroidSrc = [
+    "base/debug/stack_trace_android.cc",
+    "base/memory/shared_memory_android.cc",
+    "base/sys_info_chromeos.cc",
+]
+
+// libchrome static+shared for host and device
+// ========================================================
+cc_library {
+    name: "libchrome",
+    host_supported: true,
+    recovery_available: true,
+    vendor_available: true,
+    defaults: ["libchrome-defaults"],
+    srcs: libchromeCommonSrc,
+
+    export_shared_lib_headers: ["libbase"],
+    export_static_lib_headers: ["libgtest_prod"],
+    shared_libs: [
+        "libbase",
+        "libevent",
+    ],
+    static_libs: [
+        "libgtest_prod",
+        "libmodpb64",
+    ],
+    target: {
+        linux: {
+            srcs: libchromeLinuxSrc,
+        },
+        linux_glibc: {
+            srcs: libchromeLinuxGlibcSrc,
+        },
+        android: {
+            srcs: libchromeAndroidSrc,
+            shared_libs: [
+                "libcutils",
+                "liblog",
+            ],
+        },
+    },
+}
+
+// libchrome-crypto shared library for device
+// ========================================================
+
+// Similar to libchrome, generate wrapped header files. See comments for
+// libchrome-include for the details.
+gensrcs {
+    name: "libchrome-crypto-include",
+    cmd: "$(location libchrome_tools/include_generator.py) $(in) $(out)",
+    tool_files: ["libchrome_tools/include_generator.py"],
+    export_include_dirs: ["."],
+    srcs: ["crypto/**/*.h"],
+    output_extension: "h",
+}
+
+cc_library_shared {
+    name: "libchrome-crypto",
+    vendor_available: true,
+    defaults: ["libchrome-defaults"],
+    srcs: [
+        "crypto/openssl_util.cc",
+        "crypto/random.cc",
+        "crypto/secure_hash.cc",
+        "crypto/secure_util.cc",
+        "crypto/sha2.cc",
+    ],
+
+    generated_headers: ["libchrome-crypto-include"],
+    export_generated_headers: ["libchrome-crypto-include"],
+
+    shared_libs: [
+        "libchrome",
+        "libcrypto",
+        "libssl",
+    ],
+}
+
+// Helpers needed for unit tests.
+// ========================================================
+cc_library_static {
+    name: "libchrome_test_helpers",
+    defaults: ["libchrome-test-defaults"],
+    shared_libs: ["libchrome"],
+    host_supported: true,
+
+    srcs: [
+        "base/test/gtest_util.cc",
+        "base/test/simple_test_clock.cc",
+        "base/test/simple_test_tick_clock.cc",
+        "base/test/test_file_util.cc",
+        "base/test/test_file_util_linux.cc",
+        "base/test/test_switches.cc",
+        "base/test/test_timeouts.cc",
+    ],
+}
+
+// Helpers needed for unit tests (for host).
+// ========================================================
+cc_library_host_static {
+    name: "libchrome_test_helpers-host",
+    defaults: ["libchrome-test-defaults"],
+    shared_libs: ["libchrome"],
+
+    srcs: ["base/test/simple_test_clock.cc"],
+}
+
+// Host and target unit tests. Run (from repo root) with:
+// ./out/host/<arch>/nativetest/libchrome_test/libchrome_test
+// or
+// adb shell /data/nativetest/libchrome_test/libchrome_test
+// ========================================================
+cc_test {
+    name: "libchrome_test",
+    host_supported: true,
+    defaults: ["libchrome-test-defaults"],
+    srcs: [
+        "base/at_exit_unittest.cc",
+        "base/atomicops_unittest.cc",
+        "base/base64_unittest.cc",
+        "base/base64url_unittest.cc",
+        "base/big_endian_unittest.cc",
+        "base/bind_unittest.cc",
+        "base/bits_unittest.cc",
+        "base/build_time_unittest.cc",
+        "base/callback_helpers_unittest.cc",
+        "base/callback_list_unittest.cc",
+        "base/callback_unittest.cc",
+        "base/cancelable_callback_unittest.cc",
+        "base/command_line_unittest.cc",
+        "base/cpu_unittest.cc",
+        "base/debug/activity_tracker_unittest.cc",
+        "base/debug/debugger_unittest.cc",
+        "base/debug/leak_tracker_unittest.cc",
+        "base/environment_unittest.cc",
+        "base/files/dir_reader_posix_unittest.cc",
+        "base/files/file_descriptor_watcher_posix_unittest.cc",
+        "base/files/file_enumerator_unittest.cc",
+        "base/files/file_path_unittest.cc",
+        "base/files/file_path_watcher_unittest.cc",
+        "base/files/file_unittest.cc",
+        "base/files/important_file_writer_unittest.cc",
+        "base/files/scoped_temp_dir_unittest.cc",
+        "base/gmock_unittest.cc",
+        "base/guid_unittest.cc",
+        "base/json/json_parser_unittest.cc",
+        "base/json/json_reader_unittest.cc",
+        "base/json/json_value_converter_unittest.cc",
+        "base/json/json_value_serializer_unittest.cc",
+        "base/json/json_writer_unittest.cc",
+        "base/json/string_escape_unittest.cc",
+        "base/lazy_instance_unittest.cc",
+        "base/logging_unittest.cc",
+        "base/md5_unittest.cc",
+        "base/memory/aligned_memory_unittest.cc",
+        "base/memory/linked_ptr_unittest.cc",
+        "base/memory/ref_counted_memory_unittest.cc",
+        "base/memory/ref_counted_unittest.cc",
+        "base/memory/singleton_unittest.cc",
+        "base/memory/weak_ptr_unittest.cc",
+        "base/message_loop/message_loop_task_runner_unittest.cc",
+        "base/message_loop/message_loop_unittest.cc",
+        "base/metrics/bucket_ranges_unittest.cc",
+        "base/metrics/field_trial_unittest.cc",
+        "base/metrics/histogram_base_unittest.cc",
+        "base/metrics/histogram_macros_unittest.cc",
+        "base/metrics/histogram_snapshot_manager_unittest.cc",
+        "base/metrics/histogram_unittest.cc",
+        "base/metrics/metrics_hashes_unittest.cc",
+        "base/metrics/persistent_histogram_allocator_unittest.cc",
+        "base/metrics/persistent_memory_allocator_unittest.cc",
+        "base/metrics/persistent_sample_map_unittest.cc",
+        "base/metrics/sample_map_unittest.cc",
+        "base/metrics/sample_vector_unittest.cc",
+        "base/metrics/sparse_histogram_unittest.cc",
+        "base/metrics/statistics_recorder_unittest.cc",
+        "base/observer_list_unittest.cc",
+        "base/optional_unittest.cc",
+        "base/pickle_unittest.cc",
+        "base/posix/file_descriptor_shuffle_unittest.cc",
+        "base/posix/unix_domain_socket_unittest.cc",
+        "base/process/process_info_unittest.cc",
+        "base/process/process_metrics_unittest.cc",
+        "base/rand_util_unittest.cc",
+        "base/scoped_clear_errno_unittest.cc",
+        "base/scoped_generic_unittest.cc",
+        "base/security_unittest.cc",
+        "base/sequence_checker_unittest.cc",
+        "base/sequence_token_unittest.cc",
+        "base/sha1_unittest.cc",
+        "base/stl_util_unittest.cc",
+        "base/strings/pattern_unittest.cc",
+        "base/strings/string16_unittest.cc",
+        "base/strings/string_number_conversions_unittest.cc",
+        "base/strings/string_piece_unittest.cc",
+        "base/strings/string_split_unittest.cc",
+        "base/strings/string_util_unittest.cc",
+        "base/strings/stringprintf_unittest.cc",
+        "base/strings/sys_string_conversions_unittest.cc",
+        "base/strings/utf_string_conversions_unittest.cc",
+        "base/sync_socket_unittest.cc",
+        "base/synchronization/atomic_flag_unittest.cc",
+        "base/synchronization/condition_variable_unittest.cc",
+        "base/synchronization/lock_unittest.cc",
+        "base/synchronization/waitable_event_unittest.cc",
+        "base/sys_info_unittest.cc",
+        "base/task/cancelable_task_tracker_unittest.cc",
+        "base/task_runner_util_unittest.cc",
+        "base/task_scheduler/scheduler_lock_unittest.cc",
+        "base/task_scheduler/scoped_set_task_priority_for_current_thread_unittest.cc",
+        "base/task_scheduler/sequence_sort_key_unittest.cc",
+        "base/task_scheduler/sequence_unittest.cc",
+        "base/task_scheduler/task_traits.cc",
+        "base/template_util_unittest.cc",
+        "base/test/metrics/histogram_tester.cc",
+        "base/test/mock_entropy_provider.cc",
+        "base/test/multiprocess_test.cc",
+        "base/test/scoped_feature_list.cc",
+        "base/test/scoped_locale.cc",
+        "base/test/simple_test_tick_clock.cc",
+        "base/test/test_file_util.cc",
+        "base/test/test_file_util_linux.cc",
+        "base/test/test_file_util_posix.cc",
+        "base/test/test_io_thread.cc",
+        "base/test/test_mock_time_task_runner.cc",
+        "base/test/test_pending_task.cc",
+        "base/test/test_shared_memory_util.cc",
+        "base/test/test_simple_task_runner.cc",
+        "base/test/test_switches.cc",
+        "base/test/test_timeouts.cc",
+        "base/threading/platform_thread_unittest.cc",
+        "base/threading/simple_thread_unittest.cc",
+        "base/threading/thread_checker_unittest.cc",
+        "base/threading/thread_collision_warner_unittest.cc",
+        "base/threading/thread_id_name_manager_unittest.cc",
+        "base/threading/thread_local_storage_unittest.cc",
+        "base/threading/thread_local_unittest.cc",
+        "base/threading/thread_unittest.cc",
+        "base/time/pr_time_unittest.cc",
+        "base/time/time_unittest.cc",
+        "base/timer/hi_res_timer_manager_unittest.cc",
+        "base/timer/mock_timer.cc",
+        "base/tuple_unittest.cc",
+        "base/values_unittest.cc",
+        "base/version_unittest.cc",
+        "base/vlog_unittest.cc",
+        "testing/multiprocess_func_list.cc",
+        "testrunner.cc",
+        "ui/gfx/range/range_unittest.cc",
+    ],
+
+    cflags: ["-DUNIT_TEST"],
+    shared_libs: [
+        "libchrome",
+        "libevent",
+    ],
+    static_libs: [
+        "libgmock",
+        "libgtest",
+    ],
+    target: {
+        android: {
+            srcs: [
+                "crypto/secure_hash_unittest.cc",
+                "crypto/sha2_unittest.cc",
+            ],
+            shared_libs: [
+                "libchrome-crypto",
+            ],
+            cflags: ["-DDONT_EMBED_BUILD_METADATA"],
+        },
+    },
+}
+
+filegroup {
+    name: "libmojo_mojom_files",
+    srcs: [
+        "ipc/ipc.mojom",
+        "mojo/public/interfaces/bindings/interface_control_messages.mojom",
+        "mojo/public/interfaces/bindings/native_struct.mojom",
+        "mojo/public/interfaces/bindings/pipe_control_messages.mojom",
+        "mojo/public/mojom/base/big_buffer.mojom",
+        "mojo/public/mojom/base/big_string.mojom",
+        "mojo/public/mojom/base/file.mojom",
+        "mojo/public/mojom/base/file_error.mojom",
+        "mojo/public/mojom/base/file_info.mojom",
+        "mojo/public/mojom/base/file_path.mojom",
+        "mojo/public/mojom/base/process_id.mojom",
+        "mojo/public/mojom/base/read_only_buffer.mojom",
+        "mojo/public/mojom/base/ref_counted_memory.mojom",
+        "mojo/public/mojom/base/shared_memory.mojom",
+        "mojo/public/mojom/base/string16.mojom",
+        "mojo/public/mojom/base/text_direction.mojom",
+        "mojo/public/mojom/base/thread_priority.mojom",
+        "mojo/public/mojom/base/time.mojom",
+        "mojo/public/mojom/base/unguessable_token.mojom",
+        "mojo/public/mojom/base/values.mojom",
+        "ui/gfx/geometry/mojo/geometry.mojom",
+        "ui/gfx/range/mojo/range.mojom",
+    ],
+}
+
+filegroup {
+    name: "libmojo_mojo_sources",
+    srcs: [
+        "mojo/**/*.cc",
+    ],
+    exclude_srcs: [
+        // Unused in Chrome. Looks like mistakenly checked in.
+        // TODO(hidehiko): Remove this after the file is removed in Chrome
+        // repository. http://crrev.com/c/644531
+        "mojo/public/cpp/system/message.cc",
+
+        // No WTF support.
+        "mojo/public/cpp/bindings/lib/string_traits_wtf.cc",
+
+        // Exclude windows/mac/ios/fuchsia files.
+        "**/*_win.cc",
+        "**/*_fuchsia.cc",
+        "mojo/core/mach_port_relay.*",
+        "mojo/public/cpp/base/logfont_win*",
+        "mojo/public/mojom/base/logfont_win*",
+
+        // Exclude js binding related files.
+        "mojo/public/js/**/*",
+
+        // Exclude tests.
+        "**/*_unittest.cc",
+        "**/*_unittests.cc",
+        "**/*_perftest.cc",
+        "mojo/core/core_test_base.*",
+        "mojo/core/test/*",
+        "mojo/core/test_utils.*",
+        "mojo/public/c/system/tests/**/*",
+        "mojo/public/cpp/bindings/tests/**/*",
+        "mojo/public/cpp/system/tests/**/*",
+        "mojo/public/cpp/test_support/**/*",
+        "mojo/public/java/system/javatests/**/*",
+        "mojo/public/tests/**/*",
+
+        // Exclude memory allocator unsupported feature
+        "mojo/public/cpp/base/memory_allocator_dump_cross_process_uid*",
+
+        // Exclude fuzzers
+        "mojo/public/tools/fuzzers/**/*",
+    ],
+}
+
+// Python in Chrome repository requires still Python 2.
+python_defaults {
+    name: "libmojo_scripts",
+    version: {
+        py2: {
+            enabled: true,
+        },
+        py3: {
+            enabled: false,
+        },
+    },
+}
+
+python_binary_host {
+    name: "jni_generator",
+    main: "base/android/jni_generator/jni_generator.py",
+    srcs: [
+        "base/android/jni_generator/jni_generator.py",
+        "build/**/*.py",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+python_binary_host {
+    name: "jni_registration_generator",
+    main: "base/android/jni_generator/jni_registration_generator.py",
+    srcs: [
+        "base/android/jni_generator/jni_generator.py",
+        "base/android/jni_generator/jni_registration_generator.py",
+        "build/**/*.py",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+python_binary_host {
+    name: "mojom_bindings_generator",
+    main: "mojo/public/tools/bindings/mojom_bindings_generator.py",
+    srcs: [
+        "build/**/*.py",
+        "mojo/public/tools/bindings/**/*.py",
+        "third_party/jinja2/**/*.py",
+        "third_party/markupsafe/**/*.py",
+        "third_party/ply/**/*.py",
+    ],
+    data: [
+        "mojo/public/tools/bindings/generators/cpp_templates/*.tmpl",
+        "mojo/public/tools/bindings/generators/java_templates/*.tmpl",
+        "mojo/public/tools/bindings/generators/js_templates/*.tmpl",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+genrule {
+    name: "libmojo_mojom_templates",
+    cmd: "$(location mojom_bindings_generator)" +
+        "    --use_bundled_pylibs precompile" +
+        "    -o $(genDir)",
+
+    tools: [
+        "mojom_bindings_generator",
+    ],
+
+    out: [
+        "cpp_templates.zip",
+        "java_templates.zip",
+        "js_templates.zip",
+    ],
+}
+
+python_binary_host {
+    name: "mojom_generate_type_mappings",
+    main: "libchrome_tools/mojom_generate_type_mappings.py",
+    srcs: [
+        "build/gn_helpers.py",
+        "libchrome_tools/mojom_generate_type_mappings.py",
+        "mojo/public/tools/bindings/generate_type_mappings.py",
+        "mojo/public/tools/bindings/pylib/mojom/fileutil.py",
+        "mojo/public/tools/bindings/pylib/mojom/generate/generator.py",
+        "mojo/public/tools/bindings/pylib/mojom/generate/module.py",
+        "mojo/public/tools/bindings/pylib/mojom/generate/pack.py",
+    ],
+    defaults: ["libmojo_scripts"],
+}
+
+genrule {
+    name: "libmojo_common_custom_types__type_mappings",
+    cmd: "$(location mojom_generate_type_mappings)" +
+        "    --output=$(out)" +
+        "    $(in)",
+
+    tools: ["mojom_generate_type_mappings"],
+
+    srcs: [
+        "mojo/public/cpp/base/big_buffer.typemap",
+        "mojo/public/cpp/base/big_string.typemap",
+        "mojo/public/cpp/base/file.typemap",
+        "mojo/public/cpp/base/file_error.typemap",
+        "mojo/public/cpp/base/file_info.typemap",
+        "mojo/public/cpp/base/file_path.typemap",
+        "mojo/public/cpp/base/process_id.typemap",
+        "mojo/public/cpp/base/read_only_buffer.typemap",
+        "mojo/public/cpp/base/ref_counted_memory.typemap",
+        "mojo/public/cpp/base/shared_memory.typemap",
+        "mojo/public/cpp/base/string16.typemap",
+        "mojo/public/cpp/base/text_direction.typemap",
+        "mojo/public/cpp/base/thread_priority.typemap",
+        "mojo/public/cpp/base/time.typemap",
+        "mojo/public/cpp/base/unguessable_token.typemap",
+        "mojo/public/cpp/base/values.typemap",
+        "ui/gfx/geometry/mojo/geometry.typemap",
+        "ui/gfx/range/mojo/range.typemap",
+    ],
+    out: ["common_custom_types__type_mappings"],
+}
+
+generate_mojom_pickles {
+    name: "libmojo_mojom_pickles",
+    srcs: [":libmojo_mojom_files"],
+}
+
+generate_mojom_headers {
+    name: "libmojo_mojom_headers",
+    srcs: [":libmojo_mojom_files"],
+    pickles: [":libmojo_mojom_pickles"],
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
+}
+
+generate_mojom_srcs {
+    name: "libmojo_mojom_srcs",
+    srcs: [":libmojo_mojom_files"],
+    pickles: [":libmojo_mojom_pickles"],
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
+}
+
+genrule {
+    name: "libmojo_jni_headers",
+    cmd: "$(location libchrome_tools/jni_generator_helper.sh)" +
+        "    --jni_generator=$(location jni_generator)" +
+        "    --output_dir=$(genDir)/jni" +
+        "    --includes=base/android/jni_generator/jni_generator_helper.h" +
+        "    --ptr_type=long" +
+        "    $(in)",
+
+    tools: [
+        "jni_generator",
+    ],
+
+    tool_files: [
+        "libchrome_tools/jni_generator_helper.sh",
+    ],
+
+    srcs: [
+        "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
+        "base/android/java/src/org/chromium/base/ThreadUtils.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/BaseRunLoop.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/CoreImpl.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/WatcherImpl.java",
+    ],
+
+    out: [
+        "jni/BaseRunLoop_jni.h",
+        "jni/BuildInfo_jni.h",
+        "jni/CoreImpl_jni.h",
+        "jni/JavaExceptionReporter_jni.h",
+        "jni/WatcherImpl_jni.h",
+    ],
+}
+
+genrule {
+    name: "libmojo_jni_registration_headers",
+    cmd: "$(location libchrome_tools/jni_registration_generator_helper.sh)" +
+        "    --jni_generator=$(location jni_registration_generator)" +
+        "    --output=$(genDir)/jni/libmojo_jni_registrations.h" +
+        "    $(in)",
+
+    tools: [
+        "jni_registration_generator",
+    ],
+
+    tool_files: [
+        "libchrome_tools/jni_registration_generator_helper.sh",
+    ],
+
+    srcs: [
+        "base/android/java/src/org/chromium/base/BuildInfo.java",
+        "base/android/java/src/org/chromium/base/JavaExceptionReporter.java",
+        "base/android/java/src/org/chromium/base/ThreadUtils.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/BaseRunLoop.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/CoreImpl.java",
+        "mojo/public/java/system/src/org/chromium/mojo/system/impl/WatcherImpl.java",
+    ],
+
+    out: [
+        "jni/libmojo_jni_registrations.h",
+    ],
+}
+
+cc_library_shared {
+    name: "libmojo",
+    vendor_available: true,
+
+    generated_sources: ["libmojo_mojom_srcs"],
+    generated_headers: [
+        "libmojo_jni_headers",
+        "libmojo_jni_registration_headers",
+        "libmojo_mojom_headers",
+    ],
+    export_generated_headers: [
+        "libmojo_jni_registration_headers",
+        "libmojo_mojom_headers",
+    ],
+
+    srcs: [
+        ":libmojo_mojo_sources",
+        "base/android/build_info.cc",
+        "base/android/java_exception_reporter.cc",
+        "base/android/jni_android.cc",
+        "base/android/jni_array.cc",
+        "base/android/jni_string.cc",
+        "base/android/scoped_java_ref.cc",
+        "ipc/ipc_message.cc",
+        "ipc/ipc_message_attachment.cc",
+        "ipc/ipc_message_attachment_set.cc",
+        "ipc/ipc_message_utils.cc",
+        "ipc/ipc_mojo_handle_attachment.cc",
+        "ipc/ipc_mojo_message_helper.cc",
+        "ipc/ipc_mojo_param_traits.cc",
+        "ipc/ipc_platform_file_attachment_posix.cc",
+        "ipc/native_handle_type_converters.cc",
+    ],
+
+    cflags: [
+        "-DMOJO_CORE_LEGACY_PROTOCOL",
+        "-Wall",
+        "-Werror",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+    ],
+
+    // We also pass NO_ASHMEM to make base::SharedMemory avoid using it and prefer
+    // the POSIX versions.
+    cppflags: [
+        "-DNO_ASHMEM",
+        "-Wno-extra",
+        "-Wno-ignored-qualifiers",
+        "-Wno-non-virtual-dtor",
+        "-Wno-sign-promo",
+    ],
+
+    shared_libs: [
+        "libchrome",
+        "libchrome-crypto",
+        "libevent",
+        "liblog",
+    ],
+
+    header_libs: ["jni_headers"],
+
+    export_include_dirs: ["."],
+}
+
+generate_mojom_srcjar {
+    name: "libmojo_mojom_java_srcs",
+    srcs: [":libmojo_mojom_files"],
+    pickles: [":libmojo_mojom_pickles"],
+    srcjar: "libmojo_mojom.srcjar",
+    templates: ":libmojo_mojom_templates",
+    flags: "--disallow_native_types",
+    typemaps: [":libmojo_common_custom_types__type_mappings"],
+}
+
+java_library {
+    name: "android.mojo",
+
+    srcs: [
+        ":libmojo_mojom_java_srcs",
+        "base/android/java/src/**/*.java",
+        "mojo/android/system/src/**/*.java",
+        "mojo/public/java/bindings/src/**/*.java",
+        "mojo/public/java/system/src/**/*.java",
+    ],
+
+    static_libs: [
+        "android-support-annotations",
+    ],
+}
