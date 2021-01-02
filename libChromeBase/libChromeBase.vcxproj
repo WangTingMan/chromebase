@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\chromebase\base\allocator\allocator_extension.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\oom_callback.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\page_allocator.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\spin_lock.cc" />
+    <ClCompile Include="..\chromebase\base\at_exit.cc" />
+    <ClCompile Include="..\chromebase\base\barrier_closure.cc" />
+    <ClCompile Include="..\chromebase\base\base64.cc" />
+    <ClCompile Include="..\chromebase\base\base_paths.cc" />
+    <ClCompile Include="..\chromebase\base\base_paths_posix.cc" />
+    <ClCompile Include="..\chromebase\base\base_paths_win.cc" />
+    <ClCompile Include="..\chromebase\base\base_switches.cc" />
+    <ClCompile Include="..\chromebase\base\big_endian.cc" />
+    <ClCompile Include="..\chromebase\base\build_time.cc" />
+    <ClCompile Include="..\chromebase\base\callback_helpers.cc" />
+    <ClCompile Include="..\chromebase\base\callback_internal.cc" />
+    <ClCompile Include="..\chromebase\base\command_line.cc" />
+    <ClCompile Include="..\chromebase\base\cpu.cc" />
+    <ClCompile Include="..\chromebase\base\debug\activity_tracker.cc" />
+    <ClCompile Include="..\chromebase\base\debug\alias.cc" />
+    <ClCompile Include="..\chromebase\base\debug\crash_logging.cc" />
+    <ClCompile Include="..\chromebase\base\debug\debugger.cc" />
+    <ClCompile Include="..\chromebase\base\debug\debugger_win.cc" />
+    <ClCompile Include="..\chromebase\base\debug\dump_without_crashing.cc" />
+    <ClCompile Include="..\chromebase\base\debug\profiler.cc" />
+    <ClCompile Include="..\chromebase\base\debug\stack_trace.cc" />
+    <ClCompile Include="..\chromebase\base\debug\stack_trace_win.cc" />
+    <ClCompile Include="..\chromebase\base\debug\task_annotator.cc" />
+    <ClCompile Include="..\chromebase\base\environment.cc" />
+    <ClCompile Include="..\chromebase\base\feature_list.cc" />
+    <ClCompile Include="..\chromebase\base\files\file.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_enumerator.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_enumerator_win.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_path.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_path_constants.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_path_watcher.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_tracing.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_util.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_util_win.cc" />
+    <ClCompile Include="..\chromebase\base\files\file_win.cc" />
+    <ClCompile Include="..\chromebase\base\files\important_file_writer.cc" />
+    <ClCompile Include="..\chromebase\base\files\memory_mapped_file.cc" />
+    <ClCompile Include="..\chromebase\base\files\memory_mapped_file_win.cc" />
+    <ClCompile Include="..\chromebase\base\files\scoped_file.cc" />
+    <ClCompile Include="..\chromebase\base\files\scoped_temp_dir.cc" />
+    <ClCompile Include="..\chromebase\base\file_version_info_win.cc" />
+    <ClCompile Include="..\chromebase\base\guid.cc" />
+    <ClCompile Include="..\chromebase\base\hash.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_file_value_serializer.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_parser.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_reader.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_string_value_serializer.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_value_converter.cc" />
+    <ClCompile Include="..\chromebase\base\json\json_writer.cc" />
+    <ClCompile Include="..\chromebase\base\json\string_escape.cc" />
+    <ClCompile Include="..\chromebase\base\lazy_instance_helpers.cc" />
+    <ClCompile Include="..\chromebase\base\location.cc" />
+    <ClCompile Include="..\chromebase\base\logging.cc" />
+    <ClCompile Include="..\chromebase\base\md5.cc" />
+    <ClCompile Include="..\chromebase\base\memory\aligned_memory.cc" />
+    <ClCompile Include="..\chromebase\base\memory\memory_dump_provider_info.cc" />
+    <ClCompile Include="..\chromebase\base\memory\platform_shared_memory_region.cc" />
+    <ClCompile Include="..\chromebase\base\memory\platform_shared_memory_region_win.cc" />
+    <ClCompile Include="..\chromebase\base\memory\protected_memory.cc" />
+    <ClCompile Include="..\chromebase\base\memory\read_only_shared_memory_region.cc" />
+    <ClCompile Include="..\chromebase\base\memory\ref_counted.cc" />
+    <ClCompile Include="..\chromebase\base\memory\ref_counted_memory.cc" />
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_handle.cc" />
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_handle_win.cc" />
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_mapping.cc" />
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_tracker.cc" />
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_win.cc" />
+    <ClCompile Include="..\chromebase\base\memory\unsafe_shared_memory_region.cc" />
+    <ClCompile Include="..\chromebase\base\memory\weak_ptr.cc" />
+    <ClCompile Include="..\chromebase\base\memory\writable_shared_memory_region.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\incoming_task_queue.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_loop.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_loop_current.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_loop_task_runner.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_pump.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_pump_default.cc" />
+    <ClCompile Include="..\chromebase\base\message_loop\message_pump_win.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\bucket_ranges.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\dummy_histogram.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\field_trial.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\field_trial_params.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\field_trial_param_associator.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram_base.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram_delta_serialization.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram_functions.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram_samples.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\histogram_snapshot_manager.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\metrics_hashes.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\persistent_histogram_allocator.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\persistent_histogram_storage.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\persistent_memory_allocator.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\persistent_sample_map.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\sample_map.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\sample_vector.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\single_sample_metrics.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\sparse_histogram.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\statistics_recorder.cc" />
+    <ClCompile Include="..\chromebase\base\metrics\user_metrics.cc" />
+    <ClCompile Include="..\chromebase\base\native_library.cc" />
+    <ClCompile Include="..\chromebase\base\native_library_win.cc" />
+    <ClCompile Include="..\chromebase\base\observer_list_threadsafe.cc" />
+    <ClCompile Include="..\chromebase\base\path_service.cc" />
+    <ClCompile Include="..\chromebase\base\pending_task.cc" />
+    <ClCompile Include="..\chromebase\base\pickle.cc" />
+    <ClCompile Include="..\chromebase\base\process\kill.cc" />
+    <ClCompile Include="..\chromebase\base\process\launch.cc" />
+    <ClCompile Include="..\chromebase\base\process\memory.cc" />
+    <ClCompile Include="..\chromebase\base\process\memory_win.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_handle.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_handle_win.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_info_win.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_iterator.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_iterator_win.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_metrics.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_metrics_win.cc" />
+    <ClCompile Include="..\chromebase\base\process\process_win.cc" />
+    <ClCompile Include="..\chromebase\base\rand_util.cc" />
+    <ClCompile Include="..\chromebase\base\rand_util_win.cc" />
+    <ClCompile Include="..\chromebase\base\run_loop.cc" />
+    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\lock_free_address_hash_set.cc" />
+    <ClCompile Include="..\chromebase\base\scoped_clear_last_error_win.cc" />
+    <ClCompile Include="..\chromebase\base\scoped_native_library.cc" />
+    <ClCompile Include="..\chromebase\base\sequenced_task_runner.cc" />
+    <ClCompile Include="..\chromebase\base\sequence_checker_impl.cc" />
+    <ClCompile Include="..\chromebase\base\sequence_token.cc" />
+    <ClCompile Include="..\chromebase\base\sha1.cc" />
+    <ClCompile Include="..\chromebase\base\strings\nullable_string16.cc" />
+    <ClCompile Include="..\chromebase\base\strings\old_utf_string_conversions.cc" />
+    <ClCompile Include="..\chromebase\base\strings\pattern.cc" />
+    <ClCompile Include="..\chromebase\base\strings\safe_sprintf.cc" />
+    <ClCompile Include="..\chromebase\base\strings\strcat.cc" />
+    <ClCompile Include="..\chromebase\base\strings\stringprintf.cc" />
+    <ClCompile Include="..\chromebase\base\strings\string_number_conversions.cc" />
+    <ClCompile Include="..\chromebase\base\strings\string_piece.cc" />
+    <ClCompile Include="..\chromebase\base\strings\string_split.cc" />
+    <ClCompile Include="..\chromebase\base\strings\string_util.cc" />
+    <ClCompile Include="..\chromebase\base\strings\string_util_constants.cc" />
+    <ClCompile Include="..\chromebase\base\strings\sys_string_conversions_win.cc" />
+    <ClCompile Include="..\chromebase\base\strings\utf_string_conversions.cc" />
+    <ClCompile Include="..\chromebase\base\strings\utf_string_conversions_fuzzer.cc" />
+    <ClCompile Include="..\chromebase\base\strings\utf_string_conversion_utils.cc" />
+    <ClCompile Include="..\chromebase\base\synchronization\atomic_flag.cc" />
+    <ClCompile Include="..\chromebase\base\synchronization\condition_variable_win.cc" />
+    <ClCompile Include="..\chromebase\base\synchronization\lock.cc" />
+    <ClCompile Include="..\chromebase\base\synchronization\lock_impl_win.cc" />
+    <ClCompile Include="..\chromebase\base\synchronization\waitable_event_win.cc" />
+    <ClCompile Include="..\chromebase\base\system\system_monitor.cc" />
+    <ClCompile Include="..\chromebase\base\sys_info.cc" />
+    <ClCompile Include="..\chromebase\base\sys_info_win.cc" />
+    <ClCompile Include="..\chromebase\base\task\cancelable_task_tracker.cc" />
+    <ClCompile Include="..\chromebase\base\task\post_task.cc" />
+    <ClCompile Include="..\chromebase\base\task\scoped_set_task_priority_for_current_thread.cc" />
+    <ClCompile Include="..\chromebase\base\task\sequence_manager\enqueue_order.cc" />
+    <ClCompile Include="..\chromebase\base\task\sequence_manager\lazy_now.cc" />
+    <ClCompile Include="..\chromebase\base\task\sequence_manager\thread_controller_impl.cc" />
+    <ClCompile Include="..\chromebase\base\task\sequence_manager\thread_controller_with_message_pump_impl.cc" />
+    <ClCompile Include="..\chromebase\base\task\task_executor.cc" />
+    <ClCompile Include="..\chromebase\base\task\task_traits.cc" />
+    <ClCompile Include="..\chromebase\base\task_runner.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\environment_config.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\lazy_task_runner.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_lock_impl.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\sequence.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\sequence_sort_key.cc" />
+    <ClCompile Include="..\chromebase\base\task_scheduler\task.cc" />
+    <ClCompile Include="..\chromebase\base\test\simple_test_tick_clock.cc" />
+    <ClCompile Include="..\chromebase\base\test\test_pending_task.cc" />
+    <ClCompile Include="..\chromebase\base\test\test_simple_task_runner.cc" />
+    <ClCompile Include="..\chromebase\base\third_party\icu\icu_utf.cc" />
+    <ClCompile Include="..\chromebase\base\third_party\nspr\prtime.cc" />
+    <ClCompile Include="..\chromebase\base\threading\platform_thread_win.cc" />
+    <ClCompile Include="..\chromebase\base\threading\post_task_and_reply_impl.cc" />
+    <ClCompile Include="..\chromebase\base\threading\scoped_blocking_call.cc" />
+    <ClCompile Include="..\chromebase\base\threading\scoped_thread_priority.cc" />
+    <ClCompile Include="..\chromebase\base\threading\sequenced_task_runner_handle.cc" />
+    <ClCompile Include="..\chromebase\base\threading\sequence_local_storage_map.cc" />
+    <ClCompile Include="..\chromebase\base\threading\sequence_local_storage_slot.cc" />
+    <ClCompile Include="..\chromebase\base\threading\simple_thread.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_checker_impl.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_collision_warner.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_id_name_manager.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_local_storage.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_local_storage_win.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_restrictions.cc" />
+    <ClCompile Include="..\chromebase\base\threading\thread_task_runner_handle.cc" />
+    <ClCompile Include="..\chromebase\base\timer\elapsed_timer.cc" />
+    <ClCompile Include="..\chromebase\base\timer\mock_timer.cc" />
+    <ClCompile Include="..\chromebase\base\timer\timer.cc" />
+    <ClCompile Include="..\chromebase\base\time\clock.cc" />
+    <ClCompile Include="..\chromebase\base\time\default_clock.cc" />
+    <ClCompile Include="..\chromebase\base\time\default_tick_clock.cc" />
+    <ClCompile Include="..\chromebase\base\time\tick_clock.cc" />
+    <ClCompile Include="..\chromebase\base\time\time.cc" />
+    <ClCompile Include="..\chromebase\base\time\time_override.cc" />
+    <ClCompile Include="..\chromebase\base\time\time_to_iso8601.cc" />
+    <ClCompile Include="..\chromebase\base\time\time_win.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\blame_context.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\builtin_categories.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\category_registry.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\event_name_filter.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_allocation_context.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_allocation_context_tracker.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_event_filter.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\malloc_dump_provider.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_allocator_dump.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_allocator_dump_guid.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_manager.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_request_args.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_scheduler.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_infra_background_whitelist.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\memory_usage_estimator.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\process_memory_dump.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\thread_instruction_count.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\traced_value.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_arguments.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_buffer.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_config.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_config_category_filter.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_event_etw_export_win.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_event_filter.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_event_impl.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_event_memory_overhead.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_log.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\trace_log_constants.cc" />
+    <ClCompile Include="..\chromebase\base\trace_event\tracing_agent.cc" />
+    <ClCompile Include="..\chromebase\base\unguessable_token.cc" />
+    <ClCompile Include="..\chromebase\base\values.cc" />
+    <ClCompile Include="..\chromebase\base\value_iterators.cc" />
+    <ClCompile Include="..\chromebase\base\version.cc" />
+    <ClCompile Include="..\chromebase\base\vlog.cc" />
+    <ClCompile Include="..\chromebase\base\win\com_init_check_hook.cc" />
+    <ClCompile Include="..\chromebase\base\win\com_init_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\core_winrt_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\dllmain.cc" />
+    <ClCompile Include="..\chromebase\base\win\enum_variant.cc" />
+    <ClCompile Include="..\chromebase\base\win\event_trace_controller.cc" />
+    <ClCompile Include="..\chromebase\base\win\event_trace_provider.cc" />
+    <ClCompile Include="..\chromebase\base\win\hstring_reference.cc" />
+    <ClCompile Include="..\chromebase\base\win\iunknown_impl.cc" />
+    <ClCompile Include="..\chromebase\base\win\message_window.cc" />
+    <ClCompile Include="..\chromebase\base\win\object_watcher.cc" />
+    <ClCompile Include="..\chromebase\base\win\patch_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\pe_image.cc" />
+    <ClCompile Include="..\chromebase\base\win\process_startup_helper.cc" />
+    <ClCompile Include="..\chromebase\base\win\registry.cc" />
+    <ClCompile Include="..\chromebase\base\win\resource_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_bstr.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_com_initializer.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_handle.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_handle_verifier.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_hstring.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_process_information.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_variant.cc" />
+    <ClCompile Include="..\chromebase\base\win\scoped_winrt_initializer.cc" />
+    <ClCompile Include="..\chromebase\base\win\startup_information.cc" />
+    <ClCompile Include="..\chromebase\base\win\vector.cc" />
+    <ClCompile Include="..\chromebase\base\win\windows_version.cc" />
+    <ClCompile Include="..\chromebase\base\win\winrt_storage_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\win_util.cc" />
+    <ClCompile Include="..\chromebase\base\win\wmi.cc" />
+    <ClCompile Include="..\chromebase\base\win\wrapped_window_proc.cc" />
+    <ClCompile Include="..\chromebase\fakes\fakes.cpp" />
+    <ClCompile Include="..\chromebase\testing\multiprocess_func_list.cc" />
+    <ClCompile Include="..\chromebase\third_party\modp_b64\modp_b64.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\chromebase\base\allocator\allocator_extension.h" />
+    <ClInclude Include="..\chromebase\base\allocator\buildflags.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom_callback.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_constants.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internal.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internals_win.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\spin_lock.h" />
+    <ClInclude Include="..\chromebase\base\atomicops.h" />
+    <ClInclude Include="..\chromebase\base\atomicops_internals_atomicword_compat.h" />
+    <ClInclude Include="..\chromebase\base\atomicops_internals_portable.h" />
+    <ClInclude Include="..\chromebase\base\atomicops_internals_x86_msvc.h" />
+    <ClInclude Include="..\chromebase\base\atomic_ref_count.h" />
+    <ClInclude Include="..\chromebase\base\atomic_sequence_num.h" />
+    <ClInclude Include="..\chromebase\base\at_exit.h" />
+    <ClInclude Include="..\chromebase\base\auto_reset.h" />
+    <ClInclude Include="..\chromebase\base\barrier_closure.h" />
+    <ClInclude Include="..\chromebase\base\base64.h" />
+    <ClInclude Include="..\chromebase\base\base_export.h" />
+    <ClInclude Include="..\chromebase\base\base_paths.h" />
+    <ClInclude Include="..\chromebase\base\base_paths_posix.h" />
+    <ClInclude Include="..\chromebase\base\base_paths_win.h" />
+    <ClInclude Include="..\chromebase\base\base_switches.h" />
+    <ClInclude Include="..\chromebase\base\big_endian.h" />
+    <ClInclude Include="..\chromebase\base\bind.h" />
+    <ClInclude Include="..\chromebase\base\bind_helpers.h" />
+    <ClInclude Include="..\chromebase\base\bind_internal.h" />
+    <ClInclude Include="..\chromebase\base\bits.h" />
+    <ClInclude Include="..\chromebase\base\bit_cast.h" />
+    <ClInclude Include="..\chromebase\base\build_time.h" />
+    <ClInclude Include="..\chromebase\base\callback.h" />
+    <ClInclude Include="..\chromebase\base\callback_forward.h" />
+    <ClInclude Include="..\chromebase\base\callback_helpers.h" />
+    <ClInclude Include="..\chromebase\base\callback_internal.h" />
+    <ClInclude Include="..\chromebase\base\callback_list.h" />
+    <ClInclude Include="..\chromebase\base\cancelable_callback.h" />
+    <ClInclude Include="..\chromebase\base\cfi_buildflags.h" />
+    <ClInclude Include="..\chromebase\base\command_line.h" />
+    <ClInclude Include="..\chromebase\base\compiler_specific.h" />
+    <ClInclude Include="..\chromebase\base\component_export.h" />
+    <ClInclude Include="..\chromebase\base\containers\adapters.h" />
+    <ClInclude Include="..\chromebase\base\containers\circular_deque.h" />
+    <ClInclude Include="..\chromebase\base\containers\flat_map.h" />
+    <ClInclude Include="..\chromebase\base\containers\flat_set.h" />
+    <ClInclude Include="..\chromebase\base\containers\flat_tree.h" />
+    <ClInclude Include="..\chromebase\base\containers\hash_tables.h" />
+    <ClInclude Include="..\chromebase\base\containers\linked_list.h" />
+    <ClInclude Include="..\chromebase\base\containers\mru_cache.h" />
+    <ClInclude Include="..\chromebase\base\containers\queue.h" />
+    <ClInclude Include="..\chromebase\base\containers\ring_buffer.h" />
+    <ClInclude Include="..\chromebase\base\containers\small_map.h" />
+    <ClInclude Include="..\chromebase\base\containers\span.h" />
+    <ClInclude Include="..\chromebase\base\containers\stack.h" />
+    <ClInclude Include="..\chromebase\base\containers\stack_container.h" />
+    <ClInclude Include="..\chromebase\base\containers\vector_buffer.h" />
+    <ClInclude Include="..\chromebase\base\cpu.h" />
+    <ClInclude Include="..\chromebase\base\critical_closure.h" />
+    <ClInclude Include="..\chromebase\base\debug\activity_tracker.h" />
+    <ClInclude Include="..\chromebase\base\debug\alias.h" />
+    <ClInclude Include="..\chromebase\base\debug\crash_logging.h" />
+    <ClInclude Include="..\chromebase\base\debug\debugger.h" />
+    <ClInclude Include="..\chromebase\base\debug\debugging_buildflags.h" />
+    <ClInclude Include="..\chromebase\base\debug\dump_without_crashing.h" />
+    <ClInclude Include="..\chromebase\base\debug\leak_annotations.h" />
+    <ClInclude Include="..\chromebase\base\debug\leak_tracker.h" />
+    <ClInclude Include="..\chromebase\base\debug\profiler.h" />
+    <ClInclude Include="..\chromebase\base\debug\stack_trace.h" />
+    <ClInclude Include="..\chromebase\base\debug\task_annotator.h" />
+    <ClInclude Include="..\chromebase\base\debug\thread_heap_usage_tracker.h" />
+    <ClInclude Include="..\chromebase\base\environment.h" />
+    <ClInclude Include="..\chromebase\base\export_template.h" />
+    <ClInclude Include="..\chromebase\base\feature_list.h" />
+    <ClInclude Include="..\chromebase\base\files\dir_reader_fallback.h" />
+    <ClInclude Include="..\chromebase\base\files\file.h" />
+    <ClInclude Include="..\chromebase\base\files\file_enumerator.h" />
+    <ClInclude Include="..\chromebase\base\files\file_path.h" />
+    <ClInclude Include="..\chromebase\base\files\file_path_watcher.h" />
+    <ClInclude Include="..\chromebase\base\files\file_tracing.h" />
+    <ClInclude Include="..\chromebase\base\files\file_util.h" />
+    <ClInclude Include="..\chromebase\base\files\important_file_writer.h" />
+    <ClInclude Include="..\chromebase\base\files\memory_mapped_file.h" />
+    <ClInclude Include="..\chromebase\base\files\platform_file.h" />
+    <ClInclude Include="..\chromebase\base\files\scoped_file.h" />
+    <ClInclude Include="..\chromebase\base\files\scoped_temp_dir.h" />
+    <ClInclude Include="..\chromebase\base\file_descriptor_posix.h" />
+    <ClInclude Include="..\chromebase\base\file_version_info.h" />
+    <ClInclude Include="..\chromebase\base\file_version_info_win.h" />
+    <ClInclude Include="..\chromebase\base\format_macros.h" />
+    <ClInclude Include="..\chromebase\base\gtest_prod_util.h" />
+    <ClInclude Include="..\chromebase\base\guid.h" />
+    <ClInclude Include="..\chromebase\base\hash.h" />
+    <ClInclude Include="..\chromebase\base\json\json_file_value_serializer.h" />
+    <ClInclude Include="..\chromebase\base\json\json_parser.h" />
+    <ClInclude Include="..\chromebase\base\json\json_reader.h" />
+    <ClInclude Include="..\chromebase\base\json\json_string_value_serializer.h" />
+    <ClInclude Include="..\chromebase\base\json\json_value_converter.h" />
+    <ClInclude Include="..\chromebase\base\json\json_writer.h" />
+    <ClInclude Include="..\chromebase\base\json\string_escape.h" />
+    <ClInclude Include="..\chromebase\base\lazy_instance.h" />
+    <ClInclude Include="..\chromebase\base\lazy_instance_helpers.h" />
+    <ClInclude Include="..\chromebase\base\location.h" />
+    <ClInclude Include="..\chromebase\base\logging.h" />
+    <ClInclude Include="..\chromebase\base\macros.h" />
+    <ClInclude Include="..\chromebase\base\md5.h" />
+    <ClInclude Include="..\chromebase\base\memory\aligned_memory.h" />
+    <ClInclude Include="..\chromebase\base\memory\free_deleter.h" />
+    <ClInclude Include="..\chromebase\base\memory\linked_ptr.h" />
+    <ClInclude Include="..\chromebase\base\memory\memory_dump_provider.h" />
+    <ClInclude Include="..\chromebase\base\memory\memory_dump_provider_info.h" />
+    <ClInclude Include="..\chromebase\base\memory\platform_shared_memory_region.h" />
+    <ClInclude Include="..\chromebase\base\memory\protected_memory.h" />
+    <ClInclude Include="..\chromebase\base\memory\protected_memory_buildflags.h" />
+    <ClInclude Include="..\chromebase\base\memory\protected_memory_cfi.h" />
+    <ClInclude Include="..\chromebase\base\memory\ptr_util.h" />
+    <ClInclude Include="..\chromebase\base\memory\raw_scoped_refptr_mismatch_checker.h" />
+    <ClInclude Include="..\chromebase\base\memory\read_only_shared_memory_region.h" />
+    <ClInclude Include="..\chromebase\base\memory\ref_counted.h" />
+    <ClInclude Include="..\chromebase\base\memory\ref_counted_delete_on_sequence.h" />
+    <ClInclude Include="..\chromebase\base\memory\ref_counted_memory.h" />
+    <ClInclude Include="..\chromebase\base\memory\scoped_policy.h" />
+    <ClInclude Include="..\chromebase\base\memory\scoped_refptr.h" />
+    <ClInclude Include="..\chromebase\base\memory\shared_memory.h" />
+    <ClInclude Include="..\chromebase\base\memory\shared_memory_handle.h" />
+    <ClInclude Include="..\chromebase\base\memory\shared_memory_mapping.h" />
+    <ClInclude Include="..\chromebase\base\memory\shared_memory_tracker.h" />
+    <ClInclude Include="..\chromebase\base\memory\singleton.h" />
+    <ClInclude Include="..\chromebase\base\memory\unsafe_shared_memory_region.h" />
+    <ClInclude Include="..\chromebase\base\memory\weak_ptr.h" />
+    <ClInclude Include="..\chromebase\base\memory\writable_shared_memory_region.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\incoming_task_queue.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_loop.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_loop_current.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_loop_task_runner.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_pump.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_pump_default.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_pump_for_io.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_pump_for_ui.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\message_pump_win.h" />
+    <ClInclude Include="..\chromebase\base\message_loop\timer_slack.h" />
+    <ClInclude Include="..\chromebase\base\metrics\bucket_ranges.h" />
+    <ClInclude Include="..\chromebase\base\metrics\dummy_histogram.h" />
+    <ClInclude Include="..\chromebase\base\metrics\field_trial.h" />
+    <ClInclude Include="..\chromebase\base\metrics\field_trial_params.h" />
+    <ClInclude Include="..\chromebase\base\metrics\field_trial_param_associator.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_base.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_delta_serialization.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_flattener.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_functions.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_macros.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_macros_internal.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_macros_local.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_samples.h" />
+    <ClInclude Include="..\chromebase\base\metrics\histogram_snapshot_manager.h" />
+    <ClInclude Include="..\chromebase\base\metrics\metrics_hashes.h" />
+    <ClInclude Include="..\chromebase\base\metrics\persistent_histogram_allocator.h" />
+    <ClInclude Include="..\chromebase\base\metrics\persistent_histogram_storage.h" />
+    <ClInclude Include="..\chromebase\base\metrics\persistent_memory_allocator.h" />
+    <ClInclude Include="..\chromebase\base\metrics\persistent_sample_map.h" />
+    <ClInclude Include="..\chromebase\base\metrics\record_histogram_checker.h" />
+    <ClInclude Include="..\chromebase\base\metrics\sample_map.h" />
+    <ClInclude Include="..\chromebase\base\metrics\sample_vector.h" />
+    <ClInclude Include="..\chromebase\base\metrics\single_sample_metrics.h" />
+    <ClInclude Include="..\chromebase\base\metrics\sparse_histogram.h" />
+    <ClInclude Include="..\chromebase\base\metrics\statistics_recorder.h" />
+    <ClInclude Include="..\chromebase\base\metrics\user_metrics.h" />
+    <ClInclude Include="..\chromebase\base\metrics\user_metrics_action.h" />
+    <ClInclude Include="..\chromebase\base\native_library.h" />
+    <ClInclude Include="..\chromebase\base\no_destructor.h" />
+    <ClInclude Include="..\chromebase\base\numerics\checked_math.h" />
+    <ClInclude Include="..\chromebase\base\numerics\checked_math_impl.h" />
+    <ClInclude Include="..\chromebase\base\numerics\clamped_math.h" />
+    <ClInclude Include="..\chromebase\base\numerics\clamped_math_impl.h" />
+    <ClInclude Include="..\chromebase\base\numerics\math_constants.h" />
+    <ClInclude Include="..\chromebase\base\numerics\ranges.h" />
+    <ClInclude Include="..\chromebase\base\numerics\safe_conversions.h" />
+    <ClInclude Include="..\chromebase\base\numerics\safe_conversions_impl.h" />
+    <ClInclude Include="..\chromebase\base\numerics\safe_math.h" />
+    <ClInclude Include="..\chromebase\base\numerics\safe_math_shared_impl.h" />
+    <ClInclude Include="..\chromebase\base\observer_list.h" />
+    <ClInclude Include="..\chromebase\base\observer_list_threadsafe.h" />
+    <ClInclude Include="..\chromebase\base\optional.h" />
+    <ClInclude Include="..\chromebase\base\path_service.h" />
+    <ClInclude Include="..\chromebase\base\pending_task.h" />
+    <ClInclude Include="..\chromebase\base\pickle.h" />
+    <ClInclude Include="..\chromebase\base\post_task_and_reply_with_result_internal.h" />
+    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor.h" />
+    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor_device_source.h" />
+    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor_source.h" />
+    <ClInclude Include="..\chromebase\base\power_monitor\power_observer.h" />
+    <ClInclude Include="..\chromebase\base\process\kill.h" />
+    <ClInclude Include="..\chromebase\base\process\launch.h" />
+    <ClInclude Include="..\chromebase\base\process\memory.h" />
+    <ClInclude Include="..\chromebase\base\process\process.h" />
+    <ClInclude Include="..\chromebase\base\process\process_handle.h" />
+    <ClInclude Include="..\chromebase\base\process\process_info.h" />
+    <ClInclude Include="..\chromebase\base\process\process_iterator.h" />
+    <ClInclude Include="..\chromebase\base\process\process_metrics.h" />
+    <ClInclude Include="..\chromebase\base\process\process_metrics_iocounters.h" />
+    <ClInclude Include="..\chromebase\base\rand_util.h" />
+    <ClInclude Include="..\chromebase\base\run_loop.h" />
+    <ClInclude Include="..\chromebase\base\sampling_heap_profiler\lock_free_address_hash_set.h" />
+    <ClInclude Include="..\chromebase\base\scoped_clear_errno.h" />
+    <ClInclude Include="..\chromebase\base\scoped_generic.h" />
+    <ClInclude Include="..\chromebase\base\scoped_native_library.h" />
+    <ClInclude Include="..\chromebase\base\scoped_observer.h" />
+    <ClInclude Include="..\chromebase\base\sequenced_task_runner.h" />
+    <ClInclude Include="..\chromebase\base\sequenced_task_runner_helpers.h" />
+    <ClInclude Include="..\chromebase\base\sequence_checker.h" />
+    <ClInclude Include="..\chromebase\base\sequence_checker_impl.h" />
+    <ClInclude Include="..\chromebase\base\sequence_token.h" />
+    <ClInclude Include="..\chromebase\base\sha1.h" />
+    <ClInclude Include="..\chromebase\base\single_thread_task_runner.h" />
+    <ClInclude Include="..\chromebase\base\stl_util.h" />
+    <ClInclude Include="..\chromebase\base\strings\char_traits.h" />
+    <ClInclude Include="..\chromebase\base\strings\nullable_string16.h" />
+    <ClInclude Include="..\chromebase\base\strings\old_utf_string_conversions.h" />
+    <ClInclude Include="..\chromebase\base\strings\pattern.h" />
+    <ClInclude Include="..\chromebase\base\strings\safe_sprintf.h" />
+    <ClInclude Include="..\chromebase\base\strings\strcat.h" />
+    <ClInclude Include="..\chromebase\base\strings\stringize_macros.h" />
+    <ClInclude Include="..\chromebase\base\strings\stringprintf.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_number_conversions.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_piece.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_piece_forward.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_split.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_tokenizer.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_util.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_util_posix.h" />
+    <ClInclude Include="..\chromebase\base\strings\string_util_win.h" />
+    <ClInclude Include="..\chromebase\base\strings\sys_string_conversions.h" />
+    <ClInclude Include="..\chromebase\base\strings\utf_string_conversions.h" />
+    <ClInclude Include="..\chromebase\base\strings\utf_string_conversion_utils.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\atomic_flag.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\cancellation_flag.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\condition_variable.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\lock.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\lock_impl.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\spin_wait.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\synchronization_buildflags.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\waitable_event.h" />
+    <ClInclude Include="..\chromebase\base\synchronization\waitable_event_watcher.h" />
+    <ClInclude Include="..\chromebase\base\sync_socket.h" />
+    <ClInclude Include="..\chromebase\base\system\system_monitor.h" />
+    <ClInclude Include="..\chromebase\base\system\sys_info.h" />
+    <ClInclude Include="..\chromebase\base\system\sys_info_internal.h" />
+    <ClInclude Include="..\chromebase\base\sys_byteorder.h" />
+    <ClInclude Include="..\chromebase\base\sys_info.h" />
+    <ClInclude Include="..\chromebase\base\sys_info_internal.h" />
+    <ClInclude Include="..\chromebase\base\task\cancelable_task_tracker.h" />
+    <ClInclude Include="..\chromebase\base\task\post_task.h" />
+    <ClInclude Include="..\chromebase\base\task\scoped_set_task_priority_for_current_thread.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\enqueue_order.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\intrusive_heap.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\lazily_deallocated_deque.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\lazy_now.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\moveable_auto_lock.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_time_observer.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller_impl.h" />
+    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller_with_message_pump_impl.h" />
+    <ClInclude Include="..\chromebase\base\task\single_thread_task_runner_thread_mode.h" />
+    <ClInclude Include="..\chromebase\base\task\task_executor.h" />
+    <ClInclude Include="..\chromebase\base\task\task_traits.h" />
+    <ClInclude Include="..\chromebase\base\task_runner.h" />
+    <ClInclude Include="..\chromebase\base\task_runner_util.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\can_schedule_sequence_observer.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\environment_config.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\lazy_task_runner.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_lock.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_lock_impl.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_observer.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\scoped_set_task_priority_for_current_thread.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\sequence.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\sequence_sort_key.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\single_thread_task_runner_thread_mode.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\task.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_traits.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_traits_details.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\test_utils.h" />
+    <ClInclude Include="..\chromebase\base\task_scheduler\tracked_ref.h" />
+    <ClInclude Include="..\chromebase\base\template_util.h" />
+    <ClInclude Include="..\chromebase\base\third_party\icu\icu_utf.h" />
+    <ClInclude Include="..\chromebase\base\third_party\nspr\prtime.h" />
+    <ClInclude Include="..\chromebase\base\threading\platform_thread.h" />
+    <ClInclude Include="..\chromebase\base\threading\platform_thread_win.h" />
+    <ClInclude Include="..\chromebase\base\threading\post_task_and_reply_impl.h" />
+    <ClInclude Include="..\chromebase\base\threading\scoped_blocking_call.h" />
+    <ClInclude Include="..\chromebase\base\threading\scoped_thread_priority.h" />
+    <ClInclude Include="..\chromebase\base\threading\sequenced_task_runner_handle.h" />
+    <ClInclude Include="..\chromebase\base\threading\sequence_local_storage_map.h" />
+    <ClInclude Include="..\chromebase\base\threading\sequence_local_storage_slot.h" />
+    <ClInclude Include="..\chromebase\base\threading\simple_thread.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_checker.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_checker_impl.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_collision_warner.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_id_name_manager.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_local.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_local_storage.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_restrictions.h" />
+    <ClInclude Include="..\chromebase\base\threading\thread_task_runner_handle.h" />
+    <ClInclude Include="..\chromebase\base\thread_annotations.h" />
+    <ClInclude Include="..\chromebase\base\timer\elapsed_timer.h" />
+    <ClInclude Include="..\chromebase\base\timer\hi_res_timer_manager.h" />
+    <ClInclude Include="..\chromebase\base\timer\mock_timer.h" />
+    <ClInclude Include="..\chromebase\base\timer\timer.h" />
+    <ClInclude Include="..\chromebase\base\time\clock.h" />
+    <ClInclude Include="..\chromebase\base\time\default_clock.h" />
+    <ClInclude Include="..\chromebase\base\time\default_tick_clock.h" />
+    <ClInclude Include="..\chromebase\base\time\tick_clock.h" />
+    <ClInclude Include="..\chromebase\base\time\time.h" />
+    <ClInclude Include="..\chromebase\base\time\time_override.h" />
+    <ClInclude Include="..\chromebase\base\time\time_to_iso8601.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\auto_open_close_event.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\blame_context.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\builtin_categories.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\category_registry.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\common\trace_event_common.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\etw_manifest\chrome_events_win.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\event_name_filter.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_allocation_context.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_allocation_context_tracker.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_event_filter.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\malloc_dump_provider.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_allocator_dump.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_allocator_dump_guid.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_manager.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_provider.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_provider_info.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_request_args.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_scheduler.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_infra_background_whitelist.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\memory_usage_estimator.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\process_memory_dump.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\thread_instruction_count.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\traced_value.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_arguments.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_buffer.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_category.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_config.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_config_category_filter.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_event.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_event_etw_export_win.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_event_filter.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_event_impl.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_event_memory_overhead.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\trace_log.h" />
+    <ClInclude Include="..\chromebase\base\trace_event\tracing_agent.h" />
+    <ClInclude Include="..\chromebase\base\tuple.h" />
+    <ClInclude Include="..\chromebase\base\unguessable_token.h" />
+    <ClInclude Include="..\chromebase\base\updateable_sequenced_task_runner.h" />
+    <ClInclude Include="..\chromebase\base\values.h" />
+    <ClInclude Include="..\chromebase\base\value_iterators.h" />
+    <ClInclude Include="..\chromebase\base\version.h" />
+    <ClInclude Include="..\chromebase\base\vlog.h" />
+    <ClInclude Include="..\chromebase\base\win\async_operation.h" />
+    <ClInclude Include="..\chromebase\base\win\atl.h" />
+    <ClInclude Include="..\chromebase\base\win\com_init_check_hook.h" />
+    <ClInclude Include="..\chromebase\base\win\com_init_util.h" />
+    <ClInclude Include="..\chromebase\base\win\core_winrt_util.h" />
+    <ClInclude Include="..\chromebase\base\win\current_module.h" />
+    <ClInclude Include="..\chromebase\base\win\enum_variant.h" />
+    <ClInclude Include="..\chromebase\base\win\event_trace_consumer.h" />
+    <ClInclude Include="..\chromebase\base\win\event_trace_controller.h" />
+    <ClInclude Include="..\chromebase\base\win\event_trace_provider.h" />
+    <ClInclude Include="..\chromebase\base\win\hstring_reference.h" />
+    <ClInclude Include="..\chromebase\base\win\iat_patch_function.h" />
+    <ClInclude Include="..\chromebase\base\win\iunknown_impl.h" />
+    <ClInclude Include="..\chromebase\base\win\message_window.h" />
+    <ClInclude Include="..\chromebase\base\win\object_watcher.h" />
+    <ClInclude Include="..\chromebase\base\win\patch_util.h" />
+    <ClInclude Include="..\chromebase\base\win\pe_image.h" />
+    <ClInclude Include="..\chromebase\base\win\post_async_results.h" />
+    <ClInclude Include="..\chromebase\base\win\process_startup_helper.h" />
+    <ClInclude Include="..\chromebase\base\win\propvarutil.h" />
+    <ClInclude Include="..\chromebase\base\win\reference.h" />
+    <ClInclude Include="..\chromebase\base\win\registry.h" />
+    <ClInclude Include="..\chromebase\base\win\resource_util.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_bstr.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_com_initializer.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_co_mem.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_gdi_object.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_handle.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_handle_verifier.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_hdc.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_hglobal.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_hstring.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_process_information.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_propvariant.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_safearray.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_select_object.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_variant.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_windows_thread_environment.h" />
+    <ClInclude Include="..\chromebase\base\win\scoped_winrt_initializer.h" />
+    <ClInclude Include="..\chromebase\base\win\shlwapi.h" />
+    <ClInclude Include="..\chromebase\base\win\sphelper.h" />
+    <ClInclude Include="..\chromebase\base\win\startup_information.h" />
+    <ClInclude Include="..\chromebase\base\win\typed_event_handler.h" />
+    <ClInclude Include="..\chromebase\base\win\vector.h" />
+    <ClInclude Include="..\chromebase\base\win\wincrypt_shim.h" />
+    <ClInclude Include="..\chromebase\base\win\windowsx_shim.h" />
+    <ClInclude Include="..\chromebase\base\win\windows_full.h" />
+    <ClInclude Include="..\chromebase\base\win\windows_types.h" />
+    <ClInclude Include="..\chromebase\base\win\windows_version.h" />
+    <ClInclude Include="..\chromebase\base\win\winrt_foundation_helpers.h" />
+    <ClInclude Include="..\chromebase\base\win\winrt_storage_util.h" />
+    <ClInclude Include="..\chromebase\base\win\win_client_metrics.h" />
+    <ClInclude Include="..\chromebase\base\win\wrapped_window_proc.h" />
+    <ClInclude Include="..\chromebase\fakes\fakes.h" />
+    <ClInclude Include="..\chromebase\testing\multiprocess_func_list.h" />
+    <ClInclude Include="..\chromebase\testing\platform_test.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{b84475ad-b078-4556-9e18-006e1ab99d3f}</ProjectGuid>
+    <RootNamespace>libChromeBase</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)chromebase;$(SolutionDir)chromebase\testing\gtest\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;GTEST_DISABLED;WINDOWS32;NOMINMAX;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>Cfgmgr32.lib;Setupapi.lib;Propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
