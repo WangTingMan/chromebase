@@ -47,9 +47,11 @@ namespace base {
         return NULL;
     }
 
-    wchar_t* as_wcstr(const string16&)
+    wchar_t* as_wcstr(const string16& _string)
     {
-        return NULL;
+        const wchar_t* ret = nullptr;
+        ret = _string.c_str();
+        return const_cast< wchar_t* >( ret );
     }
 
     wchar_t* as_u16cstr(const wchar_t*)

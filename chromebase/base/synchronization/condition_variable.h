@@ -115,7 +115,7 @@ class BASE_EXPORT ConditionVariable {
 #if DCHECK_IS_ON()
   base::Lock* const user_lock_;  // Needed to adjust shadow lock state on wait.
 #endif
-
+  bool waiting_is_blocking_ = false;
   DISALLOW_COPY_AND_ASSIGN(ConditionVariable);
 };
 

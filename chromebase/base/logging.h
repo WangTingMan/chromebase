@@ -335,6 +335,7 @@ inline constexpr bool AnalyzerAssumeTrue(bool arg) {
 #endif  // defined(__clang_analyzer__)
 
 typedef int LogSeverity;
+const LogSeverity LOG_DEBUG = -2;  // This is level 1 verbosity
 const LogSeverity LOG_VERBOSE = -1;  // This is level 1 verbosity
 // Note: the log severities are used to index into the array of names,
 // see log_severity_names.
@@ -417,7 +418,12 @@ const LogSeverity LOG_0 = LOG_ERROR;
 // function of LogMessage which seems to avoid the problem.
 #define LOG_STREAM(severity) COMPACT_GOOGLE_LOG_ ## severity.stream()
 
+#ifdef _MSC_VER
+#define LOG(severity) LAZY_STREAM(LOG_STREAM(##severity), LOG_IS_ON(##severity))
+#else
 #define LOG(severity) LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity))
+#endif
+
 #define LOG_IF(severity, condition) \
   LAZY_STREAM(LOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 

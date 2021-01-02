@@ -39,7 +39,8 @@ void EnsureProcessTerminated(Process process) {
 
   if (process.WaitForExitWithTimeout(TimeDelta(), nullptr))
     return;
-
+  abort();
+  /*
   PostDelayedTaskWithTraits(
       FROM_HERE,
       {TaskPriority::BACKGROUND, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
@@ -55,6 +56,7 @@ void EnsureProcessTerminated(Process process) {
           },
           std::move(process)),
       TimeDelta::FromSeconds(2));
+      */
 }
 #endif  // defined(OS_WIN) || defined(OS_FUCHSIA)
 

@@ -180,6 +180,14 @@ class BASE_EXPORT Value {
   Value* FindKey(StringPiece key);
   const Value* FindKey(StringPiece key) const;
 
+  // Returns nullptr if value is not found or not a dictionary.
+  const Value* FindDictKey( StringPiece key ) const;
+  Value* FindDictKey( StringPiece key );
+
+  // Returns nullptr if value is not found or not a list.
+  const Value* FindListKey( StringPiece key ) const;
+  Value* FindListKey( StringPiece key );
+
   // |FindKeyOfType| is similar to |FindKey|, but it also requires the found
   // value to have type |type|. If no type is found, or the found value is of a
   // different type nullptr is returned.
@@ -204,6 +212,21 @@ class BASE_EXPORT Value {
   Value* SetKey(std::string&& key, Value value);
   // This overload is necessary to avoid ambiguity for const char* arguments.
   Value* SetKey(const char* key, Value value);
+
+
+  // |Set<Type>Key| looks up |key| in the underlying dictionary and associates
+  // a corresponding Value() constructed from the second parameter. Compared
+  // to SetKey(), this avoids un-necessary temporary Value() creation, as well
+  // ambiguities in the value type.
+  Value* SetBoolKey( StringPiece key, bool val );
+  Value* SetIntKey( StringPiece key, int val );
+  Value* SetDoubleKey( StringPiece key, double val );
+  Value* SetStringKey( StringPiece key, StringPiece val );
+  // NOTE: These two overloads are provided as performance / code generation
+  // optimizations.
+  Value* SetStringKey( StringPiece key, const char* val );
+  Value* SetStringKey( StringPiece key, std::string&& val );
+  Value* SetStringKey( StringPiece key, StringPiece16 val );
 
   // This attemps to remove the value associated with |key|. In case of failure,
   // e.g. the key does not exist, |false| is returned and the underlying
@@ -238,6 +261,35 @@ class BASE_EXPORT Value {
   const Value* FindPath(std::initializer_list<StringPiece> path) const;
   const Value* FindPath(span<const StringPiece> path) const;
 
+  // Searches a hierarchy of dictionary values for a given value. If a path
+  // of dictionaries exist, returns the item at that path. If any of the path
+  // components do not exist or if any but the last path components are not
+  // dictionaries, returns nullptr.
+  //
+  // The type of the leaf Value is not checked.
+  //
+  // Implementation note: This can't return an iterator because the iterator
+  // will actually be into another Value, so it can't be compared to iterators
+  // from this one (in particular, the DictItems().end() iterator).
+  //
+  // This version takes a StringPiece for the path, using dots as separators.
+  // Example:
+  //    auto* found = FindPath("foo.bar");
+  Value* FindPath( StringPiece path );
+  const Value* FindPath( StringPiece path ) const;
+
+
+  Value* FindListPath( StringPiece path );
+  const Value* FindListPath( StringPiece path ) const;
+
+  // These are convenience forms of |FindKey|. They return |base::nullopt| if
+  // the value is not found or doesn't have the type specified in the
+  // function's name.
+  base::Optional<bool> FindBoolKey( StringPiece key ) const;
+  base::Optional<int> FindIntKey( StringPiece key ) const;
+
+  // |FindStringKey| returns |nullptr| if value is not found or not a string.
+  const std::string* FindStringKey( StringPiece key ) const;
   // Like FindPath() but will only return the value if the leaf Value type
   // matches the given type. Will return nullptr otherwise.
   //
@@ -248,6 +300,16 @@ class BASE_EXPORT Value {
   const Value* FindPathOfType(std::initializer_list<StringPiece> path,
                               Type type) const;
   const Value* FindPathOfType(span<const StringPiece> path, Type type) const;
+
+
+  // Like FindPath() but will only return the value if the leaf Value type
+  // matches the given type. Will return nullptr otherwise.
+  // Note: Prefer Find<Type>Path() for simple values.
+  //
+  // Note: If there is only one component in the path, use FindKeyOfType()
+  // instead for slightly better performance.
+  Value* FindPathOfType( StringPiece path, Type type );
+  const Value* FindPathOfType( StringPiece path, Type type ) const;
 
   // Sets the given path, expanding and creating dictionary keys as necessary.
   //
@@ -372,6 +434,9 @@ class BASE_EXPORT Value {
  private:
   void InternalMoveConstructFrom(Value&& that);
   void InternalCleanup();
+  // NOTE: Using a movable reference here is done for performance (it avoids
+  // creating + moving + destroying a temporary unique ptr).
+  Value* SetKeyInternal( StringPiece key, std::unique_ptr<Value>&& val_ptr );
 
   DISALLOW_COPY_AND_ASSIGN(Value);
 };

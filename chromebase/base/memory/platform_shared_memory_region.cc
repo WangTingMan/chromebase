@@ -15,6 +15,16 @@ PlatformSharedMemoryRegion PlatformSharedMemoryRegion::CreateWritable(
   return Create(Mode::kWritable, size);
 }
 
+
+bool PlatformSharedMemoryRegion::MapAt( off_t offset,
+           size_t size,
+           void** memory,
+           size_t* mapped_size ) const
+{
+    assert( 0 );
+    return false;
+}
+
 // static
 PlatformSharedMemoryRegion PlatformSharedMemoryRegion::CreateUnsafe(
     size_t size) {

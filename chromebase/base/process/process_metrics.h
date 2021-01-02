@@ -109,7 +109,7 @@ class BASE_EXPORT ProcessMetrics {
     size_t private_dirty_kb;
     size_t swap_kb;
   };
-  BASE_EXPORT TotalsSummary GetTotalsSummary() const;
+  // BASE_EXPORT TotalsSummary GetTotalsSummary() const;
 #endif
 
 #if defined(OS_MACOSX)

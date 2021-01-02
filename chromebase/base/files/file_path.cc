@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <algorithm>
+#include <filesystem>
 
 #include "base/logging.h"
 #include "base/macros.h"
@@ -179,6 +180,17 @@ FilePath::FilePath(StringPieceType path) {
   StringType::size_type nul_pos = path_.find(kStringTerminator);
   if (nul_pos != StringType::npos)
     path_.erase(nul_pos, StringType::npos);
+}
+
+FilePath::FilePath( std::string a_path )
+{
+    std::filesystem::path pp( a_path );
+    std::wstring pth = pp.wstring();
+    StringPieceType path( pth );
+    path.CopyToString( &path_ );
+    StringType::size_type nul_pos = path_.find( kStringTerminator );
+    if( nul_pos != StringType::npos )
+        path_.erase( nul_pos, StringType::npos );
 }
 
 FilePath::~FilePath() = default;

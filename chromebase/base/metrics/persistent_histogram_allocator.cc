@@ -29,6 +29,8 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 
+#pragma comment( lib,"Kernel32.lib" )
+
 namespace base {
 
 namespace {

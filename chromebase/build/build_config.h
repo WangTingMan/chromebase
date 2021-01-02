@@ -109,7 +109,7 @@
 #if defined(OS_FREEBSD) || defined(OS_NETBSD) || defined(OS_OPENBSD)
 #define OS_BSD 1
 #endif
-
+#define NO_TCMALLOC
 // For access to standard POSIXish features, use OS_POSIX instead of a
 // more specific macro.
 #if defined(OS_AIX) || defined(OS_ANDROID) || defined(OS_ASMJS) ||    \
@@ -236,5 +236,7 @@
 // equivalent types.
 #define BASE_STRING16_ITERATOR_IS_CHAR16_POINTER
 #endif
+
+#include <fakes\fakes.h>
 
 #endif  // BUILD_BUILD_CONFIG_H_

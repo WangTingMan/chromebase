@@ -373,7 +373,11 @@ void* ThreadLocalStorage::Slot::Get() const {
   TlsVectorEntry* tls_data = static_cast<TlsVectorEntry*>(
       PlatformThreadLocalStorage::GetTLSValue(
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
-  DCHECK_NE(tls_data, kDestroyed);
+  //DCHECK_NE(tls_data, kDestroyed);
+  if( kDestroyed == tls_data )
+  {
+      return nullptr;
+  }
   if (!tls_data)
     return nullptr;
   DCHECK_NE(slot_, kInvalidSlotValue);

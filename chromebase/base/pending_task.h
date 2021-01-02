@@ -29,6 +29,7 @@ struct BASE_EXPORT PendingTask {
               Nestable nestable = Nestable::kNestable);
   PendingTask(PendingTask&& other);
   ~PendingTask();
+  PendingTask() {}
 
   PendingTask& operator=(PendingTask&& other);
 

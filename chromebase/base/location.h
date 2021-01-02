@@ -73,6 +73,16 @@ class BASE_EXPORT Location {
                                  const char* file_name,
                                  int line_number);
 
+#if SUPPORTS_LOCATION_BUILTINS && BUILDFLAG(ENABLE_LOCATION_SOURCE)
+  static Location Current( const char* function_name = __builtin_FUNCTION(),
+                          const char* file_name = __builtin_FILE(),
+                          int line_number = __builtin_LINE() );
+#elif SUPPORTS_LOCATION_BUILTINS
+  static Location Current( const char* file_name = __builtin_FILE() );
+#else
+  static Location Current();
+#endif
+
  private:
   const char* function_name_ = nullptr;
   const char* file_name_ = nullptr;

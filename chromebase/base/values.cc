@@ -23,6 +23,48 @@
 
 namespace base {
 
+// Helper class to enumerate the path components from a StringPiece
+// without performing heap allocations. Components are simply separated
+// by single dots (e.g. "foo.bar.baz"  -> ["foo", "bar", "baz"]).
+//
+// Usage example:
+//    PathSplitter splitter(some_path);
+//    while (splitter.HasNext()) {
+//       StringPiece component = splitter.Next();
+//       ...
+//    }
+//
+    class PathSplitter
+    {
+    public:
+        explicit PathSplitter( StringPiece path ) : path_( path ) {}
+
+        bool HasNext() const { return pos_ < path_.size(); }
+
+        StringPiece Next()
+        {
+            DCHECK( HasNext() );
+            size_t start = pos_;
+            size_t pos = path_.find( '.', start );
+            size_t end;
+            if( pos == path_.npos )
+            {
+                end = path_.size();
+                pos_ = end;
+            }
+            else
+            {
+                end = pos;
+                pos_ = pos + 1;
+            }
+            return path_.substr( start, end - start );
+        }
+
+    private:
+        StringPiece path_;
+        size_t pos_ = 0;
+    };
+
 namespace {
 
 const char* const kTypeNames[] = {"null",   "boolean", "integer",    "double",
@@ -273,6 +315,26 @@ const Value* Value::FindKey(StringPiece key) const {
   return found->second.get();
 }
 
+const Value* Value::FindDictKey( StringPiece key ) const
+{
+    return FindKeyOfType( key, Type::DICTIONARY );
+}
+
+Value* Value::FindDictKey( StringPiece key )
+{
+    return FindKeyOfType( key, Type::DICTIONARY );
+}
+
+const Value* Value::FindListKey( StringPiece key ) const
+{
+    return FindKeyOfType( key, Type::LIST );
+}
+
+Value* Value::FindListKey( StringPiece key )
+{
+    return FindKeyOfType( key, Type::LIST );
+}
+
 Value* Value::FindKeyOfType(StringPiece key, Type type) {
   return const_cast<Value*>(
       static_cast<const Value*>(this)->FindKeyOfType(key, type));
@@ -316,6 +378,43 @@ Value* Value::SetKey(const char* key, Value value) {
   return SetKey(StringPiece(key), std::move(value));
 }
 
+
+Value* Value::SetBoolKey( StringPiece key, bool value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
+Value* Value::SetIntKey( StringPiece key, int value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
+Value* Value::SetDoubleKey( StringPiece key, double value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
+
+Value* Value::SetStringKey( StringPiece key, StringPiece value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
+Value* Value::SetStringKey( StringPiece key, const char* value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
+Value* Value::SetStringKey( StringPiece key, std::string&& value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( std::move( value ) ) );
+}
+
+Value* Value::SetStringKey( StringPiece key, StringPiece16 value )
+{
+    return SetKeyInternal( key, std::make_unique<Value>( value ) );
+}
+
 Value* Value::FindPath(std::initializer_list<StringPiece> path) {
   return const_cast<Value*>(const_cast<const Value*>(this)->FindPath(path));
 }
@@ -336,6 +435,24 @@ const Value* Value::FindPath(span<const StringPiece> path) const {
       return nullptr;
   }
   return cur;
+}
+
+Value* Value::FindPath( StringPiece path )
+{
+    return const_cast< Value* >( const_cast< const Value* >( this )->FindPath( path ) );
+}
+
+const Value* Value::FindPath( StringPiece path ) const
+{
+    CHECK( is_dict() );
+    const Value* cur = this;
+    PathSplitter splitter( path );
+    while( splitter.HasNext() )
+    {
+        if( !cur->is_dict() || ( cur = cur->FindKey( splitter.Next() ) ) == nullptr )
+            return nullptr;
+    }
+    return cur;
 }
 
 Value* Value::FindPathOfType(std::initializer_list<StringPiece> path,
@@ -361,6 +478,20 @@ const Value* Value::FindPathOfType(span<const StringPiece> path,
   if (!result || result->type() != type)
     return nullptr;
   return result;
+}
+
+Value* Value::FindPathOfType( StringPiece path, Type type )
+{
+    return const_cast< Value* >(
+        const_cast< const Value* >( this )->FindPathOfType( path, type ) );
+}
+
+const Value* Value::FindPathOfType( StringPiece path, Type type ) const
+{
+    const Value* cur = FindPath( path );
+    if( !cur || cur->type() != type )
+        return nullptr;
+    return cur;
 }
 
 Value* Value::SetPath(std::initializer_list<StringPiece> path, Value value) {
@@ -419,6 +550,34 @@ bool Value::RemovePath(span<const StringPiece> path) {
     dict_.erase(found);
 
   return removed;
+}
+
+const std::string* Value::FindStringKey( StringPiece key ) const
+{
+    const Value* result = FindKeyOfType( key, Type::STRING );
+    return result ? &result->string_value_ : nullptr;
+}
+
+base::Optional<bool> Value::FindBoolKey( StringPiece key ) const
+{
+    const Value* result = FindKeyOfType( key, Type::BOOLEAN );
+    return result ? base::make_optional( result->bool_value_ ) : base::nullopt;
+}
+
+base::Optional<int> Value::FindIntKey( StringPiece key ) const
+{
+    const Value* result = FindKeyOfType( key, Type::INTEGER );
+    return result ? base::make_optional( result->int_value_ ) : base::nullopt;
+}
+
+const Value* Value::FindListPath( StringPiece path ) const
+{
+    return FindPathOfType( path, Type::LIST );
+}
+
+Value* Value::FindListPath( StringPiece path )
+{
+    return FindPathOfType( path, Type::LIST );
 }
 
 Value::dict_iterator_proxy Value::DictItems() {
@@ -701,6 +860,22 @@ void Value::InternalCleanup() {
       list_.~ListStorage();
       return;
   }
+}
+
+
+Value* Value::SetKeyInternal( StringPiece key,
+                             std::unique_ptr<Value>&& val_ptr )
+{
+    CHECK( is_dict() );
+    // NOTE: We can't use |insert_or_assign| here, as only |try_emplace| does
+    // an explicit conversion from StringPiece to std::string if necessary.
+    auto result = dict_.try_emplace( key, std::move( val_ptr ) );
+    if( !result.second )
+    {
+        // val_ptr is guaranteed to be still intact at this point.
+        result.first->second = std::move( val_ptr );
+    }
+    return result.first->second.get();
 }
 
 ///////////////////// DictionaryValue ////////////////////
