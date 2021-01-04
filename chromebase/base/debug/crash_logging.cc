@@ -41,9 +41,6 @@ ScopedCrashKeyString::ScopedCrashKeyString(CrashKeyString* crash_key,
   SetCrashKeyString(crash_key_, value);
 }
 
-ScopedCrashKeyString::ScopedCrashKeyString(ScopedCrashKeyString&& other)
-    : crash_key_(std::exchange(other.crash_key_, nullptr)) {}
-
 ScopedCrashKeyString::~ScopedCrashKeyString() {
   ClearCrashKeyString(crash_key_);
 }

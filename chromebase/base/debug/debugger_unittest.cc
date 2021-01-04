@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 #include "base/debug/debugger.h"
+
 #include "build/build_config.h"
-
-#if defined(OS_WIN)
-#include <windows.h>
-#endif
-
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -37,7 +33,7 @@ TEST(Debugger, CrashAtBreakpoint) {
 #if defined(OS_WIN)
 TEST(Debugger, DoesntExecuteBeyondBreakpoint) {
   EXPECT_EXIT(CrashWithBreakDebugger(),
-              ::testing::ExitedWithCode(STATUS_BREAKPOINT), "");
+              ::testing::ExitedWithCode(0x80000003), "");
 }
 #endif  // defined(OS_WIN)
 

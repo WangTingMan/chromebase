@@ -16,10 +16,13 @@
 #include "base/logging.h"
 #include "base/memory/singleton.h"
 #include "base/stl_util.h"
+#include "base/strings/strcat.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "build/build_config.h"
+
+#include <base/win/windows_version.h>
+#pragma comment( lib, "dbghelp.lib" )
 
 namespace base {
 namespace debug {
@@ -112,32 +115,10 @@ long WINAPI StackDumpExceptionFilter(EXCEPTION_POINTERS* info) {
 }
 
 FilePath GetExePath() {
-  wchar_t system_buffer[MAX_PATH];
-  GetModuleFileName(NULL, system_buffer, MAX_PATH);
+  char16 system_buffer[MAX_PATH];
+  GetModuleFileName(NULL, as_writable_wcstr(system_buffer), MAX_PATH);
   system_buffer[MAX_PATH - 1] = L'\0';
   return FilePath(system_buffer);
-}
-
-bool SymInitializeCurrentProc() {
-  const HANDLE current_process = GetCurrentProcess();
-  if (SymInitialize(current_process, nullptr, TRUE))
-    return true;
-
-  g_init_error = GetLastError();
-  if (g_init_error != ERROR_INVALID_PARAMETER)
-    return false;
-
-  // SymInitialize() can fail with ERROR_INVALID_PARAMETER when something has
-  // already called SymInitialize() in this process. For example, when absl
-  // support for gtest is enabled, it results in absl calling SymInitialize()
-  // almost immediately after startup. In such a case, try to reinit to see if
-  // that succeeds.
-  SymCleanup(current_process);
-  if (SymInitialize(current_process, nullptr, TRUE))
-    return true;
-
-  g_init_error = GetLastError();
-  return false;
 }
 
 bool InitializeSymbols() {
@@ -153,7 +134,10 @@ bool InitializeSymbols() {
   SymSetOptions(SYMOPT_DEFERRED_LOADS |
                 SYMOPT_UNDNAME |
                 SYMOPT_LOAD_LINES);
-  if (!SymInitializeCurrentProc()) {
+  if (!SymInitialize(GetCurrentProcess(), NULL, TRUE)) {
+    g_init_error = GetLastError();
+    // TODO(awong): Handle error: SymInitialize can fail with
+    // ERROR_INVALID_PARAMETER.
     // When it fails, we should not call debugbreak since it kills the current
     // process (prevents future tests from running or kills the browser
     // process).
@@ -166,20 +150,20 @@ bool InitializeSymbols() {
   // add the directory of the executable to symbol search path.
   // All following errors are non-fatal.
   static constexpr size_t kSymbolsArraySize = 1024;
-  wchar_t symbols_path[kSymbolsArraySize];
+  char16 symbols_path[kSymbolsArraySize];
 
   // Note: The below function takes buffer size as number of characters,
   // not number of bytes!
-  if (!SymGetSearchPathW(GetCurrentProcess(), symbols_path,
+  if (!SymGetSearchPathW(GetCurrentProcess(), as_writable_wcstr(symbols_path),
                          kSymbolsArraySize)) {
     g_init_error = GetLastError();
     DLOG(WARNING) << "SymGetSearchPath failed: " << g_init_error;
     return false;
   }
 
-  std::wstring new_path = StringPrintf(L"%ls;%ls", symbols_path,
-                                       GetExePath().DirName().value().c_str());
-  if (!SymSetSearchPathW(GetCurrentProcess(), new_path.c_str())) {
+  string16 new_path = StrCat(
+      {symbols_path, STRING16_LITERAL(";"), GetExePath().DirName().value()});
+  if (!SymSetSearchPathW(GetCurrentProcess(), as_wcstr(new_path))) {
     g_init_error = GetLastError();
     DLOG(WARNING) << "SymSetSearchPath failed." << g_init_error;
     return false;
@@ -311,6 +295,17 @@ StackTrace::StackTrace(const CONTEXT* context) {
   InitTrace(context);
 }
 
+StackTrace::StackTrace( size_t count )
+{
+    // NOTE: This code MUST be async-signal safe (it's used by in-process
+    // stack dumping signal handler). NO malloc or stdio is allowed here.
+    count_ = 0;
+}
+
+void StackTrace::Print() const
+{
+}
+
 void StackTrace::InitTrace(const CONTEXT* context_record) {
   // StackWalk64 modifies the register context in place, so we have to copy it
   // so that downstream exception handlers get the right context.  The incoming
@@ -357,9 +352,13 @@ void StackTrace::InitTrace(const CONTEXT* context_record) {
     trace_[i] = NULL;
 }
 
-void StackTrace::PrintWithPrefix(const char* prefix_string) const {
-  OutputToStreamWithPrefix(&std::cerr, prefix_string);
+#if !defined(__UCLIBC__) & !defined(_AIX)
+// Resolves backtrace to symbols and write to stream.
+void StackTrace::OutputToStream( std::ostream* os ) const
+{
+    OutputToStreamWithPrefix( os, NULL );
 }
+#endif
 
 void StackTrace::OutputToStreamWithPrefix(std::ostream* os,
                                           const char* prefix_string) const {

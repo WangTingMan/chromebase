@@ -8,12 +8,9 @@
 #include <stddef.h>
 
 #include <memory>
-#include <type_traits>
 
 #include "base/base_export.h"
 #include "base/macros.h"
-#include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 
 namespace base {
@@ -64,71 +61,13 @@ BASE_EXPORT void ClearCrashKeyString(CrashKeyString* crash_key);
 class BASE_EXPORT ScopedCrashKeyString {
  public:
   ScopedCrashKeyString(CrashKeyString* crash_key, base::StringPiece value);
-  ScopedCrashKeyString(ScopedCrashKeyString&& other);
   ~ScopedCrashKeyString();
 
-  // Disallow copy and assign.
-  ScopedCrashKeyString(const ScopedCrashKeyString&) = delete;
-  ScopedCrashKeyString& operator=(const ScopedCrashKeyString&) = delete;
-
-  // Disallow move assign to keep the time at which the crash key is cleared
-  // easy to reason about. Assigning over an existing instance would
-  // automatically clear the key instead of at the destruction of the object.
-  ScopedCrashKeyString& operator=(ScopedCrashKeyString&&) = delete;
-
  private:
-  CrashKeyString* crash_key_;
+  CrashKeyString* const crash_key_;
+
+  DISALLOW_COPY_AND_ASSIGN(ScopedCrashKeyString);
 };
-
-// Internal helpers for the SCOPED_CRASH_KEY_... helper macros defined below.
-//
-// The static_assert that checks the length of |key_name| is a compile-time
-// equivalent of the DCHECK in crash_reporter::internal::CrashKeyStringImpl::Set
-// that restricts the name of a crash key to 40 characters.
-#define SCOPED_CRASH_KEY_STRING_INTERNAL2(category, name, nonce, data,  \
-                                          key_size)                     \
-  static_assert(::base::size(category "-" name) < 40,                   \
-                "Crash key names must be shorter than 40 characters."); \
-  ::base::debug::ScopedCrashKeyString scoped_crash_key_helper##nonce(   \
-      [] {                                                              \
-        static auto* const key = ::base::debug::AllocateCrashKeyString( \
-            category "-" name, key_size);                               \
-        return key;                                                     \
-      }(),                                                              \
-      (data))
-
-// This indirection is needed to expand __COUNTER__.
-#define SCOPED_CRASH_KEY_STRING_INTERNAL(category, name, nonce, data, \
-                                         key_size)                    \
-  SCOPED_CRASH_KEY_STRING_INTERNAL2(category, name, nonce, data, key_size)
-
-// Helper macros for putting a local variable crash key on the stack before
-// causing a crash or calling CrashWithoutDumping(). `category` and `name`
-// should be string literals.
-//
-//   SCOPED_CRASH_KEY_STRING32("MyCategory", "key_name", "value");
-//
-// will set the crash key annotation named "MyCategory-key_name" to "value"
-// while in scope.
-#define SCOPED_CRASH_KEY_STRING32(category, name, data)                 \
-  SCOPED_CRASH_KEY_STRING_INTERNAL(category, name, __COUNTER__, (data), \
-                                   ::base::debug::CrashKeySize::Size32)
-
-#define SCOPED_CRASH_KEY_STRING64(category, name, data)                 \
-  SCOPED_CRASH_KEY_STRING_INTERNAL(category, name, __COUNTER__, (data), \
-                                   ::base::debug::CrashKeySize::Size64)
-
-#define SCOPED_CRASH_KEY_STRING256(category, name, data)                \
-  SCOPED_CRASH_KEY_STRING_INTERNAL(category, name, __COUNTER__, (data), \
-                                   ::base::debug::CrashKeySize::Size256)
-
-#define SCOPED_CRASH_KEY_BOOL(category, name, data)                       \
-  static_assert(std::is_same<std::decay_t<decltype(data)>, bool>::value,  \
-                "SCOPED_CRASH_KEY_BOOL must be passed a boolean value."); \
-  SCOPED_CRASH_KEY_STRING32(category, name, (data) ? "true" : "false")
-
-#define SCOPED_CRASH_KEY_NUMBER(category, name, data) \
-  SCOPED_CRASH_KEY_STRING32(category, name, ::base::NumberToString(data))
 
 ////////////////////////////////////////////////////////////////////////////////
 // The following declarations are used to initialize the crash key system
