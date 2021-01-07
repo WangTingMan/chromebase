@@ -145,8 +145,7 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
     char path[128];
   } file_info;
   file_info.data_size = data.size();
-  std::vector<char> buffer = WideCharToChar( path.value().c_str() );
-  strlcpy(file_info.path, buffer.data(), arraysize(file_info.path));
+  strlcpy( file_info.path, path.value().c_str(), arraysize( file_info.path ) );
   debug::Alias(&file_info);
 #endif
 

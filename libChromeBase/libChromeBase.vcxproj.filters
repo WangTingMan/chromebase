@@ -94,14 +94,6 @@
     <Filter Include="testing">
       <UniqueIdentifier>{7ece73b6-9a00-493a-a00e-3efe4aa69173}</UniqueIdentifier>
     </Filter>
-    <Filter Include="fake headers">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="fake sources">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="base\third_party">
       <UniqueIdentifier>{d4709bbd-15cf-4b97-b464-218545d0e615}</UniqueIdentifier>
     </Filter>
@@ -721,9 +713,6 @@
     </ClCompile>
     <ClCompile Include="..\chromebase\base\base_paths_win.cc">
       <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\fakes\fakes.cpp">
-      <Filter>fake sources</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\debug\stack_trace_win.cc">
       <Filter>base\debug</Filter>
@@ -2025,9 +2014,6 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\base_paths_win.h">
       <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\fakes\fakes.h">
-      <Filter>fake headers</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\win\scoped_handle.h">
       <Filter>base\win</Filter>

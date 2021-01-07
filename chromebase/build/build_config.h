@@ -34,7 +34,7 @@
 
 // Use the Chrome OS version of the code for both Android targets and Chrome OS builds.
 #if !defined(__ANDROID_HOST__)
-#define OS_CHROMEOS 1
+//#define OS_CHROMEOS 1
 #endif  // !defined(__ANDROID_HOST__)
 
 #if defined(__ANDROID__)  // Android targets
@@ -236,7 +236,5 @@
 // equivalent types.
 #define BASE_STRING16_ITERATOR_IS_CHAR16_POINTER
 #endif
-
-#include <fakes\fakes.h>
 
 #endif  // BUILD_BUILD_CONFIG_H_

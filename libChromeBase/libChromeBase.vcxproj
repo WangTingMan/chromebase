@@ -287,7 +287,6 @@
     <ClCompile Include="..\chromebase\base\win\win_util.cc" />
     <ClCompile Include="..\chromebase\base\win\wmi.cc" />
     <ClCompile Include="..\chromebase\base\win\wrapped_window_proc.cc" />
-    <ClCompile Include="..\chromebase\fakes\fakes.cpp" />
     <ClCompile Include="..\chromebase\testing\multiprocess_func_list.cc" />
     <ClCompile Include="..\chromebase\third_party\modp_b64\modp_b64.cc" />
   </ItemGroup>
@@ -704,7 +703,6 @@
     <ClInclude Include="..\chromebase\base\win\winrt_storage_util.h" />
     <ClInclude Include="..\chromebase\base\win\win_client_metrics.h" />
     <ClInclude Include="..\chromebase\base\win\wrapped_window_proc.h" />
-    <ClInclude Include="..\chromebase\fakes\fakes.h" />
     <ClInclude Include="..\chromebase\testing\multiprocess_func_list.h" />
     <ClInclude Include="..\chromebase\testing\platform_test.h" />
   </ItemGroup>
