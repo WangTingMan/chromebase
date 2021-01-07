@@ -291,5 +291,32 @@ PlatformSharedMemoryRegion::PlatformSharedMemoryRegion(
     const UnguessableToken& guid)
     : handle_(std::move(handle)), mode_(mode), size_(size), guid_(guid) {}
 
+bool PlatformSharedMemoryRegion::MapAtInternal( off_t offset,
+    size_t size,
+    void** memory,
+    size_t* mapped_size ) const
+{
+    bool write_allowed = mode_ != Mode::kReadOnly;
+    // Try to map the shared memory. On the first failure, release any reserved
+    // address space for a single entry.
+    for( int i = 0; i < 2; ++i )
+    {
+        *memory = MapViewOfFile(
+            handle_.Get(), FILE_MAP_READ | ( write_allowed ? FILE_MAP_WRITE : 0 ),
+            static_cast< uint64_t >( offset ) >> 32, static_cast< DWORD >( offset ), size );
+        if( *memory )
+            break;
+        ReleaseReservation();
+    }
+    if( !*memory )
+    {
+        DPLOG( ERROR ) << "Failed executing MapViewOfFile";
+        return false;
+    }
+
+    *mapped_size = GetMemorySectionSize( *memory );
+    return true;
+}
+
 }  // namespace subtle
 }  // namespace base

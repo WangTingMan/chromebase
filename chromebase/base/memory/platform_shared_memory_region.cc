@@ -21,8 +21,7 @@ bool PlatformSharedMemoryRegion::MapAt( off_t offset,
            void** memory,
            size_t* mapped_size ) const
 {
-    assert( 0 );
-    return false;
+    return MapAtInternal( offset, size, memory, mapped_size );
 }
 
 // static
