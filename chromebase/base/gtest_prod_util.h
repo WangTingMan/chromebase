@@ -18,14 +18,10 @@
 //   void MyMethod();
 //   FRIEND_TEST_ALL_PREFIXES(MyClassTest, MyMethod);
 // };
-#ifdef GTEST_DISABLED
-#define FRIEND_TEST_ALL_PREFIXES(test_case_name, test_name)
-#else
 #define FRIEND_TEST_ALL_PREFIXES(test_case_name, test_name) \
   FRIEND_TEST(test_case_name, test_name); \
   FRIEND_TEST(test_case_name, DISABLED_##test_name); \
   FRIEND_TEST(test_case_name, FLAKY_##test_name)
-#endif
 
 // C++ compilers will refuse to compile the following code:
 //
