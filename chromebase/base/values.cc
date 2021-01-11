@@ -32,10 +32,10 @@ namespace base {
 //   standard-layout union type contains one of the standard-layout structs,
 //   it is permitted to inspect the common initial sequence of any of
 //   standard-layout struct members;
-//
-static_assert(std::is_standard_layout<Value>::value,
-              "base::Value should be a standard-layout C++ class in order "
-              "to avoid undefined behaviour in its implementation!");
+//   To void potential risk, the union member has been moved to be class member.
+//static_assert(std::is_standard_layout<Value>::value,
+//              "base::Value should be a standard-layout C++ class in order "
+//              "to avoid undefined behaviour in its implementation!");
 
 static_assert(sizeof(Value::DoubleStorage) == sizeof(double),
               "The double and DoubleStorage types should have the same size");

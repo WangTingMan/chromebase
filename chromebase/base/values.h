@@ -483,11 +483,12 @@ class BASE_EXPORT Value {
     bool bool_value_;
     int int_value_;
     DoubleStorage double_value_;
-    std::string string_value_;
-    BlobStorage binary_value_;
-    DictStorage dict_;
-    ListStorage list_;
   };
+
+  std::string string_value_;
+  BlobStorage binary_value_;
+  DictStorage dict_;
+  ListStorage list_;
 
  private:
   friend class ValuesTest_SizeOfValue_Test;

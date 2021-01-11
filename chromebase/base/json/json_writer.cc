@@ -181,9 +181,9 @@ bool JSONWriter::BuildJSONString(const Value& node, size_t depth) {
       return omit_binary_values_;
 
     // TODO(crbug.com/859477): Remove after root cause is found.
-    case Value::Type::DEAD:
-      CHECK(false);
-      return false;
+    //case Value::Type::DEAD:
+    //  CHECK(false);
+    //  return false;
   }
 
   // TODO(crbug.com/859477): Revert to NOTREACHED() after root cause is found.

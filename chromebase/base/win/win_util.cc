@@ -55,6 +55,8 @@
 #include "base/win/win_client_metrics.h"
 #include "base/win/windows_version.h"
 
+#pragma comment( lib,"Powrprof.lib" )
+
 namespace base {
 namespace win {
 

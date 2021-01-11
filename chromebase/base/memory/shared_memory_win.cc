@@ -36,14 +36,15 @@ enum CreateError {
   CREATE_FILE_MAPPING_FAILURE = 6,
   REDUCE_PERMISSIONS_FAILURE = 7,
   ALREADY_EXISTS = 8,
-  CREATE_ERROR_LAST = ALREADY_EXISTS
+  CREATE_ERROR_LAST = ALREADY_EXISTS,
+  kMaxValue = ALREADY_EXISTS + 1
 };
 
 // Emits UMA metrics about encountered errors. Pass zero (0) for |winerror|
 // if there is no associated Windows error.
 void LogError(CreateError error, DWORD winerror) {
   UMA_HISTOGRAM_ENUMERATION("SharedMemory.CreateError", error,
-                            CREATE_ERROR_LAST + 1);
+                            CREATE_ERROR_LAST );
   static_assert(ERROR_SUCCESS == 0, "Windows error code changed!");
   if (winerror != ERROR_SUCCESS)
     UmaHistogramSparse("SharedMemory.CreateWinError", winerror);

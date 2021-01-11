@@ -734,8 +734,9 @@ AddTraceEventWithThreadIdAndTimestamp(
     unsigned long long bind_id,
     const char* arg1_name,
     ARG1_TYPE&& arg1_val) {
-  base::trace_event::TraceArguments args(arg1_name,
-                                         std::forward<ARG1_TYPE>(arg1_val));
+    base::trace_event::TraceArguments args; //( arg1_name,
+                                         //std::forward<ARG1_TYPE>(arg1_val));
+  args.Construct( arg1_name, std::forward<ARG1_TYPE>( arg1_val ) );
   return TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_THREAD_ID_AND_TIMESTAMP(
       phase, category_group_enabled, name, scope, id, bind_id, thread_id,
       timestamp, &args, flags);
@@ -757,9 +758,11 @@ AddTraceEventWithThreadIdAndTimestamp(
     ARG1_TYPE&& arg1_val,
     const char* arg2_name,
     ARG2_TYPE&& arg2_val) {
-  base::trace_event::TraceArguments args(
-      arg1_name, std::forward<ARG1_TYPE>(arg1_val), arg2_name,
-      std::forward<ARG2_TYPE>(arg2_val));
+    base::trace_event::TraceArguments args;// (
+     // arg1_name, std::forward<ARG1_TYPE>(arg1_val), arg2_name,
+     // std::forward<ARG2_TYPE>(arg2_val));
+  args.Construct( arg1_name, std::forward<ARG1_TYPE>( arg1_val ), arg2_name,
+      std::forward<ARG2_TYPE>( arg2_val ) );
   return TRACE_EVENT_API_ADD_TRACE_EVENT_WITH_THREAD_ID_AND_TIMESTAMP(
       phase, category_group_enabled, name, scope, id, bind_id, thread_id,
       timestamp, &args, flags);

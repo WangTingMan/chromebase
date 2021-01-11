@@ -63,7 +63,8 @@ class BASE_EXPORT ModuleCache {
     // True if this is a native module.
     virtual bool IsNative() const = 0;
   };
-
+  ModuleCache( const ModuleCache& ) = delete;
+  ModuleCache& operator=( const ModuleCache& ) = delete;
   ModuleCache();
   ~ModuleCache();
 

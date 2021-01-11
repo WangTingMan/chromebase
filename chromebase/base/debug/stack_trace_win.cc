@@ -19,7 +19,10 @@
 #include "base/strings/strcat.h"
 #include "base/strings/string_util.h"
 #include "base/synchronization/lock.h"
+#include "base/win/windows_version.h"
 #include "build/build_config.h"
+
+#pragma comment(lib, "dbghelp.lib")
 
 namespace base {
 namespace debug {

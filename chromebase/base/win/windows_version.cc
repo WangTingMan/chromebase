@@ -72,7 +72,9 @@ OSInfo** OSInfo::GetInstanceStorage() {
   // and it's convenient for other modules to use this class without it.
   static OSInfo* info = []() {
     _OSVERSIONINFOEXW version_info = {sizeof(version_info)};
-    ::GetVersionEx(reinterpret_cast<_OSVERSIONINFOW*>(&version_info));
+    //::GetVersionEx(reinterpret_cast<_OSVERSIONINFOW*>(&version_info));
+    // Need to modify this implementation.
+    std::abort();
 
     DWORD os_type = 0;
     ::GetProductInfo(version_info.dwMajorVersion, version_info.dwMinorVersion,
@@ -223,7 +225,12 @@ base::Version OSInfo::Kernel32BaseVersion() const {
         HIWORD(file_version_info->fixed_file_info()->dwFileVersionLS);
     const int patch =
         LOWORD(file_version_info->fixed_file_info()->dwFileVersionLS);
-    return base::Version(std::vector<uint32_t>{major, minor, build, patch});
+    std::vector<uint32_t> ver;
+    ver.push_back( major );
+    ver.push_back( minor );
+    ver.push_back( build );
+    ver.push_back( patch );
+    return base::Version( ver );
   }());
   return *version;
 }

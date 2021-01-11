@@ -16,7 +16,7 @@
 // This dance of two macros does a concatenation of two preprocessor args using
 // ## doubly indirectly because using ## directly prevents macros in that
 // parameter from being expanded.
-#define BUILDFLAG_CAT_INDIRECT(a, b) a ## b
+#define BUILDFLAG_CAT_INDIRECT(a, b) a##b
 #define BUILDFLAG_CAT(a, b) BUILDFLAG_CAT_INDIRECT(a, b)
 
 // Accessor for build flags.
@@ -42,6 +42,6 @@
 // Because the flag is accessed as a preprocessor macro with (), an error
 // will be thrown if the proper header defining the internal flag value has
 // not been included.
-#define BUILDFLAG(flag) (BUILDFLAG_CAT(BUILDFLAG_INTERNAL_, flag)())
+#define BUILDFLAG(flag) (BUILDFLAG_CAT(BUILDFLAG_INTERNAL_, flag))
 
 #endif  // BUILD_BUILDFLAG_H_

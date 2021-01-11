@@ -71,7 +71,7 @@ const char* GetAndLeakThreadName() {
   // Use tid if we don't have a thread name.
   snprintf(name, sizeof(name), "%lu",
            static_cast<unsigned long>(PlatformThread::CurrentId()));
-  return strdup(name);
+  return _strdup(name);
 }
 
 }  // namespace

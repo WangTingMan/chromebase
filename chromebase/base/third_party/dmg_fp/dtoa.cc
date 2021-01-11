@@ -189,6 +189,8 @@
 #define IEEE_8087
 #define NO_HEX_FP
 
+#define USE_LOCALE
+
 #ifndef Long
 #if __LP64__
 #define Long int
@@ -327,6 +329,13 @@ typedef union { double d; ULong L[2]; } U;
 extern int strtod_diglim;
 #else
 #define strtod_diglim STRTOD_DIGLIM
+#endif
+
+// Macro for telling -Wimplicit-fallthrough that a fallthrough is intentional.
+#if defined(__clang__)
+#define FALLTHROUGH [[clang::fallthrough]]
+#else
+#define FALLTHROUGH
 #endif
 
 /* The following definition of Storeinc is appropriate for MIPS processors.

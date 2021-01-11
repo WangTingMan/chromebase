@@ -102,7 +102,9 @@ namespace time_internal {
 // if |value| also is at either limit of its spectrum). The int64_t argument and
 // return value are in terms of a microsecond timebase.
 BASE_EXPORT int64_t SaturatedAdd(int64_t value, TimeDelta delta);
-BASE_EXPORT int64_t SaturatedSub(int64_t value, TimeDelta delta);
+BASE_EXPORT int64_t SaturatedSub( int64_t value, TimeDelta delta );
+BASE_EXPORT int64_t SaturatedAdd( TimeDelta delta, int64_t value );
+BASE_EXPORT int64_t SaturatedSub( TimeDelta delta, int64_t value );
 
 }  // namespace time_internal
 

@@ -70,7 +70,11 @@ const char* GetAndLeakThreadName() {
   // Use tid if we don't have a thread name.
   snprintf(name, sizeof(name), "Thread %lu",
            static_cast<unsigned long>(base::PlatformThread::CurrentId()));
+#ifdef WIN32
+  return _strdup( name );
+#else
   return strdup(name);
+#endif
 }
 
 const char* UpdateAndGetThreadName(const char* name) {

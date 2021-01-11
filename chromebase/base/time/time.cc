@@ -179,6 +179,16 @@ int64_t SaturatedSub(int64_t value, TimeDelta delta) {
   return std::numeric_limits<int64_t>::min();
 }
 
+int64_t SaturatedAdd( TimeDelta delta, int64_t value )
+{
+    return SaturatedAdd( value, delta );
+}
+
+int64_t SaturatedSub( TimeDelta delta, int64_t value )
+{
+    return SaturatedSub( value, delta );
+}
+
 }  // namespace time_internal
 
 std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {

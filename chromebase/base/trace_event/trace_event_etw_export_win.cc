@@ -16,7 +16,8 @@
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_impl.h"
 
-#include <windows.h>
+#include <windows.h> 
+#include <evntprov.h>
 
 // The GetProcAddress technique is borrowed from
 // https://github.com/google/UIforETW/tree/master/ETWProviders
@@ -108,8 +109,11 @@ static void __stdcall EtwEnableCallback(LPCGUID SourceId,
                                         PVOID CallbackContext) {
   // Invoke the default callback, which updates the information inside
   // CHROME_Context.
-  McGenControlCallbackV2(SourceId, ControlCode, Level, MatchAnyKeyword,
-                         MatchAllKeyword, FilterData, CallbackContext);
+  //McGenControlCallbackV2(SourceId, ControlCode, Level, MatchAnyKeyword,
+  //                       MatchAllKeyword, FilterData, CallbackContext);
+
+  // No implementation for McGenControlCallbackV2.
+    std::abort();
 
   base::trace_event::TraceEventETWExport::OnETWEnableUpdate();
 }

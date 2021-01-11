@@ -45,6 +45,10 @@ class BASE_EXPORT LockFreeAddressHashSet {
   explicit LockFreeAddressHashSet(size_t buckets_count);
   ~LockFreeAddressHashSet();
 
+  LockFreeAddressHashSet( const LockFreeAddressHashSet& ) = delete;
+
+  LockFreeAddressHashSet& operator=( const LockFreeAddressHashSet& ) = delete;
+
   // Checks if the |key| is in the set. Can be executed concurrently with
   // |Insert|, |Remove|, and |Contains| operations.
   ALWAYS_INLINE bool Contains(void* key) const;

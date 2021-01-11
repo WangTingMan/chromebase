@@ -113,7 +113,8 @@ void InitializeMetadataEvent(TraceEvent* trace_event,
   if (!trace_event)
     return;
 
-  TraceArguments args(arg_name, value);
+  TraceArguments args;
+  args.Construct( arg_name, value );
   trace_event->Reset(thread_id, TimeTicks(), ThreadTicks(),
                      ThreadInstructionCount(), TRACE_EVENT_PHASE_METADATA,
                      CategoryRegistry::kCategoryMetadata->state_ptr(),
@@ -497,10 +498,11 @@ void TraceLog::UpdateCategoryState(TraceCategory* category) {
   }
 
 #if defined(OS_WIN)
-  if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
-          category->name())) {
-    state_flags |= TraceCategory::ENABLED_FOR_ETW_EXPORT;
-  }
+  //if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
+  //        category->name())) {
+  //  state_flags |= TraceCategory::ENABLED_FOR_ETW_EXPORT;
+  //}
+  std::abort();
 #endif
 
   uint32_t enabled_filters_bitmap = 0;
@@ -1232,8 +1234,12 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
   // This is done sooner rather than later, to avoid creating the event and
   // acquiring the lock, which is not needed for ETW as it's already threadsafe.
   if (*category_group_enabled & TraceCategory::ENABLED_FOR_ETW_EXPORT)
-    TraceEventETWExport::AddEvent(phase, category_group_enabled, name, id,
-                                  args);
+  {
+      // No implementation for trace_event_etw_export_win right now. So ignore here.
+      //TraceEventETWExport::AddEvent( phase, category_group_enabled, name, id,
+      //    args );
+      std::abort();
+  }
 #endif  // OS_WIN
 
   if (*category_group_enabled & RECORDING_MODE) {
@@ -1428,7 +1434,11 @@ void TraceLog::UpdateTraceEventDurationExplicit(
 #if defined(OS_WIN)
   // Generate an ETW event that marks the end of a complete event.
   if (category_group_enabled_local & TraceCategory::ENABLED_FOR_ETW_EXPORT)
-    TraceEventETWExport::AddCompleteEndEvent(name);
+  {
+      //No implementation for trace_event_etw_export_win right now. so ignore this.
+      //TraceEventETWExport::AddCompleteEndEvent(name);
+      std::abort();
+  }
 #endif  // OS_WIN
 
   if (category_group_enabled_local & TraceCategory::ENABLED_FOR_RECORDING) {
@@ -1692,12 +1702,14 @@ void TraceLog::UpdateETWCategoryGroupEnabledFlags() {
   // Go through each category and set/clear the ETW bit depending on whether the
   // category is enabled.
   for (TraceCategory& category : CategoryRegistry::GetAllCategories()) {
-    if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
-            category.name())) {
-      category.set_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
-    } else {
-      category.clear_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
-    }
+//     if (base::trace_event::TraceEventETWExport::IsCategoryGroupEnabled(
+//             category.name())) {
+//       category.set_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
+//     } else {
+//       category.clear_state_flag(TraceCategory::ENABLED_FOR_ETW_EXPORT);
+//     }
+
+    std::abort();
   }
 }
 #endif  // defined(OS_WIN)

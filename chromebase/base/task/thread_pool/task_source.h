@@ -134,6 +134,8 @@ class BASE_EXPORT TaskSource : public RefCountedThreadSafe<TaskSource> {
     Transaction(Transaction&& other);
     ~Transaction();
 
+    Transaction();
+
     operator bool() const { return !!task_source_; }
 
     // Returns the next task to run from this TaskSource. This should be called

@@ -25,18 +25,25 @@ void CreateSyntheticHeapCorruption() {
 
 }  // namespace
 
+static bool IsVerionLessThanWin10()
+{
+    return base::win::GetVersion() < base::win::Version::WIN10;
+}
+
 void TerminateWithHeapCorruption() {
   __try {
     // Pre-Windows 10, it's hard to trigger a heap corruption fast fail, so
     // artificially create one instead.
-    if (base::win::GetVersion() < base::win::Version::WIN10)
+    if ( IsVerionLessThanWin10() )
       CreateSyntheticHeapCorruption();
-    HANDLE heap = ::HeapCreate(0, 0, 0);
-    CHECK(heap);
-    CHECK(HeapSetInformation(heap, HeapEnableTerminationOnCorruption, nullptr,
-                             0));
-    void* addr = ::HeapAlloc(heap, 0, 0x1000);
-    CHECK(addr);
+    HANDLE heap = nullptr;
+    heap = ::HeapCreate( 0, 0, 0 );
+    //CHECK(heap);
+    BOOL ret = HeapSetInformation(heap, HeapEnableTerminationOnCorruption, nullptr,
+                             0);
+    void* addr = nullptr;
+    addr = ::HeapAlloc( heap, 0, 0x1000 );
+    //CHECK(addr);
     // Corrupt heap header.
     char* addr_mutable = reinterpret_cast<char*>(addr);
     memset(addr_mutable - sizeof(addr), 0xCC, sizeof(addr));
@@ -45,7 +52,7 @@ void TerminateWithHeapCorruption() {
     HeapDestroy(heap);
   } __except (EXCEPTION_EXECUTE_HANDLER) {
     // Heap corruption exception should never be caught.
-    CHECK(false);
+    //CHECK(false);
   }
   // Should never reach here.
   abort();

@@ -571,6 +571,40 @@ class BASE_EXPORT TraceArguments {
     values_[0].Init(std::forward<T>(arg1_value));
   }
 
+  template<typename T>
+  void Construct( const char* arg1_name, T&& arg1_value )
+  {
+      for( size_t n = 0; n < size_; ++n )
+      {
+          if( types_[n] == TRACE_VALUE_TYPE_CONVERTABLE )
+              delete values_[n].as_convertable;
+      }
+
+      size_ = 1;
+      types_[0] = TraceValue::TypeFor<T>::value;
+      names_[0] = arg1_name;
+      values_[0].Init( std::forward<T>( arg1_value ) );
+  }
+
+  template<typename T1, typename T2>
+  void Construct( const char* arg1_name, T1&& arg1_value, const char* arg2_name, T2&& arg2_value )
+  {
+      for( size_t n = 0; n < size_; ++n )
+      {
+          if( types_[n] == TRACE_VALUE_TYPE_CONVERTABLE )
+              delete values_[n].as_convertable;
+      }
+
+      size_ = 2;
+      types_[0] = TraceValue::TypeFor<T1>::value;
+      names_[0] = arg1_name;
+      values_[0].Init( std::forward<T1>( arg1_value ) );
+
+      types_[1] = TraceValue::TypeFor<T2>::value;
+      names_[1] = arg2_name;
+      values_[1].Init( std::forward<T2>( arg2_value ) );
+  }
+
   // Constructor for two arguments.
   template <typename T1,
             typename T2,

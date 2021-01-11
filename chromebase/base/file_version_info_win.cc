@@ -17,6 +17,8 @@
 
 using base::FilePath;
 
+#pragma comment(lib, "version.lib")
+
 namespace {
 
 struct LanguageAndCodePage {

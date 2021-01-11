@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <windows.h>
 
-#include "base/clang_coverage_buildflags.h"
+//#include "base/clang_coverage_buildflags.h"
 
-#if BUILDFLAG(CLANG_COVERAGE)
-#include "base/test/clang_coverage.h"
-#endif
+//#if BUILDFLAG(CLANG_COVERAGE)
+//#include "base/test/clang_coverage.h"
+//#endif
 
 namespace base {
 namespace debug {
@@ -21,9 +21,9 @@ bool BeingDebugged() {
 }
 
 void BreakDebugger() {
-#if BUILDFLAG(CLANG_COVERAGE)
-  WriteClangCoverageProfile();
-#endif
+//#if BUILDFLAG(CLANG_COVERAGE)
+//    WriteClangCoverageProfile();
+//#endif
 
   if (IsDebugUISuppressed())
     _exit(1);

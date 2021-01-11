@@ -41,7 +41,8 @@ enum LoadLibraryResult {
   // but fails.
   UNAVAILABLE_AND_FAIL,
   // Add new items before this one, always keep this one at the end.
-  END
+  END,
+  kMaxValue = 6
 };
 
 // A helper method to log library loading result to UMA.

@@ -60,7 +60,8 @@ void BlameContext::TakeSnapshot() {
   std::unique_ptr<trace_event::TracedValue> snapshot(
       new trace_event::TracedValue);
   AsValueInto(snapshot.get());
-  TraceArguments args("snapshot", std::move(snapshot));
+  TraceArguments args;//
+  args.Construct( "snapshot", std::move( snapshot ) );
   TRACE_EVENT_API_ADD_TRACE_EVENT(TRACE_EVENT_PHASE_SNAPSHOT_OBJECT,
                                   category_group_enabled_, type_, scope_, id_,
                                   &args, TRACE_EVENT_FLAG_HAS_ID);

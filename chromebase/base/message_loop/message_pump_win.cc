@@ -25,6 +25,7 @@ enum MessageLoopProblems {
   SET_TIMER_ERROR,
   RECEIVED_WM_QUIT_ERROR,
   MESSAGE_LOOP_PROBLEM_MAX,
+  kMaxValue
 };
 
 // Returns the number of milliseconds before |next_task_time|, clamped between

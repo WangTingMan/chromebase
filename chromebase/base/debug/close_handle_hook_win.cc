@@ -157,6 +157,30 @@ void EATPatch(HMODULE module, const char* function_name,
 #pragma warning(pop)
 }
 
+static bool ExePatchFromModule( HMODULE module, const char* function_name, void* new_function,
+    base::win::IATPatchFunction* patch )
+{
+    __try
+    {
+        // There is no guarantee that |module| is still loaded at this point.
+        if( patch->PatchFromModule( module, "kernel32.dll", function_name,
+            new_function ) )
+        {
+            delete patch;
+            return false;
+        }
+    }
+    __except( ( GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ||
+        GetExceptionCode() == EXCEPTION_GUARD_PAGE ||
+        GetExceptionCode() == EXCEPTION_IN_PAGE_ERROR ) ?
+        EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH )
+    {
+        // Leak the patch.
+        return false;
+    }
+    return true;
+}
+
 // Performs an IAT interception.
 base::win::IATPatchFunction* IATPatch(HMODULE module, const char* function_name,
                                       void* new_function, void** old_function) {
@@ -164,19 +188,9 @@ base::win::IATPatchFunction* IATPatch(HMODULE module, const char* function_name,
     return NULL;
 
   base::win::IATPatchFunction* patch = new base::win::IATPatchFunction;
-  __try {
-    // There is no guarantee that |module| is still loaded at this point.
-    if (patch->PatchFromModule(module, "kernel32.dll", function_name,
-                               new_function)) {
-      delete patch;
+  if( !ExePatchFromModule( module, function_name, new_function, patch ) )
+  {
       return NULL;
-    }
-  } __except((GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ||
-              GetExceptionCode() == EXCEPTION_GUARD_PAGE ||
-              GetExceptionCode() == EXCEPTION_IN_PAGE_ERROR) ?
-             EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-    // Leak the patch.
-    return NULL;
   }
 
   if (!(*old_function)) {

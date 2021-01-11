@@ -49,6 +49,11 @@ TaskSource::Transaction::Transaction(TaskSource::Transaction&& other)
   other.task_source_ = nullptr;
 }
 
+TaskSource::Transaction::Transaction()
+{
+    task_source_ = nullptr;
+}
+
 TaskSource::Transaction::~Transaction() {
   if (task_source_) {
     task_source_->lock_.AssertAcquired();

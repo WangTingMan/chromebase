@@ -170,7 +170,8 @@ class BASE_EXPORT HistogramSamples {
     SAMPLES_ACCUMULATE_WENT_NEGATIVE,
     DEPRECATED_SAMPLES_ACCUMULATE_OVERFLOW,
     SAMPLES_ACCUMULATE_OVERFLOW,
-    MAX_NEGATIVE_SAMPLE_REASONS
+    MAX_NEGATIVE_SAMPLE_REASONS,
+    kMaxValue
   };
 
   // Based on |op| type, add or subtract sample counts data from the iterator.
