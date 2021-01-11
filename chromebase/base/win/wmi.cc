@@ -16,11 +16,8 @@
 #include "base/threading/scoped_thread_priority.h"
 #include "base/win/scoped_bstr.h"
 #include "base/win/scoped_variant.h"
-#include <base/win/windows_version.h>
 
 using Microsoft::WRL::ComPtr;
-
-#pragma comment(lib, "wbemuuid.lib")
 
 namespace base {
 namespace win {

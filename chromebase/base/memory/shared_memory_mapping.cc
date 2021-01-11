@@ -7,8 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
-// Unsupported in libchrome
-// #include "base/memory/shared_memory_tracker.h"
+#include "base/memory/shared_memory_tracker.h"
 #include "base/unguessable_token.h"
 #include "build/build_config.h"
 
@@ -26,16 +25,15 @@
 #endif
 
 #if defined(OS_FUCHSIA)
-#include <zircon/process.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
+#include <lib/zx/vmar.h>
+#include "base/fuchsia/fuchsia_logging.h"
 #endif
 
 namespace base {
 
 SharedMemoryMapping::SharedMemoryMapping() = default;
 
-SharedMemoryMapping::SharedMemoryMapping(SharedMemoryMapping&& mapping)
+SharedMemoryMapping::SharedMemoryMapping(SharedMemoryMapping&& mapping) noexcept
     : memory_(mapping.memory_),
       size_(mapping.size_),
       mapped_size_(mapping.mapped_size_),
@@ -44,7 +42,7 @@ SharedMemoryMapping::SharedMemoryMapping(SharedMemoryMapping&& mapping)
 }
 
 SharedMemoryMapping& SharedMemoryMapping::operator=(
-    SharedMemoryMapping&& mapping) {
+    SharedMemoryMapping&& mapping) noexcept {
   Unmap();
   memory_ = mapping.memory_;
   size_ = mapping.size_;
@@ -63,38 +61,38 @@ SharedMemoryMapping::SharedMemoryMapping(void* memory,
                                          size_t mapped_size,
                                          const UnguessableToken& guid)
     : memory_(memory), size_(size), mapped_size_(mapped_size), guid_(guid) {
-  // Unsupported in libchrome.
-  // SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
+  SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
 }
 
 void SharedMemoryMapping::Unmap() {
   if (!IsValid())
     return;
-  // Unsupported in libchrome.
-  // SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
+
+  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
 #if defined(OS_WIN)
   if (!UnmapViewOfFile(memory_))
     DPLOG(ERROR) << "UnmapViewOfFile";
 #elif defined(OS_FUCHSIA)
   uintptr_t addr = reinterpret_cast<uintptr_t>(memory_);
-  zx_status_t status = zx_vmar_unmap(zx_vmar_root_self(), addr, size_);
-  DLOG_IF(ERROR, status != ZX_OK)
-      << "zx_vmar_unmap failed: " << zx_status_get_string(status);
+  zx_status_t status = zx::vmar::root_self()->unmap(addr, mapped_size_);
+  if (status != ZX_OK)
+    ZX_DLOG(ERROR, status) << "zx_vmar_unmap";
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
   kern_return_t kr = mach_vm_deallocate(
-      mach_task_self(), reinterpret_cast<mach_vm_address_t>(memory_), size_);
+      mach_task_self(), reinterpret_cast<mach_vm_address_t>(memory_),
+      mapped_size_);
   MACH_DLOG_IF(ERROR, kr != KERN_SUCCESS, kr) << "mach_vm_deallocate";
 #else
-  if (munmap(memory_, size_) < 0)
+  if (munmap(memory_, mapped_size_) < 0)
     DPLOG(ERROR) << "munmap";
 #endif
 }
 
 ReadOnlySharedMemoryMapping::ReadOnlySharedMemoryMapping() = default;
 ReadOnlySharedMemoryMapping::ReadOnlySharedMemoryMapping(
-    ReadOnlySharedMemoryMapping&&) = default;
+    ReadOnlySharedMemoryMapping&&) noexcept = default;
 ReadOnlySharedMemoryMapping& ReadOnlySharedMemoryMapping::operator=(
-    ReadOnlySharedMemoryMapping&&) = default;
+    ReadOnlySharedMemoryMapping&&) noexcept = default;
 ReadOnlySharedMemoryMapping::ReadOnlySharedMemoryMapping(
     void* address,
     size_t size,
@@ -104,9 +102,9 @@ ReadOnlySharedMemoryMapping::ReadOnlySharedMemoryMapping(
 
 WritableSharedMemoryMapping::WritableSharedMemoryMapping() = default;
 WritableSharedMemoryMapping::WritableSharedMemoryMapping(
-    WritableSharedMemoryMapping&&) = default;
+    WritableSharedMemoryMapping&&) noexcept = default;
 WritableSharedMemoryMapping& WritableSharedMemoryMapping::operator=(
-    WritableSharedMemoryMapping&&) = default;
+    WritableSharedMemoryMapping&&) noexcept = default;
 WritableSharedMemoryMapping::WritableSharedMemoryMapping(
     void* address,
     size_t size,

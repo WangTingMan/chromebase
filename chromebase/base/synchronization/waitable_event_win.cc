@@ -69,7 +69,7 @@ void WaitableEvent::Wait() {
   // It is most unexpected that this should ever fail.  Help consumers learn
   // about it if it should ever fail.
   DPCHECK(result != WAIT_FAILED);
-  DCHECK_EQ( WAIT_OBJECT_0, result );
+  DCHECK_EQ(WAIT_OBJECT_0, result);
 }
 
 namespace {
@@ -116,15 +116,12 @@ bool WaitableEvent::TimedWait(const TimeDelta& wait_delta) {
   // consider it blocked for scheduling purposes. Ignore this for non-blocking
   // WaitableEvents.
   Optional<debug::ScopedEventWaitActivity> event_activity;
-#if 0
   Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>
       scoped_blocking_call;
   if (waiting_is_blocking_) {
     event_activity.emplace(this);
     scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   }
-#endif 
-  assert( 0 );
 
   TimeTicks now(TimeTicks::Now());
   // TimeTicks takes care of overflow including the cases when wait_delta
@@ -140,15 +137,12 @@ bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
   // consider it blocked for scheduling purposes. Ignore this for non-blocking
   // WaitableEvents.
   Optional<debug::ScopedEventWaitActivity> event_activity;
-#if 0
   Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>
       scoped_blocking_call;
   if (waiting_is_blocking_) {
     event_activity.emplace(this);
     scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   }
-#endif 
-  assert( 0 );
 
   TimeTicks now(TimeTicks::Now());
   if (end_time <= now)
@@ -160,11 +154,8 @@ bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
 // static
 size_t WaitableEvent::WaitMany(WaitableEvent** events, size_t count) {
   DCHECK(count) << "Cannot wait on no events";
-#if 0
   internal::ScopedBlockingCallWithBaseSyncPrimitives scoped_blocking_call(
-      BlockingType::MAY_BLOCK );
-#endif 
-  assert( 0 );
+      BlockingType::MAY_BLOCK);
   // Record an event (the first) that this thread is blocking upon.
   debug::ScopedEventWaitActivity event_activity(events[0]);
 

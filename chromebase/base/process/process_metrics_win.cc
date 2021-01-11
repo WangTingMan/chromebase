@@ -168,15 +168,15 @@ bool ProcessMetrics::GetIOCounters(IoCounters* io_counters) const {
 
   return GetProcessIoCounters(process_.Get(), io_counters) != FALSE;
 }
-// 
-// uint64_t ProcessMetrics::GetCumulativeDiskUsageInBytes() {
-//   IoCounters counters;
-//   if (!GetIOCounters(&counters))
-//     return 0;
-// 
-//   return counters.ReadTransferCount + counters.WriteTransferCount +
-//          counters.OtherTransferCount;
-// }
+
+uint64_t ProcessMetrics::GetCumulativeDiskUsageInBytes() {
+  IoCounters counters;
+  if (!GetIOCounters(&counters))
+    return 0;
+
+  return counters.ReadTransferCount + counters.WriteTransferCount +
+         counters.OtherTransferCount;
+}
 
 ProcessMetrics::ProcessMetrics(ProcessHandle process) {
   if (process) {
@@ -232,7 +232,6 @@ size_t ProcessMetrics::GetMallocUsage() {
   return 0;
 }
 
-#ifdef HAS_SystemPerformanceInfo
 SystemPerformanceInfo::SystemPerformanceInfo() = default;
 SystemPerformanceInfo::SystemPerformanceInfo(
     const SystemPerformanceInfo& other) = default;
@@ -302,6 +301,5 @@ BASE_EXPORT bool GetSystemPerformanceInfo(SystemPerformanceInfo* info) {
 
   return true;
 }
-#endif
 
 }  // namespace base

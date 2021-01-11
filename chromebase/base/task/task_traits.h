@@ -189,8 +189,6 @@ struct ThreadPool {};
 // Describes metadata for a single task or a group of tasks.
 class BASE_EXPORT TaskTraits {
  public:
-     TaskTraits(){}
-
   // ValidTrait ensures TaskTraits' constructor only accepts appropriate types.
   struct ValidTrait {
     ValidTrait(TaskPriority);

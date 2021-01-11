@@ -9,10 +9,8 @@
 #include "base/logging.h"
 #include "base/task/scoped_set_task_priority_for_current_thread.h"
 #include "base/task/task_executor.h"
-#if 0
 #include "base/task/thread_pool/thread_pool.h"
 #include "base/task/thread_pool/thread_pool_impl.h"
-#endif
 #include "base/threading/post_task_and_reply_impl.h"
 
 namespace base {
@@ -44,7 +42,6 @@ TaskTraits GetTaskTraitsWithExplicitPriority(TaskTraits traits) {
 
 TaskExecutor* GetTaskExecutorForTraits(const TaskTraits& traits) {
   TaskExecutor* executor = GetRegisteredTaskExecutorForTraits(traits);
-#if 0
   DCHECK(executor || ThreadPoolInstance::Get())
       << "Ref. Prerequisite section of post_task.h.\n\n"
          "Hint: if this is in a unit test, you're likely merely missing a "
@@ -52,8 +49,6 @@ TaskExecutor* GetTaskExecutorForTraits(const TaskTraits& traits) {
   // TODO(skyostil): Make thread affinity a required trait.
   if (!executor || traits.use_thread_pool())
     return static_cast<internal::ThreadPoolImpl*>(ThreadPoolInstance::Get());
-#endif 
-  assert( 0 );
   return executor;
 }
 
@@ -110,7 +105,6 @@ scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunner(
 
 scoped_refptr<UpdateableSequencedTaskRunner>
 CreateUpdateableSequencedTaskRunner(const TaskTraits& traits) {
-#if 0
   DCHECK(ThreadPoolInstance::Get())
       << "Ref. Prerequisite section of post_task.h.\n\n"
          "Hint: if this is in a unit test, you're likely merely missing a "
@@ -124,10 +118,7 @@ CreateUpdateableSequencedTaskRunner(const TaskTraits& traits) {
          "CreateUpdateableSequencedTaskRunner().";
   const TaskTraits adjusted_traits = GetTaskTraitsWithExplicitPriority(traits);
   return static_cast<internal::ThreadPoolImpl*>(ThreadPoolInstance::Get())
-      ->CreateUpdateableSequencedTaskRunner( adjusted_traits );
-#endif 
-  assert( 0 );
-  return scoped_refptr<UpdateableSequencedTaskRunner>();
+      ->CreateUpdateableSequencedTaskRunner(adjusted_traits);
 }
 
 scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunner(

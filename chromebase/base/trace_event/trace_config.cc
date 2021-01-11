@@ -409,8 +409,7 @@ void TraceConfig::InitializeFromConfigDict(const Value& dict) {
 }
 
 void TraceConfig::InitializeFromConfigString(StringPiece config_string) {
-  std::unique_ptr<Value> value_ = JSONReader::Read( config_string );
-  base::Optional<Value> dict( std::move( *value_ ) );
+  base::Optional<Value> dict = JSONReader::Read(config_string);
   if (dict && dict->is_dict())
     InitializeFromConfigDict(*dict);
   else

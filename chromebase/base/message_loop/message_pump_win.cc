@@ -143,10 +143,7 @@ void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
   if (in_native_loop_ && !work_scheduled_) {
     // TODO(gab): Consider passing a NextWorkInfo object to ScheduleDelayedWork
     // to take advantage of |recent_now| here too.
-#if 0
-    ScheduleNativeTimer({delayed_work_time, TimeTicks::Now()}); 
-#endif
-    assert( 0 );
+    ScheduleNativeTimer({delayed_work_time, TimeTicks::Now()});
   }
 }
 
@@ -157,18 +154,12 @@ void MessagePumpForUI::EnableWmQuit() {
 
 void MessagePumpForUI::AddObserver(Observer* observer) {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_);
-#if 0
-  observers_.AddObserver( observer );
-#endif
-  assert( 0 );
+  observers_.AddObserver(observer);
 }
 
 void MessagePumpForUI::RemoveObserver(Observer* observer) {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_);
-#if 0
-  observers_.RemoveObserver( observer );
-#endif
-  assert( 0 );
+  observers_.RemoveObserver(observer);
 }
 
 //-----------------------------------------------------------------------------
@@ -215,22 +206,17 @@ void MessagePumpForUI::DoRunLoop() {
     // work.
 
     in_native_loop_ = false;
-#if 0
     state_->delegate->BeforeDoInternalWork();
-#endif
-    assert( 0 );
     DCHECK(!in_native_loop_);
 
     bool more_work_is_plausible = ProcessNextWindowsMessage();
     in_native_loop_ = false;
     if (state_->should_quit)
       break;
-#if 0
+
     Delegate::NextWorkInfo next_work_info = state_->delegate->DoSomeWork();
     in_native_loop_ = false;
     more_work_is_plausible |= next_work_info.is_immediate();
-#endif
-    assert( 0 );
     if (state_->should_quit)
       break;
 
@@ -244,10 +230,8 @@ void MessagePumpForUI::DoRunLoop() {
 
     if (more_work_is_plausible)
       continue;
-#if 0
+
     more_work_is_plausible = state_->delegate->DoIdleWork();
-#endif
-    assert( 0 );
     // DoIdleWork() shouldn't end up in native nested loops and thus shouldn't
     // have any chance of reinstalling a native timer.
     DCHECK(!in_native_loop_);
@@ -257,15 +241,13 @@ void MessagePumpForUI::DoRunLoop() {
 
     if (more_work_is_plausible)
       continue;
-#if 0
+
     // WaitForWork() does some work itself, so notify the delegate of it.
     state_->delegate->BeforeDoInternalWork();
-    WaitForWork( next_work_info );
-#endif
-    assert( 0 );
+    WaitForWork(next_work_info);
   }
 }
-#if 0
+
 void MessagePumpForUI::WaitForWork(Delegate::NextWorkInfo next_work_info) {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_);
 
@@ -312,7 +294,6 @@ void MessagePumpForUI::WaitForWork(Delegate::NextWorkInfo next_work_info) {
     DCHECK_NE(WAIT_FAILED, result) << GetLastError();
   }
 }
-#endif
 
 void MessagePumpForUI::HandleWorkMessage() {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_);
@@ -334,15 +315,13 @@ void MessagePumpForUI::HandleWorkMessage() {
   // run now.  This is an attempt to make our dummy message not starve other
   // messages that may be in the Windows message queue.
   ProcessPumpReplacementMessage();
-#if 0
+
   Delegate::NextWorkInfo next_work_info = state_->delegate->DoSomeWork();
   if (next_work_info.is_immediate()) {
     ScheduleWork();
   } else {
     ScheduleNativeTimer(next_work_info);
   }
-#endif
-  assert( 0 );
 }
 
 void MessagePumpForUI::HandleTimerMessage() {
@@ -367,18 +346,15 @@ void MessagePumpForUI::HandleTimerMessage() {
   // that sort.
   if (!state_)
     return;
-#if 0
+
   Delegate::NextWorkInfo next_work_info = state_->delegate->DoSomeWork();
   if (next_work_info.is_immediate()) {
     ScheduleWork();
   } else {
     ScheduleNativeTimer(next_work_info);
   }
-#endif
-  assert( 0 );
 }
 
-#if 0
 void MessagePumpForUI::ScheduleNativeTimer(
     Delegate::NextWorkInfo next_work_info) {
   DCHECK(!next_work_info.is_immediate());
@@ -443,7 +419,6 @@ void MessagePumpForUI::ScheduleNativeTimer(
                               MESSAGE_LOOP_PROBLEM_MAX);
   }
 }
-#endif 
 
 void MessagePumpForUI::KillNativeTimer() {
   DCHECK(installed_native_timer_);
@@ -494,15 +469,13 @@ bool MessagePumpForUI::ProcessMessageHelper(const MSG& msg) {
   // While running our main message pump, we discard kMsgHaveWork messages.
   if (msg.message == kMsgHaveWork && msg.hwnd == message_window_.hwnd())
     return ProcessPumpReplacementMessage();
-#if 0
+
   for (Observer& observer : observers_)
     observer.WillDispatchMSG(msg);
   ::TranslateMessage(&msg);
   ::DispatchMessage(&msg);
   for (Observer& observer : observers_)
-      observer.DidDispatchMSG( msg );
-#endif
-  assert( 0 );
+    observer.DidDispatchMSG(msg);
 
   return true;
 }
@@ -645,15 +618,13 @@ void MessagePumpForIO::DoRunLoop() {
     // again quickly will find any work to do.  Finally, if they all say they
     // had no work, then it is a good time to consider sleeping (waiting) for
     // more work.
-#if 0
+
     Delegate::NextWorkInfo next_work_info = state_->delegate->DoSomeWork();
     bool more_work_is_plausible = next_work_info.is_immediate();
-#endif
-    assert( 0 );
     if (state_->should_quit)
       break;
-#if 0
-    more_work_is_plausible |= WaitForIOCompletion( 0, nullptr );
+
+    more_work_is_plausible |= WaitForIOCompletion(0, nullptr);
     if (state_->should_quit)
       break;
 
@@ -667,13 +638,10 @@ void MessagePumpForIO::DoRunLoop() {
     if (more_work_is_plausible)
       continue;
 
-    WaitForWork( next_work_info );
-#endif
-    assert( 0 );
+    WaitForWork(next_work_info);
   }
 }
 
-#if 0
 // Wait until IO completes, up to the time needed by the timer manager to fire
 // the next set of timers.
 void MessagePumpForIO::WaitForWork(Delegate::NextWorkInfo next_work_info) {
@@ -690,7 +658,6 @@ void MessagePumpForIO::WaitForWork(Delegate::NextWorkInfo next_work_info) {
   base::debug::Alias(&timeout);
   WaitForIOCompletion(timeout, nullptr);
 }
-#endif
 
 bool MessagePumpForIO::WaitForIOCompletion(DWORD timeout, IOHandler* filter) {
   DCHECK_CALLED_ON_VALID_THREAD(bound_thread_);

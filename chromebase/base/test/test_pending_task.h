@@ -10,8 +10,7 @@
 #include "base/callback.h"
 #include "base/location.h"
 #include "base/time/time.h"
-// Unsupported in libchrome.
-// #include "base/trace_event/trace_event_argument.h"
+#include "base/trace_event/traced_value.h"
 
 namespace base {
 
@@ -59,13 +58,10 @@ struct TestPendingTask {
   TimeDelta delay;
   TestNestability nestability;
 
-// Unsupported in libchrome.
-#if 0
   // Functions for using test pending task with tracing, useful in unit
   // testing.
   void AsValueInto(base::trace_event::TracedValue* state) const;
   std::unique_ptr<base::trace_event::ConvertableToTraceFormat> AsValue() const;
-#endif
   std::string ToString() const;
 
  private:

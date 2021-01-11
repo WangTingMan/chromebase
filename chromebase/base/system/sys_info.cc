@@ -106,9 +106,8 @@ std::string SysInfo::HardwareModelName() {
 
 void SysInfo::GetHardwareInfo(base::OnceCallback<void(HardwareInfo)> callback) {
 #if defined(OS_WIN)
-    TaskTraits taskTraits;
   base::PostTaskAndReplyWithResult(
-      base::CreateCOMSTATaskRunner( taskTraits ).get(), FROM_HERE,
+      base::CreateCOMSTATaskRunner({}).get(), FROM_HERE,
       base::BindOnce(&GetHardwareInfoSync), std::move(callback));
 #elif defined(OS_ANDROID) || defined(OS_MACOSX)
   base::PostTaskAndReplyWithResult(

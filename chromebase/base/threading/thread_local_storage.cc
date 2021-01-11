@@ -300,17 +300,6 @@ void PlatformThreadLocalStorage::OnThreadExit() {
 void PlatformThreadLocalStorage::OnThreadExit(void* value) {
   OnThreadExitInternal(static_cast<TlsVectorEntry*>(value));
 }
-
-// static
-void PlatformThreadLocalStorage::ForceFreeTLS() {
-  PlatformThreadLocalStorage::TLSKey key =
-      base::subtle::NoBarrier_AtomicExchange(
-          &g_native_tls_key,
-          PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES);
-  if (key == PlatformThreadLocalStorage::TLS_KEY_OUT_OF_INDEXES)
-    return;
-  PlatformThreadLocalStorage::FreeTLS(key);
-}
 #endif  // defined(OS_WIN)
 
 }  // namespace internal
@@ -373,11 +362,7 @@ void* ThreadLocalStorage::Slot::Get() const {
   TlsVectorEntry* tls_data = static_cast<TlsVectorEntry*>(
       PlatformThreadLocalStorage::GetTLSValue(
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
-  //DCHECK_NE(tls_data, kDestroyed);
-  if( kDestroyed == tls_data )
-  {
-      return nullptr;
-  }
+  DCHECK_NE(tls_data, kDestroyed);
   if (!tls_data)
     return nullptr;
   DCHECK_NE(slot_, kInvalidSlotValue);
@@ -393,8 +378,11 @@ void ThreadLocalStorage::Slot::Set(void* value) {
       PlatformThreadLocalStorage::GetTLSValue(
           base::subtle::NoBarrier_Load(&g_native_tls_key)));
   DCHECK_NE(tls_data, kDestroyed);
-  if (!tls_data)
+  if (!tls_data) {
+    if (!value)
+      return;
     tls_data = ConstructTlsVector();
+  }
   DCHECK_NE(slot_, kInvalidSlotValue);
   DCHECK_LT(slot_, kThreadLocalStorageSize);
   tls_data[slot_].data = value;

@@ -97,10 +97,12 @@ class TimeDelta;
 // time classes instead.
 namespace time_internal {
 
-// Add or subtract |value| from a TimeDelta. The int64_t argument and return
-// value are in terms of a microsecond timebase.
-BASE_EXPORT int64_t SaturatedAdd(TimeDelta delta, int64_t value);
-BASE_EXPORT int64_t SaturatedSub(TimeDelta delta, int64_t value);
+// Add or subtract a TimeDelta from |value|. TimeDelta::Min()/Max() are treated
+// as infinity and will always saturate the return value (infinity math applies
+// if |value| also is at either limit of its spectrum). The int64_t argument and
+// return value are in terms of a microsecond timebase.
+BASE_EXPORT int64_t SaturatedAdd(int64_t value, TimeDelta delta);
+BASE_EXPORT int64_t SaturatedSub(int64_t value, TimeDelta delta);
 
 }  // namespace time_internal
 
@@ -127,6 +129,9 @@ class BASE_EXPORT TimeDelta {
   static TimeDelta FromFileTime(FILETIME ft);
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   static TimeDelta FromTimeSpec(const timespec& ts);
+#endif
+#if defined(OS_FUCHSIA)
+  static TimeDelta FromZxDuration(zx_duration_t nanos);
 #endif
 
   // Converts an integer value representing TimeDelta to a class. This is used
@@ -180,6 +185,9 @@ class BASE_EXPORT TimeDelta {
 #if defined(OS_POSIX) || defined(OS_FUCHSIA)
   struct timespec ToTimeSpec() const;
 #endif
+#if defined(OS_FUCHSIA)
+  zx_duration_t ToZxDuration() const;
+#endif
 
   // Returns the time delta in some unit. The InXYZF versions return a floating
   // point value. The InXYZ versions return a truncated value (aka rounded
@@ -195,24 +203,19 @@ class BASE_EXPORT TimeDelta {
   double InMillisecondsF() const;
   int64_t InMilliseconds() const;
   int64_t InMillisecondsRoundedUp() const;
-  int64_t InMicroseconds() const;
+  constexpr int64_t InMicroseconds() const { return delta_; }
   double InMicrosecondsF() const;
   int64_t InNanoseconds() const;
-
-  constexpr TimeDelta& operator=(TimeDelta other) {
-    delta_ = other.delta_;
-    return *this;
-  }
 
   // Computations with other deltas. Can easily be made constexpr with C++17 but
   // hard to do until then per limitations around
   // __builtin_(add|sub)_overflow in safe_math_clang_gcc_impl.h :
   // https://chromium-review.googlesource.com/c/chromium/src/+/873352#message-59594ab70827795a67e0780404adf37b4b6c2f14
   TimeDelta operator+(TimeDelta other) const {
-    return TimeDelta(time_internal::SaturatedAdd(*this, other.delta_));
+    return TimeDelta(time_internal::SaturatedAdd(delta_, other));
   }
   TimeDelta operator-(TimeDelta other) const {
-    return TimeDelta(time_internal::SaturatedSub(*this, other.delta_));
+    return TimeDelta(time_internal::SaturatedSub(delta_, other));
   }
 
   TimeDelta& operator+=(TimeDelta other) {
@@ -283,14 +286,9 @@ class BASE_EXPORT TimeDelta {
     return delta_ >= other.delta_;
   }
 
-#if defined(OS_WIN)
-  // This works around crbug.com/635974
-  constexpr TimeDelta(const TimeDelta& other) : delta_(other.delta_) {}
-#endif
-
  private:
-  friend int64_t time_internal::SaturatedAdd(TimeDelta delta, int64_t value);
-  friend int64_t time_internal::SaturatedSub(TimeDelta delta, int64_t value);
+  friend int64_t time_internal::SaturatedAdd(int64_t value, TimeDelta delta);
+  friend int64_t time_internal::SaturatedSub(int64_t value, TimeDelta delta);
 
   // Constructs a delta given the duration in microseconds. This is private
   // to avoid confusion by callers with an integer constructor. Use
@@ -330,20 +328,22 @@ namespace time_internal {
 template<class TimeClass>
 class TimeBase {
  public:
-  static const int64_t kHoursPerDay = 24;
-  static const int64_t kMillisecondsPerSecond = 1000;
-  static const int64_t kMillisecondsPerDay =
+  static constexpr int64_t kHoursPerDay = 24;
+  static constexpr int64_t kSecondsPerMinute = 60;
+  static constexpr int64_t kSecondsPerHour = 60 * kSecondsPerMinute;
+  static constexpr int64_t kMillisecondsPerSecond = 1000;
+  static constexpr int64_t kMillisecondsPerDay =
       kMillisecondsPerSecond * 60 * 60 * kHoursPerDay;
-  static const int64_t kMicrosecondsPerMillisecond = 1000;
-  static const int64_t kMicrosecondsPerSecond =
+  static constexpr int64_t kMicrosecondsPerMillisecond = 1000;
+  static constexpr int64_t kMicrosecondsPerSecond =
       kMicrosecondsPerMillisecond * kMillisecondsPerSecond;
-  static const int64_t kMicrosecondsPerMinute = kMicrosecondsPerSecond * 60;
-  static const int64_t kMicrosecondsPerHour = kMicrosecondsPerMinute * 60;
-  static const int64_t kMicrosecondsPerDay =
+  static constexpr int64_t kMicrosecondsPerMinute = kMicrosecondsPerSecond * 60;
+  static constexpr int64_t kMicrosecondsPerHour = kMicrosecondsPerMinute * 60;
+  static constexpr int64_t kMicrosecondsPerDay =
       kMicrosecondsPerHour * kHoursPerDay;
-  static const int64_t kMicrosecondsPerWeek = kMicrosecondsPerDay * 7;
-  static const int64_t kNanosecondsPerMicrosecond = 1000;
-  static const int64_t kNanosecondsPerSecond =
+  static constexpr int64_t kMicrosecondsPerWeek = kMicrosecondsPerDay * 7;
+  static constexpr int64_t kNanosecondsPerMicrosecond = 1000;
+  static constexpr int64_t kNanosecondsPerSecond =
       kNanosecondsPerMicrosecond * kMicrosecondsPerSecond;
 
   // Returns true if this object has not been initialized.
@@ -351,13 +351,15 @@ class TimeBase {
   // Warning: Be careful when writing code that performs math on time values,
   // since it's possible to produce a valid "zero" result that should not be
   // interpreted as a "null" value.
-  bool is_null() const {
-    return us_ == 0;
-  }
+  constexpr bool is_null() const { return us_ == 0; }
 
   // Returns true if this object represents the maximum/minimum time.
-  bool is_max() const { return us_ == std::numeric_limits<int64_t>::max(); }
-  bool is_min() const { return us_ == std::numeric_limits<int64_t>::min(); }
+  constexpr bool is_max() const {
+    return us_ == std::numeric_limits<int64_t>::max();
+  }
+  constexpr bool is_min() const {
+    return us_ == std::numeric_limits<int64_t>::min();
+  }
 
   // Returns the maximum/minimum times, which should be greater/less than than
   // any reasonable time with which we might compare it.
@@ -375,7 +377,7 @@ class TimeBase {
   //
   // DEPRECATED - Do not use in new code. For serializing Time values, prefer
   // Time::ToDeltaSinceWindowsEpoch().InMicroseconds(). http://crbug.com/634507
-  int64_t ToInternalValue() const { return us_; }
+  constexpr int64_t ToInternalValue() const { return us_; }
 
   // The amount of time since the origin (or "zero") point. This is a syntactic
   // convenience to aid in code readability, mainly for debugging/testing use
@@ -383,7 +385,9 @@ class TimeBase {
   //
   // Warning: While the Time subclass has a fixed origin point, the origin for
   // the other subclasses can vary each time the application is restarted.
-  TimeDelta since_origin() const { return TimeDelta::FromMicroseconds(us_); }
+  constexpr TimeDelta since_origin() const {
+    return TimeDelta::FromMicroseconds(us_);
+  }
 
   TimeClass& operator=(TimeClass other) {
     us_ = other.us_;
@@ -397,10 +401,10 @@ class TimeBase {
 
   // Return a new time modified by some delta.
   TimeClass operator+(TimeDelta delta) const {
-    return TimeClass(time_internal::SaturatedAdd(delta, us_));
+    return TimeClass(time_internal::SaturatedAdd(us_, delta));
   }
   TimeClass operator-(TimeDelta delta) const {
-    return TimeClass(-time_internal::SaturatedSub(delta, us_));
+    return TimeClass(time_internal::SaturatedSub(us_, delta));
   }
 
   // Modify by some time delta.
@@ -581,6 +585,11 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   struct timeval ToTimeVal() const;
 #endif
 
+#if defined(OS_FUCHSIA)
+  static Time FromZxTime(zx_time_t time);
+  zx_time_t ToZxTime() const;
+#endif
+
 #if defined(OS_MACOSX)
   static Time FromCFAbsoluteTime(CFAbsoluteTime t);
   CFAbsoluteTime ToCFAbsoluteTime() const;
@@ -643,6 +652,12 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   // in the input string, FromString assumes local time and FromUTCString
   // assumes UTC. A timezone that cannot be parsed (e.g. "UTC" which is not
   // specified in RFC822) is treated as if the timezone is not specified.
+  //
+  // WARNING: the underlying converter is very permissive. For example: it is
+  // not checked whether a given day of the week matches the date; Feb 29
+  // silently becomes Mar 1 in non-leap years; under certain conditions, whole
+  // English sentences may be parsed successfully and yield unexpected results.
+  //
   // TODO(iyengar) Move the FromString/FromTimeT/ToTimeT/FromFileTime to
   // a new time converter class.
   static bool FromString(const char* time_string,
@@ -663,9 +678,10 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
     return Explode(true, exploded);
   }
 
-  // Rounds this time down to the nearest day in local time. It will represent
-  // midnight on that day.
-  Time LocalMidnight() const;
+  // The following two functions round down the time to the nearest day in
+  // either UTC or local time. It will represent midnight on that day.
+  Time UTCMidnight() const { return Midnight(false); }
+  Time LocalMidnight() const { return Midnight(true); }
 
   // Converts an integer value representing Time to a class. This may be used
   // when deserializing a |Time| structure, using a value known to be
@@ -692,6 +708,10 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   static bool FromExploded(bool is_local,
                            const Exploded& exploded,
                            Time* time) WARN_UNUSED_RESULT;
+
+  // Rounds down the time to the nearest day in either local time
+  // |is_local = true| or UTC |is_local = false|.
+  Time Midnight(bool is_local) const;
 
   // Converts a string representation of time to a Time object.
   // An example of a time string which is converted is as below:-
@@ -794,7 +814,7 @@ constexpr TimeDelta TimeDelta::FromDouble(double value) {
 // static
 constexpr TimeDelta TimeDelta::FromProduct(int64_t value,
                                            int64_t positive_value) {
-  DCHECK(positive_value > 0);
+  DCHECK(positive_value > 0);  // NOLINT, DCHECK_GT isn't constexpr.
   return value > std::numeric_limits<int64_t>::max() / positive_value
              ? Max()
              : value < std::numeric_limits<int64_t>::min() / positive_value
@@ -858,12 +878,12 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
   static TimeTicks FromMachAbsoluteTime(uint64_t mach_absolute_time);
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
-#if defined(OS_ANDROID)
+#if defined(OS_ANDROID) || defined(OS_CHROMEOS)
   // Converts to TimeTicks the value obtained from SystemClock.uptimeMillis().
   // Note: this convertion may be non-monotonic in relation to previously
   // obtained TimeTicks::Now() values because of the truncation (to
   // milliseconds) performed by uptimeMillis().
-  static TimeTicks FromUptimeMillis(jlong uptime_millis_value);
+  static TimeTicks FromUptimeMillis(int64_t uptime_millis_value);
 #endif
 
   // Get an estimate of the TimeTick value at the time of the UnixEpoch. Because
@@ -898,8 +918,8 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
     return TimeTicks(us);
   }
 
-#if defined(OS_WIN)
  protected:
+#if defined(OS_WIN)
   typedef DWORD (*TickFunctionType)(void);
   static TickFunctionType SetMockTickFunction(TickFunctionType ticker);
 #endif
@@ -921,8 +941,7 @@ BASE_EXPORT std::ostream& operator<<(std::ostream& os, TimeTicks time_ticks);
 // thread is running.
 class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
  public:
-  ThreadTicks() : TimeBase(0) {
-  }
+  constexpr ThreadTicks() : TimeBase(0) {}
 
   // Returns true if ThreadTicks::Now() is supported on this system.
   static bool IsSupported() WARN_UNUSED_RESULT {
@@ -982,11 +1001,17 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
 #if defined(OS_WIN)
   FRIEND_TEST_ALL_PREFIXES(TimeTicks, TSCTicksPerSecond);
 
+#if defined(ARCH_CPU_ARM64)
+  // TSCTicksPerSecond is not supported on Windows on Arm systems because the
+  // cycle-counting methods use the actual CPU cycle count, and not a consistent
+  // incrementing counter.
+#else
   // Returns the frequency of the TSC in ticks per second, or 0 if it hasn't
   // been measured yet. Needs to be guarded with a call to IsSupported().
   // This method is declared here rather than in the anonymous namespace to
   // allow testing.
   static double TSCTicksPerSecond();
+#endif
 
   static bool IsSupportedWin() WARN_UNUSED_RESULT;
   static void WaitUntilInitializedWin();

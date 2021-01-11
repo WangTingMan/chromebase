@@ -19,8 +19,7 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
-// Unused, and this file is not ported to libchrome.
-// #include "base/nix/xdg_util.h"
+#include "base/nix/xdg_util.h"
 #include "base/path_service.h"
 #include "base/process/process_metrics.h"
 #include "build/build_config.h"
@@ -77,8 +76,6 @@ bool PathProviderPosix(int key, FilePath* result) {
       return true;
 #endif
     }
-// Following paths are not supported in libchrome/libmojo.
-#if 0
     case DIR_SOURCE_ROOT: {
       // Allow passing this in the environment, for more flexibility in build
       // tree configurations (sub-project builds, gyp --output_dir, etc.)
@@ -115,7 +112,6 @@ bool PathProviderPosix(int key, FilePath* result) {
       *result = cache_dir;
       return true;
     }
-#endif
   }
   return false;
 }

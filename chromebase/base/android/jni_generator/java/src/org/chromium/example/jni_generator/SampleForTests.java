@@ -10,7 +10,6 @@ import org.chromium.base.annotations.AccessedByNative;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.CalledByNativeUnchecked;
 import org.chromium.base.annotations.JNINamespace;
-import org.chromium.base.annotations.NativeCall;
 import org.chromium.base.annotations.NativeClassQualifiedName;
 
 import java.util.ArrayList;
@@ -119,11 +118,12 @@ class SampleForTests {
     private String mArrgh = "*/*";
 
     private @interface SomeAnnotation {}
+    private @interface AnotherAnnotation {}
 
     // The generator is not confused by @Annotated parameters.
     @CalledByNative
-    void javaMethodWithAnnotatedParam(@SomeAnnotation int foo) {
-    }
+    void javaMethodWithAnnotatedParam(@SomeAnnotation int foo, final @SomeAnnotation int bar,
+            @SomeAnnotation final int baz, @SomeAnnotation final @AnotherAnnotation int bat) {}
 
     // ---------------------------------------------------------------------------------------------
     // Java fields which are accessed from C++ code only must be annotated with @AccessedByNative to
@@ -262,12 +262,6 @@ class SampleForTests {
     native void nativeAddStructB(long nativeCPPClass, InnerStructB b);
     native void nativeIterateAndDoSomethingWithStructB(long nativeCPPClass);
     native String nativeReturnAString(long nativeCPPClass);
-
-    // This inner class shows how to annotate native methods on inner classes.
-    static class InnerClass {
-        @NativeCall("InnerClass")
-        private static native int nativeGetInnerIntFunction();
-    }
 
     interface InnerInterface {}
     enum InnerEnum {}

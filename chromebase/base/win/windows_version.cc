@@ -27,38 +27,7 @@
 #error Windows 10.0.18362.0 SDK or higher required.
 #endif
 
-#define STRING16_LITERAL(STR) L##STR
-
-namespace {
-typedef BOOL(WINAPI* GetProductInfoPtr)(DWORD, DWORD, DWORD, DWORD, PDWORD);
-}  // namespace
-
 namespace base {
-
-    wchar_t* as_wcstr(const wchar_t* original)
-    {
-        // TODO
-        return NULL;
-    }
-
-    wchar_t* as_writable_wcstr( const wchar_t* original )
-    {
-        // TODO
-        return NULL;
-    }
-
-    wchar_t* as_wcstr(const string16& _string)
-    {
-        const wchar_t* ret = nullptr;
-        ret = _string.c_str();
-        return const_cast< wchar_t* >( ret );
-    }
-
-    wchar_t* as_u16cstr(const wchar_t*)
-    {
-        return NULL;
-    }
-
 namespace win {
 
 namespace {
@@ -102,22 +71,12 @@ OSInfo** OSInfo::GetInstanceStorage() {
   // Note: we don't use the Singleton class because it depends on AtExitManager,
   // and it's convenient for other modules to use this class without it.
   static OSInfo* info = []() {
-    _OSVERSIONINFOEXW version_info;
-    version_info.dwOSVersionInfoSize = sizeof(version_info);
-    LPOSVERSIONINFOEXW a = &version_info;
-    DWORD b = 0;
-    DWORDLONG c = 0;
-    ::VerifyVersionInfo( a, b, c );
+    _OSVERSIONINFOEXW version_info = {sizeof(version_info)};
+    ::GetVersionEx(reinterpret_cast<_OSVERSIONINFOW*>(&version_info));
 
     DWORD os_type = 0;
-    if (version_info.dwMajorVersion == 6 || version_info.dwMajorVersion == 10) {
-      // Only present on Vista+.
-      GetProductInfoPtr get_product_info =
-          reinterpret_cast<GetProductInfoPtr>(::GetProcAddress(
-              ::GetModuleHandle(L"kernel32.dll"), "GetProductInfo"));
-      get_product_info(version_info.dwMajorVersion, version_info.dwMinorVersion,
-                       0, 0, &os_type);
-    }
+    ::GetProductInfo(version_info.dwMajorVersion, version_info.dwMinorVersion,
+                     0, 0, &os_type);
 
     return new OSInfo(version_info, GetSystemInfoStorage(), os_type);
   }();
@@ -256,13 +215,13 @@ base::Version OSInfo::Kernel32BaseVersion() const {
           FilePath(FILE_PATH_LITERAL("kernelbase.dll")));
     }
     CHECK(file_version_info);
-    const unsigned int major =
+    const int major =
         HIWORD(file_version_info->fixed_file_info()->dwFileVersionMS);
-    const unsigned int minor =
+    const int minor =
         LOWORD(file_version_info->fixed_file_info()->dwFileVersionMS);
-    const unsigned int build =
+    const int build =
         HIWORD(file_version_info->fixed_file_info()->dwFileVersionLS);
-    const unsigned int patch =
+    const int patch =
         LOWORD(file_version_info->fixed_file_info()->dwFileVersionLS);
     return base::Version(std::vector<uint32_t>{major, minor, build, patch});
   }());
@@ -283,13 +242,8 @@ std::string OSInfo::processor_model_name() {
 
 // static
 OSInfo::WOW64Status OSInfo::GetWOW64StatusForProcess(HANDLE process_handle) {
-  typedef BOOL(WINAPI * IsWow64ProcessFunc)(HANDLE, PBOOL);
-  IsWow64ProcessFunc is_wow64_process = reinterpret_cast<IsWow64ProcessFunc>(
-      GetProcAddress(GetModuleHandle(L"kernel32.dll"), "IsWow64Process"));
-  if (!is_wow64_process)
-    return WOW64_DISABLED;
   BOOL is_wow64 = FALSE;
-  if (!(*is_wow64_process)(process_handle, &is_wow64))
+  if (!::IsWow64Process(process_handle, &is_wow64))
     return WOW64_UNKNOWN;
   return is_wow64 ? WOW64_ENABLED : WOW64_DISABLED;
 }

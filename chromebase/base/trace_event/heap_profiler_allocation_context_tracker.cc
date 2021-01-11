@@ -18,10 +18,8 @@
 #include "base/trace_event/heap_profiler_allocation_context.h"
 #include "build/build_config.h"
 
-#if defined(OS_ANDROID)
 #if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
 #include "base/trace_event/cfi_backtrace_android.h"
-#endif
 #endif
 
 #if defined(OS_LINUX) || defined(OS_ANDROID)
@@ -73,7 +71,7 @@ const char* GetAndLeakThreadName() {
   // Use tid if we don't have a thread name.
   snprintf(name, sizeof(name), "%lu",
            static_cast<unsigned long>(PlatformThread::CurrentId()));
-  return  _strdup(name);
+  return strdup(name);
 }
 
 }  // namespace
@@ -223,15 +221,13 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
 // kMaxFrameCount + 1 frames, so that we know if there are more frames
 // than our backtrace capacity.
 #if !defined(OS_NACL)  // We don't build base/debug/stack_trace.cc for NaCl.
-#if defined(OS_ANDROID)
-#if BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
+#if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE)
         const void* frames[Backtrace::kMaxFrameCount + 1];
         static_assert(base::size(frames) >= Backtrace::kMaxFrameCount,
                       "not requesting enough frames to fill Backtrace");
         size_t frame_count =
             CFIBacktraceAndroid::GetInitializedInstance()->Unwind(
                 frames, base::size(frames));
-#endif
 #elif BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
         const void* frames[Backtrace::kMaxFrameCount + 1];
         static_assert(base::size(frames) >= Backtrace::kMaxFrameCount,

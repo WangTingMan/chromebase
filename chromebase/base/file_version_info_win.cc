@@ -14,9 +14,6 @@
 #include "base/strings/string_util.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "base/win/resource_util.h"
-#include <base\location.h>
-#include <base\win\windows_version.h>
-#pragma comment(lib, "version.lib")
 
 using base::FilePath;
 
@@ -54,7 +51,7 @@ VS_FIXEDFILEINFO* GetVsFixedFileInfo(const void* data) {
 FileVersionInfoWin::~FileVersionInfoWin() = default;
 
 // static
-FileVersionInfo*
+std::unique_ptr<FileVersionInfo>
 FileVersionInfo::CreateFileVersionInfoForModule(HMODULE module) {
   void* data;
   size_t version_info_length;
@@ -67,20 +64,21 @@ FileVersionInfo::CreateFileVersionInfoForModule(HMODULE module) {
   if (!translate)
     return nullptr;
 
-  return new FileVersionInfoWin(data, translate->language, translate->code_page);
+  return base::WrapUnique(
+      new FileVersionInfoWin(data, translate->language, translate->code_page));
 }
 
 // static
-FileVersionInfo* FileVersionInfo::CreateFileVersionInfo(
+std::unique_ptr<FileVersionInfo> FileVersionInfo::CreateFileVersionInfo(
     const FilePath& file_path) {
-    std::unique_ptr<FileVersionInfoWin> ptr = FileVersionInfoWin::CreateFileVersionInfoWin(file_path);
-  return ptr.release();
+  return FileVersionInfoWin::CreateFileVersionInfoWin(file_path);
 }
 
 // static
 std::unique_ptr<FileVersionInfoWin>
 FileVersionInfoWin::CreateFileVersionInfoWin(const FilePath& file_path) {
-  base::ScopedBlockingCall scoped_blocking_call( base::BlockingType::MAY_BLOCK );
+  base::ScopedBlockingCall scoped_blocking_call(FROM_HERE,
+                                                base::BlockingType::MAY_BLOCK);
 
   DWORD dummy;
   const wchar_t* path = base::as_wcstr(file_path.value());
@@ -97,8 +95,8 @@ FileVersionInfoWin::CreateFileVersionInfoWin(const FilePath& file_path) {
   if (!translate)
     return nullptr;
 
-  return std::unique_ptr<FileVersionInfoWin>( new FileVersionInfoWin(
-      std::move(data), translate->language, translate->code_page) );
+  return base::WrapUnique(new FileVersionInfoWin(
+      std::move(data), translate->language, translate->code_page));
 }
 
 base::string16 FileVersionInfoWin::company_name() {

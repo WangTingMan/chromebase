@@ -4,6 +4,7 @@
 
 #include "base/task/sequence_manager/work_queue.h"
 
+#include "base/task/sequence_manager/sequence_manager_impl.h"
 #include "base/task/sequence_manager/work_queue_sets.h"
 
 namespace base {
@@ -17,7 +18,7 @@ WorkQueue::WorkQueue(TaskQueueImpl* task_queue,
 
 void WorkQueue::AsValueInto(TimeTicks now,
                             trace_event::TracedValue* state) const {
-  for (const TaskQueueImpl::Task& task : tasks_) {
+  for (const Task& task : tasks_) {
     TaskQueueImpl::TaskAsValueInto(task, now, state);
   }
 }
@@ -27,13 +28,13 @@ WorkQueue::~WorkQueue() {
                             << work_queue_sets_->GetName() << " : " << name_;
 }
 
-const TaskQueueImpl::Task* WorkQueue::GetFrontTask() const {
+const Task* WorkQueue::GetFrontTask() const {
   if (tasks_.empty())
     return nullptr;
   return &tasks_.front();
 }
 
-const TaskQueueImpl::Task* WorkQueue::GetBackTask() const {
+const Task* WorkQueue::GetBackTask() const {
   if (tasks_.empty())
     return nullptr;
   return &tasks_.back();
@@ -60,16 +61,16 @@ bool WorkQueue::GetFrontTaskEnqueueOrder(EnqueueOrder* enqueue_order) const {
   return true;
 }
 
-void WorkQueue::Push(TaskQueueImpl::Task task) {
+void WorkQueue::Push(Task task) {
   bool was_empty = tasks_.empty();
 #ifndef NDEBUG
   DCHECK(task.enqueue_order_set());
 #endif
 
   // Make sure the |enqueue_order()| is monotonically increasing.
-  DCHECK(was_empty || tasks_.rbegin()->enqueue_order() < task.enqueue_order());
+  DCHECK(was_empty || tasks_.back().enqueue_order() < task.enqueue_order());
 
-  // Amoritized O(1).
+  // Amortized O(1).
   tasks_.push_back(std::move(task));
 
   if (!was_empty)
@@ -80,7 +81,43 @@ void WorkQueue::Push(TaskQueueImpl::Task task) {
     work_queue_sets_->OnTaskPushedToEmptyQueue(this);
 }
 
-void WorkQueue::PushNonNestableTaskToFront(TaskQueueImpl::Task task) {
+WorkQueue::TaskPusher::TaskPusher(WorkQueue* work_queue)
+    : work_queue_(work_queue), was_empty_(work_queue->Empty()) {}
+
+WorkQueue::TaskPusher::TaskPusher(TaskPusher&& other)
+    : work_queue_(other.work_queue_), was_empty_(other.was_empty_) {
+  other.work_queue_ = nullptr;
+}
+
+void WorkQueue::TaskPusher::Push(Task* task) {
+  DCHECK(work_queue_);
+
+#ifndef NDEBUG
+  DCHECK(task->enqueue_order_set());
+#endif
+
+  // Make sure the |enqueue_order()| is monotonically increasing.
+  DCHECK(work_queue_->tasks_.empty() ||
+         work_queue_->tasks_.back().enqueue_order() < task->enqueue_order());
+
+  // Amortized O(1).
+  work_queue_->tasks_.push_back(std::move(*task));
+}
+
+WorkQueue::TaskPusher::~TaskPusher() {
+  // If |work_queue_| became non empty and it isn't blocked by a fence then we
+  // must notify |work_queue_->work_queue_sets_|.
+  if (was_empty_ && work_queue_ && !work_queue_->Empty() &&
+      work_queue_->work_queue_sets_ && !work_queue_->BlockedByFence()) {
+    work_queue_->work_queue_sets_->OnTaskPushedToEmptyQueue(work_queue_);
+  }
+}
+
+WorkQueue::TaskPusher WorkQueue::CreateTaskPusher() {
+  return TaskPusher(this);
+}
+
+void WorkQueue::PushNonNestableTaskToFront(Task task) {
   DCHECK(task.nestable == Nestable::kNonNestable);
 
   bool was_empty = tasks_.empty();
@@ -90,13 +127,13 @@ void WorkQueue::PushNonNestableTaskToFront(TaskQueueImpl::Task task) {
 #endif
 
   if (!was_empty) {
-    // Make sure the |enqueue_order()| is monotonically increasing.
+    // Make sure the |enqueue_order| is monotonically increasing.
     DCHECK_LE(task.enqueue_order(), tasks_.front().enqueue_order())
         << task_queue_->GetName() << " : " << work_queue_sets_->GetName()
         << " : " << name_;
   }
 
-  // Amoritized O(1).
+  // Amortized O(1).
   tasks_.push_front(std::move(task));
 
   if (!work_queue_sets_)
@@ -110,14 +147,14 @@ void WorkQueue::PushNonNestableTaskToFront(TaskQueueImpl::Task task) {
   if (was_empty || was_blocked) {
     work_queue_sets_->OnTaskPushedToEmptyQueue(this);
   } else {
-    work_queue_sets_->OnFrontTaskChanged(this);
+    work_queue_sets_->OnQueuesFrontTaskChanged(this);
   }
 }
 
-void WorkQueue::ReloadEmptyImmediateQueue() {
+void WorkQueue::TakeImmediateIncomingQueueTasks() {
   DCHECK(tasks_.empty());
 
-  task_queue_->ReloadEmptyImmediateQueue(&tasks_);
+  task_queue_->TakeImmediateIncomingQueueTasks(&tasks_);
   if (tasks_.empty())
     return;
 
@@ -126,27 +163,42 @@ void WorkQueue::ReloadEmptyImmediateQueue() {
     work_queue_sets_->OnTaskPushedToEmptyQueue(this);
 }
 
-TaskQueueImpl::Task WorkQueue::TakeTaskFromWorkQueue() {
+Task WorkQueue::TakeTaskFromWorkQueue() {
   DCHECK(work_queue_sets_);
   DCHECK(!tasks_.empty());
 
-  TaskQueueImpl::Task pending_task = std::move(tasks_.front());
+  Task pending_task = std::move(tasks_.front());
   tasks_.pop_front();
   // NB immediate tasks have a different pipeline to delayed ones.
-  if (queue_type_ == QueueType::kImmediate && tasks_.empty()) {
-    // Short-circuit the queue reload so that OnPopQueue does the right thing.
-    task_queue_->ReloadEmptyImmediateQueue(&tasks_);
+  if (tasks_.empty()) {
+    // NB delayed tasks are inserted via Push, no don't need to reload those.
+    if (queue_type_ == QueueType::kImmediate) {
+      // Short-circuit the queue reload so that OnPopMinQueueInSet does the
+      // right thing.
+      task_queue_->TakeImmediateIncomingQueueTasks(&tasks_);
+    }
+    // Since the queue is empty, now is a good time to consider reducing it's
+    // capacity if we're wasting memory.
+    tasks_.MaybeShrinkQueue();
   }
 
-  // OnPopQueue calls GetFrontTaskEnqueueOrder which checks BlockedByFence() so
-  // we don't need to here.
-  work_queue_sets_->OnPopQueue(this);
+  DCHECK(work_queue_sets_);
+#if DCHECK_IS_ON()
+  // If diagnostics are on it's possible task queues are being selected at
+  // random so we can't use the (slightly) more efficient OnPopMinQueueInSet.
+  work_queue_sets_->OnQueuesFrontTaskChanged(this);
+#else
+  // OnPopMinQueueInSet calls GetFrontTaskEnqueueOrder which checks
+  // BlockedByFence() so we don't need to here.
+  work_queue_sets_->OnPopMinQueueInSet(this);
+#endif
   task_queue_->TraceQueueSize();
   return pending_task;
 }
 
 bool WorkQueue::RemoveAllCanceledTasksFromFront() {
-  DCHECK(work_queue_sets_);
+  if (!work_queue_sets_)
+    return false;
   bool task_removed = false;
   while (!tasks_.empty() &&
          (!tasks_.front().task || tasks_.front().task.IsCancelled())) {
@@ -154,12 +206,21 @@ bool WorkQueue::RemoveAllCanceledTasksFromFront() {
     task_removed = true;
   }
   if (task_removed) {
-    // NB immediate tasks have a different pipeline to delayed ones.
-    if (queue_type_ == QueueType::kImmediate && tasks_.empty()) {
-      // Short-circuit the queue reload so that OnPopQueue does the right thing.
-      task_queue_->ReloadEmptyImmediateQueue(&tasks_);
+    if (tasks_.empty()) {
+      // NB delayed tasks are inserted via Push, no don't need to reload those.
+      if (queue_type_ == QueueType::kImmediate) {
+        // Short-circuit the queue reload so that OnPopMinQueueInSet does the
+        // right thing.
+        task_queue_->TakeImmediateIncomingQueueTasks(&tasks_);
+      }
+      // Since the queue is empty, now is a good time to consider reducing it's
+      // capacity if we're wasting memory.
+      tasks_.MaybeShrinkQueue();
     }
-    work_queue_sets_->OnPopQueue(this);
+    // If we have a valid |heap_handle_| (i.e. we're not blocked by a fence or
+    // disabled) then |work_queue_sets_| needs to be told.
+    if (heap_handle_.IsValid())
+      work_queue_sets_->OnQueuesFrontTaskChanged(this);
     task_queue_->TraceQueueSize();
   }
   return task_removed;
@@ -189,10 +250,11 @@ void WorkQueue::InsertFenceSilently(EnqueueOrder fence) {
 
 bool WorkQueue::InsertFence(EnqueueOrder fence) {
   bool was_blocked_by_fence = InsertFenceImpl(fence);
+  if (!work_queue_sets_)
+    return false;
 
   // Moving the fence forward may unblock some tasks.
-  if (work_queue_sets_ && !tasks_.empty() && was_blocked_by_fence &&
-      !BlockedByFence()) {
+  if (!tasks_.empty() && was_blocked_by_fence && !BlockedByFence()) {
     work_queue_sets_->OnTaskPushedToEmptyQueue(this);
     return true;
   }
@@ -223,6 +285,18 @@ bool WorkQueue::ShouldRunBefore(const WorkQueue* other_queue) const {
   DCHECK(have_task);
   DCHECK(have_other_task);
   return enqueue_order < other_enqueue_order;
+}
+
+void WorkQueue::MaybeShrinkQueue() {
+  tasks_.MaybeShrinkQueue();
+}
+
+void WorkQueue::DeletePendingTasks() {
+  tasks_.clear();
+
+  if (work_queue_sets_ && heap_handle().IsValid())
+    work_queue_sets_->OnQueuesFrontTaskChanged(this);
+  DCHECK(!heap_handle_.IsValid());
 }
 
 void WorkQueue::PopTaskForTesting() {

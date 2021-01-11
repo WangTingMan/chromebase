@@ -14,15 +14,9 @@
 #include "base/macros.h"
 #include "base/version.h"
 
-#include <windows.h>
-
 typedef void* HANDLE;
 struct _OSVERSIONINFOEXW;
 struct _SYSTEM_INFO;
-
-#ifndef STRING16_LITERAL
-#define STRING16_LITERAL(STR) L##STR
-#endif
 
 namespace base {
 namespace test {
@@ -31,19 +25,6 @@ class ScopedOSInfoOverride;
 }  // namespace base
 
 namespace base {
-
-#ifdef WINDOWS32
-
-    wchar_t* as_wcstr(const wchar_t* original);
-
-    wchar_t* as_writable_wcstr(const wchar_t* original);
-
-    wchar_t* as_wcstr(const std::wstring&);
-
-    wchar_t* as_u16cstr(const wchar_t*);
-
-#endif
-
 namespace win {
 
 // The running version of Windows.  This is declared outside OSInfo for

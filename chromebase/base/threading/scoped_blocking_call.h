@@ -115,9 +115,8 @@ class BASE_EXPORT UncheckedScopedBlockingCall {
 class BASE_EXPORT ScopedBlockingCall
     : public internal::UncheckedScopedBlockingCall {
  public:
-     ScopedBlockingCall( const Location& from_here, BlockingType blocking_type );
-     ScopedBlockingCall( BlockingType blocking_type );
-    ~ScopedBlockingCall();
+  ScopedBlockingCall(const Location& from_here, BlockingType blocking_type);
+  ~ScopedBlockingCall();
 };
 
 namespace internal {

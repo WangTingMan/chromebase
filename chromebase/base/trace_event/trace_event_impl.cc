@@ -60,8 +60,8 @@ TraceEvent::TraceEvent(int thread_id,
 
 TraceEvent::~TraceEvent() = default;
 
-TraceEvent::TraceEvent(TraceEvent&& other) /*noexcept*/ = default;
-TraceEvent& TraceEvent::operator=(TraceEvent&& other) /*noexcept*/ = default;
+TraceEvent::TraceEvent(TraceEvent&& other) noexcept = default;
+TraceEvent& TraceEvent::operator=(TraceEvent&& other) noexcept = default;
 
 void TraceEvent::Reset() {
   // Only reset fields that won't be initialized in Reset(int, ...), or that may

@@ -74,8 +74,8 @@ class BASE_EXPORT TraceEvent {
   ~TraceEvent();
 
   // Allow move operations.
-  TraceEvent(TraceEvent&&) /*noexcept*/;
-  TraceEvent& operator=(TraceEvent&&) /*noexcept*/;
+  TraceEvent(TraceEvent&&) noexcept;
+  TraceEvent& operator=(TraceEvent&&) noexcept;
 
   // Reset instance to empty state.
   void Reset();

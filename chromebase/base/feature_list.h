@@ -5,6 +5,7 @@
 #ifndef BASE_FEATURE_LIST_H_
 #define BASE_FEATURE_LIST_H_
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -20,6 +21,7 @@
 namespace base {
 
 class FieldTrial;
+class FieldTrialList;
 
 // Specifies whether a given feature is enabled or disabled by default.
 enum FeatureState {
@@ -43,12 +45,12 @@ struct BASE_EXPORT Feature {
   const FeatureState default_state;
 };
 
-#if DCHECK_IS_CONFIGURABLE
+#if defined(DCHECK_IS_CONFIGURABLE)
 // DCHECKs have been built-in, and are configurable at run-time to be fatal, or
 // not, via a DcheckIsFatal feature. We define the Feature here since it is
 // checked in FeatureList::SetInstance(). See https://crbug.com/596231.
 extern BASE_EXPORT const Feature kDCheckIsFatalFeature;
-#endif  // DCHECK_IS_CONFIGURABLE
+#endif  // defined(DCHECK_IS_CONFIGURABLE)
 
 // The FeatureList class is used to determine whether a given feature is on or
 // off. It provides an authoritative answer, taking into account command-line
@@ -287,13 +289,19 @@ class BASE_EXPORT FeatureList {
 
   // Map from feature name to an OverrideEntry struct for the feature, if it
   // exists.
-  std::map<std::string, OverrideEntry> overrides_;
+  std::map<std::string, OverrideEntry, std::less<>> overrides_;
 
   // Locked map that keeps track of seen features, to ensure a single feature is
   // only defined once. This verification is only done in builds with DCHECKs
   // enabled.
   Lock feature_identity_tracker_lock_;
   std::map<std::string, const Feature*> feature_identity_tracker_;
+
+  // Tracks the associated FieldTrialList for DCHECKs. This is used to catch
+  // the scenario where multiple FieldTrialList are used with the same
+  // FeatureList - which can lead to overrides pointing to invalid FieldTrial
+  // objects.
+  base::FieldTrialList* field_trial_list_ = nullptr;
 
   // Whether this object has been fully initialized. This gets set to true as a
   // result of FinalizeInitialization().

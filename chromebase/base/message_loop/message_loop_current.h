@@ -5,6 +5,8 @@
 #ifndef BASE_MESSAGE_LOOP_MESSAGE_LOOP_CURRENT_H_
 #define BASE_MESSAGE_LOOP_MESSAGE_LOOP_CURRENT_H_
 
+#include <ostream>
+
 #include "base/base_export.h"
 #include "base/logging.h"
 #include "base/memory/scoped_refptr.h"
@@ -12,11 +14,23 @@
 #include "base/message_loop/message_pump_for_ui.h"
 #include "base/pending_task.h"
 #include "base/single_thread_task_runner.h"
+#include "base/task/task_observer.h"
 #include "build/build_config.h"
+
+namespace web {
+class TestWebThreadBundle;
+}
 
 namespace base {
 
-class MessageLoop;
+class MessageLoopImpl;
+
+namespace sequence_manager {
+
+namespace internal {
+class SequenceManagerImpl;
+}
+}  // namespace sequence_manager
 
 // MessageLoopCurrent is a proxy to the public interface of the MessageLoop
 // bound to the thread it's obtained on.
@@ -38,13 +52,20 @@ class MessageLoop;
 class BASE_EXPORT MessageLoopCurrent {
  public:
   // MessageLoopCurrent is effectively just a disguised pointer and is fine to
-  // copy around.
+  // copy/move around.
   MessageLoopCurrent(const MessageLoopCurrent& other) = default;
+  MessageLoopCurrent(MessageLoopCurrent&& other) = default;
   MessageLoopCurrent& operator=(const MessageLoopCurrent& other) = default;
+
+  bool operator==(const MessageLoopCurrent& other) const;
 
   // Returns a proxy object to interact with the MessageLoop running the
   // current thread. It must only be used on the thread it was obtained.
   static MessageLoopCurrent Get();
+
+  // Return an empty MessageLoopCurrent. No methods should be called on this
+  // object.
+  static MessageLoopCurrent GetNull();
 
   // Returns true if the current thread is running a MessageLoop. Prefer this to
   // verifying the boolean value of Get() (so that Get() can ultimately DCHECK
@@ -56,10 +77,6 @@ class BASE_EXPORT MessageLoopCurrent {
   // MessageLoop*.
   MessageLoopCurrent* operator->() { return this; }
   explicit operator bool() const { return !!current_; }
-
-  // TODO(gab): Migrate the types of variables that store MessageLoop::current()
-  // and remove this implicit cast back to MessageLoop*.
-  operator MessageLoop*() const { return current_; }
 
   // A DestructionObserver is notified when the current MessageLoop is being
   // destroyed.  These observers are notified prior to MessageLoop::current()
@@ -88,37 +105,24 @@ class BASE_EXPORT MessageLoopCurrent {
   // DestructionObserver is receiving a notification callback.
   void RemoveDestructionObserver(DestructionObserver* destruction_observer);
 
-  // Forwards to MessageLoop::task_runner().
-  // DEPRECATED(https://crbug.com/616447): Use ThreadTaskRunnerHandle::Get()
-  // instead of MessageLoopCurrent::Get()->task_runner().
-  const scoped_refptr<SingleThreadTaskRunner>& task_runner() const;
-
   // Forwards to MessageLoop::SetTaskRunner().
   // DEPRECATED(https://crbug.com/825327): only owners of the MessageLoop
   // instance should replace its TaskRunner.
   void SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner);
 
-  // A TaskObserver is an object that receives task notifications from the
-  // MessageLoop.
-  //
-  // NOTE: A TaskObserver implementation should be extremely fast!
-  class BASE_EXPORT TaskObserver {
-   public:
-    // This method is called before processing a task.
-    virtual void WillProcessTask(const PendingTask& pending_task) = 0;
-
-    // This method is called after processing a task.
-    virtual void DidProcessTask(const PendingTask& pending_task) = 0;
-
-   protected:
-    virtual ~TaskObserver() = default;
-  };
+  // This alias is deprecated. Use base::TaskObserver instead.
+  // TODO(yutak): Replace all the use sites with base::TaskObserver.
+  using TaskObserver = base::TaskObserver;
 
   // Forwards to MessageLoop::(Add|Remove)TaskObserver.
   // DEPRECATED(https://crbug.com/825327): only owners of the MessageLoop
   // instance should add task observers on it.
   void AddTaskObserver(TaskObserver* task_observer);
   void RemoveTaskObserver(TaskObserver* task_observer);
+
+  // When this functionality is enabled, the queue time will be recorded for
+  // posted tasks.
+  void SetAddQueueTimeToTasks(bool enable);
 
   // Enables or disables the recursive task processing. This happens in the case
   // of recursive message loops. Some unwanted message loops may occur when
@@ -159,9 +163,12 @@ class BASE_EXPORT MessageLoopCurrent {
     ~ScopedNestableTaskAllower();
 
    private:
-    MessageLoop* const loop_;
+    sequence_manager::internal::SequenceManagerImpl* const sequence_manager_;
     const bool old_state_;
   };
+
+  // Returns true if this is the active MessageLoop for the current thread.
+  bool IsBoundToCurrentThread() const;
 
   // Returns true if the message loop is idle (ignoring delayed tasks). This is
   // the same condition which triggers DoWork() to return false: i.e.
@@ -170,24 +177,23 @@ class BASE_EXPORT MessageLoopCurrent {
   // level.
   bool IsIdleForTesting();
 
-  // Binds |current| to the current thread. It will from then on be the
-  // MessageLoop driven by MessageLoopCurrent on this thread. This is only meant
-  // to be invoked by the MessageLoop itself.
-  static void BindToCurrentThreadInternal(MessageLoop* current);
-
-  // Unbinds |current| from the current thread. Must be invoked on the same
-  // thread that invoked |BindToCurrentThreadInternal(current)|. This is only
-  // meant to be invoked by the MessageLoop itself.
-  static void UnbindFromCurrentThreadInternal(MessageLoop* current);
-
-  // Returns true if |message_loop| is bound to MessageLoopCurrent on the
-  // current thread. This is only meant to be invoked by the MessageLoop itself.
-  static bool IsBoundToCurrentThreadInternal(MessageLoop* message_loop);
-
  protected:
-  explicit MessageLoopCurrent(MessageLoop* current) : current_(current) {}
+  explicit MessageLoopCurrent(
+      sequence_manager::internal::SequenceManagerImpl* sequence_manager)
+      : current_(sequence_manager) {}
 
-  MessageLoop* const current_;
+  static sequence_manager::internal::SequenceManagerImpl*
+  GetCurrentSequenceManagerImpl();
+
+  friend class MessageLoopImpl;
+  friend class MessagePumpLibeventTest;
+  friend class ScheduleWorkTest;
+  friend class Thread;
+  friend class sequence_manager::internal::SequenceManagerImpl;
+  friend class MessageLoopTaskRunnerTest;
+  friend class web::TestWebThreadBundle;
+
+  sequence_manager::internal::SequenceManagerImpl* current_;
 };
 
 #if !defined(OS_NACL)
@@ -232,13 +238,17 @@ class BASE_EXPORT MessageLoopCurrentForUI : public MessageLoopCurrent {
   void Abort();
 #endif
 
- private:
-  MessageLoopCurrentForUI(MessageLoop* current, MessagePumpForUI* pump)
-      : MessageLoopCurrent(current), pump_(pump) {
-    DCHECK(pump_);
-  }
+#if defined(OS_WIN)
+  void AddMessagePumpObserver(MessagePumpForUI::Observer* observer);
+  void RemoveMessagePumpObserver(MessagePumpForUI::Observer* observer);
+#endif
 
-  MessagePumpForUI* const pump_;
+ private:
+  explicit MessageLoopCurrentForUI(
+      sequence_manager::internal::SequenceManagerImpl* current)
+      : MessageLoopCurrent(current) {}
+
+  MessagePumpForUI* GetMessagePumpForUI() const;
 };
 
 #endif  // !defined(OS_NACL)
@@ -272,6 +282,13 @@ class BASE_EXPORT MessageLoopCurrentForIO : public MessageLoopCurrent {
                            MessagePumpForIO::FdWatcher* delegate);
 #endif  // defined(OS_WIN)
 
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  bool WatchMachReceivePort(
+      mach_port_t port,
+      MessagePumpForIO::MachPortWatchController* controller,
+      MessagePumpForIO::MachPortWatcher* delegate);
+#endif
+
 #if defined(OS_FUCHSIA)
   // Additional watch API for native platform resources.
   bool WatchZxHandle(zx_handle_t handle,
@@ -284,12 +301,11 @@ class BASE_EXPORT MessageLoopCurrentForIO : public MessageLoopCurrent {
 #endif  // !defined(OS_NACL_SFI)
 
  private:
-  MessageLoopCurrentForIO(MessageLoop* current, MessagePumpForIO* pump)
-      : MessageLoopCurrent(current), pump_(pump) {
-    DCHECK(pump_);
-  }
+  explicit MessageLoopCurrentForIO(
+      sequence_manager::internal::SequenceManagerImpl* current)
+      : MessageLoopCurrent(current) {}
 
-  MessagePumpForIO* const pump_;
+  MessagePumpForIO* GetMessagePumpForIO() const;
 };
 
 }  // namespace base

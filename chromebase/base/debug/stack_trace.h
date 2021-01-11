@@ -16,6 +16,9 @@
 #include "build/build_config.h"
 
 #if defined(OS_POSIX)
+#if !defined(OS_NACL)
+#include <signal.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -38,9 +41,16 @@ namespace debug {
 // done in official builds because it has security implications).
 BASE_EXPORT bool EnableInProcessStackDumping();
 
-#if defined(OS_POSIX)
-BASE_EXPORT void SetStackDumpFirstChanceCallback(bool (*handler)(int,
-                                                                 void*,
+#if defined(OS_POSIX) && !defined(OS_NACL)
+// Sets a first-chance callback for the stack dump signal handler. This callback
+// is called at the beginning of the signal handler to handle special kinds of
+// signals, like out-of-bounds memory accesses in WebAssembly (WebAssembly Trap
+// Handler).
+// {SetStackDumpFirstChanceCallback} returns {true} if the callback
+// has been set correctly. It returns {false} if the stack dump signal handler
+// has not been registered with the OS, e.g. because of ASAN.
+BASE_EXPORT bool SetStackDumpFirstChanceCallback(bool (*handler)(int,
+                                                                 siginfo_t*,
                                                                  void*));
 #endif
 
@@ -83,32 +93,53 @@ class BASE_EXPORT StackTrace {
   // Prints the stack trace to stderr.
   void Print() const;
 
+  // Prints the stack trace to stderr, prepending the given string before
+  // each output line.
+  void PrintWithPrefix(const char* prefix_string) const;
+
 #if !defined(__UCLIBC__) & !defined(_AIX)
   // Resolves backtrace to symbols and write to stream.
   void OutputToStream(std::ostream* os) const;
+  // Resolves backtrace to symbols and write to stream, with the provided
+  // prefix string prepended to each line.
+  void OutputToStreamWithPrefix(std::ostream* os,
+                                const char* prefix_string) const;
 #endif
-
-  void OutputToStreamWithPrefix( std::ostream* os, const char* prefix_string ) const;
 
   // Resolves backtrace to symbols and returns as string.
   std::string ToString() const;
+
+  // Resolves backtrace to symbols and returns as string, prepending the
+  // provided prefix string to each line.
+  std::string ToStringWithPrefix(const char* prefix_string) const;
 
  private:
 #if defined(OS_WIN)
   void InitTrace(const _CONTEXT* context_record);
 #endif
 
-  // From http://msdn.microsoft.com/en-us/library/bb204633.aspx,
-  // the sum of FramesToSkip and FramesToCapture must be less than 63,
-  // so set it to 62. Even if on POSIX it could be a larger value, it usually
-  // doesn't give much more information.
-  static const int kMaxTraces = 62;
+#if defined(OS_ANDROID)
+  // TODO(https://crbug.com/925525): Testing indicates that Android has issues
+  // with a larger value here, so leave Android at 62.
+  static constexpr int kMaxTraces = 62;
+#else
+  // For other platforms, use 250. This seems reasonable without
+  // being huge.
+  static constexpr int kMaxTraces = 250;
+#endif
 
   void* trace_[kMaxTraces];
 
   // The number of valid frames in |trace_|.
   size_t count_;
 };
+
+// Forwards to StackTrace::OutputToStream().
+BASE_EXPORT std::ostream& operator<<(std::ostream& os, const StackTrace& s);
+
+// Record a stack trace with up to |count| frames into |trace|. Returns the
+// number of frames read.
+BASE_EXPORT size_t CollectStackTrace(void** trace, size_t count);
 
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 // Traces the stack by using frame pointers. This function is faster but less

@@ -21,9 +21,6 @@
 #include "base/synchronization/lock.h"
 #include "build/build_config.h"
 
-#include <base/win/windows_version.h>
-#pragma comment( lib, "dbghelp.lib" )
-
 namespace base {
 namespace debug {
 
@@ -295,17 +292,6 @@ StackTrace::StackTrace(const CONTEXT* context) {
   InitTrace(context);
 }
 
-StackTrace::StackTrace( size_t count )
-{
-    // NOTE: This code MUST be async-signal safe (it's used by in-process
-    // stack dumping signal handler). NO malloc or stdio is allowed here.
-    count_ = 0;
-}
-
-void StackTrace::Print() const
-{
-}
-
 void StackTrace::InitTrace(const CONTEXT* context_record) {
   // StackWalk64 modifies the register context in place, so we have to copy it
   // so that downstream exception handlers get the right context.  The incoming
@@ -352,13 +338,9 @@ void StackTrace::InitTrace(const CONTEXT* context_record) {
     trace_[i] = NULL;
 }
 
-#if !defined(__UCLIBC__) & !defined(_AIX)
-// Resolves backtrace to symbols and write to stream.
-void StackTrace::OutputToStream( std::ostream* os ) const
-{
-    OutputToStreamWithPrefix( os, NULL );
+void StackTrace::PrintWithPrefix(const char* prefix_string) const {
+  OutputToStreamWithPrefix(&std::cerr, prefix_string);
 }
-#endif
 
 void StackTrace::OutputToStreamWithPrefix(std::ostream* os,
                                           const char* prefix_string) const {

@@ -22,11 +22,16 @@ class BASE_EXPORT RealTimeDomain : public TimeDomain {
   LazyNow CreateLazyNow() const override;
   TimeTicks Now() const override;
   Optional<TimeDelta> DelayTillNextTask(LazyNow* lazy_now) override;
+  bool MaybeFastForwardToNextTask(bool quit_when_idle_requested) override;
 
  protected:
+  void OnRegisterWithSequenceManager(
+      SequenceManagerImpl* sequence_manager) override;
   const char* GetName() const override;
 
  private:
+  const TickClock* tick_clock_ = nullptr;
+
   DISALLOW_COPY_AND_ASSIGN(RealTimeDomain);
 };
 

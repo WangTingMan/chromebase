@@ -1,8 +1,6 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <windows.h>
-#include <Evntprov.h>
 
 #include "base/trace_event/trace_event_etw_export_win.h"
 
@@ -110,11 +108,8 @@ static void __stdcall EtwEnableCallback(LPCGUID SourceId,
                                         PVOID CallbackContext) {
   // Invoke the default callback, which updates the information inside
   // CHROME_Context.
-#if 0
   McGenControlCallbackV2(SourceId, ControlCode, Level, MatchAnyKeyword,
                          MatchAllKeyword, FilterData, CallbackContext);
-#endif
-  assert( 0 );
 
   base::trace_event::TraceEventETWExport::OnETWEnableUpdate();
 }
@@ -134,7 +129,6 @@ TraceEventETWExport::TraceEventETWExport() : etw_match_any_keyword_(0ULL) {
   // This allows us to detect changes to enable/disable/keyword changes.
   // ChromeHandle and the other parameters to EventRegister are all generated
   // globals from chrome_events_win.h
-#if 0
   DCHECK(!ChromeHandle);
   EventRegister(&CHROME, &EtwEnableCallback, &CHROME_Context, &ChromeHandle);
   TraceEventETWExport::is_registration_complete_ = true;
@@ -147,17 +141,12 @@ TraceEventETWExport::TraceEventETWExport() : etw_match_any_keyword_(0ULL) {
     categories_status_[kFilteredEventGroupNames[i]] = false;
   categories_status_[kOtherEventsGroupName] = false;
   categories_status_[kDisabledOtherEventsGroupName] = false;
-  DCHECK_EQ( kNumberOfCategories, categories_status_.size() );
-#endif
-  assert( 0 );
+  DCHECK_EQ(kNumberOfCategories, categories_status_.size());
 }
 
 TraceEventETWExport::~TraceEventETWExport() {
-#if 0
   EventUnregisterChrome();
   is_registration_complete_ = false;
-#endif
-  assert( 0 );
 }
 
 // static
@@ -179,12 +168,8 @@ void TraceEventETWExport::AddEvent(char phase,
                                    const TraceArguments* args) {
   // We bail early in case exporting is disabled or no consumer is listening.
   auto* instance = GetInstance();
-#if 0
   if (!instance || !EventEnabledChromeEvent())
     return;
-
-#endif
-  assert( 0 );
 
   const char* phase_string = nullptr;
   // Space to store the phase identifier and null-terminator, when needed.
@@ -269,25 +254,20 @@ void TraceEventETWExport::AddEvent(char phase,
       args->values()[i].AppendAsString(args->types()[i], arg_values_string + i);
     }
   }
-#if 0
+
   EventWriteChromeEvent(
       name, phase_string, num_args > 0 ? args->names()[0] : "",
       arg_values_string[0].c_str(), num_args > 1 ? args->names()[1] : "",
-      arg_values_string[1].c_str(), "", "" );
-#endif
-  assert( 0 );
+      arg_values_string[1].c_str(), "", "");
 }
 
 // static
 void TraceEventETWExport::AddCompleteEndEvent(const char* name) {
-#if 0
   auto* instance = GetInstance();
   if (!instance || !EventEnabledChromeEvent())
     return;
 
-  EventWriteChromeEvent( name, "Complete End", "", "", "", "", "", "" );
-#endif
-  assert( 0 );
+  EventWriteChromeEvent(name, "Complete End", "", "", "", "", "", "");
 }
 
 // static
@@ -297,11 +277,9 @@ bool TraceEventETWExport::IsCategoryGroupEnabled(
   auto* instance = GetInstanceIfExists();
   if (instance == nullptr)
     return false;
-#if 0
+
   if (!EventEnabledChromeEvent())
-      return false;
-#endif
-  assert( 0 );
+    return false;
 
   CStringTokenizer category_group_tokens(category_group_name.begin(),
                                          category_group_name.end(), ",");
@@ -315,20 +293,14 @@ bool TraceEventETWExport::IsCategoryGroupEnabled(
 }
 
 bool TraceEventETWExport::UpdateEnabledCategories() {
-#if 0
   if (etw_match_any_keyword_ == CHROME_Context.MatchAnyKeyword)
-      return false;
-#endif
-  assert( 0 );
+    return false;
 
   // If the keyword has changed, update each category.
   // Chrome_Context.MatchAnyKeyword is set by UIforETW (or other ETW trace
   // recording tools) using the ETW infrastructure. This value will be set in
   // all Chrome processes that have registered their ETW provider.
-#if 0
   etw_match_any_keyword_ = CHROME_Context.MatchAnyKeyword;
-#endif
-  assert( 0 );
   for (size_t i = 0; i < ARRAYSIZE(kFilteredEventGroupNames); i++) {
     if (etw_match_any_keyword_ & (1ULL << i)) {
       categories_status_[kFilteredEventGroupNames[i]] = true;
@@ -398,13 +370,9 @@ TraceEventETWExport* TraceEventETWExport::GetInstance() {
 
 // static
 TraceEventETWExport* TraceEventETWExport::GetInstanceIfExists() {
-#if 0
   return Singleton<
       TraceEventETWExport,
       StaticMemorySingletonTraits<TraceEventETWExport>>::GetIfExists();
-#endif
-  assert( 0 );
-  return NULL;
 }
 
 }  // namespace trace_event

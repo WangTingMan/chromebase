@@ -128,15 +128,13 @@ bool EscapeJSONString(StringPiece16 str,
 
 std::string GetQuotedJSONString(StringPiece str) {
   std::string dest;
-  bool ok = EscapeJSONStringImpl(str, true, &dest);
-  DCHECK(ok);
+  EscapeJSONStringImpl(str, true, &dest);
   return dest;
 }
 
 std::string GetQuotedJSONString(StringPiece16 str) {
   std::string dest;
-  bool ok = EscapeJSONStringImpl(str, true, &dest);
-  DCHECK(ok);
+  EscapeJSONStringImpl(str, true, &dest);
   return dest;
 }
 
@@ -147,15 +145,14 @@ std::string EscapeBytesAsInvalidJSONString(StringPiece str,
   if (put_in_quotes)
     dest.push_back('"');
 
-  for (StringPiece::const_iterator it = str.begin(); it != str.end(); ++it) {
-    unsigned char c = *it;
+  for (unsigned char c : str) {
     if (EscapeSpecialCodePoint(c, &dest))
       continue;
 
     if (c < 32 || c > 126)
       base::StringAppendF(&dest, kU16EscapeFormat, c);
     else
-      dest.push_back(*it);
+      dest.push_back(c);
   }
 
   if (put_in_quotes)

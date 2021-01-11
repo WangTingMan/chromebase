@@ -12,8 +12,9 @@
 #include "base/build_time.h"
 #include "base/compiler_specific.h"
 #include "base/logging.h"
-#include "base/macros.h"
+#include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/test/gtest_util.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time_override.h"
 #include "build/build_config.h"
@@ -21,8 +22,6 @@
 
 #if defined(OS_ANDROID)
 #include "base/android/jni_android.h"
-#elif defined(OS_IOS)
-#include "base/ios/ios_util.h"
 #elif defined(OS_WIN)
 #include <windows.h>
 #endif
@@ -186,19 +185,6 @@ TEST_F(TimeTest, UTCTimeT) {
 
 // Test conversions to/from time_t and exploding/unexploding (local time).
 TEST_F(TimeTest, LocalTimeT) {
-#if defined(OS_IOS) && TARGET_OS_SIMULATOR
-  // The function CFTimeZoneCopySystem() fails to determine the system timezone
-  // when running iOS 11.0 simulator on an host running High Sierra and return
-  // the "GMT" timezone. This causes Time::LocalExplode and localtime_r values
-  // to differ by the local timezone offset. Disable the test if simulating
-  // iOS 10.0 as it is not possible to check the version of the host mac.
-  // TODO(crbug.com/782033): remove this once support for iOS pre-11.0 is
-  // dropped or when the bug in CFTimeZoneCopySystem() is fixed.
-  if (ios::IsRunningOnIOS10OrLater() && !ios::IsRunningOnIOS11OrLater()) {
-    return;
-  }
-#endif
-
   // C library time and exploded time.
   time_t now_t_1 = time(nullptr);
   struct tm tms;
@@ -293,6 +279,15 @@ TEST_F(TimeTest, UTCExplode) {
   EXPECT_TRUE((a - b) < TimeDelta::FromSeconds(1));
 }
 
+TEST_F(TimeTest, UTCMidnight) {
+  Time::Exploded exploded;
+  Time::Now().UTCMidnight().UTCExplode(&exploded);
+  EXPECT_EQ(0, exploded.hour);
+  EXPECT_EQ(0, exploded.minute);
+  EXPECT_EQ(0, exploded.second);
+  EXPECT_EQ(0, exploded.millisecond);
+}
+
 TEST_F(TimeTest, LocalMidnight) {
   Time::Exploded exploded;
   Time::Now().LocalMidnight().LocalExplode(&exploded);
@@ -310,7 +305,7 @@ TEST_F(TimeTest, ParseTimeTest1) {
   char time_buf[64] = {};
 #if defined(OS_WIN)
   localtime_s(&local_time, &current_time);
-  asctime_s(time_buf, arraysize(time_buf), &local_time);
+  asctime_s(time_buf, base::size(time_buf), &local_time);
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   localtime_r(&current_time, &local_time);
   asctime_r(&local_time, time_buf);
@@ -817,6 +812,28 @@ TEST_F(TimeTest, NowOverride) {
   EXPECT_LT(build_time, subtle::TimeNowFromSystemTimeIgnoringOverride());
   EXPECT_GT(Time::Max(), subtle::TimeNowFromSystemTimeIgnoringOverride());
 }
+
+#if defined(OS_FUCHSIA)
+TEST(ZxTimeTest, ToFromConversions) {
+  Time unix_epoch = Time::UnixEpoch();
+  EXPECT_EQ(unix_epoch.ToZxTime(), 0);
+  EXPECT_EQ(Time::FromZxTime(6000000000),
+            unix_epoch + TimeDelta::FromSeconds(6));
+
+  TimeTicks ticks_now = TimeTicks::Now();
+  EXPECT_GE(ticks_now.ToZxTime(), 0);
+  TimeTicks ticks_later = ticks_now + TimeDelta::FromSeconds(2);
+  EXPECT_EQ((ticks_later.ToZxTime() - ticks_now.ToZxTime()), 2000000000);
+  EXPECT_EQ(TimeTicks::FromZxTime(3000000000),
+            TimeTicks() + TimeDelta::FromSeconds(3));
+
+  EXPECT_EQ(TimeDelta().ToZxDuration(), 0);
+  EXPECT_EQ(TimeDelta::FromZxDuration(0), TimeDelta());
+
+  EXPECT_EQ(TimeDelta::FromSeconds(2).ToZxDuration(), 2000000000);
+  EXPECT_EQ(TimeDelta::FromZxDuration(4000000000), TimeDelta::FromSeconds(4));
+}
+#endif  // defined(OS_FUCHSIA)
 
 TEST(TimeTicks, Deltas) {
   for (int index = 0; index < 50; index++) {
@@ -1531,6 +1548,126 @@ TEST(TimeDelta, Overflows) {
   TimeTicks ticks_now = TimeTicks::Now();
   EXPECT_EQ(-kOneSecond, (ticks_now - kOneSecond) - ticks_now);
   EXPECT_EQ(kOneSecond, (ticks_now + kOneSecond) - ticks_now);
+}
+
+TEST(TimeBase, AddSubDeltaSaturates) {
+  constexpr TimeTicks kLargeTimeTicks =
+      TimeTicks::FromInternalValue(std::numeric_limits<int64_t>::max() - 1);
+
+  constexpr TimeTicks kLargeNegativeTimeTicks =
+      TimeTicks::FromInternalValue(std::numeric_limits<int64_t>::min() + 1);
+
+  EXPECT_TRUE((kLargeTimeTicks + TimeDelta::Max()).is_max())
+      << (kLargeTimeTicks + TimeDelta::Max());
+  EXPECT_TRUE((kLargeNegativeTimeTicks + TimeDelta::Max()).is_max())
+      << (kLargeNegativeTimeTicks + TimeDelta::Max());
+  EXPECT_TRUE((kLargeTimeTicks - TimeDelta::Max()).is_min())
+      << (kLargeTimeTicks - TimeDelta::Max());
+  EXPECT_TRUE((kLargeNegativeTimeTicks - TimeDelta::Max()).is_min())
+      << (kLargeNegativeTimeTicks - TimeDelta::Max());
+  EXPECT_TRUE((TimeTicks() + TimeDelta::Max()).is_max())
+      << (TimeTicks() + TimeDelta::Max());
+  EXPECT_TRUE((TimeTicks() - TimeDelta::Max()).is_min())
+      << (TimeTicks() - TimeDelta::Max());
+  EXPECT_TRUE((TimeTicks::Now() + TimeDelta::Max()).is_max())
+      << (TimeTicks::Now() + TimeDelta::Max());
+  EXPECT_TRUE((TimeTicks::Now() - TimeDelta::Max()).is_min())
+      << (TimeTicks::Now() - TimeDelta::Max());
+
+  EXPECT_TRUE((kLargeTimeTicks + TimeDelta::Min()).is_min())
+      << (kLargeTimeTicks + TimeDelta::Min());
+  EXPECT_TRUE((kLargeNegativeTimeTicks + TimeDelta::Min()).is_min())
+      << (kLargeNegativeTimeTicks + TimeDelta::Min());
+  EXPECT_TRUE((kLargeTimeTicks - TimeDelta::Min()).is_max())
+      << (kLargeTimeTicks - TimeDelta::Min());
+  EXPECT_TRUE((kLargeNegativeTimeTicks - TimeDelta::Min()).is_max())
+      << (kLargeNegativeTimeTicks - TimeDelta::Min());
+  EXPECT_TRUE((TimeTicks() + TimeDelta::Min()).is_min())
+      << (TimeTicks() + TimeDelta::Min());
+  EXPECT_TRUE((TimeTicks() - TimeDelta::Min()).is_max())
+      << (TimeTicks() - TimeDelta::Min());
+  EXPECT_TRUE((TimeTicks::Now() + TimeDelta::Min()).is_min())
+      << (TimeTicks::Now() + TimeDelta::Min());
+  EXPECT_TRUE((TimeTicks::Now() - TimeDelta::Min()).is_max())
+      << (TimeTicks::Now() - TimeDelta::Min());
+}
+
+TEST(TimeBase, AddSubInfinities) {
+  // CHECK when adding opposite signs or subtracting same sign.
+  EXPECT_CHECK_DEATH({ TimeTicks::Min() + TimeDelta::Max(); });
+  EXPECT_CHECK_DEATH({ TimeTicks::Max() + TimeDelta::Min(); });
+  EXPECT_CHECK_DEATH({ TimeTicks::Min() - TimeDelta::Min(); });
+  EXPECT_CHECK_DEATH({ TimeTicks::Max() - TimeDelta::Max(); });
+
+  // Saturates when adding same sign or subtracting opposite signs.
+  EXPECT_TRUE((TimeTicks::Max() + TimeDelta::Max()).is_max());
+  EXPECT_TRUE((TimeTicks::Min() + TimeDelta::Min()).is_min());
+  EXPECT_TRUE((TimeTicks::Max() - TimeDelta::Min()).is_max());
+  EXPECT_TRUE((TimeTicks::Min() - TimeDelta::Max()).is_min());
+}
+
+constexpr TimeTicks TestTimeTicksConstexprCopyAssignment() {
+  TimeTicks a = TimeTicks::FromInternalValue(12345);
+  TimeTicks b;
+  b = a;
+  return b;
+}
+
+TEST(TimeTicks, ConstexprAndTriviallyCopiable) {
+  // "Trivially copyable" is necessary for use in std::atomic<TimeTicks>.
+  static_assert(std::is_trivially_copyable<TimeTicks>(), "");
+
+  // Copy ctor.
+  constexpr TimeTicks a = TimeTicks::FromInternalValue(12345);
+  constexpr TimeTicks b{a};
+  static_assert(a.ToInternalValue() == b.ToInternalValue(), "");
+
+  // Copy assignment.
+  static_assert(a.ToInternalValue() ==
+                    TestTimeTicksConstexprCopyAssignment().ToInternalValue(),
+                "");
+}
+
+constexpr ThreadTicks TestThreadTicksConstexprCopyAssignment() {
+  ThreadTicks a = ThreadTicks::FromInternalValue(12345);
+  ThreadTicks b;
+  b = a;
+  return b;
+}
+
+TEST(ThreadTicks, ConstexprAndTriviallyCopiable) {
+  // "Trivially copyable" is necessary for use in std::atomic<ThreadTicks>.
+  static_assert(std::is_trivially_copyable<ThreadTicks>(), "");
+
+  // Copy ctor.
+  constexpr ThreadTicks a = ThreadTicks::FromInternalValue(12345);
+  constexpr ThreadTicks b{a};
+  static_assert(a.ToInternalValue() == b.ToInternalValue(), "");
+
+  // Copy assignment.
+  static_assert(a.ToInternalValue() ==
+                    TestThreadTicksConstexprCopyAssignment().ToInternalValue(),
+                "");
+}
+
+constexpr TimeDelta TestTimeDeltaConstexprCopyAssignment() {
+  TimeDelta a = TimeDelta::FromSeconds(1);
+  TimeDelta b;
+  b = a;
+  return b;
+}
+
+TEST(TimeDelta, ConstexprAndTriviallyCopiable) {
+  // "Trivially copyable" is necessary for use in std::atomic<TimeDelta>.
+  static_assert(std::is_trivially_copyable<TimeDelta>(), "");
+
+  // Copy ctor.
+  constexpr TimeDelta a = TimeDelta::FromSeconds(1);
+  constexpr TimeDelta b{a};
+  static_assert(a == b, "");
+
+  // Copy assignment.
+  static_assert(a == TestTimeDeltaConstexprCopyAssignment(), "");
 }
 
 TEST(TimeDeltaLogging, DCheckEqCompiles) {

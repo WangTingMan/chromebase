@@ -10,7 +10,6 @@
 #include "base/strings/string_util.h"
 #include "base/win/current_module.h"
 #include "base/win/wrapped_window_proc.h"
-#include <base/win/windows_version.h>
 
 const wchar_t kMessageWindowClassName[] = L"Chrome_MessageWindow";
 

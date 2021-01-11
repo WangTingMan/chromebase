@@ -151,8 +151,10 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
   bool MessageCallback(
       UINT message, WPARAM wparam, LPARAM lparam, LRESULT* result);
   void DoRunLoop() override;
+  void WaitForWork(Delegate::NextWorkInfo next_work_info);
   void HandleWorkMessage();
   void HandleTimerMessage();
+  void ScheduleNativeTimer(Delegate::NextWorkInfo next_work_info);
   void KillNativeTimer();
   bool ProcessNextWindowsMessage();
   bool ProcessMessageHelper(const MSG& msg);
@@ -174,7 +176,7 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
   // Used to decide whether ScheduleDelayedWork() should start a native timer.
   bool in_native_loop_ = false;
 
-  //ObserverList<Observer>::Unchecked observers_;
+  ObserverList<Observer>::Unchecked observers_;
 };
 
 //-----------------------------------------------------------------------------
@@ -275,6 +277,7 @@ class BASE_EXPORT MessagePumpForIO : public MessagePumpWin {
   };
 
   void DoRunLoop() override;
+  void WaitForWork(Delegate::NextWorkInfo next_work_info);
   bool MatchCompletedIOItem(IOHandler* filter, IOItem* item);
   bool GetIOItem(DWORD timeout, IOItem* item);
   bool ProcessInternalIOItem(const IOItem& item);

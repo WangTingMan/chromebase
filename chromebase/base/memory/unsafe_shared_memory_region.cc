@@ -10,12 +10,32 @@
 
 namespace base {
 
+UnsafeSharedMemoryRegion::CreateFunction*
+    UnsafeSharedMemoryRegion::create_hook_ = nullptr;
+
 // static
 UnsafeSharedMemoryRegion UnsafeSharedMemoryRegion::Create(size_t size) {
+  if (create_hook_)
+    return create_hook_(size);
+
   subtle::PlatformSharedMemoryRegion handle =
       subtle::PlatformSharedMemoryRegion::CreateUnsafe(size);
 
   return UnsafeSharedMemoryRegion(std::move(handle));
+}
+
+// static
+UnsafeSharedMemoryRegion UnsafeSharedMemoryRegion::CreateFromHandle(
+    const SharedMemoryHandle& handle) {
+  if (!handle.IsValid())
+    return UnsafeSharedMemoryRegion();
+  auto platform_region =
+      subtle::PlatformSharedMemoryRegion::TakeFromSharedMemoryHandle(
+          handle, subtle::PlatformSharedMemoryRegion::Mode::kUnsafe);
+  if (!platform_region.IsValid()) {
+    return UnsafeSharedMemoryRegion();
+  }
+  return Deserialize(std::move(platform_region));
 }
 
 // static

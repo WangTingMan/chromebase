@@ -17,8 +17,7 @@ namespace win {
 namespace {
 
 BSTR AllocBstrOrDie(StringPiece16 non_bstr) {
-    const wchar_t* ptr = non_bstr.data();
-  BSTR result = ::SysAllocStringLen(ptr,
+  BSTR result = ::SysAllocStringLen(as_wcstr(non_bstr),
                                     checked_cast<UINT>(non_bstr.length()));
   if (!result) {
     base::TerminateBecauseOutOfMemory((non_bstr.length() + 1) *

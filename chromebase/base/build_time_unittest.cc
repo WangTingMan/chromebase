@@ -3,19 +3,13 @@
 // found in the LICENSE file.
 
 #include "base/build_time.h"
-#if !defined(DONT_EMBED_BUILD_METADATA)
 #include "base/generated_build_date.h"
-#endif
 #include "base/time/time.h"
 
 #include "testing/gtest/include/gtest/gtest.h"
 
 TEST(BuildTime, DateLooksValid) {
-#if !defined(DONT_EMBED_BUILD_METADATA)
   char build_date[] = BUILD_DATE;
-#else
-  char build_date[] = "Sep 02 2008 05:00:00";
-#endif
 
   EXPECT_EQ(20u, strlen(build_date));
   EXPECT_EQ(' ', build_date[3]);
@@ -35,11 +29,3 @@ TEST(BuildTime, InThePast) {
   EXPECT_LT(base::GetBuildTime(), base::Time::Now());
   EXPECT_LT(base::GetBuildTime(), base::Time::NowFromSystemTime());
 }
-
-#if !defined(DONT_EMBED_BUILD_METADATA)
-TEST(BuildTime, NotTooFar) {
-  // BuildTime must be less than 45 days old.
-  base::Time cutoff(base::Time::Now() - base::TimeDelta::FromDays(45));
-  EXPECT_GT(base::GetBuildTime(), cutoff);
-}
-#endif

@@ -8,18 +8,6 @@
 
 namespace base {
 
-#ifdef WINDOWS32
-
-    wchar_t* as_wcstr( const wchar_t* original );
-
-    wchar_t* as_writable_wcstr( const wchar_t* original );
-
-    wchar_t* as_wcstr( const std::wstring& );
-
-    wchar_t* as_u16cstr( const wchar_t* );
-
-#endif
-
 ProcessIterator::ProcessIterator(const ProcessFilter* filter)
     : started_iteration_(false),
       filter_(filter) {

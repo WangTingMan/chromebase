@@ -10,7 +10,6 @@
 #include "base/values.h"
 #include "build/build_config.h"
 
-#if defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
 namespace {
 int CalculateEventsPerSecond(uint64_t event_count,
                              uint64_t* last_event_count,
@@ -42,7 +41,6 @@ int CalculateEventsPerSecond(uint64_t event_count,
 }
 
 }  // namespace
-#endif  // defined(OS_MACOSX) || defined(OS_LINUX) || defined(OS_AIX)
 
 namespace base {
 
@@ -65,20 +63,18 @@ SystemMetrics SystemMetrics::Sample() {
   GetSystemDiskInfo(&system_metrics.disk_info_);
 #endif
 #if defined(OS_CHROMEOS)
-#if 0
   GetSwapInfo(&system_metrics.swap_info_);
-#endif 
-  assert( 0 );
 #endif
-
+#if defined(OS_WIN)
+  GetSystemPerformanceInfo(&system_metrics.performance_);
+#endif
   return system_metrics;
 }
 
 std::unique_ptr<Value> SystemMetrics::ToValue() const {
   std::unique_ptr<DictionaryValue> res(new DictionaryValue());
 
-#if 0
-  res->SetInteger("committed_memory", static_cast<int>(committed_memory_));
+  res->SetIntKey("committed_memory", static_cast<int>(committed_memory_));
 #if defined(OS_LINUX) || defined(OS_ANDROID)
   std::unique_ptr<DictionaryValue> meminfo = memory_info_.ToValue();
   std::unique_ptr<DictionaryValue> vmstat = vmstat_info_.ToValue();
@@ -89,8 +85,9 @@ std::unique_ptr<Value> SystemMetrics::ToValue() const {
 #if defined(OS_CHROMEOS)
   res->Set("swapinfo", swap_info_.ToValue());
 #endif
+#if defined(OS_WIN)
+  res->Set("perfinfo", performance_.ToValue());
 #endif
-  assert( 0 );
 
   return std::move(res);
 }
@@ -152,4 +149,19 @@ int ProcessMetrics::CalculatePackageIdleWakeupsPerSecond(
 }
 
 #endif  // defined(OS_MACOSX)
+
+#if !defined(OS_WIN)
+uint64_t ProcessMetrics::GetCumulativeDiskUsageInBytes() {
+  // Not implemented.
+  return 0;
+}
+#endif
+
+uint64_t ProcessMetrics::GetDiskUsageBytesPerSecond() {
+  uint64_t cumulative_disk_usage = GetCumulativeDiskUsageInBytes();
+  return CalculateEventsPerSecond(cumulative_disk_usage,
+                                  &last_cumulative_disk_usage_,
+                                  &last_disk_usage_time_);
+}
+
 }  // namespace base

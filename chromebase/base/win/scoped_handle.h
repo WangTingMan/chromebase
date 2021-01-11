@@ -107,11 +107,8 @@ class GenericScopedHandle {
   }
 
  private:
-#ifdef GTEST_DISABLED
-#else
   FRIEND_TEST_ALL_PREFIXES(ScopedHandleTest, ActiveVerifierWrongOwner);
   FRIEND_TEST_ALL_PREFIXES(ScopedHandleTest, ActiveVerifierUntrackedHandle);
-#endif
   Handle handle_;
 
   DISALLOW_COPY_AND_ASSIGN(GenericScopedHandle);

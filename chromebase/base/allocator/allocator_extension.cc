@@ -3,13 +3,19 @@
 // found in the LICENSE file.
 
 #include "base/allocator/allocator_extension.h"
-
+#include "base/allocator/buildflags.h"
 #include "base/logging.h"
 
 #if defined(USE_TCMALLOC)
+#if BUILDFLAG(USE_NEW_TCMALLOC)
+#include "third_party/tcmalloc/chromium/src/gperftools/heap-profiler.h"
+#include "third_party/tcmalloc/chromium/src/gperftools/malloc_extension.h"
+#include "third_party/tcmalloc/chromium/src/gperftools/malloc_hook.h"
+#else
 #include "third_party/tcmalloc/gperftools-2.0/chromium/src/gperftools/heap-profiler.h"
 #include "third_party/tcmalloc/gperftools-2.0/chromium/src/gperftools/malloc_extension.h"
 #include "third_party/tcmalloc/gperftools-2.0/chromium/src/gperftools/malloc_hook.h"
+#endif
 #endif
 
 namespace base {
@@ -28,8 +34,21 @@ bool GetNumericProperty(const char* name, size_t* value) {
   return false;
 }
 
-bool IsHeapProfilerRunning() {
+bool SetNumericProperty(const char* name, size_t value) {
 #if defined(USE_TCMALLOC)
+  return ::MallocExtension::instance()->SetNumericProperty(name, value);
+#endif
+  return false;
+}
+
+void GetHeapSample(std::string* writer) {
+#if defined(USE_TCMALLOC)
+  ::MallocExtension::instance()->GetHeapSample(writer);
+#endif
+}
+
+bool IsHeapProfilerRunning() {
+#if defined(USE_TCMALLOC) && defined(ENABLE_PROFILING)
   return ::IsHeapProfilerRunning();
 #endif
   return false;

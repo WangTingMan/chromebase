@@ -5,8 +5,6 @@
 #ifndef BASE_COMPONENT_EXPORT_H_
 #define BASE_COMPONENT_EXPORT_H_
 
-#include "build/build_config.h"
-
 // Used to annotate symbols which are exported by the component named
 // |component|. Note that this only does the right thing if the corresponding
 // component target's sources are compiled with |IS_$component_IMPL| defined
@@ -72,16 +70,7 @@
 // |COMPONENT_MACRO_CONDITIONAL_COMMA_()| above to implement conditional macro
 // expansion.
 #define COMPONENT_MACRO_SELECT_THIRD_ARGUMENT_(...) \
-  COMPONENT_MACRO_EXPAND_(                          \
-      COMPONENT_MACRO_SELECT_THIRD_ARGUMENT_IMPL_(__VA_ARGS__))
+  COMPONENT_MACRO_SELECT_THIRD_ARGUMENT_IMPL_(__VA_ARGS__)
 #define COMPONENT_MACRO_SELECT_THIRD_ARGUMENT_IMPL_(a, b, c, ...) c
-
-// Helper to work around MSVC quirkiness wherein a macro expansion like |,|
-// within a parameter list will be treated as a single macro argument. This is
-// needed to ensure that |COMPONENT_MACRO_CONDITIONAL_COMMA_()| above can expand
-// to multiple separate positional arguments in the affirmative case, thus
-// elliciting the desired conditional behavior with
-// |COMPONENT_MACRO_SELECT_THIRD_ARGUMENT_()|.
-#define COMPONENT_MACRO_EXPAND_(x) x
 
 #endif  // BASE_COMPONENT_EXPORT_H_

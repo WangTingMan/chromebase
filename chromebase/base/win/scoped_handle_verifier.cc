@@ -90,7 +90,7 @@ void ThreadSafeAssignOrCreateScopedHandleVerifier(
 
 // static
 void ScopedHandleVerifier::InstallVerifier() {
-#if 0/*BUILDFLAG(SINGLE_MODULE_MODE_HANDLE_VERIFIER)*/
+#if BUILDFLAG(SINGLE_MODULE_MODE_HANDLE_VERIFIER)
   // Component build has one Active Verifier per module.
   ThreadSafeAssignOrCreateScopedHandleVerifier(nullptr, true);
 #else

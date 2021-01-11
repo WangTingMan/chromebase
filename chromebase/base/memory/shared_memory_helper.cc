@@ -11,6 +11,7 @@
 #include "base/debug/alias.h"
 #endif  // defined(OS_CHROMEOS)
 
+#include "base/stl_util.h"
 #include "base/threading/thread_restrictions.h"
 
 namespace base {
@@ -33,10 +34,6 @@ bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
                                  ScopedFD* fd,
                                  ScopedFD* readonly_fd,
                                  FilePath* path) {
-#if defined(OS_LINUX)
-  // It doesn't make sense to have a open-existing private piece of shmem
-  DCHECK(!options.open_existing_deprecated);
-#endif  // defined(OS_LINUX)
   // Q: Why not use the shm_open() etc. APIs?
   // A: Because they're limited to 4mb on OS X.  FFFFFFFUUUUUUUUUUU
   FilePath directory;
@@ -96,8 +93,7 @@ bool PrepareMapFile(ScopedFD fd,
 
   *mapped_file = HANDLE_EINTR(dup(fd.get()));
   if (*mapped_file == -1) {
-    NOTREACHED() << "Call to dup failed, errno=" << errno;
-
+    DPCHECK(false) << "dup failed";
 #if defined(OS_CHROMEOS)
     if (errno == EMFILE) {
       // We're out of file descriptors and are probably about to crash somewhere
@@ -130,16 +126,16 @@ bool PrepareMapFile(ScopedFD fd,
       // begins.
       crash_ptr = strncpy(crash_ptr, kFileDataMarker, strlen(kFileDataMarker));
       for (int i = original_fd_limit; i >= 0; --i) {
-        memset(buf, 0, arraysize(buf));
-        memset(fd_path, 0, arraysize(fd_path));
-        snprintf(fd_path, arraysize(fd_path) - 1, "/proc/self/fd/%d", i);
-        ssize_t count = readlink(fd_path, buf, arraysize(buf) - 1);
+        memset(buf, 0, base::size(buf));
+        memset(fd_path, 0, base::size(fd_path));
+        snprintf(fd_path, base::size(fd_path) - 1, "/proc/self/fd/%d", i);
+        ssize_t count = readlink(fd_path, buf, base::size(buf) - 1);
         if (count < 0) {
           PLOG(ERROR) << "readlink failed for: " << fd_path;
           continue;
         }
 
-        if (crash_ptr + count + 1 < crash_buffer + arraysize(crash_buffer)) {
+        if (crash_ptr + count + 1 < crash_buffer + base::size(crash_buffer)) {
           crash_ptr = strncpy(crash_ptr, buf, count + 1);
         }
         LOG(ERROR) << i << ": " << buf;

@@ -11,9 +11,6 @@
 #include "base/strings/string_util.h"
 #include "base/threading/scoped_blocking_call.h"
 #include "base/win/shlwapi.h"
-#include "base/win/windows_version.h"
-
-#pragma comment(lib, "Shlwapi.lib")
 
 namespace base {
 
@@ -115,7 +112,7 @@ FileEnumerator::FileInfo FileEnumerator::GetInfo() const {
 }
 
 FilePath FileEnumerator::Next() {
-  ScopedBlockingCall scoped_blocking_call(/*FROM_HERE,*/ BlockingType::MAY_BLOCK);
+  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
 
   while (has_find_data_ || !pending_paths_.empty()) {
     if (!has_find_data_) {

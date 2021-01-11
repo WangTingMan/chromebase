@@ -10,6 +10,7 @@
 #include "base/memory/read_only_shared_memory_region.h"
 #include "base/memory/shared_memory_mapping.h"
 #include "base/memory/unsafe_shared_memory_region.h"
+#include "build/build_config.h"
 
 namespace base {
 
@@ -22,13 +23,24 @@ namespace base {
 // ReadOnlySharedMemoryRegion. However, unlike ReadOnlySharedMemoryRegion and
 // UnsafeSharedMemoryRegion, ownership of this region (while writable) is unique
 // and may only be transferred, not duplicated.
+//
+// Unlike ReadOnlySharedMemoryRegion and UnsafeSharedMemoryRegion,
+// WritableSharedMemoryRegion doesn't provide GetPlatformHandle() method to
+// ensure that the region is never duplicated while writable.
 class BASE_EXPORT WritableSharedMemoryRegion {
  public:
   using MappingType = WritableSharedMemoryMapping;
   // Creates a new WritableSharedMemoryRegion instance of a given
   // size that can be used for mapping writable shared memory into the virtual
   // address space.
+  //
+  // This call will fail if the process does not have sufficient permissions to
+  // create a shared memory region itself. See
+  // mojo::CreateWritableSharedMemoryRegion in
+  // mojo/public/cpp/base/shared_memory_utils.h for creating a shared memory
+  // region from a an unprivileged process where a broker must be used.
   static WritableSharedMemoryRegion Create(size_t size);
+  using CreateFunction = decltype(Create);
 
   // Returns a WritableSharedMemoryRegion built from a platform handle that was
   // taken from another WritableSharedMemoryRegion instance. Returns an invalid
@@ -95,9 +107,24 @@ class BASE_EXPORT WritableSharedMemoryRegion {
     return handle_.GetGUID();
   }
 
+#if defined(OS_WIN)
+  // On Windows it is necessary in rare cases to take a writable handle from a
+  // region that will be converted to read-only. On this platform it is a safe
+  // operation, as the handle returned from this method will remain writable
+  // after the region is converted to read-only. However, it breaks chromium's
+  // WritableSharedMemoryRegion semantics and so should be use with care.
+  HANDLE UnsafeGetPlatformHandle() const { return handle_.GetPlatformHandle(); }
+#endif
+
  private:
+  friend class SharedMemoryHooks;
+
   explicit WritableSharedMemoryRegion(
       subtle::PlatformSharedMemoryRegion handle);
+
+  static void set_create_hook(CreateFunction* hook) { create_hook_ = hook; }
+
+  static CreateFunction* create_hook_;
 
   subtle::PlatformSharedMemoryRegion handle_;
 

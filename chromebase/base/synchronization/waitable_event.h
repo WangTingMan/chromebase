@@ -199,7 +199,7 @@ class BASE_EXPORT WaitableEvent {
    public:
     ReceiveRight(mach_port_t name, bool create_slow_watch_list);
 
-    mach_port_t Name() const { return right_.get(); };
+    mach_port_t Name() const { return right_.get(); }
 
     // This structure is used iff UseSlowWatchList() is true. See the comment
     // in Signal() for details.
@@ -287,6 +287,7 @@ class BASE_EXPORT WaitableEvent {
   // Whether a thread invoking Wait() on this WaitableEvent should be considered
   // blocked as opposed to idle (and potentially replaced if part of a pool).
   bool waiting_is_blocking_ = true;
+
   DISALLOW_COPY_AND_ASSIGN(WaitableEvent);
 };
 

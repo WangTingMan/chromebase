@@ -16,7 +16,6 @@
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
 #include <mach/mach.h>
 #include "base/base_export.h"
-#include "base/file_descriptor_posix.h"
 #include "base/macros.h"
 #include "base/process/process_handle.h"
 #elif defined(OS_POSIX)
@@ -34,6 +33,9 @@ namespace base {
 // address space of the current process.
 // TODO(erikchen): This class should have strong ownership semantics to prevent
 // leaks of the underlying OS resource. https://crbug.com/640840.
+//
+// DEPRECATED - Use {Writable,ReadOnly}SharedMemoryRegion instead.
+// http://crbug.com/795291
 class BASE_EXPORT SharedMemoryHandle {
  public:
   // The default constructor returns an invalid SharedMemoryHandle.
@@ -101,13 +103,6 @@ class BASE_EXPORT SharedMemoryHandle {
                      const base::UnguessableToken& guid);
   zx_handle_t GetHandle() const;
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
-  enum Type {
-    // The SharedMemoryHandle is backed by a POSIX fd.
-    POSIX,
-    // The SharedMemoryHandle is backed by the Mach primitive "memory object".
-    MACH,
-  };
-
   // Makes a Mach-based SharedMemoryHandle of the given size. On error,
   // subsequent calls to IsValid() return false.
   // Passing the wrong |size| has no immediate consequence, but may cause errors
@@ -146,7 +141,7 @@ class BASE_EXPORT SharedMemoryHandle {
   int Release();
 #endif
 
-#if defined(OS_ANDROID) || defined(__ANDROID__)
+#if defined(OS_ANDROID)
   // Marks the current file descriptor as read-only, for the purpose of
   // mapping. This is independent of the region's read-only status.
   void SetReadOnly() { read_only_ = true; }
@@ -163,7 +158,7 @@ class BASE_EXPORT SharedMemoryHandle {
   bool SetRegionReadOnly() const;
 #endif
 
-#if defined(OS_POSIX)
+#if defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))
   // Constructs a SharedMemoryHandle backed by a FileDescriptor. The newly
   // created instance has the same ownership semantics as base::FileDescriptor.
   // This typically means that the SharedMemoryHandle takes ownership of the
@@ -201,24 +196,14 @@ class BASE_EXPORT SharedMemoryHandle {
   friend bool CheckReadOnlySharedMemoryHandleForTesting(
       SharedMemoryHandle handle);
 
-  Type type_ = MACH;
+  mach_port_t memory_object_ = MACH_PORT_NULL;
 
-  // Each instance of a SharedMemoryHandle is backed either by a POSIX fd or a
-  // mach port. |type_| determines the backing member.
-  union {
-    FileDescriptor file_descriptor_;
-
-    struct {
-      mach_port_t memory_object_ = MACH_PORT_NULL;
-
-      // Whether passing this object as a parameter to an IPC message passes
-      // ownership of |memory_object_| to the IPC stack. This is meant to mimic
-      // the behavior of the |auto_close| parameter of FileDescriptor.
-      // Defaults to |false|.
-      bool ownership_passes_to_ipc_ = false;
-    };
-  };
-#elif defined(OS_ANDROID) || defined(__ANDROID__)
+  // Whether passing this object as a parameter to an IPC message passes
+  // ownership of |memory_object_| to the IPC stack. This is meant to mimic
+  // the behavior of the |auto_close| parameter of FileDescriptor.
+  // Defaults to |false|.
+  bool ownership_passes_to_ipc_ = false;
+#elif defined(OS_ANDROID)
   friend class SharedMemory;
 
   FileDescriptor file_descriptor_;

@@ -4,6 +4,7 @@
 
 #include "base/process/process.h"
 
+#include "base/clang_coverage_buildflags.h"
 #include "base/debug/activity_tracker.h"
 #include "base/logging.h"
 #include "base/numerics/safe_conversions.h"
@@ -11,6 +12,10 @@
 #include "base/threading/thread_restrictions.h"
 
 #include <windows.h>
+
+#if BUILDFLAG(CLANG_COVERAGE)
+#include "base/test/clang_coverage.h"
+#endif
 
 namespace {
 
@@ -85,6 +90,9 @@ bool Process::CanBackgroundProcesses() {
 
 // static
 void Process::TerminateCurrentProcessImmediately(int exit_code) {
+#if BUILDFLAG(CLANG_COVERAGE)
+  WriteClangCoverageProfile();
+#endif
   ::TerminateProcess(GetCurrentProcess(), exit_code);
   // There is some ambiguity over whether the call above can return. Rather than
   // hitting confusing crashes later on we should crash right here.
@@ -119,6 +127,18 @@ Process Process::Duplicate() const {
 ProcessId Process::Pid() const {
   DCHECK(IsValid());
   return GetProcId(Handle());
+}
+
+Time Process::CreationTime() const {
+  FILETIME creation_time = {};
+  FILETIME ignore1 = {};
+  FILETIME ignore2 = {};
+  FILETIME ignore3 = {};
+  if (!::GetProcessTimes(Handle(), &creation_time, &ignore1, &ignore2,
+                         &ignore3)) {
+    return Time();
+  }
+  return Time::FromFileTime(creation_time);
 }
 
 bool Process::is_current() const {

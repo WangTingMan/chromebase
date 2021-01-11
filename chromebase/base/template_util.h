@@ -72,6 +72,12 @@ struct SupportsOstreamOperator<T,
                                              << std::declval<T>()))>
     : std::true_type {};
 
+template <typename T, typename = void>
+struct SupportsToString : std::false_type {};
+template <typename T>
+struct SupportsToString<T, decltype(void(std::declval<T>().ToString()))>
+    : std::true_type {};
+
 // Used to detech whether the given type is an iterator.  This is normally used
 // with std::enable_if to provide disambiguation for functions that take
 // templatzed iterators as input.
@@ -144,6 +150,35 @@ struct is_trivially_copy_constructible<std::vector<T...>> : std::false_type {};
 template <typename T>
 using is_trivially_copy_constructible = std::is_trivially_copy_constructible<T>;
 #endif
+
+// base::in_place_t is an implementation of std::in_place_t from
+// C++17. A tag type used to request in-place construction in template vararg
+// constructors.
+
+// Specification:
+// https://en.cppreference.com/w/cpp/utility/in_place
+struct in_place_t {};
+constexpr in_place_t in_place = {};
+
+// base::in_place_type_t is an implementation of std::in_place_type_t from
+// C++17. A tag type used for in-place construction when the type to construct
+// needs to be specified, such as with base::unique_any, designed to be a
+// drop-in replacement.
+
+// Specification:
+// http://en.cppreference.com/w/cpp/utility/in_place
+template <typename T>
+struct in_place_type_t {};
+
+template <typename T>
+struct is_in_place_type_t {
+  static constexpr bool value = false;
+};
+
+template <typename... Ts>
+struct is_in_place_type_t<in_place_type_t<Ts...>> {
+  static constexpr bool value = true;
+};
 
 }  // namespace base
 

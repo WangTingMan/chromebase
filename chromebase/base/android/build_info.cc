@@ -9,10 +9,10 @@
 #include "base/android/jni_android.h"
 #include "base/android/jni_array.h"
 #include "base/android/scoped_java_ref.h"
+#include "base/base_jni_headers/BuildInfo_jni.h"
 #include "base/logging.h"
 #include "base/memory/singleton.h"
 #include "base/strings/string_number_conversions.h"
-#include "jni/BuildInfo_jni.h"
 
 namespace base {
 namespace android {
@@ -38,7 +38,7 @@ struct BuildInfoSingletonTraits {
     JNIEnv* env = AttachCurrentThread();
     ScopedJavaLocalRef<jobjectArray> params_objs = Java_BuildInfo_getAll(env);
     std::vector<std::string> params;
-    AppendJavaStringArrayToStringVector(env, params_objs.obj(), &params);
+    AppendJavaStringArrayToStringVector(env, params_objs, &params);
     return new BuildInfo(params);
   }
 
@@ -76,7 +76,8 @@ BuildInfo::BuildInfo(const std::vector<std::string>& params)
       custom_themes_(StrDupParam(params, 19)),
       resources_version_(StrDupParam(params, 20)),
       extracted_file_suffix_(params[21]),
-      is_at_least_p_(GetIntParam(params, 22)) {}
+      is_at_least_q_(GetIntParam(params, 22)),
+      is_debug_android_(GetIntParam(params, 23)) {}
 
 // static
 BuildInfo* BuildInfo::GetInstance() {

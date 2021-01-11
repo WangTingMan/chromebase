@@ -283,11 +283,9 @@ void PlatformThread::Join(PlatformThreadHandle thread_handle) {
   // Record the event that this thread is blocking upon (for hang diagnosis).
   base::debug::ScopedThreadJoinActivity thread_activity(&thread_handle);
 
-#ifdef WINDOWS32
-#else
   base::internal::ScopedBlockingCallWithBaseSyncPrimitives scoped_blocking_call(
       base::BlockingType::MAY_BLOCK);
-#endif
+
   // Wait for the thread to exit.  It should already have terminated but make
   // sure this assumption is valid.
   CHECK_EQ(WAIT_OBJECT_0,
@@ -301,12 +299,12 @@ void PlatformThread::Detach(PlatformThreadHandle thread_handle) {
 }
 
 // static
-bool PlatformThread::CanIncreaseCurrentThreadPriority() {
+bool PlatformThread::CanIncreaseThreadPriority(ThreadPriority priority) {
   return true;
 }
 
 // static
-void PlatformThread::SetCurrentThreadPriority(ThreadPriority priority) {
+void PlatformThread::SetCurrentThreadPriorityImpl(ThreadPriority priority) {
   // A DCHECK is triggered on FeatureList initialization if the state of a
   // feature has been checked before. We only want to trigger that DCHECK if the
   // priority has been set to BACKGROUND before, so we are careful not to access
@@ -404,8 +402,8 @@ ThreadPriority PlatformThread::GetCurrentThreadPriority() {
 }
 
 // static
-// size_t PlatformThread::GetDefaultThreadStackSize() {
-//   return 0;
-// }
+size_t PlatformThread::GetDefaultThreadStackSize() {
+  return 0;
+}
 
 }  // namespace base

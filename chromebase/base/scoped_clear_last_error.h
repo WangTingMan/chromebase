@@ -32,12 +32,6 @@ class BASE_EXPORT ScopedClearLastErrorBase {
   DISALLOW_COPY_AND_ASSIGN(ScopedClearLastErrorBase);
 };
 
-#ifdef _MSC_VER
-#ifndef OS_WIN
-#define OS_WIN
-#endif
-#endif
-
 #if defined(OS_WIN)
 
 // Windows specific implementation of ScopedClearLastError.

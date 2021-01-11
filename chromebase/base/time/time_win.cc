@@ -46,8 +46,6 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time_override.h"
 
-#pragma comment( lib,"winmm.lib" )
-
 namespace base {
 
 namespace {

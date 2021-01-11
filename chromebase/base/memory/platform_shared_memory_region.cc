@@ -5,6 +5,7 @@
 #include "base/memory/platform_shared_memory_region.h"
 
 #include "base/memory/shared_memory_mapping.h"
+#include "base/numerics/checked_math.h"
 
 namespace base {
 namespace subtle {
@@ -13,15 +14,6 @@ namespace subtle {
 PlatformSharedMemoryRegion PlatformSharedMemoryRegion::CreateWritable(
     size_t size) {
   return Create(Mode::kWritable, size);
-}
-
-
-bool PlatformSharedMemoryRegion::MapAt( off_t offset,
-           size_t size,
-           void** memory,
-           size_t* mapped_size ) const
-{
-    return MapAtInternal( offset, size, memory, mapped_size );
 }
 
 // static
@@ -40,6 +32,30 @@ PlatformSharedMemoryRegion::~PlatformSharedMemoryRegion() = default;
 PlatformSharedMemoryRegion::ScopedPlatformHandle
 PlatformSharedMemoryRegion::PassPlatformHandle() {
   return std::move(handle_);
+}
+
+bool PlatformSharedMemoryRegion::MapAt(off_t offset,
+                                       size_t size,
+                                       void** memory,
+                                       size_t* mapped_size) const {
+  if (!IsValid())
+    return false;
+
+  if (size == 0)
+    return false;
+
+  size_t end_byte;
+  if (!CheckAdd(offset, size).AssignIfValid(&end_byte) || end_byte > size_) {
+    return false;
+  }
+
+  bool success = MapAtInternal(offset, size, memory, mapped_size);
+  if (success) {
+    DCHECK_EQ(
+        0U, reinterpret_cast<uintptr_t>(*memory) & (kMapMinimumAlignment - 1));
+  }
+
+  return success;
 }
 
 }  // namespace subtle

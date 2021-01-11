@@ -13,6 +13,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/test/gtest_util.h"
+#include "base/test/test_timeouts.h"
 #include "base/threading/thread.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -78,8 +79,8 @@ struct Arrow {
   WeakPtr<Target> target;
 };
 struct TargetWithFactory : public Target {
-  TargetWithFactory() : factory(this) {}
-  WeakPtrFactory<Target> factory;
+  TargetWithFactory() {}
+  WeakPtrFactory<Target> factory{this};
 };
 
 // Helper class to create and destroy weak pointer copies
@@ -389,6 +390,90 @@ TEST(WeakPtrTest, InvalidateWeakPtrs) {
   factory.InvalidateWeakPtrs();
   EXPECT_EQ(nullptr, ptr2.get());
   EXPECT_FALSE(factory.HasWeakPtrs());
+}
+
+// Tests that WasInvalidated() is true only for invalidated WeakPtrs (not
+// nullptr) and doesn't DCHECK (e.g. because of a dereference attempt).
+TEST(WeakPtrTest, WasInvalidatedByFactoryDestruction) {
+  WeakPtr<int> ptr;
+  EXPECT_FALSE(ptr.WasInvalidated());
+
+  // Test |data| destroyed. That is, the typical pattern when |data| (and its
+  // associated factory) go out of scope.
+  {
+    int data = 0;
+    WeakPtrFactory<int> factory(&data);
+    ptr = factory.GetWeakPtr();
+
+    // Verify that a live WeakPtr is not reported as Invalidated.
+    EXPECT_FALSE(ptr.WasInvalidated());
+  }
+
+  // Checking validity shouldn't read beyond the stack frame.
+  EXPECT_TRUE(ptr.WasInvalidated());
+  ptr = nullptr;
+  EXPECT_FALSE(ptr.WasInvalidated());
+}
+
+// As above, but testing InvalidateWeakPtrs().
+TEST(WeakPtrTest, WasInvalidatedByInvalidateWeakPtrs) {
+  int data = 0;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  EXPECT_FALSE(ptr.WasInvalidated());
+  factory.InvalidateWeakPtrs();
+  EXPECT_TRUE(ptr.WasInvalidated());
+  ptr = nullptr;
+  EXPECT_FALSE(ptr.WasInvalidated());
+}
+
+// A WeakPtr should not be reported as 'invalidated' if nullptr was assigned to
+// it.
+TEST(WeakPtrTest, WasInvalidatedWhilstNull) {
+  int data = 0;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  EXPECT_FALSE(ptr.WasInvalidated());
+  ptr = nullptr;
+  EXPECT_FALSE(ptr.WasInvalidated());
+  factory.InvalidateWeakPtrs();
+  EXPECT_FALSE(ptr.WasInvalidated());
+}
+
+TEST(WeakPtrTest, MaybeValidOnSameSequence) {
+  int data;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  EXPECT_TRUE(ptr.MaybeValid());
+  factory.InvalidateWeakPtrs();
+  // Since InvalidateWeakPtrs() ran on this sequence, MaybeValid() should be
+  // false.
+  EXPECT_FALSE(ptr.MaybeValid());
+}
+
+TEST(WeakPtrTest, MaybeValidOnOtherSequence) {
+  int data;
+  WeakPtrFactory<int> factory(&data);
+  WeakPtr<int> ptr = factory.GetWeakPtr();
+  EXPECT_TRUE(ptr.MaybeValid());
+
+  base::Thread other_thread("other_thread");
+  other_thread.StartAndWaitForTesting();
+  other_thread.task_runner()->PostTask(
+      FROM_HERE,
+      base::BindOnce(
+          [](WeakPtr<int> ptr) {
+            // Check that MaybeValid() _eventually_ returns false.
+            const TimeDelta timeout = TestTimeouts::tiny_timeout();
+            const TimeTicks begin = TimeTicks::Now();
+            while (ptr.MaybeValid() && (TimeTicks::Now() - begin) < timeout)
+              PlatformThread::YieldCurrentThread();
+            EXPECT_FALSE(ptr.MaybeValid());
+          },
+          ptr));
+  factory.InvalidateWeakPtrs();
+  // |other_thread|'s destructor will join, ensuring we wait for the task to be
+  // run.
 }
 
 TEST(WeakPtrTest, HasWeakPtrs) {

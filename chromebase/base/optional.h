@@ -5,6 +5,7 @@
 #ifndef BASE_OPTIONAL_H_
 #define BASE_OPTIONAL_H_
 
+#include <functional>
 #include <type_traits>
 #include <utility>
 
@@ -14,18 +15,10 @@
 namespace base {
 
 // Specification:
-// http://en.cppreference.com/w/cpp/utility/optional/in_place_t
-struct in_place_t {};
-
-// Specification:
 // http://en.cppreference.com/w/cpp/utility/optional/nullopt_t
 struct nullopt_t {
   constexpr explicit nullopt_t(int) {}
 };
-
-// Specification:
-// http://en.cppreference.com/w/cpp/utility/optional/in_place
-constexpr in_place_t in_place = {};
 
 // Specification:
 // http://en.cppreference.com/w/cpp/utility/optional/nullopt
@@ -434,6 +427,28 @@ class OPTIONAL_DECLSPEC_EMPTY_BASES Optional
                                       std::is_copy_assignable<T>::value>,
       public internal::MoveAssignable<std::is_move_constructible<T>::value &&
                                       std::is_move_assignable<T>::value> {
+ private:
+  // Disable some versions of T that are ill-formed.
+  // See: https://timsong-cpp.github.io/cppwp/n4659/optional#syn-1
+  static_assert(
+      !std::is_same<internal::RemoveCvRefT<T>, in_place_t>::value,
+      "instantiation of base::Optional with in_place_t is ill-formed");
+  static_assert(!std::is_same<internal::RemoveCvRefT<T>, nullopt_t>::value,
+                "instantiation of base::Optional with nullopt_t is ill-formed");
+  static_assert(
+      !std::is_reference<T>::value,
+      "instantiation of base::Optional with a reference type is ill-formed");
+  // See: https://timsong-cpp.github.io/cppwp/n4659/optional#optional-3
+  static_assert(std::is_destructible<T>::value,
+                "instantiation of base::Optional with a non-destructible type "
+                "is ill-formed");
+  // Arrays are explicitly disallowed because for arrays of known bound
+  // is_destructible is of undefined value.
+  // See: https://en.cppreference.com/w/cpp/types/is_destructible
+  static_assert(
+      !std::is_array<T>::value,
+      "instantiation of base::Optional with an array type is ill-formed");
+
  public:
 #undef OPTIONAL_DECLSPEC_EMPTY_BASES
   using value_type = T;
@@ -575,32 +590,32 @@ class OPTIONAL_DECLSPEC_EMPTY_BASES Optional
   }
 
   constexpr const T* operator->() const {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return &storage_.value_;
   }
 
   constexpr T* operator->() {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return &storage_.value_;
   }
 
   constexpr const T& operator*() const & {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return storage_.value_;
   }
 
   constexpr T& operator*() & {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return storage_.value_;
   }
 
   constexpr const T&& operator*() const && {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return std::move(storage_.value_);
   }
 
   constexpr T&& operator*() && {
-    DCHECK(storage_.is_populated_);
+    CHECK(storage_.is_populated_);
     return std::move(storage_.value_);
   }
 

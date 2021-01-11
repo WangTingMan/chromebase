@@ -18,18 +18,6 @@
 
 namespace base {
 
-#ifdef WINDOWS32
-
-    wchar_t* as_wcstr( const wchar_t* original );
-
-    wchar_t* as_writable_wcstr( const wchar_t* original );
-
-    wchar_t* as_wcstr( const std::wstring& );
-
-    wchar_t* as_u16cstr( const wchar_t* );
-
-#endif
-
 namespace {
 
 // forward declare
@@ -238,9 +226,30 @@ NativeLibrary PinSystemLibrary(FilePath::StringPieceType name,
       error->code = ERROR_NOT_FOUND;
     return nullptr;
   }
-  abort();
-  NativeLibrary lib;
-  return lib;
+
+  // GetModuleHandleEx acquires the LoaderLock, hence must not be called from
+  // Dllmain.
+  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
+  ScopedNativeLibrary module;
+  if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
+                            as_wcstr(library_path.value().value()),
+                            ScopedNativeLibrary::Receiver(module).get())) {
+    // Load and pin the library since it wasn't already loaded.
+    module = ScopedNativeLibrary(
+        LoadSystemLibraryHelper(library_path.value(), error));
+    if (module.is_valid()) {
+      ScopedNativeLibrary temp;
+      if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN,
+                                as_wcstr(library_path.value().value()),
+                                ScopedNativeLibrary::Receiver(temp).get())) {
+        if (error)
+          error->code = ::GetLastError();
+        // Return nullptr since we failed to pin the module.
+        return nullptr;
+      }
+    }
+  }
+  return module.release();
 }
 
 }  // namespace base

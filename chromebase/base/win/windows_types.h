@@ -106,16 +106,12 @@ typedef struct _GUID GUID;
 typedef GUID CLSID;
 
 typedef struct tagLOGFONTW LOGFONTW, *PLOGFONTW, *NPLOGFONTW, *LPLOGFONTW;
-#ifdef WINDOWS32
-#else
 typedef LOGFONTW LOGFONT;
-#endif
 
 typedef struct _FILETIME FILETIME;
-#ifdef WINDOWS32
-#else
+
 typedef struct tagMENUITEMINFOW MENUITEMINFOW, MENUITEMINFO;
-#endif
+
 typedef struct tagNMHDR NMHDR;
 
 typedef PVOID PSID;

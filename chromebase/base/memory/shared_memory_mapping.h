@@ -6,7 +6,10 @@
 #define BASE_MEMORY_SHARED_MEMORY_MAPPING_H_
 
 #include <cstddef>
+#include <type_traits>
 
+#include "base/containers/buffer_iterator.h"
+#include "base/containers/span.h"
 #include "base/macros.h"
 #include "base/unguessable_token.h"
 
@@ -29,8 +32,8 @@ class BASE_EXPORT SharedMemoryMapping {
   SharedMemoryMapping();
 
   // Move operations are allowed.
-  SharedMemoryMapping(SharedMemoryMapping&& mapping);
-  SharedMemoryMapping& operator=(SharedMemoryMapping&& mapping);
+  SharedMemoryMapping(SharedMemoryMapping&& mapping) noexcept;
+  SharedMemoryMapping& operator=(SharedMemoryMapping&& mapping) noexcept;
 
   // Unmaps the region if the mapping is valid.
   virtual ~SharedMemoryMapping();
@@ -90,12 +93,65 @@ class BASE_EXPORT ReadOnlySharedMemoryMapping : public SharedMemoryMapping {
   ReadOnlySharedMemoryMapping();
 
   // Move operations are allowed.
-  ReadOnlySharedMemoryMapping(ReadOnlySharedMemoryMapping&&);
-  ReadOnlySharedMemoryMapping& operator=(ReadOnlySharedMemoryMapping&&);
+  ReadOnlySharedMemoryMapping(ReadOnlySharedMemoryMapping&&) noexcept;
+  ReadOnlySharedMemoryMapping& operator=(
+      ReadOnlySharedMemoryMapping&&) noexcept;
 
   // Returns the base address of the mapping. This is read-only memory. This is
   // page-aligned. This is nullptr for invalid instances.
   const void* memory() const { return raw_memory_ptr(); }
+
+  // Returns a pointer to a page-aligned const T if the mapping is valid and
+  // large enough to contain a T, or nullptr otherwise.
+  template <typename T>
+  const T* GetMemoryAs() const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return nullptr;
+    if (sizeof(T) > size())
+      return nullptr;
+    return static_cast<const T*>(raw_memory_ptr());
+  }
+
+  // Returns a span of const T. The number of elements is autodeduced from the
+  // size of the shared memory mapping. The number of elements may be
+  // autodeduced as zero, i.e. the mapping is invalid or the size of the mapping
+  // isn't large enough to contain even one T: in that case, an empty span
+  // will be returned. The first element, if any, is guaranteed to be
+  // page-aligned.
+  template <typename T>
+  span<const T> GetMemoryAsSpan() const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return span<const T>();
+    size_t count = size() / sizeof(T);
+    return GetMemoryAsSpan<T>(count);
+  }
+
+  // Returns a span of const T with |count| elements if the mapping is valid and
+  // large enough to contain |count| elements, or an empty span otherwise. The
+  // first element, if any, is guaranteed to be page-aligned.
+  template <typename T>
+  span<const T> GetMemoryAsSpan(size_t count) const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return span<const T>();
+    if (size() / sizeof(T) < count)
+      return span<const T>();
+    return span<const T>(static_cast<const T*>(raw_memory_ptr()), count);
+  }
+
+  // Returns a BufferIterator of const T.
+  template <typename T>
+  BufferIterator<const T> GetMemoryAsBufferIterator() const {
+    return BufferIterator<const T>(GetMemoryAsSpan<T>());
+  }
 
  private:
   friend class ReadOnlySharedMemoryRegion;
@@ -116,12 +172,64 @@ class BASE_EXPORT WritableSharedMemoryMapping : public SharedMemoryMapping {
   WritableSharedMemoryMapping();
 
   // Move operations are allowed.
-  WritableSharedMemoryMapping(WritableSharedMemoryMapping&&);
-  WritableSharedMemoryMapping& operator=(WritableSharedMemoryMapping&&);
+  WritableSharedMemoryMapping(WritableSharedMemoryMapping&&) noexcept;
+  WritableSharedMemoryMapping& operator=(
+      WritableSharedMemoryMapping&&) noexcept;
 
   // Returns the base address of the mapping. This is writable memory. This is
   // page-aligned. This is nullptr for invalid instances.
   void* memory() const { return raw_memory_ptr(); }
+
+  // Returns a pointer to a page-aligned T if the mapping is valid and large
+  // enough to contain a T, or nullptr otherwise.
+  template <typename T>
+  T* GetMemoryAs() const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return nullptr;
+    if (sizeof(T) > size())
+      return nullptr;
+    return static_cast<T*>(raw_memory_ptr());
+  }
+
+  // Returns a span of T. The number of elements is autodeduced from the size of
+  // the shared memory mapping. The number of elements may be autodeduced as
+  // zero, i.e. the mapping is invalid or the size of the mapping isn't large
+  // enough to contain even one T: in that case, an empty span will be returned.
+  // The first element, if any, is guaranteed to be page-aligned.
+  template <typename T>
+  span<T> GetMemoryAsSpan() const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return span<T>();
+    size_t count = size() / sizeof(T);
+    return GetMemoryAsSpan<T>(count);
+  }
+
+  // Returns a span of T with |count| elements if the mapping is valid and large
+  // enough to contain |count| elements, or an empty span otherwise. The first
+  // element, if any, is guaranteed to be page-aligned.
+  template <typename T>
+  span<T> GetMemoryAsSpan(size_t count) const {
+    static_assert(std::is_trivially_copyable<T>::value,
+                  "Copying non-trivially-copyable object across memory spaces "
+                  "is dangerous");
+    if (!IsValid())
+      return span<T>();
+    if (size() / sizeof(T) < count)
+      return span<T>();
+    return span<T>(static_cast<T*>(raw_memory_ptr()), count);
+  }
+
+  // Returns a BufferIterator of T.
+  template <typename T>
+  BufferIterator<T> GetMemoryAsBufferIterator() {
+    return BufferIterator<T>(GetMemoryAsSpan<T>());
+  }
 
  private:
   friend WritableSharedMemoryMapping MapAtForTesting(

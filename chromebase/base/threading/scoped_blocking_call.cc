@@ -73,28 +73,12 @@ ScopedBlockingCall::ScopedBlockingCall(const Location& from_here,
   tls_construction_in_progress.Get().Set(true);
 #endif
 
+  internal::AssertBlockingAllowed();
   TRACE_EVENT_BEGIN2("base", "ScopedBlockingCall", "file_name",
                      from_here.file_name(), "function_name",
                      from_here.function_name());
 #if DCHECK_IS_ON()
   tls_construction_in_progress.Get().Set(false);
-#endif
-}
-
-ScopedBlockingCall::ScopedBlockingCall( BlockingType blocking_type )
-    : UncheckedScopedBlockingCall( blocking_type )
-{
-    Location from_here;
-#if DCHECK_IS_ON()
-    DCHECK( !tls_construction_in_progress.Get().Get() );
-    tls_construction_in_progress.Get().Set( true );
-#endif
-
-    TRACE_EVENT_BEGIN2( "base", "ScopedBlockingCall", "file_name",
-                       from_here.file_name(), "function_name",
-                       from_here.function_name() );
-#if DCHECK_IS_ON()
-    tls_construction_in_progress.Get().Set( false );
 #endif
 }
 

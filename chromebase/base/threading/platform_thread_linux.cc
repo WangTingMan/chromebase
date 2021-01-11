@@ -49,7 +49,7 @@ FilePath ThreadPriorityToCgroupDirectory(const FilePath& cgroup_filepath,
 void SetThreadCgroup(PlatformThreadId thread_id,
                      const FilePath& cgroup_directory) {
   FilePath tasks_filepath = cgroup_directory.Append(FILE_PATH_LITERAL("tasks"));
-  std::string tid = IntToString(thread_id);
+  std::string tid = NumberToString(thread_id);
   int bytes_written = WriteFile(tasks_filepath, tid.c_str(), tid.size());
   if (bytes_written != static_cast<int>(tid.size())) {
     DVLOG(1) << "Failed to add " << tid << " to " << tasks_filepath.value();
@@ -97,6 +97,20 @@ const ThreadPriorityToNiceValuePair kThreadPriorityToNiceValueMap[4] = {
     {ThreadPriority::REALTIME_AUDIO, -10},
 };
 
+Optional<bool> CanIncreaseCurrentThreadPriorityForPlatform(
+    ThreadPriority priority) {
+#if !defined(OS_NACL)
+  // A non-zero soft-limit on RLIMIT_RTPRIO is required to be allowed to invoke
+  // pthread_setschedparam in SetCurrentThreadPriorityForPlatform().
+  struct rlimit rlim;
+  if (priority == ThreadPriority::REALTIME_AUDIO &&
+      getrlimit(RLIMIT_RTPRIO, &rlim) != 0 && rlim.rlim_cur != 0) {
+    return base::make_optional(true);
+  }
+#endif
+  return base::nullopt;
+}
+
 bool SetCurrentThreadPriorityForPlatform(ThreadPriority priority) {
 #if !defined(OS_NACL)
   SetThreadCgroupsForThreadPriority(PlatformThread::CurrentId(), priority);
@@ -107,7 +121,7 @@ bool SetCurrentThreadPriorityForPlatform(ThreadPriority priority) {
 #endif
 }
 
-bool GetCurrentThreadPriorityForPlatform(ThreadPriority* priority) {
+Optional<ThreadPriority> GetCurrentThreadPriorityForPlatform() {
 #if !defined(OS_NACL)
   int maybe_sched_rr = 0;
   struct sched_param maybe_realtime_prio = {0};
@@ -115,11 +129,10 @@ bool GetCurrentThreadPriorityForPlatform(ThreadPriority* priority) {
                             &maybe_realtime_prio) == 0 &&
       maybe_sched_rr == SCHED_RR &&
       maybe_realtime_prio.sched_priority == kRealTimePrio.sched_priority) {
-    *priority = ThreadPriority::REALTIME_AUDIO;
-    return true;
+    return base::make_optional(ThreadPriority::REALTIME_AUDIO);
   }
 #endif
-  return false;
+  return base::nullopt;
 }
 
 }  // namespace internal

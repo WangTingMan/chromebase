@@ -8,7 +8,6 @@
 #include <stddef.h>
 
 #include <limits>
-#include <ostream>
 #include <type_traits>
 
 #include "base/numerics/safe_conversions_impl.h"
@@ -18,6 +17,10 @@
 #define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (1)
 #else
 #define BASE_HAS_OPTIMIZED_SAFE_CONVERSIONS (0)
+#endif
+
+#if !BASE_NUMERICS_DISABLE_OSTREAM_OPERATORS
+#include <ostream>
 #endif
 
 namespace base {
@@ -164,12 +167,21 @@ struct SaturateFastOp<
     Dst,
     Src,
     typename std::enable_if<std::is_integral<Src>::value &&
-                            std::is_integral<Dst>::value>::type> {
+                            std::is_integral<Dst>::value &&
+                            SaturateFastAsmOp<Dst, Src>::is_supported>::type> {
+  static const bool is_supported = true;
+  static Dst Do(Src value) { return SaturateFastAsmOp<Dst, Src>::Do(value); }
+};
+
+template <typename Dst, typename Src>
+struct SaturateFastOp<
+    Dst,
+    Src,
+    typename std::enable_if<std::is_integral<Src>::value &&
+                            std::is_integral<Dst>::value &&
+                            !SaturateFastAsmOp<Dst, Src>::is_supported>::type> {
   static const bool is_supported = true;
   static Dst Do(Src value) {
-    if (SaturateFastAsmOp<Dst, Src>::is_supported)
-      return SaturateFastAsmOp<Dst, Src>::Do(value);
-
     // The exact order of the following is structured to hit the correct
     // optimization heuristics across compilers. Do not change without
     // checking the emitted code.
@@ -299,12 +311,14 @@ constexpr StrictNumeric<typename UnderlyingType<T>::type> MakeStrictNum(
   return value;
 }
 
+#if !BASE_NUMERICS_DISABLE_OSTREAM_OPERATORS
 // Overload the ostream output operator to make logging work nicely.
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const StrictNumeric<T>& value) {
   os << static_cast<T>(value);
   return os;
 }
+#endif
 
 #define BASE_NUMERIC_COMPARISON_OPERATORS(CLASS, NAME, OP)              \
   template <typename L, typename R,                                     \
@@ -315,14 +329,14 @@ std::ostream& operator<<(std::ostream& os, const StrictNumeric<T>& value) {
                        typename UnderlyingType<R>::type>(lhs, rhs);     \
   }
 
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsLess, <);
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsLessOrEqual, <=);
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsGreater, >);
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsGreaterOrEqual, >=);
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsEqual, ==);
-BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsNotEqual, !=);
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsLess, <)
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsLessOrEqual, <=)
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsGreater, >)
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsGreaterOrEqual, >=)
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsEqual, ==)
+BASE_NUMERIC_COMPARISON_OPERATORS(Strict, IsNotEqual, !=)
 
-};  // namespace internal
+}  // namespace internal
 
 using internal::as_signed;
 using internal::as_unsigned;

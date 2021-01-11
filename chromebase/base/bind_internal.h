@@ -7,9 +7,13 @@
 
 #include <stddef.h>
 
+#include <functional>
+#include <memory>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
+#include "base/bind.h"
 #include "base/callback_internal.h"
 #include "base/compiler_specific.h"
 #include "base/memory/raw_scoped_refptr_mismatch_checker.h"
@@ -46,6 +50,15 @@
 //  BindState<> -- Stores the curried parameters, and is the main entry point
 //                 into the Bind() system.
 
+#if defined(OS_WIN)
+namespace Microsoft {
+namespace WRL {
+template <typename>
+class ComPtr;
+}  // namespace WRL
+}  // namespace Microsoft
+#endif
+
 namespace base {
 
 template <typename T>
@@ -73,16 +86,6 @@ class UnretainedWrapper {
 };
 
 template <typename T>
-class ConstRefWrapper {
- public:
-  explicit ConstRefWrapper(const T& o) : ptr_(&o) {}
-  const T& get() const { return *ptr_; }
-
- private:
-  const T* ptr_;
-};
-
-template <typename T>
 class RetainedRefWrapper {
  public:
   explicit RetainedRefWrapper(T* o) : ptr_(o) {}
@@ -101,26 +104,15 @@ struct IgnoreResultHelper {
   T functor_;
 };
 
-// An alternate implementation is to avoid the destructive copy, and instead
-// specialize ParamTraits<> for OwnedWrapper<> to change the StorageType to
-// a class that is essentially a std::unique_ptr<>.
-//
-// The current implementation has the benefit though of leaving ParamTraits<>
-// fully in callback_internal.h as well as avoiding type conversions during
-// storage.
 template <typename T>
 class OwnedWrapper {
  public:
   explicit OwnedWrapper(T* o) : ptr_(o) {}
-  ~OwnedWrapper() { delete ptr_; }
-  T* get() const { return ptr_; }
-  OwnedWrapper(OwnedWrapper&& other) {
-    ptr_ = other.ptr_;
-    other.ptr_ = NULL;
-  }
+  explicit OwnedWrapper(std::unique_ptr<T>&& ptr) : ptr_(std::move(ptr)) {}
+  T* get() const { return ptr_.get(); }
 
  private:
-  mutable T* ptr_;
+  std::unique_ptr<T> ptr_;
 };
 
 // PassedWrapper is a copyable adapter for a scoper that ignores const.
@@ -408,7 +400,7 @@ struct FunctorTraits<R (*)(Args...)> {
   }
 };
 
-#if defined(OS_WIN) && !defined(ARCH_CPU_X86_64)
+#if defined(OS_WIN) && !defined(ARCH_CPU_64_BITS)
 
 // For functions.
 template <typename R, typename... Args>
@@ -436,7 +428,7 @@ struct FunctorTraits<R(__fastcall*)(Args...)> {
   }
 };
 
-#endif  // defined(OS_WIN) && !defined(ARCH_CPU_X86_64)
+#endif  // defined(OS_WIN) && !defined(ARCH_CPU_64_BITS)
 
 #if defined(OS_MACOSX)
 
@@ -725,26 +717,85 @@ std::enable_if_t<!FunctorTraits<Functor>::is_nullable, bool> IsNull(
   return false;
 }
 
-// Used by ApplyCancellationTraits below.
+// Used by QueryCancellationTraits below.
 template <typename Functor, typename BoundArgsTuple, size_t... indices>
-bool ApplyCancellationTraitsImpl(const Functor& functor,
+bool QueryCancellationTraitsImpl(BindStateBase::CancellationQueryMode mode,
+                                 const Functor& functor,
                                  const BoundArgsTuple& bound_args,
                                  std::index_sequence<indices...>) {
-  return CallbackCancellationTraits<Functor, BoundArgsTuple>::IsCancelled(
-      functor, std::get<indices>(bound_args)...);
+  switch (mode) {
+    case BindStateBase::IS_CANCELLED:
+      return CallbackCancellationTraits<Functor, BoundArgsTuple>::IsCancelled(
+          functor, std::get<indices>(bound_args)...);
+    case BindStateBase::MAYBE_VALID:
+      return CallbackCancellationTraits<Functor, BoundArgsTuple>::MaybeValid(
+          functor, std::get<indices>(bound_args)...);
+  }
+  NOTREACHED();
 }
 
 // Relays |base| to corresponding CallbackCancellationTraits<>::Run(). Returns
 // true if the callback |base| represents is canceled.
 template <typename BindStateType>
-bool ApplyCancellationTraits(const BindStateBase* base) {
+bool QueryCancellationTraits(const BindStateBase* base,
+                             BindStateBase::CancellationQueryMode mode) {
   const BindStateType* storage = static_cast<const BindStateType*>(base);
   static constexpr size_t num_bound_args =
       std::tuple_size<decltype(storage->bound_args_)>::value;
-  return ApplyCancellationTraitsImpl(
-      storage->functor_, storage->bound_args_,
+  return QueryCancellationTraitsImpl(
+      mode, storage->functor_, storage->bound_args_,
       std::make_index_sequence<num_bound_args>());
-};
+}
+
+// The base case of BanUnconstructedRefCountedReceiver that checks nothing.
+template <typename Functor, typename Receiver, typename... Unused>
+std::enable_if_t<
+    !(MakeFunctorTraits<Functor>::is_method &&
+      std::is_pointer<std::decay_t<Receiver>>::value &&
+      IsRefCountedType<std::remove_pointer_t<std::decay_t<Receiver>>>::value)>
+BanUnconstructedRefCountedReceiver(const Receiver& receiver, Unused&&...) {}
+
+template <typename Functor>
+void BanUnconstructedRefCountedReceiver() {}
+
+// Asserts that Callback is not the first owner of a ref-counted receiver.
+template <typename Functor, typename Receiver, typename... Unused>
+std::enable_if_t<
+    MakeFunctorTraits<Functor>::is_method &&
+    std::is_pointer<std::decay_t<Receiver>>::value &&
+    IsRefCountedType<std::remove_pointer_t<std::decay_t<Receiver>>>::value>
+BanUnconstructedRefCountedReceiver(const Receiver& receiver, Unused&&...) {
+  DCHECK(receiver);
+
+  // It's error prone to make the implicit first reference to ref-counted types.
+  // In the example below, base::BindOnce() makes the implicit first reference
+  // to the ref-counted Foo. If PostTask() failed or the posted task ran fast
+  // enough, the newly created instance can be destroyed before |oo| makes
+  // another reference.
+  //   Foo::Foo() {
+  //     base::PostTask(FROM_HERE, base::BindOnce(&Foo::Bar, this));
+  //   }
+  //
+  //   scoped_refptr<Foo> oo = new Foo();
+  //
+  // Instead of doing like above, please consider adding a static constructor,
+  // and keep the first reference alive explicitly.
+  //   // static
+  //   scoped_refptr<Foo> Foo::Create() {
+  //     auto foo = base::WrapRefCounted(new Foo());
+  //     base::PostTask(FROM_HERE, base::BindOnce(&Foo::Bar, foo));
+  //     return foo;
+  //   }
+  //
+  //   Foo::Foo() {}
+  //
+  //   scoped_refptr<Foo> oo = Foo::Create();
+  DCHECK(receiver->HasAtLeastOneRef())
+      << "base::Bind() refuses to create the first reference to ref-counted "
+         "objects. That is typically happens around PostTask() in their "
+         "constructor, and such objects can be destroyed before `new` returns "
+         "if the task resolves fast enough.";
+}
 
 // BindState<>
 //
@@ -757,16 +808,20 @@ struct BindState final : BindStateBase {
                                  std::tuple<BoundArgs...>>::is_cancellable>;
 
   template <typename ForwardFunctor, typename... ForwardBoundArgs>
-  explicit BindState(BindStateBase::InvokeFuncStorage invoke_func,
-                     ForwardFunctor&& functor,
-                     ForwardBoundArgs&&... bound_args)
-      // IsCancellable is std::false_type if
-      // CallbackCancellationTraits<>::IsCancelled returns always false.
-      // Otherwise, it's std::true_type.
-      : BindState(IsCancellable{},
-                  invoke_func,
-                  std::forward<ForwardFunctor>(functor),
-                  std::forward<ForwardBoundArgs>(bound_args)...) {}
+  static BindState* Create(BindStateBase::InvokeFuncStorage invoke_func,
+                           ForwardFunctor&& functor,
+                           ForwardBoundArgs&&... bound_args) {
+    // Ban ref counted receivers that were not yet fully constructed to avoid
+    // a common pattern of racy situation.
+    BanUnconstructedRefCountedReceiver<ForwardFunctor>(bound_args...);
+
+    // IsCancellable is std::false_type if
+    // CallbackCancellationTraits<>::IsCancelled returns always false.
+    // Otherwise, it's std::true_type.
+    return new BindState(IsCancellable{}, invoke_func,
+                         std::forward<ForwardFunctor>(functor),
+                         std::forward<ForwardBoundArgs>(bound_args)...);
+  }
 
   Functor functor_;
   std::tuple<BoundArgs...> bound_args_;
@@ -779,7 +834,7 @@ struct BindState final : BindStateBase {
                      ForwardBoundArgs&&... bound_args)
       : BindStateBase(invoke_func,
                       &Destroy,
-                      &ApplyCancellationTraits<BindState>),
+                      &QueryCancellationTraits<BindState>),
         functor_(std::forward<ForwardFunctor>(functor)),
         bound_args_(std::forward<ForwardBoundArgs>(bound_args)...) {
     DCHECK(!IsNull(functor_));
@@ -867,7 +922,7 @@ template <typename T>
 struct IsWeakReceiver : std::false_type {};
 
 template <typename T>
-struct IsWeakReceiver<internal::ConstRefWrapper<T>> : IsWeakReceiver<T> {};
+struct IsWeakReceiver<std::reference_wrapper<T>> : IsWeakReceiver<T> {};
 
 template <typename T>
 struct IsWeakReceiver<WeakPtr<T>> : std::true_type {};
@@ -889,10 +944,8 @@ struct BindUnwrapTraits<internal::UnretainedWrapper<T>> {
 };
 
 template <typename T>
-struct BindUnwrapTraits<internal::ConstRefWrapper<T>> {
-  static const T& Unwrap(const internal::ConstRefWrapper<T>& o) {
-    return o.get();
-  }
+struct BindUnwrapTraits<std::reference_wrapper<T>> {
+  static T& Unwrap(std::reference_wrapper<T> o) { return o.get(); }
 };
 
 template <typename T>
@@ -909,6 +962,13 @@ template <typename T>
 struct BindUnwrapTraits<internal::PassedWrapper<T>> {
   static T Unwrap(const internal::PassedWrapper<T>& o) { return o.Take(); }
 };
+
+#if defined(OS_WIN)
+template <typename T>
+struct BindUnwrapTraits<Microsoft::WRL::ComPtr<T>> {
+  static T* Unwrap(const Microsoft::WRL::ComPtr<T>& ptr) { return ptr.Get(); }
+};
+#endif
 
 // CallbackCancellationTraits allows customization of Callback's cancellation
 // semantics. By default, callbacks are not cancellable. A specialization should
@@ -935,6 +995,13 @@ struct CallbackCancellationTraits<
                           const Args&...) {
     return !receiver;
   }
+
+  template <typename Receiver, typename... Args>
+  static bool MaybeValid(const Functor&,
+                         const Receiver& receiver,
+                         const Args&...) {
+    return receiver.MaybeValid();
+  }
 };
 
 // Specialization for a nested bind.
@@ -947,6 +1014,11 @@ struct CallbackCancellationTraits<OnceCallback<Signature>,
   static bool IsCancelled(const Functor& functor, const BoundArgs&...) {
     return functor.IsCancelled();
   }
+
+  template <typename Functor>
+  static bool MaybeValid(const Functor& functor, const BoundArgs&...) {
+    return functor.MaybeValid();
+  }
 };
 
 template <typename Signature, typename... BoundArgs>
@@ -957,6 +1029,11 @@ struct CallbackCancellationTraits<RepeatingCallback<Signature>,
   template <typename Functor>
   static bool IsCancelled(const Functor& functor, const BoundArgs&...) {
     return functor.IsCancelled();
+  }
+
+  template <typename Functor>
+  static bool MaybeValid(const Functor& functor, const BoundArgs&...) {
+    return functor.MaybeValid();
   }
 };
 

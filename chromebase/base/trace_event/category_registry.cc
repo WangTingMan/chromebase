@@ -99,7 +99,7 @@ bool CategoryRegistry::GetOrCreateCategoryLocked(
   // TODO(primiano): this strdup should be removed. The only documented reason
   // for it was TraceWatchEvent, which is gone. However, something might have
   // ended up relying on this. Needs some auditing before removal.
-  const char* category_name_copy = _strdup(category_name);
+  const char* category_name_copy = strdup(category_name);
   ANNOTATE_LEAKING_OBJECT_PTR(category_name_copy);
 
   *category = &categories_[category_index];

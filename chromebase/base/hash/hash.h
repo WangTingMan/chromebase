@@ -52,7 +52,6 @@ BASE_EXPORT uint32_t PersistentHash(const std::string& str);
 BASE_EXPORT size_t HashInts32(uint32_t value1, uint32_t value2);
 BASE_EXPORT size_t HashInts64(uint64_t value1, uint64_t value2);
 
-#ifndef BASE_HASH_H_
 template <typename T1, typename T2>
 inline size_t HashInts(T1 value1, T2 value2) {
   // This condition is expected to be compile-time evaluated and optimised away
@@ -63,7 +62,6 @@ inline size_t HashInts(T1 value1, T2 value2) {
   return HashInts32(static_cast<uint32_t>(value1),
                     static_cast<uint32_t>(value2));
 }
-#endif
 
 // A templated hasher for pairs of integer types. Example:
 //
@@ -72,14 +70,12 @@ inline size_t HashInts(T1 value1, T2 value2) {
 template <typename T>
 struct IntPairHash;
 
-#ifndef BASE_HASH_H_
 template <typename Type1, typename Type2>
 struct IntPairHash<std::pair<Type1, Type2>> {
   size_t operator()(std::pair<Type1, Type2> value) const {
     return HashInts(value.first, value.second);
   }
 };
-#endif
 
 }  // namespace base
 
