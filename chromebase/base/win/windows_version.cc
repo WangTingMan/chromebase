@@ -5,6 +5,7 @@
 #include "base/win/windows_version.h"
 
 #include <windows.h>
+#include <VersionHelpers.h>
 
 #include <memory>
 #include <tuple>
@@ -72,9 +73,33 @@ OSInfo** OSInfo::GetInstanceStorage() {
   // and it's convenient for other modules to use this class without it.
   static OSInfo* info = []() {
     _OSVERSIONINFOEXW version_info = {sizeof(version_info)};
-    //::GetVersionEx(reinterpret_cast<_OSVERSIONINFOW*>(&version_info));
-    // Need to modify this implementation.
-    std::abort();
+    do
+    {
+        if( IsWindows10OrGreater() )
+        {
+            version_info.dwMajorVersion = 10;
+            version_info.dwMinorVersion = 0;
+            break;
+        }
+
+        if( IsWindows8Point1OrGreater() )
+        {
+            version_info.dwMajorVersion = 6;
+            version_info.dwMinorVersion = 3;
+            break;
+        }
+
+        if( IsWindows7OrGreater() )
+        {
+            version_info.dwMajorVersion = 6;
+            version_info.dwMinorVersion = 1;
+            break;
+        }
+
+        //Default we think the OS version is XP...What ever..
+        version_info.dwMajorVersion = 5;
+        version_info.dwMinorVersion = 1;
+    } while (0);
 
     DWORD os_type = 0;
     ::GetProductInfo(version_info.dwMajorVersion, version_info.dwMinorVersion,
