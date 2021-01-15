@@ -1,5 +1,5 @@
-# Welcome to usb chrome base with visual studio
-Tag: libchrome linbase chromebase
+# Welcome to use chrome base with visual studio
+## Tag: libchrome linbase chromebase
 This repo is to build the base folder which located in chromium with visual studio on windows.
 You can find some usable components from this project, and you can use these component in your
 project( but you must comply with the rule from google.
