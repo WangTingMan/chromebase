@@ -967,6 +967,7 @@
     <ClInclude Include="..\chromebase\base\win\win_util.h" />
     <ClInclude Include="..\chromebase\base\win\wmi.h" />
     <ClInclude Include="..\chromebase\base\win\wrapped_window_proc.h" />
+    <ClInclude Include="..\chromebase\testing\gmock\include\gmock\gmock.h" />
     <ClInclude Include="..\chromebase\testing\multiprocess_func_list.h" />
     <ClInclude Include="..\chromebase\testing\platform_test.h" />
   </ItemGroup>
@@ -1033,7 +1034,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)chromebase;$(SolutionDir)chromebase\testing\gtest\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)..\chromebase;$(ProjectDir)..\chromebase\testing\gtest\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -1077,7 +1078,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;GTEST_DISABLED;WINDOWS32;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -1097,7 +1098,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;GTEST_DISABLED;WINDOWS32;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

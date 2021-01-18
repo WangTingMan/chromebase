@@ -16,6 +16,9 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
+// We do not use gtest right now. So we disable GTEST.
+#define GTEST_DISABLED
+
 // A brief primer on #defines:
 //
 // - __ANDROID__ is automatically defined by the Android toolchain (see

@@ -2987,6 +2987,9 @@
     <ClInclude Include="..\chromebase\base\task\thread_pool\worker_thread_stack.h">
       <Filter>base\task\thread_pool</Filter>
     </ClInclude>
+    <ClInclude Include="..\chromebase\testing\gmock\include\gmock\gmock.h">
+      <Filter>testing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\chromebase\base\win\windows_undefines.inc">
