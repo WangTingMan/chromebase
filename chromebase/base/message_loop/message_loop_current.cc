@@ -57,6 +57,11 @@ void MessageLoopCurrent::SetTaskRunner(
   current_->SetTaskRunner(std::move(task_runner));
 }
 
+const scoped_refptr<SingleThreadTaskRunner>& MessageLoopCurrent::task_runner() const
+{
+    return current_->GetTaskRunner();
+}
+
 bool MessageLoopCurrent::IsBoundToCurrentThread() const {
   return current_ == GetCurrentSequenceManagerImpl();
 }

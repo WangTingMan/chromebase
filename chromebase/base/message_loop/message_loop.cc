@@ -98,6 +98,11 @@ bool MessageLoop::IsIdleForTesting() {
   return sequence_manager_->IsIdleForTesting();
 }
 
+MessageLoopCurrent MessageLoop::current()
+{
+    return MessageLoopCurrent::Get();
+}
+
 //------------------------------------------------------------------------------
 
 // static

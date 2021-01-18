@@ -137,6 +137,9 @@ class BASE_EXPORT MessageLoop {
   // TODO(alexclarke): Make this const when MessageLoopImpl goes away.
   bool IsIdleForTesting();
 
+  // TODO(gab): Mass migrate callers to MessageLoopCurrent::Get().
+  static MessageLoopCurrent current();
+
   //----------------------------------------------------------------------------
  protected:
   // Returns true if this is the active MessageLoop for the current thread.

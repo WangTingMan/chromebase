@@ -110,6 +110,8 @@ class BASE_EXPORT MessageLoopCurrent {
   // instance should replace its TaskRunner.
   void SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner);
 
+  const scoped_refptr<SingleThreadTaskRunner>& task_runner() const;
+
   // This alias is deprecated. Use base::TaskObserver instead.
   // TODO(yutak): Replace all the use sites with base::TaskObserver.
   using TaskObserver = base::TaskObserver;
