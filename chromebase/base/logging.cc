@@ -463,7 +463,10 @@ bool BaseInitLoggingImpl(const LoggingSettings& settings) {
 
   if (!g_log_file_name)
     g_log_file_name = new PathString();
-  *g_log_file_name = settings.log_file;
+  if( settings.lock_log )
+  {
+      g_log_file_name->assign( settings.log_file );
+  }
   if (settings.delete_old == DELETE_OLD_LOG_FILE)
     DeleteFilePath(*g_log_file_name);
 

@@ -364,6 +364,7 @@ typedef int LogSeverity;
 const LogSeverity LOG_VERBOSE = -1;  // This is level 1 verbosity
 // Note: the log severities are used to index into the array of names,
 // see log_severity_names.
+const LogSeverity LOG_DEBUG = -2;
 const LogSeverity LOG_INFO = 0;
 const LogSeverity LOG_WARNING = 1;
 const LogSeverity LOG_ERROR = 2;
