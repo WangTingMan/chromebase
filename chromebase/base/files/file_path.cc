@@ -14,6 +14,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base\strings\old_utf_string_conversions.h"
 #include "build/build_config.h"
 
 #if defined(OS_MACOSX)
@@ -180,6 +181,18 @@ FilePath::FilePath(StringPieceType path) {
   if (nul_pos != StringType::npos)
     path_.erase(nul_pos, StringType::npos);
 }
+
+#if defined(OS_WIN)
+FilePath::FilePath( std::string const& a_str )
+{
+    std::wstring wstr = base::SysMultiByteToWide( a_str, 0 );
+    StringPieceType path( wstr.c_str() );
+    path.CopyToString( &path_ );
+    StringType::size_type nul_pos = path_.find( kStringTerminator );
+    if( nul_pos != StringType::npos )
+        path_.erase( nul_pos, StringType::npos );
+}
+#endif
 
 FilePath::~FilePath() = default;
 
