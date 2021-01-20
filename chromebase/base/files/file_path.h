@@ -180,6 +180,12 @@ class BASE_EXPORT FilePath {
   ~FilePath();
   FilePath& operator=(const FilePath& that);
 
+#if defined(OS_WIN)
+
+  FilePath( std::string path );
+
+#endif
+
   // Constructs FilePath with the contents of |that|, which is left in valid but
   // unspecified state.
   FilePath(FilePath&& that) noexcept;
