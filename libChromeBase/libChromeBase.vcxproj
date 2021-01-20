@@ -537,7 +537,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{154BF911-734F-4A12-8870-7E18C6E6A3BE}</ProjectGuid>
+    <ProjectGuid>{B84475AD-B078-4556-9E18-006E1AB99D3F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libchrome</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
