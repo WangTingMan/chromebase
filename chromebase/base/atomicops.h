@@ -39,6 +39,15 @@
 #include "base/base_export.h"
 #include "build/build_config.h"
 
+#if defined(OS_WIN) && defined(ARCH_CPU_64_BITS)
+// windows.h #defines this (only on x64). This causes problems because the
+// public API also uses MemoryBarrier at the public name for this fence. So, on
+// X64, undef it, and call its documented
+// (http://msdn.microsoft.com/en-us/library/windows/desktop/ms684208.aspx)
+// implementation directly.
+#undef MemoryBarrier
+#endif
+
 namespace base {
 namespace subtle {
 
@@ -91,7 +100,8 @@ Atomic32 Barrier_AtomicIncrement(volatile Atomic32* ptr,
 // ensure that no later memory access can be reordered ahead of the operation.
 // "Release" operations ensure that no previous memory access can be reordered
 // after the operation.  "Barrier" operations have both "Acquire" and "Release"
-// semantics.
+// semantics.   A MemoryBarrier() has "Barrier" semantics, but does no memory
+// access.
 Atomic32 Acquire_CompareAndSwap(volatile Atomic32* ptr,
                                 Atomic32 old_value,
                                 Atomic32 new_value);
@@ -99,6 +109,7 @@ Atomic32 Release_CompareAndSwap(volatile Atomic32* ptr,
                                 Atomic32 old_value,
                                 Atomic32 new_value);
 
+void MemoryBarrier();
 void NoBarrier_Store(volatile Atomic32* ptr, Atomic32 value);
 void Acquire_Store(volatile Atomic32* ptr, Atomic32 value);
 void Release_Store(volatile Atomic32* ptr, Atomic32 value);
@@ -133,7 +144,7 @@ Atomic64 Release_Load(volatile const Atomic64* ptr);
 }  // namespace subtle
 }  // namespace base
 
-#if defined(OS_WIN) && defined(ARCH_CPU_X86_FAMILY)
+#if defined(OS_WIN)
 // TODO(jfb): Try to use base/atomicops_internals_portable.h everywhere.
 // https://crbug.com/559247.
 #  include "base/atomicops_internals_x86_msvc.h"

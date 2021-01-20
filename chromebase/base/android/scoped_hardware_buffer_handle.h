@@ -30,9 +30,6 @@ class BASE_EXPORT ScopedHardwareBufferHandle {
   // acquire a new reference.
   static ScopedHardwareBufferHandle Adopt(AHardwareBuffer* buffer);
 
-  // Adds a reference to |buffer| managed by this handle.
-  static ScopedHardwareBufferHandle Create(AHardwareBuffer* buffer);
-
   // Takes ownership of |other|'s buffer reference. Does NOT acquire a new one.
   ScopedHardwareBufferHandle& operator=(ScopedHardwareBufferHandle&& other);
 

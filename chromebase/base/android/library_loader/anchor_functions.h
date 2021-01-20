@@ -22,9 +22,6 @@ BASE_EXPORT extern const size_t kEndOfText;
 BASE_EXPORT extern const size_t kStartOfOrderedText;
 BASE_EXPORT extern const size_t kEndOfOrderedText;
 
-// Returns true if anchors are sane.
-BASE_EXPORT bool AreAnchorsSane();
-
 // Returns true if the ordering looks sane.
 BASE_EXPORT bool IsOrderingSane();
 

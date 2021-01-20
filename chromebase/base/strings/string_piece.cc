@@ -11,7 +11,6 @@
 #include <ostream>
 
 #include "base/logging.h"
-#include "base/strings/utf_string_conversions.h"
 
 namespace base {
 namespace {
@@ -41,13 +40,17 @@ template class BasicStringPiece<std::string>;
 template class BasicStringPiece<string16>;
 #endif
 
+bool operator==(const StringPiece& x, const StringPiece& y) {
+  if (x.size() != y.size())
+    return false;
+
+  return CharTraits<StringPiece::value_type>::compare(x.data(), y.data(),
+                                                      x.size()) == 0;
+}
+
 std::ostream& operator<<(std::ostream& o, const StringPiece& piece) {
   o.write(piece.data(), static_cast<std::streamsize>(piece.size()));
   return o;
-}
-
-std::ostream& operator<<(std::ostream& o, const StringPiece16& piece) {
-  return o << UTF16ToUTF8(piece);
 }
 
 namespace internal {
@@ -259,8 +262,8 @@ BASE_EXPORT size_t find_first_not_of(const StringPiece16& self,
 
   for (size_t self_i = pos; self_i < self.size(); ++self_i) {
     bool found = false;
-    for (auto c : s) {
-      if (self[self_i] == c) {
+    for (size_t s_i = 0; s_i < s.size(); ++s_i) {
+      if (self[self_i] == s[s_i]) {
         found = true;
         break;
       }
@@ -327,8 +330,8 @@ size_t find_last_of(const StringPiece16& self,
 
   for (size_t self_i = std::min(pos, self.size() - 1); ;
        --self_i) {
-    for (auto c : s) {
-      if (self.data()[self_i] == c)
+    for (size_t s_i = 0; s_i < s.size(); s_i++) {
+      if (self.data()[self_i] == s[s_i])
         return self_i;
     }
     if (self_i == 0)
@@ -372,8 +375,8 @@ size_t find_last_not_of(const StringPiece16& self,
 
   for (size_t self_i = std::min(pos, self.size() - 1); ; --self_i) {
     bool found = false;
-    for (auto c : s) {
-      if (self.data()[self_i] == c) {
+    for (size_t s_i = 0; s_i < s.size(); s_i++) {
+      if (self.data()[self_i] == s[s_i]) {
         found = true;
         break;
       }

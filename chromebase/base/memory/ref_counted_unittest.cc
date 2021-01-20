@@ -8,11 +8,8 @@
 #include <utility>
 
 #include "base/test/gtest_util.h"
-#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-namespace base {
-namespace subtle {
 namespace {
 
 class SelfAssign : public base::RefCounted<SelfAssign> {
@@ -176,16 +173,7 @@ class CheckRefptrNull : public base::RefCounted<CheckRefptrNull> {
   scoped_refptr<CheckRefptrNull>* ptr_ = nullptr;
 };
 
-class Overflow : public base::RefCounted<Overflow> {
- public:
-  Overflow() = default;
-
- private:
-  friend class base::RefCounted<Overflow>;
-  ~Overflow() = default;
-};
-
-}  // namespace
+}  // end namespace
 
 TEST(RefCountedUnitTest, TestSelfAssignment) {
   SelfAssign* p = new SelfAssign;
@@ -681,16 +669,3 @@ TEST(RefCountedDeathTest, TestAdoptRef) {
       base::MakeRefCounted<InitialRefCountIsOne>();
   EXPECT_DCHECK_DEATH(base::AdoptRef(obj.get()));
 }
-
-#if defined(ARCH_CPU_64_BITS)
-TEST(RefCountedDeathTest, TestOverflowCheck) {
-  EXPECT_DCHECK_DEATH({
-    auto p = base::MakeRefCounted<Overflow>();
-    p->ref_count_ = std::numeric_limits<uint32_t>::max();
-    p->AddRef();
-  });
-}
-#endif
-
-}  // namespace subtle
-}  // namespace base

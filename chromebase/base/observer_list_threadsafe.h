@@ -6,7 +6,6 @@
 #define BASE_OBSERVER_LIST_THREADSAFE_H_
 
 #include <unordered_map>
-#include <utility>
 
 #include "base/base_export.h"
 #include "base/bind.h"
@@ -22,6 +21,12 @@
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_local.h"
 #include "build/build_config.h"
+
+// TODO(fdoray): Removing these includes causes IWYU failures in other headers,
+// remove them in a follow- up CL.
+#include "base/memory/ptr_util.h"
+#include "base/single_thread_task_runner.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -107,7 +112,7 @@ class ObserverListThreadSafe : public internal::ObserverListThreadSafeBase {
     AutoLock auto_lock(lock_);
 
     // Add |observer| to the list of observers.
-    DCHECK(!Contains(observers_, observer));
+    DCHECK(!ContainsKey(observers_, observer));
     const scoped_refptr<SequencedTaskRunner> task_runner =
         SequencedTaskRunnerHandle::Get();
     observers_[observer] = task_runner;
@@ -155,9 +160,9 @@ class ObserverListThreadSafe : public internal::ObserverListThreadSafeBase {
   // delivery.
   template <typename Method, typename... Params>
   void Notify(const Location& from_here, Method m, Params&&... params) {
-    RepeatingCallback<void(ObserverType*)> method =
-        BindRepeating(&Dispatcher<ObserverType, Method>::Run, m,
-                      std::forward<Params>(params)...);
+    Callback<void(ObserverType*)> method =
+        Bind(&Dispatcher<ObserverType, Method>::Run, m,
+             std::forward<Params>(params)...);
 
     AutoLock lock(lock_);
     for (const auto& observer : observers_) {
@@ -174,11 +179,11 @@ class ObserverListThreadSafe : public internal::ObserverListThreadSafeBase {
   struct NotificationData : public NotificationDataBase {
     NotificationData(ObserverListThreadSafe* observer_list_in,
                      const Location& from_here_in,
-                     const RepeatingCallback<void(ObserverType*)>& method_in)
+                     const Callback<void(ObserverType*)>& method_in)
         : NotificationDataBase(observer_list_in, from_here_in),
           method(method_in) {}
 
-    RepeatingCallback<void(ObserverType*)> method;
+    Callback<void(ObserverType*)> method;
   };
 
   ~ObserverListThreadSafe() override = default;

@@ -10,8 +10,6 @@
 
 namespace base {
 
-constexpr int kInvalidFd = -1;
-
 // -----------------------------------------------------------------------------
 // We introduct a special structure for file descriptors in order that we are
 // able to use template specialisation to special-case their handling.
@@ -28,7 +26,7 @@ constexpr int kInvalidFd = -1;
 // ipc/ipc_message_utils.h for all the details.
 // -----------------------------------------------------------------------------
 struct FileDescriptor {
-  FileDescriptor() : fd(kInvalidFd), auto_close(false) {}
+  FileDescriptor() : fd(-1), auto_close(false) {}
 
   FileDescriptor(int ifd, bool iauto_close) : fd(ifd), auto_close(iauto_close) {
   }

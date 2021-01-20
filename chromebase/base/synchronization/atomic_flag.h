@@ -5,10 +5,7 @@
 #ifndef BASE_SYNCHRONIZATION_ATOMIC_FLAG_H_
 #define BASE_SYNCHRONIZATION_ATOMIC_FLAG_H_
 
-#include <stdint.h>
-
-#include <atomic>
-
+#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/sequence_checker.h"
@@ -21,7 +18,7 @@ namespace base {
 class BASE_EXPORT AtomicFlag {
  public:
   AtomicFlag();
-  ~AtomicFlag();
+  ~AtomicFlag() = default;
 
   // Set the flag. Must always be called from the same sequence.
   void Set();
@@ -29,18 +26,15 @@ class BASE_EXPORT AtomicFlag {
   // Returns true iff the flag was set. If this returns true, the current thread
   // is guaranteed to be synchronized with all memory operations on the sequence
   // which invoked Set() up until at least the first call to Set() on it.
-  bool IsSet() const {
-    // Inline here: this has a measurable performance impact on base::WeakPtr.
-    return flag_.load(std::memory_order_acquire) != 0;
-  }
+  bool IsSet() const;
 
   // Resets the flag. Be careful when using this: callers might not expect
   // IsSet() to return false after returning true once.
   void UnsafeResetForTesting();
 
  private:
-  std::atomic<uint_fast8_t> flag_{0};
-  SEQUENCE_CHECKER(set_sequence_checker_);
+  base::subtle::Atomic32 flag_ = 0;
+  SequenceChecker set_sequence_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(AtomicFlag);
 };

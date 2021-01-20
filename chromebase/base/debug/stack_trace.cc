@@ -10,7 +10,7 @@
 #include <sstream>
 
 #include "base/logging.h"
-#include "base/stl_util.h"
+#include "base/macros.h"
 
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
@@ -47,15 +47,11 @@ constexpr size_t kStackFrameAdjustment = 0;
 #endif
 
 uintptr_t GetNextStackFrame(uintptr_t fp) {
-  const uintptr_t* fp_addr = reinterpret_cast<const uintptr_t*>(fp);
-  MSAN_UNPOISON(fp_addr, sizeof(uintptr_t));
-  return fp_addr[0] - kStackFrameAdjustment;
+  return reinterpret_cast<const uintptr_t*>(fp)[0] - kStackFrameAdjustment;
 }
 
 uintptr_t GetStackFramePC(uintptr_t fp) {
-  const uintptr_t* fp_addr = reinterpret_cast<const uintptr_t*>(fp);
-  MSAN_UNPOISON(&fp_addr[1], sizeof(uintptr_t));
-  return fp_addr[1];
+  return reinterpret_cast<const uintptr_t*>(fp)[1];
 }
 
 bool IsStackFrameValid(uintptr_t fp, uintptr_t prev_fp, uintptr_t stack_end) {
@@ -78,7 +74,7 @@ bool IsStackFrameValid(uintptr_t fp, uintptr_t prev_fp, uintptr_t stack_end) {
   }
 
   return true;
-}
+};
 
 // ScanStackForNextFrame() scans the stack for a valid frame to allow unwinding
 // past system libraries. Only supported on Linux where system libraries are
@@ -200,14 +196,10 @@ uintptr_t GetStackEnd() {
 }
 #endif  // BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
 
-StackTrace::StackTrace() : StackTrace(base::size(trace_)) {}
-
-StackTrace::StackTrace(size_t count) {
-  count_ = CollectStackTrace(trace_, std::min(count, base::size(trace_)));
-}
+StackTrace::StackTrace() : StackTrace(arraysize(trace_)) {}
 
 StackTrace::StackTrace(const void* const* trace, size_t count) {
-  count = std::min(count, base::size(trace_));
+  count = std::min(count, arraysize(trace_));
   if (count)
     memcpy(trace_, trace, count * sizeof(trace_[0]));
   count_ = count;
@@ -220,32 +212,12 @@ const void *const *StackTrace::Addresses(size_t* count) const {
   return nullptr;
 }
 
-void StackTrace::Print() const {
-  PrintWithPrefix(nullptr);
-}
-
-void StackTrace::OutputToStream(std::ostream* os) const {
-  OutputToStreamWithPrefix(os, nullptr);
-}
-
 std::string StackTrace::ToString() const {
-  return ToStringWithPrefix(nullptr);
-}
-std::string StackTrace::ToStringWithPrefix(const char* prefix_string) const {
   std::stringstream stream;
 #if !defined(__UCLIBC__) && !defined(_AIX)
-  OutputToStreamWithPrefix(&stream, prefix_string);
+  OutputToStream(&stream);
 #endif
   return stream.str();
-}
-
-std::ostream& operator<<(std::ostream& os, const StackTrace& s) {
-#if !defined(__UCLIBC__) & !defined(_AIX)
-  s.OutputToStream(&os);
-#else
-  os << "StackTrace::OutputToStream not implemented.";
-#endif
-  return os;
 }
 
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)

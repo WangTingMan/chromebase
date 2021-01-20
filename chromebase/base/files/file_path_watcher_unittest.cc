@@ -21,12 +21,12 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/location.h"
 #include "base/macros.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/scoped_task_environment.h"
 #include "base/test/test_file_util.h"
 #include "base/test/test_timeouts.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -47,12 +47,12 @@ namespace {
 
 class TestDelegate;
 
-// Aggregates notifications from the test delegates and breaks the run loop
+// Aggregates notifications from the test delegates and breaks the message loop
 // the test thread is waiting on once they all came in.
 class NotificationCollector
     : public base::RefCountedThreadSafe<NotificationCollector> {
  public:
-  NotificationCollector() : task_runner_(ThreadTaskRunnerHandle::Get()) {}
+  NotificationCollector() : task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
 
   // Called from the file thread by the delegates.
   void OnChange(TestDelegate* delegate) {
@@ -143,8 +143,7 @@ class FilePathWatcherTest : public testing::Test {
  public:
   FilePathWatcherTest()
 #if defined(OS_POSIX)
-      : scoped_task_environment_(
-            test::ScopedTaskEnvironment::MainThreadType::IO)
+      : file_descriptor_watcher_(&loop_)
 #endif
   {
   }
@@ -205,7 +204,10 @@ class FilePathWatcherTest : public testing::Test {
 
   NotificationCollector* collector() { return collector_.get(); }
 
-  test::ScopedTaskEnvironment scoped_task_environment_;
+  MessageLoopForIO loop_;
+#if defined(OS_POSIX)
+  FileDescriptorWatcher file_descriptor_watcher_;
+#endif
 
   ScopedTempDir temp_dir_;
   scoped_refptr<NotificationCollector> collector_;
@@ -218,9 +220,9 @@ bool FilePathWatcherTest::SetupWatch(const FilePath& target,
                                      FilePathWatcher* watcher,
                                      TestDelegateBase* delegate,
                                      bool recursive_watch) {
-  return watcher->Watch(target, recursive_watch,
-                        base::BindRepeating(&TestDelegateBase::OnFileChanged,
-                                            delegate->AsWeakPtr()));
+  return watcher->Watch(
+      target, recursive_watch,
+      base::Bind(&TestDelegateBase::OnFileChanged, delegate->AsWeakPtr()));
 }
 
 // Basic test: Create the file and verify that we notice.

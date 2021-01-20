@@ -7,8 +7,6 @@
 
 namespace base {
 
-PendingTask::PendingTask() = default;
-
 PendingTask::PendingTask(const Location& posted_from,
                          OnceClosure task,
                          TimeTicks delayed_run_time,

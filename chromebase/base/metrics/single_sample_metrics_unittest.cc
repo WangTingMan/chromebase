@@ -4,6 +4,7 @@
 
 #include "base/metrics/single_sample_metrics.h"
 
+#include "base/memory/ptr_util.h"
 #include "base/metrics/dummy_histogram.h"
 #include "base/test/gtest_util.h"
 #include "base/test/metrics/histogram_tester.h"
@@ -41,14 +42,14 @@ TEST_F(SingleSampleMetricsTest, DefaultFactoryGetSet) {
   EXPECT_EQ(factory, SingleSampleMetricsFactory::Get());
 
   // Setting a factory after the default has been instantiated should fail.
-  EXPECT_DCHECK_DEATH(SingleSampleMetricsFactory::SetFactory(nullptr));
+  EXPECT_DCHECK_DEATH(SingleSampleMetricsFactory::SetFactory(
+      WrapUnique<SingleSampleMetricsFactory>(nullptr)));
 }
 
 TEST_F(SingleSampleMetricsTest, CustomFactoryGetSet) {
-  auto factory = std::make_unique<DefaultSingleSampleMetricsFactory>();
-  SingleSampleMetricsFactory* factory_raw = factory.get();
-  SingleSampleMetricsFactory::SetFactory(std::move(factory));
-  EXPECT_EQ(factory_raw, SingleSampleMetricsFactory::Get());
+  SingleSampleMetricsFactory* factory = new DefaultSingleSampleMetricsFactory();
+  SingleSampleMetricsFactory::SetFactory(WrapUnique(factory));
+  EXPECT_EQ(factory, SingleSampleMetricsFactory::Get());
 }
 
 TEST_F(SingleSampleMetricsTest, DefaultSingleSampleMetricNoValue) {

@@ -237,13 +237,14 @@ void StatisticsRecorder::InitLogOnShutdown() {
 }
 
 // static
-bool StatisticsRecorder::SetCallback(const std::string& name,
-                                     StatisticsRecorder::OnSampleCallback cb) {
+bool StatisticsRecorder::SetCallback(
+    const std::string& name,
+    const StatisticsRecorder::OnSampleCallback& cb) {
   DCHECK(!cb.is_null());
   const AutoLock auto_lock(lock_.Get());
   EnsureGlobalRecorderWhileLocked();
 
-  if (!top_->callbacks_.insert({name, std::move(cb)}).second)
+  if (!top_->callbacks_.insert({name, cb}).second)
     return false;
 
   const HistogramMap::const_iterator it = top_->histograms_.find(name);

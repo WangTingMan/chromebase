@@ -6,12 +6,12 @@
 #define BASE_TASK_SEQUENCE_MANAGER_WORK_QUEUE_H_
 
 #include "base/base_export.h"
-#include "base/task/common/intrusive_heap.h"
 #include "base/task/sequence_manager/enqueue_order.h"
+#include "base/task/sequence_manager/intrusive_heap.h"
 #include "base/task/sequence_manager/sequenced_task_source.h"
 #include "base/task/sequence_manager/task_queue_impl.h"
 #include "base/trace_event/trace_event.h"
-#include "base/trace_event/traced_value.h"
+#include "base/trace_event/trace_event_argument.h"
 
 namespace base {
 namespace sequence_manager {
@@ -55,55 +55,32 @@ class BASE_EXPORT WorkQueue {
 
   // Returns the first task in this queue or null if the queue is empty. This
   // method ignores any fences.
-  const Task* GetFrontTask() const;
+  const TaskQueueImpl::Task* GetFrontTask() const;
 
   // Returns the last task in this queue or null if the queue is empty. This
   // method ignores any fences.
-  const Task* GetBackTask() const;
+  const TaskQueueImpl::Task* GetBackTask() const;
 
   // Pushes the task onto the |tasks_| and if a fence hasn't been reached
   // it informs the WorkQueueSets if the head changed.
-  void Push(Task task);
-
-  // RAII helper that helps efficiently push N Tasks to a WorkQueue.
-  class BASE_EXPORT TaskPusher {
-   public:
-    TaskPusher(const TaskPusher&) = delete;
-    TaskPusher(TaskPusher&& other);
-    ~TaskPusher();
-
-    void Push(Task* task);
-
-   private:
-    friend class WorkQueue;
-
-    explicit TaskPusher(WorkQueue* work_queue);
-
-    WorkQueue* work_queue_;
-    const bool was_empty_;
-  };
-
-  // Returns an RAII helper to efficiently push multiple tasks.
-  TaskPusher CreateTaskPusher();
+  void Push(TaskQueueImpl::Task task);
 
   // Pushes the task onto the front of the |tasks_| and if it's before any
   // fence it informs the WorkQueueSets the head changed. Use with caution this
   // API can easily lead to task starvation if misused.
-  void PushNonNestableTaskToFront(Task task);
+  void PushNonNestableTaskToFront(TaskQueueImpl::Task task);
 
   // Reloads the empty |tasks_| with
   // |task_queue_->TakeImmediateIncomingQueue| and if a fence hasn't been
   // reached it informs the WorkQueueSets if the head changed.
-  void TakeImmediateIncomingQueueTasks();
+  void ReloadEmptyImmediateQueue();
 
   size_t Size() const { return tasks_.size(); }
-
-  size_t Capacity() const { return tasks_.capacity(); }
 
   // Pulls a task off the |tasks_| and informs the WorkQueueSets.  If the
   // task removed had an enqueue order >= the current fence then WorkQueue
   // pretends to be empty as far as the WorkQueueSets is concerned.
-  Task TakeTaskFromWorkQueue();
+  TaskQueueImpl::Task TakeTaskFromWorkQueue();
 
   // Removes all canceled tasks from the head of the list. Returns true if any
   // tasks were removed.
@@ -117,11 +94,9 @@ class BASE_EXPORT WorkQueue {
 
   size_t work_queue_set_index() const { return work_queue_set_index_; }
 
-  base::internal::HeapHandle heap_handle() const { return heap_handle_; }
+  HeapHandle heap_handle() const { return heap_handle_; }
 
-  void set_heap_handle(base::internal::HeapHandle handle) {
-    heap_handle_ = handle;
-  }
+  void set_heap_handle(HeapHandle handle) { heap_handle_ = handle; }
 
   QueueType queue_type() const { return queue_type_; }
 
@@ -152,12 +127,6 @@ class BASE_EXPORT WorkQueue {
   // Otherwise returns false.
   bool BlockedByFence() const;
 
-  // Shrinks |tasks_| if it's wasting memory.
-  void MaybeShrinkQueue();
-
-  // Delete all tasks within this WorkQueue.
-  void DeletePendingTasks();
-
   // Test support function. This should not be used in production code.
   void PopTaskForTesting();
 
@@ -168,11 +137,7 @@ class BASE_EXPORT WorkQueue {
   WorkQueueSets* work_queue_sets_ = nullptr;  // NOT OWNED.
   TaskQueueImpl* const task_queue_;           // NOT OWNED.
   size_t work_queue_set_index_ = 0;
-
-  // Iff the queue isn't empty (or appearing to be empty due to a fence) then
-  // |heap_handle_| will be valid and correspond to this queue's location within
-  // an IntrusiveHeap inside the WorkQueueSet.
-  base::internal::HeapHandle heap_handle_;
+  HeapHandle heap_handle_;
   const char* const name_;
   EnqueueOrder fence_;
   const QueueType queue_type_;

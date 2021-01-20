@@ -34,8 +34,7 @@ struct SimpleMessage {
     if (value == "foo") {
       *field = FOO;
       return true;
-    }
-    if (value == "bar") {
+    } else if (value == "bar") {
       *field = BAR;
       return true;
     }
@@ -48,11 +47,13 @@ struct SimpleMessage {
   }
 
   static bool GetValueString(const base::Value* value, std::string* result) {
-    const std::string* str = value->FindStringKey("val");
-    if (!str)
+    const base::DictionaryValue* dict = nullptr;
+    if (!value->GetAsDictionary(&dict))
       return false;
-    if (result)
-      *result = *str;
+
+    if (!dict->GetString("val", result))
+      return false;
+
     return true;
   }
 
@@ -104,11 +105,10 @@ TEST(JSONValueConverterTest, ParseSimpleMessage) {
       "  \"ints\": [1, 2]"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   SimpleMessage message;
   base::JSONValueConverter<SimpleMessage> converter;
-  EXPECT_TRUE(converter.Convert(*value, &message));
+  EXPECT_TRUE(converter.Convert(*value.get(), &message));
 
   EXPECT_EQ(1, message.foo);
   EXPECT_EQ("bar", message.bar);
@@ -147,11 +147,10 @@ TEST(JSONValueConverterTest, ParseNestedMessage) {
       "  }]\n"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   NestedMessage message;
   base::JSONValueConverter<NestedMessage> converter;
-  EXPECT_TRUE(converter.Convert(*value, &message));
+  EXPECT_TRUE(converter.Convert(*value.get(), &message));
 
   EXPECT_EQ(1.0, message.foo);
   EXPECT_EQ(1, message.child.foo);
@@ -185,16 +184,15 @@ TEST(JSONValueConverterTest, ParseFailures) {
   const char normal_data[] =
       "{\n"
       "  \"foo\": 1,\n"
-      "  \"bar\": 2,\n"  // "bar" is an integer here.
+      "  \"bar\": 2,\n" // "bar" is an integer here.
       "  \"baz\": true,\n"
       "  \"ints\": [1, 2]"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   SimpleMessage message;
   base::JSONValueConverter<SimpleMessage> converter;
-  EXPECT_FALSE(converter.Convert(*value, &message));
+  EXPECT_FALSE(converter.Convert(*value.get(), &message));
   // Do not check the values below.  |message| may be modified during
   // Convert() even it fails.
 }
@@ -207,12 +205,11 @@ TEST(JSONValueConverterTest, ParseWithMissingFields) {
       "  \"ints\": [1, 2]"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   SimpleMessage message;
   base::JSONValueConverter<SimpleMessage> converter;
   // Convert() still succeeds even if the input doesn't have "bar" field.
-  EXPECT_TRUE(converter.Convert(*value, &message));
+  EXPECT_TRUE(converter.Convert(*value.get(), &message));
 
   EXPECT_EQ(1, message.foo);
   EXPECT_TRUE(message.baz);
@@ -231,11 +228,10 @@ TEST(JSONValueConverterTest, EnumParserFails) {
       "  \"ints\": [1, 2]"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   SimpleMessage message;
   base::JSONValueConverter<SimpleMessage> converter;
-  EXPECT_FALSE(converter.Convert(*value, &message));
+  EXPECT_FALSE(converter.Convert(*value.get(), &message));
   // No check the values as mentioned above.
 }
 
@@ -249,11 +245,10 @@ TEST(JSONValueConverterTest, RepeatedValueErrorInTheMiddle) {
       "  \"ints\": [1, false]"
       "}\n";
 
-  Optional<Value> value = base::JSONReader::Read(normal_data);
-  ASSERT_TRUE(value);
+  std::unique_ptr<Value> value = base::JSONReader::Read(normal_data);
   SimpleMessage message;
   base::JSONValueConverter<SimpleMessage> converter;
-  EXPECT_FALSE(converter.Convert(*value, &message));
+  EXPECT_FALSE(converter.Convert(*value.get(), &message));
   // No check the values as mentioned above.
 }
 

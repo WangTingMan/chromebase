@@ -4,21 +4,17 @@
 
 #include "base/task/sequence_manager/time_domain.h"
 
-#include "base/task/sequence_manager/associated_thread_id.h"
 #include "base/task/sequence_manager/sequence_manager_impl.h"
 #include "base/task/sequence_manager/task_queue_impl.h"
 #include "base/task/sequence_manager/work_queue.h"
-#include "base/threading/thread_checker.h"
 
 namespace base {
 namespace sequence_manager {
 
-TimeDomain::TimeDomain()
-    : sequence_manager_(nullptr),
-      associated_thread_(MakeRefCounted<internal::AssociatedThreadId>()) {}
+TimeDomain::TimeDomain() : sequence_manager_(nullptr) {}
 
 TimeDomain::~TimeDomain() {
-  DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
+  DCHECK(main_thread_checker_.CalledOnValidThread());
 }
 
 void TimeDomain::OnRegisterWithSequenceManager(
@@ -26,7 +22,6 @@ void TimeDomain::OnRegisterWithSequenceManager(
   DCHECK(sequence_manager);
   DCHECK(!sequence_manager_);
   sequence_manager_ = sequence_manager;
-  associated_thread_ = sequence_manager_->associated_thread();
 }
 
 SequenceManager* TimeDomain::sequence_manager() const {
@@ -43,44 +38,37 @@ void TimeDomain::SetNextDelayedDoWork(LazyNow* lazy_now, TimeTicks run_time) {
 }
 
 void TimeDomain::RequestDoWork() {
-  sequence_manager_->ScheduleWork();
+  sequence_manager_->MaybeScheduleImmediateWork(FROM_HERE);
 }
 
 void TimeDomain::UnregisterQueue(internal::TaskQueueImpl* queue) {
-  DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
+  DCHECK(main_thread_checker_.CalledOnValidThread());
   DCHECK_EQ(queue->GetTimeDomain(), this);
   LazyNow lazy_now(CreateLazyNow());
-  SetNextWakeUpForQueue(queue, nullopt, internal::WakeUpResolution::kLow,
-                        &lazy_now);
+  SetNextWakeUpForQueue(queue, nullopt, &lazy_now);
 }
 
 void TimeDomain::SetNextWakeUpForQueue(
     internal::TaskQueueImpl* queue,
-    Optional<internal::DelayedWakeUp> wake_up,
-    internal::WakeUpResolution resolution,
+    Optional<internal::TaskQueueImpl::DelayedWakeUp> wake_up,
     LazyNow* lazy_now) {
-  DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
+  DCHECK(main_thread_checker_.CalledOnValidThread());
   DCHECK_EQ(queue->GetTimeDomain(), this);
   DCHECK(queue->IsQueueEnabled() || !wake_up);
 
   Optional<TimeTicks> previous_wake_up;
-  Optional<internal::WakeUpResolution> previous_queue_resolution;
   if (!delayed_wake_up_queue_.empty())
     previous_wake_up = delayed_wake_up_queue_.Min().wake_up.time;
-  if (queue->heap_handle().IsValid()) {
-    previous_queue_resolution =
-        delayed_wake_up_queue_.at(queue->heap_handle()).resolution;
-  }
 
   if (wake_up) {
     // Insert a new wake-up into the heap.
     if (queue->heap_handle().IsValid()) {
       // O(log n)
       delayed_wake_up_queue_.ChangeKey(queue->heap_handle(),
-                                       {wake_up.value(), resolution, queue});
+                                       {wake_up.value(), queue});
     } else {
       // O(log n)
-      delayed_wake_up_queue_.insert({wake_up.value(), resolution, queue});
+      delayed_wake_up_queue_.insert({wake_up.value(), queue});
     }
   } else {
     // Remove a wake-up from heap if present.
@@ -92,49 +80,37 @@ void TimeDomain::SetNextWakeUpForQueue(
   if (!delayed_wake_up_queue_.empty())
     new_wake_up = delayed_wake_up_queue_.Min().wake_up.time;
 
-  if (previous_queue_resolution &&
-      *previous_queue_resolution == internal::WakeUpResolution::kHigh) {
-    pending_high_res_wake_up_count_--;
-  }
-  if (wake_up && resolution == internal::WakeUpResolution::kHigh)
-    pending_high_res_wake_up_count_++;
-  DCHECK_GE(pending_high_res_wake_up_count_, 0);
-
   // TODO(kraynov): https://crbug.com/857101 Review the relationship with
   // SequenceManager's time. Right now it's not an issue since
   // VirtualTimeDomain doesn't invoke SequenceManager itself.
 
-  if (new_wake_up == previous_wake_up) {
-    // Nothing to be done
-    return;
-  }
-
-  if (!new_wake_up) {
-    // No new wake-up to be set, cancel the previous one.
-    new_wake_up = TimeTicks::Max();
-  }
-
-  if (*new_wake_up <= lazy_now->Now()) {
-    RequestDoWork();
+  if (new_wake_up) {
+    if (new_wake_up != previous_wake_up) {
+      // Update the wake-up.
+      SetNextDelayedDoWork(lazy_now, new_wake_up.value());
+    }
   } else {
-    SetNextDelayedDoWork(lazy_now, *new_wake_up);
+    if (previous_wake_up) {
+      // No new wake-up to be set, cancel the previous one.
+      SetNextDelayedDoWork(lazy_now, TimeTicks::Max());
+    }
   }
 }
 
-void TimeDomain::MoveReadyDelayedTasksToWorkQueues(LazyNow* lazy_now) {
-  DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
+void TimeDomain::WakeUpReadyDelayedQueues(LazyNow* lazy_now) {
+  DCHECK(main_thread_checker_.CalledOnValidThread());
   // Wake up any queues with pending delayed work.  Note std::multimap stores
   // the elements sorted by key, so the begin() iterator points to the earliest
   // queue to wake-up.
   while (!delayed_wake_up_queue_.empty() &&
          delayed_wake_up_queue_.Min().wake_up.time <= lazy_now->Now()) {
     internal::TaskQueueImpl* queue = delayed_wake_up_queue_.Min().queue;
-    queue->MoveReadyDelayedTasksToWorkQueue(lazy_now);
+    queue->WakeUpForDelayedWork(lazy_now);
   }
 }
 
 Optional<TimeTicks> TimeDomain::NextScheduledRunTime() const {
-  DCHECK_CALLED_ON_VALID_THREAD(associated_thread_->thread_checker);
+  DCHECK(main_thread_checker_.CalledOnValidThread());
   if (delayed_wake_up_queue_.empty())
     return nullopt;
   return delayed_wake_up_queue_.Min().wake_up.time;
@@ -154,14 +130,6 @@ void TimeDomain::AsValueInto(trace_event::TracedValue* state) const {
 
 void TimeDomain::AsValueIntoInternal(trace_event::TracedValue* state) const {
   // Can be overriden to trace some additional state.
-}
-
-bool TimeDomain::HasPendingHighResolutionTasks() const {
-  return pending_high_res_wake_up_count_;
-}
-
-bool TimeDomain::Empty() const {
-  return delayed_wake_up_queue_.empty();
 }
 
 }  // namespace sequence_manager

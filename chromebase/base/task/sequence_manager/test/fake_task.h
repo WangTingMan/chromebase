@@ -6,15 +6,13 @@
 #define BASE_TASK_SEQUENCE_MANAGER_TEST_FAKE_TASK_H_
 
 #include "base/task/sequence_manager/task_queue.h"
-#include "base/task/sequence_manager/tasks.h"
 
 namespace base {
 namespace sequence_manager {
 
-class FakeTask : public Task {
+class FakeTask : public TaskQueue::Task {
  public:
   FakeTask();
-  explicit FakeTask(TaskType task_type);
 };
 
 class FakeTaskTiming : public TaskQueue::TaskTiming {

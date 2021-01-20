@@ -23,21 +23,21 @@ namespace {
 // A thread that runs a callback.
 class RunCallbackThread : public SimpleThread {
  public:
-  explicit RunCallbackThread(OnceClosure callback)
-      : SimpleThread("RunCallbackThread"), callback_(std::move(callback)) {}
+  explicit RunCallbackThread(const Closure& callback)
+      : SimpleThread("RunCallbackThread"), callback_(callback) {}
 
  private:
   // SimpleThread:
-  void Run() override { std::move(callback_).Run(); }
+  void Run() override { callback_.Run(); }
 
-  OnceClosure callback_;
+  const Closure callback_;
 
   DISALLOW_COPY_AND_ASSIGN(RunCallbackThread);
 };
 
 // Runs a callback on a new thread synchronously.
-void RunCallbackOnNewThreadSynchronously(OnceClosure callback) {
-  RunCallbackThread run_callback_thread(std::move(callback));
+void RunCallbackOnNewThreadSynchronously(const Closure& callback) {
+  RunCallbackThread run_callback_thread(callback);
   run_callback_thread.Start();
   run_callback_thread.Join();
 }
@@ -125,7 +125,7 @@ TEST(ThreadCheckerTest,
 TEST(ThreadCheckerTest, DisallowedDifferentThreadsNoSequenceToken) {
   ThreadCheckerImpl thread_checker;
   RunCallbackOnNewThreadSynchronously(
-      BindOnce(&ExpectNotCalledOnValidThread, Unretained(&thread_checker)));
+      Bind(&ExpectNotCalledOnValidThread, Unretained(&thread_checker)));
 }
 
 TEST(ThreadCheckerTest, DisallowedDifferentThreadsSameSequence) {
@@ -138,7 +138,7 @@ TEST(ThreadCheckerTest, DisallowedDifferentThreadsSameSequence) {
   ThreadCheckerImpl thread_checker;
   EXPECT_TRUE(thread_checker.CalledOnValidThread());
 
-  RunCallbackOnNewThreadSynchronously(BindOnce(
+  RunCallbackOnNewThreadSynchronously(Bind(
       &ExpectNotCalledOnValidThreadWithSequenceTokenAndThreadTaskRunnerHandle,
       Unretained(&thread_checker), sequence_token));
 }
@@ -173,7 +173,7 @@ TEST(ThreadCheckerTest, DetachFromThread) {
   // Verify that CalledOnValidThread() returns true when called on a different
   // thread after a call to DetachFromThread().
   RunCallbackOnNewThreadSynchronously(
-      BindOnce(&ExpectCalledOnValidThread, Unretained(&thread_checker)));
+      Bind(&ExpectCalledOnValidThread, Unretained(&thread_checker)));
 
   EXPECT_FALSE(thread_checker.CalledOnValidThread());
 }
@@ -189,7 +189,7 @@ TEST(ThreadCheckerTest, DetachFromThreadWithSequenceToken) {
   // Verify that CalledOnValidThread() returns true when called on a different
   // thread after a call to DetachFromThread().
   RunCallbackOnNewThreadSynchronously(
-      BindOnce(&ExpectCalledOnValidThread, Unretained(&thread_checker)));
+      Bind(&ExpectCalledOnValidThread, Unretained(&thread_checker)));
 
   EXPECT_FALSE(thread_checker.CalledOnValidThread());
 }
@@ -232,14 +232,14 @@ class ThreadCheckerMacroTest : public testing::Test {
 TEST_F(ThreadCheckerMacroTest, Macros) {
   THREAD_CHECKER(my_thread_checker);
 
-  RunCallbackOnNewThreadSynchronously(BindOnce(
+  RunCallbackOnNewThreadSynchronously(Bind(
       &ThreadCheckerMacroTest::ExpectDeathOnOtherThread, Unretained(this)));
 
   DETACH_FROM_THREAD(my_thread_checker_);
 
   RunCallbackOnNewThreadSynchronously(
-      BindOnce(&ThreadCheckerMacroTest::ExpectNoDeathOnOtherThreadAfterDetach,
-               Unretained(this)));
+      Bind(&ThreadCheckerMacroTest::ExpectNoDeathOnOtherThreadAfterDetach,
+           Unretained(this)));
 }
 
 }  // namespace base

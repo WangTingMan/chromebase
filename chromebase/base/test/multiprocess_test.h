@@ -46,7 +46,7 @@ class CommandLine;
 //   }
 //
 //   // Note: |MULTIPROCESS_TEST_MAIN()| is defined in
-//   // testing/multiprocess_func_list.h.
+//   // testing/multi_process_function_list.h.
 //   MULTIPROCESS_TEST_MAIN(a_test_func) {
 //     // Code here runs in a child process....
 //     return 0;
@@ -80,11 +80,6 @@ bool WaitForMultiprocessTestChildExit(const Process& process,
 bool TerminateMultiProcessTestChild(const Process& process,
                                     int exit_code,
                                     bool wait);
-
-#if defined(OS_ANDROID)
-// Returns whether the child process exited cleanly from the main runloop.
-bool MultiProcessTestChildHasCleanExit(const Process& process);
-#endif
 
 // MultiProcessTest ------------------------------------------------------------
 

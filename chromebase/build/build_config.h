@@ -16,9 +16,6 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
-// We do not use gtest right now. So we disable GTEST.
-#define GTEST_DISABLED
-
 // A brief primer on #defines:
 //
 // - __ANDROID__ is automatically defined by the Android toolchain (see
@@ -37,7 +34,7 @@
 
 // Use the Chrome OS version of the code for both Android targets and Chrome OS builds.
 #if !defined(__ANDROID_HOST__)
-//#define OS_CHROMEOS 1
+#define OS_CHROMEOS 1
 #endif  // !defined(__ANDROID_HOST__)
 
 #if defined(__ANDROID__)  // Android targets
@@ -112,7 +109,7 @@
 #if defined(OS_FREEBSD) || defined(OS_NETBSD) || defined(OS_OPENBSD)
 #define OS_BSD 1
 #endif
-#define NO_TCMALLOC
+
 // For access to standard POSIXish features, use OS_POSIX instead of a
 // more specific macro.
 #if defined(OS_AIX) || defined(OS_ANDROID) || defined(OS_ASMJS) ||    \

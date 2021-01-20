@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "base/files/file_path.h"
-#include "base/stl_util.h"
+#include "base/macros.h"
 
 namespace base {
 
@@ -15,7 +15,7 @@ const FilePath::CharType FilePath::kSeparators[] = FILE_PATH_LITERAL("\\/");
 const FilePath::CharType FilePath::kSeparators[] = FILE_PATH_LITERAL("/");
 #endif  // FILE_PATH_USES_WIN_SEPARATORS
 
-const size_t FilePath::kSeparatorsLength = base::size(kSeparators);
+const size_t FilePath::kSeparatorsLength = arraysize(kSeparators);
 
 const FilePath::CharType FilePath::kCurrentDirectory[] = FILE_PATH_LITERAL(".");
 const FilePath::CharType FilePath::kParentDirectory[] = FILE_PATH_LITERAL("..");

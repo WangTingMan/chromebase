@@ -19,13 +19,11 @@ class AtomicRefCount {
       : ref_count_(initial_value) {}
 
   // Increment a reference count.
-  // Returns the previous value of the count.
-  int Increment() { return Increment(1); }
+  void Increment() { Increment(1); }
 
   // Increment a reference count by "increment", which must exceed 0.
-  // Returns the previous value of the count.
-  int Increment(int increment) {
-    return ref_count_.fetch_add(increment, std::memory_order_relaxed);
+  void Increment(int increment) {
+    ref_count_.fetch_add(increment, std::memory_order_relaxed);
   }
 
   // Decrement a reference count, and return whether the result is non-zero.
