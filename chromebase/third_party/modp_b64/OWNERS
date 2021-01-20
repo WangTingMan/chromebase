@@ -1,0 +1,6 @@
+# Default code reviewers picked from top 3 or more developers.
+# Please update this list if you find better candidates.
+# used by libchrome
+include platform/external/libchrome:/OWNERS
+# previous importer
+armansito@google.com

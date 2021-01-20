@@ -1,29 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Recources">
+    <Filter Include="资源文件">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="base">
       <UniqueIdentifier>{cb164c8b-308c-4f97-aed5-10d1ecc72d2e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\allocator">
-      <UniqueIdentifier>{9a02b54b-0bdf-47a5-824b-cc626d9cc1a3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\allocator\partition_allocator">
-      <UniqueIdentifier>{31b20284-ef04-487b-aa41-bb572dee880d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\containers">
-      <UniqueIdentifier>{78bf3320-7e2a-4beb-b2cf-7e39a6a6f5e1}</UniqueIdentifier>
     </Filter>
     <Filter Include="base\debug">
       <UniqueIdentifier>{b538caa7-2210-47bd-a468-d29f115e58d7}</UniqueIdentifier>
@@ -43,17 +26,8 @@
     <Filter Include="base\metrics">
       <UniqueIdentifier>{ca2d28a4-7fa3-4f65-bc26-2ac36af2e88c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="base\numerics">
-      <UniqueIdentifier>{034f7ce3-1ad4-4359-a459-37573c887935}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\power_monitor">
-      <UniqueIdentifier>{9950d271-b6f0-4e38-beb9-3a099b5ad6e0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="base\process">
       <UniqueIdentifier>{dfcebc46-dd59-4d88-a771-0748785be050}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\sampling_heap_profiler">
-      <UniqueIdentifier>{f48e5d7c-9f5d-43ba-8365-5c7ec36b4f9e}</UniqueIdentifier>
     </Filter>
     <Filter Include="base\strings">
       <UniqueIdentifier>{bc143b7b-7291-4009-9fe8-f71b15ec7477}</UniqueIdentifier>
@@ -64,8 +38,8 @@
     <Filter Include="base\task">
       <UniqueIdentifier>{f84c868b-4d91-41c8-b14f-2223ced19f63}</UniqueIdentifier>
     </Filter>
-    <Filter Include="base\task\sequence_manager">
-      <UniqueIdentifier>{2d5ad7aa-14ab-40ce-8c58-812f367da27e}</UniqueIdentifier>
+    <Filter Include="base\task_scheduler">
+      <UniqueIdentifier>{3e731f0c-9fe1-46bd-af6f-333280d1f9f1}</UniqueIdentifier>
     </Filter>
     <Filter Include="base\threading">
       <UniqueIdentifier>{bcfa0f51-9a21-4a59-a962-90b35cad3022}</UniqueIdentifier>
@@ -76,12 +50,6 @@
     <Filter Include="base\timer">
       <UniqueIdentifier>{d177e1c4-69dc-4e2a-a591-87dd248cb8a6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="base\trace_event">
-      <UniqueIdentifier>{fdf176f2-1498-45a9-ac8f-a3d0e52e753f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\trace_event\common">
-      <UniqueIdentifier>{6638cf75-f6db-44c7-b11d-2c3f502c0ac4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="base\win">
       <UniqueIdentifier>{822ed225-0c91-4e96-9c7c-9b637d690a6f}</UniqueIdentifier>
     </Filter>
@@ -90,6 +58,14 @@
     </Filter>
     <Filter Include="testing">
       <UniqueIdentifier>{7ece73b6-9a00-493a-a00e-3efe4aa69173}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fake headers">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="fake sources">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="base\third_party">
       <UniqueIdentifier>{d4709bbd-15cf-4b97-b464-218545d0e615}</UniqueIdentifier>
@@ -100,62 +76,8 @@
     <Filter Include="base\json">
       <UniqueIdentifier>{09fd4496-4485-4b1e-bb68-0a50e6359500}</UniqueIdentifier>
     </Filter>
-    <Filter Include="base\system">
-      <UniqueIdentifier>{1b76b3fd-7463-40bd-b7c5-b75fb4f17c10}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\trace_event\etw_manifest">
-      <UniqueIdentifier>{73335c68-d226-41f8-a929-14abef78eef8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\Test">
-      <UniqueIdentifier>{8ac6dbb8-a41a-4f7d-93d1-1287b7ffb9f8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\task\common">
-      <UniqueIdentifier>{8ba0cfdc-a764-4370-a681-44f388a9902e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="third_party\cityhash">
-      <UniqueIdentifier>{57df9233-e82f-4f8c-aeee-ea9c78392d67}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\profiler">
-      <UniqueIdentifier>{83d5b651-7884-4370-ada0-1b706449dbca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="third_party\dmg_fp">
-      <UniqueIdentifier>{556990cc-be4d-4ecb-b31f-de62f4e14655}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\task\promise">
-      <UniqueIdentifier>{4d880be4-1f35-467e-989e-7c569ca35600}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\win\embedded_i18n">
-      <UniqueIdentifier>{2c6904ae-e64d-440c-bf7f-015afa9cc741}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\utils">
-      <UniqueIdentifier>{0e97d847-3868-48af-a5c9-e9be2e673c99}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\utils\type_safety">
-      <UniqueIdentifier>{c4ce5b8b-96c9-4881-af9e-b68e29c56d71}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\utils\values">
-      <UniqueIdentifier>{5cf62304-e8ea-4d14-88d6-75e3137951aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base\task\thread_pool">
-      <UniqueIdentifier>{94ef977c-ccb1-468b-a378-377665e0ff37}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\chromebase\base\allocator\allocator_extension.cc">
-      <Filter>base\allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\oom_callback.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\page_allocator.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\spin_lock.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\debug\activity_tracker.cc">
       <Filter>base\debug</Filter>
     </ClCompile>
@@ -220,9 +142,6 @@
       <Filter>base\memory</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\memory\platform_shared_memory_region.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\protected_memory.cc">
       <Filter>base\memory</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\memory\read_only_shared_memory_region.cc">
@@ -291,9 +210,6 @@
     <ClCompile Include="..\chromebase\base\metrics\histogram_base.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\histogram_delta_serialization.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\metrics\histogram_functions.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
@@ -309,9 +225,6 @@
     <ClCompile Include="..\chromebase\base\metrics\persistent_histogram_allocator.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\persistent_histogram_storage.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\metrics\persistent_memory_allocator.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
@@ -324,16 +237,10 @@
     <ClCompile Include="..\chromebase\base\metrics\sample_vector.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\single_sample_metrics.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\metrics\sparse_histogram.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\metrics\statistics_recorder.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\user_metrics.cc">
       <Filter>base\metrics</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\process\kill.cc">
@@ -357,9 +264,6 @@
     <ClCompile Include="..\chromebase\base\process\process_metrics.cc">
       <Filter>base\process</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\lock_free_address_hash_set.cc">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\strings\nullable_string16.cc">
       <Filter>base\strings</Filter>
     </ClCompile>
@@ -370,9 +274,6 @@
       <Filter>base\strings</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\strings\safe_sprintf.cc">
-      <Filter>base\strings</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\strings\strcat.cc">
       <Filter>base\strings</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\strings\string_number_conversions.cc">
@@ -411,14 +312,17 @@
     <ClCompile Include="..\chromebase\base\task\cancelable_task_tracker.cc">
       <Filter>base\task</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\lazy_now.cc">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_lock_impl.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\thread_controller_impl.cc">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClCompile Include="..\chromebase\base\task_scheduler\sequence.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\thread_controller_with_message_pump_impl.cc">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClCompile Include="..\chromebase\base\task_scheduler\sequence_sort_key.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\task.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\threading\platform_thread_win.cc">
       <Filter>base\threading</Filter>
@@ -480,41 +384,11 @@
     <ClCompile Include="..\chromebase\base\time\time_override.cc">
       <Filter>base\time</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\time\time_to_iso8601.cc">
-      <Filter>base\time</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\timer\elapsed_timer.cc">
-      <Filter>base\timer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\timer\mock_timer.cc">
       <Filter>base\timer</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\timer\timer.cc">
       <Filter>base\timer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_allocator_dump_guid.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_request_args.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_infra_background_whitelist.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_usage_estimator.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\process_memory_dump.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\thread_instruction_count.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_arguments.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_event_memory_overhead.cc">
-      <Filter>base\trace_event</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\win\com_init_check_hook.cc">
       <Filter>base\win</Filter>
@@ -600,6 +474,9 @@
     <ClCompile Include="..\chromebase\base\base_paths.cc">
       <Filter>base</Filter>
     </ClCompile>
+    <ClCompile Include="..\chromebase\base\base_paths_posix.cc">
+      <Filter>base</Filter>
+    </ClCompile>
     <ClCompile Include="..\chromebase\base\base_switches.cc">
       <Filter>base</Filter>
     </ClCompile>
@@ -631,6 +508,9 @@
       <Filter>base</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\guid.cc">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\hash.cc">
       <Filter>base</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\lazy_instance_helpers.cc">
@@ -681,6 +561,9 @@
     <ClCompile Include="..\chromebase\base\sha1.cc">
       <Filter>base</Filter>
     </ClCompile>
+    <ClCompile Include="..\chromebase\base\sys_info.cc">
+      <Filter>base</Filter>
+    </ClCompile>
     <ClCompile Include="..\chromebase\base\task_runner.cc">
       <Filter>base</Filter>
     </ClCompile>
@@ -698,9 +581,6 @@
     </ClCompile>
     <ClCompile Include="..\chromebase\base\vlog.cc">
       <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\testing\multiprocess_func_list.cc">
-      <Filter>testing</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\base_paths_win.cc">
       <Filter>base</Filter>
@@ -747,13 +627,10 @@
     <ClCompile Include="..\chromebase\base\json\json_writer.cc">
       <Filter>base\json</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_manager.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\shared_memory_tracker.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\rand_util_win.cc">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\sys_info_win.cc">
       <Filter>base</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\threading\thread_local_storage_win.cc">
@@ -765,38 +642,11 @@
     <ClCompile Include="..\chromebase\base\process\memory_win.cc">
       <Filter>base\process</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\process\process_info_win.cc">
-      <Filter>base\process</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\files\file_util_win.cc">
       <Filter>base\files</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\threading\scoped_thread_priority.cc">
-      <Filter>base\threading</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_allocator_dump.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\process\process_metrics_win.cc">
       <Filter>base\process</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\system\system_monitor.cc">
-      <Filter>base\system</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\field_trial_params.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\post_task.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\task_traits.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\scoped_set_task_priority_for_current_thread.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\task_executor.cc">
-      <Filter>base\task</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\win\wmi.cc">
       <Filter>base\win</Filter>
@@ -804,62 +654,8 @@
     <ClCompile Include="..\chromebase\base\files\file_enumerator_win.cc">
       <Filter>base\files</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\traced_value.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\malloc_dump_provider.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_allocation_context_tracker.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_config.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_log.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\blame_context.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\builtin_categories.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\category_registry.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\event_name_filter.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_allocation_context.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\heap_profiler_event_filter.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_scheduler.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_buffer.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_config_category_filter.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_event_filter.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_event_impl.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\tracing_agent.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\synchronization\waitable_event_win.cc">
       <Filter>base\synchronization</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\trace_log_constants.cc">
-      <Filter>base\trace_event</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\message_loop\message_pump_win.cc">
       <Filter>base\message_loop</Filter>
@@ -876,9 +672,6 @@
     <ClCompile Include="..\chromebase\base\base64.cc">
       <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\scoped_clear_last_error_win.cc">
-      <Filter>base</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\native_library_win.cc">
       <Filter>base</Filter>
     </ClCompile>
@@ -891,15 +684,6 @@
     <ClCompile Include="..\chromebase\base\synchronization\condition_variable_win.cc">
       <Filter>base\synchronization</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\test\simple_test_tick_clock.cc">
-      <Filter>base\Test</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\test\test_pending_task.cc">
-      <Filter>base\Test</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\test\test_simple_task_runner.cc">
-      <Filter>base\Test</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\win\win_util.cc">
       <Filter>base\win</Filter>
     </ClCompile>
@@ -909,497 +693,29 @@
     <ClCompile Include="..\chromebase\third_party\modp_b64\modp_b64.cc">
       <Filter>third_party</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\task_trace.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\common\checked_lock_impl.cc">
-      <Filter>base\task\common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\common\operations_controller.cc">
-      <Filter>base\task\common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\common\scoped_defer_task_posting.cc">
-      <Filter>base\task\common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\common\task_annotator.cc">
-      <Filter>base\task\common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\containers\any_internal.cc">
-      <Filter>base\containers</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\type_id.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\containers\unique_any.cc">
-      <Filter>base\containers</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\memory_reclaimer.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_oom.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_page.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.cc">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\allocator\allocator_check.cc">
-      <Filter>base\allocator</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\logging_win.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\token.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\hash\hash.cc">
-      <Filter>base\hash</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\third_party\cityhash\city.cc">
-      <Filter>third_party\cityhash</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\third_party\cityhash\SuperFastHashImpl.cc">
-      <Filter>third_party\cityhash</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\synchronization\waitable_event_watcher_win.cc">
-      <Filter>base\synchronization</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\associated_thread_id.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\atomic_flag_set.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\enqueue_order_generator.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\real_time_domain.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\sequence_manager.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\sequence_manager_impl.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\task_queue.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\task_queue_impl.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\task_queue_selector.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\tasks.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\observer_list_internal.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\observer_list_types.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\time_domain.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\work_deduplicator.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\work_queue.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\work_queue_sets.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\message_loop\work_id_provider.cc">
-      <Filter>base\message_loop</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\crc32.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\metrics\ukm_source_id.cc">
-      <Filter>base\metrics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\power_monitor\power_monitor.cc">
-      <Filter>base\power_monitor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\power_monitor\power_monitor_device_source.cc">
-      <Filter>base\power_monitor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\power_monitor\power_monitor_device_source_win.cc">
-      <Filter>base\power_monitor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\power_monitor\power_monitor_source.cc">
-      <Filter>base\power_monitor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\process\environment_internal.cc">
-      <Filter>base\process</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\process\launch_win.cc">
-      <Filter>base\process</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\frame.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\metadata_recorder.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\native_unwinder_win.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\profile_builder.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\sample_metadata.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\stack_sampler.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\stack_sampler_impl.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\stack_sampler_win.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\stack_sampling_profiler.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\test_support_library.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\thread_delegate_win.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\profiler\win32_stack_frame_unwinder.cc">
-      <Filter>base\profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\module_cache.cc">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\module_cache_win.cc">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\poisson_allocation_sampler.cc">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\sampling_heap_profiler\sampling_heap_profiler.cc">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\strings\latin1_string_conversions.cc">
-      <Filter>base\strings</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\strings\utf_offset_string_conversions.cc">
-      <Filter>base\strings</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\third_party\dmg_fp\dtoa.cc">
-      <Filter>third_party\dmg_fp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\third_party\dmg_fp\g_fmt.cc">
-      <Filter>third_party\dmg_fp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\timer\hi_res_timer_manager_win.cc">
-      <Filter>base\timer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\timer\lap_timer.cc">
-      <Filter>base\timer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\process\kill_win.cc">
-      <Filter>base\process</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\system\sys_info.cc">
-      <Filter>base\system</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\system\sys_info_win.cc">
-      <Filter>base\system</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\files\file_path_watcher_win.cc">
-      <Filter>base\files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\files\file_proxy.cc">
-      <Filter>base\files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\abstract_promise.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\dependent_list.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\finally_executor.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\helpers.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\no_op_promise_executor.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\promise_executor.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\promise\then_and_catch_executor.cc">
-      <Filter>base\task\promise</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\activity_analyzer.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\asan_invalid_access.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\close_handle_hook_win.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\win\iat_patch_function.cc">
-      <Filter>base\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\gdi_debug_util_win.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\debug\invalid_access_win.cc">
-      <Filter>base\debug</Filter>
-    </ClCompile>
     <ClCompile Include="..\chromebase\base\base64url.cc">
       <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\deferred_sequenced_task_runner.cc">
-      <Filter>base</Filter>
+    <ClCompile Include="..\chromebase\base\memory\shared_memory_helper.cc">
+      <Filter>base\memory</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\enterprise_util_win.cc">
-      <Filter>base</Filter>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scoped_set_task_priority_for_current_thread.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\one_shot_event.cc">
-      <Filter>base</Filter>
+    <ClCompile Include="..\chromebase\base\task_scheduler\task_traits.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\supports_user_data.cc">
-      <Filter>base</Filter>
+    <ClCompile Include="..\chromebase\base\strings\strcat.cc">
+      <Filter>base\strings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\process\process_info_win.cc">
+      <Filter>base\process</Filter>
     </ClCompile>
     <ClCompile Include="..\chromebase\base\sync_socket_win.cc">
       <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\chromebase\base\syslog_logging.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\value_conversions.cc">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\win\hstring_compare.cc">
-      <Filter>base\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\win\i18n.cc">
-      <Filter>base\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\win\shortcut.cc">
-      <Filter>base\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\win\embedded_i18n\language_selector.cc">
-      <Filter>base\win\embedded_i18n</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\util\values\values_util.cc">
-      <Filter>base\utils\values</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\trace_event\memory_dump_provider_info.cc">
-      <Filter>base\trace_event</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\discardable_memory.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\discardable_memory_allocator.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\discardable_shared_memory.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\memory_pressure_listener.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\memory_pressure_monitor.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\memory_pressure_monitor_win.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\memory\protected_memory_win.cc">
-      <Filter>base\memory</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\threading\platform_thread.cc">
-      <Filter>base\threading</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\threading\watchdog.cc">
-      <Filter>base\threading</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\lazy_task_runner.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\single_thread_task_executor.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\task_features.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\test_task_traits_extension.cc">
-      <Filter>base\task</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\sequence_manager\graceful_queue_shutdown_helper.cc">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\delayed_task_manager.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\environment_config.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\initialization_util.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\job_task_source.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\pooled_parallel_task_runner.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\pooled_sequenced_task_runner.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\pooled_single_thread_task_runner_manager.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\pooled_task_runner_delegate.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\priority_queue.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\sequence.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\sequence_sort_key.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\service_thread.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\task.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\task_source.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\task_tracker.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_group.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_group_impl.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_group_native.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_group_native_win.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_pool.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_pool_clock.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\thread_pool_impl.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\worker_thread.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\chromebase\base\task\thread_pool\worker_thread_stack.cc">
-      <Filter>base\task\thread_pool</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_extension.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\buildflags.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom_callback.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_constants.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internal.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internals_win.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\spin_lock.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\adapters.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\circular_deque.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\flat_map.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\flat_set.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\flat_tree.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\hash_tables.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\linked_list.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\mru_cache.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\queue.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\ring_buffer.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\small_map.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\span.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\stack.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\stack_container.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\vector_buffer.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\debug\activity_tracker.h">
       <Filter>base\debug</Filter>
     </ClInclude>
@@ -1481,10 +797,10 @@
     <ClInclude Include="..\chromebase\base\memory\linked_ptr.h">
       <Filter>base\memory</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\platform_shared_memory_region.h">
+    <ClInclude Include="..\chromebase\base\memory\memory_dump_provider.h">
       <Filter>base\memory</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\protected_memory.h">
+    <ClInclude Include="..\chromebase\base\memory\platform_shared_memory_region.h">
       <Filter>base\memory</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\memory\protected_memory_buildflags.h">
@@ -1583,12 +899,6 @@
     <ClInclude Include="..\chromebase\base\metrics\histogram_base.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\histogram_delta_serialization.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\histogram_flattener.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\metrics\histogram_functions.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
@@ -1613,9 +923,6 @@
     <ClInclude Include="..\chromebase\base\metrics\persistent_histogram_allocator.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\persistent_histogram_storage.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\metrics\persistent_memory_allocator.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
@@ -1631,62 +938,11 @@
     <ClInclude Include="..\chromebase\base\metrics\sample_vector.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\single_sample_metrics.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\metrics\sparse_histogram.h">
       <Filter>base\metrics</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\metrics\statistics_recorder.h">
       <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\user_metrics.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\user_metrics_action.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\checked_math.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\checked_math_impl.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\clamped_math.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\clamped_math_impl.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\math_constants.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\ranges.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\safe_conversions.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\safe_conversions_impl.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\safe_math.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\numerics\safe_math_shared_impl.h">
-      <Filter>base\numerics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor.h">
-      <Filter>base\power_monitor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor_device_source.h">
-      <Filter>base\power_monitor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\power_monitor\power_monitor_source.h">
-      <Filter>base\power_monitor</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\power_monitor\power_observer.h">
-      <Filter>base\power_monitor</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\process\kill.h">
       <Filter>base\process</Filter>
@@ -1703,9 +959,6 @@
     <ClInclude Include="..\chromebase\base\process\process_handle.h">
       <Filter>base\process</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\process\process_info.h">
-      <Filter>base\process</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\process\process_iterator.h">
       <Filter>base\process</Filter>
     </ClInclude>
@@ -1714,9 +967,6 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\process\process_metrics_iocounters.h">
       <Filter>base\process</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\sampling_heap_profiler\lock_free_address_hash_set.h">
-      <Filter>base\sampling_heap_profiler</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\strings\char_traits.h">
       <Filter>base\strings</Filter>
@@ -1731,9 +981,6 @@
       <Filter>base\strings</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\strings\safe_sprintf.h">
-      <Filter>base\strings</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\strings\strcat.h">
       <Filter>base\strings</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\strings\string_number_conversions.h">
@@ -1752,6 +999,9 @@
       <Filter>base\strings</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\strings\string_util.h">
+      <Filter>base\strings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\strings\string_util_posix.h">
       <Filter>base\strings</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\strings\string_util_win.h">
@@ -1787,9 +1037,6 @@
     <ClInclude Include="..\chromebase\base\synchronization\lock_impl.h">
       <Filter>base\synchronization</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\synchronization\spin_wait.h">
-      <Filter>base\synchronization</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\synchronization\synchronization_buildflags.h">
       <Filter>base\synchronization</Filter>
     </ClInclude>
@@ -1802,32 +1049,44 @@
     <ClInclude Include="..\chromebase\base\task\cancelable_task_tracker.h">
       <Filter>base\task</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\enqueue_order.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\can_schedule_sequence_observer.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\intrusive_heap.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_lock.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\lazily_deallocated_deque.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_lock_impl.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\lazy_now.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_observer.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\moveable_auto_lock.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scoped_set_task_priority_for_current_thread.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_time_observer.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\sequence.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\sequence_sort_key.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller_impl.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\single_thread_task_runner_thread_mode.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\thread_controller_with_message_pump_impl.h">
-      <Filter>base\task\sequence_manager</Filter>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_traits.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_traits_details.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\test_utils.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\tracked_ref.h">
+      <Filter>base\task_scheduler</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\threading\platform_thread.h">
       <Filter>base\threading</Filter>
@@ -1898,56 +1157,14 @@
     <ClInclude Include="..\chromebase\base\time\time_override.h">
       <Filter>base\time</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\time\time_to_iso8601.h">
-      <Filter>base\time</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\timer\elapsed_timer.h">
       <Filter>base\timer</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\timer\hi_res_timer_manager.h">
       <Filter>base\timer</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\timer\mock_timer.h">
-      <Filter>base\timer</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\timer\timer.h">
       <Filter>base\timer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_allocator_dump_guid.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_provider.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_provider_info.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_request_args.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_infra_background_whitelist.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_usage_estimator.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\process_memory_dump.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\thread_instruction_count.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_arguments.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_event_memory_overhead.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\common\trace_event_common.h">
-      <Filter>base\trace_event\common</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\win\async_operation.h">
       <Filter>base\win</Filter>
@@ -2099,27 +1316,6 @@
     <ClInclude Include="..\chromebase\base\at_exit.h">
       <Filter>base</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomic_ref_count.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomic_sequence_num.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomicops.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomicops_internals_atomicword_compat.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomicops_internals_portable.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\atomicops_internals_x86_msvc.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\auto_reset.h">
-      <Filter>base</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\barrier_closure.h">
       <Filter>base</Filter>
     </ClInclude>
@@ -2127,6 +1323,9 @@
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\base_paths.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\base_paths_posix.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\base_switches.h">
@@ -2214,6 +1413,9 @@
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\guid.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\hash.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\lazy_instance.h">
@@ -2309,6 +1511,12 @@
     <ClInclude Include="..\chromebase\base\sys_byteorder.h">
       <Filter>base</Filter>
     </ClInclude>
+    <ClInclude Include="..\chromebase\base\sys_info.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\sys_info_internal.h">
+      <Filter>base</Filter>
+    </ClInclude>
     <ClInclude Include="..\chromebase\base\task_runner.h">
       <Filter>base</Filter>
     </ClInclude>
@@ -2338,12 +1546,6 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\vlog.h">
       <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\testing\multiprocess_func_list.h">
-      <Filter>testing</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\testing\platform_test.h">
-      <Filter>testing</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\base_paths_win.h">
       <Filter>base</Filter>
@@ -2381,110 +1583,8 @@
     <ClInclude Include="..\chromebase\base\json\string_escape.h">
       <Filter>base\json</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_manager.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\shared_memory_tracker.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\threading\scoped_thread_priority.h">
-      <Filter>base\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_allocator_dump.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\system\sys_info.h">
-      <Filter>base\system</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\system\sys_info_internal.h">
-      <Filter>base\system</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\system\system_monitor.h">
-      <Filter>base\system</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\field_trial_params.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\post_task.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\task_traits.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\single_thread_task_runner_thread_mode.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
     <ClInclude Include="..\chromebase\base\updateable_sequenced_task_runner.h">
       <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\scoped_set_task_priority_for_current_thread.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\task_executor.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\traced_value.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_config.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_log.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\auto_open_close_event.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\blame_context.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\builtin_categories.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\category_registry.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\event_name_filter.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_allocation_context.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_allocation_context_tracker.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\heap_profiler_event_filter.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\malloc_dump_provider.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\memory_dump_scheduler.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_buffer.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_category.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_config_category_filter.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_event.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_event_filter.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\trace_event_impl.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\tracing_agent.h">
-      <Filter>base\trace_event</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\trace_event\etw_manifest\chrome_events_win.h">
-      <Filter>base\trace_event\etw_manifest</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\message_loop\message_pump_win.h">
       <Filter>base\message_loop</Filter>
@@ -2498,500 +1598,20 @@
     <ClInclude Include="..\chromebase\base\base64.h">
       <Filter>base</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\task_trace.h">
-      <Filter>base\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\checked_lock.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\checked_lock_impl.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\intrusive_heap.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\operations_controller.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\scoped_defer_task_posting.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\common\task_annotator.h">
-      <Filter>base\task\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\any_internal.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\type_id.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\buffer_iterator.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\checked_iterators.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\id_map.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\unique_any.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\unique_ptr_adapters.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\containers\util.h">
-      <Filter>base\containers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\memory_reclaimer.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc_constants.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_direct_map_extent.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_freelist_entry.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_oom.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_page.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_cookie.h">
-      <Filter>base\allocator\partition_allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_check.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_shim_internals.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_shim_override_cpp_symbols.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_shim_override_libc_symbols.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\allocator\allocator_shim_override_linker_wrapped_symbols.h">
-      <Filter>base\allocator</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\logging_win.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\immediate_crash.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\logging_buildflags.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\token.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\third_party\cityhash\city.h">
-      <Filter>third_party\cityhash</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\associated_thread_id.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\atomic_flag_set.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\enqueue_order_generator.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\real_time_domain.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\sequence_manager.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\sequence_manager_impl.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\sequenced_task_source.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_queue.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_queue_impl.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_queue_selector.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\task_queue_selector_logic.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\tasks.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\observer_list_internal.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\observer_list_types.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\time_domain.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\work_deduplicator.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\work_queue.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\work_queue_sets.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\message_loop\work_id_provider.h">
-      <Filter>base\message_loop</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\crc32.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\metrics\ukm_source_id.h">
-      <Filter>base\metrics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\process\environment_internal.h">
-      <Filter>base\process</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\clang_coverage_buildflags.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\frame.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\metadata_recorder.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\native_unwinder.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\native_unwinder_win.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\profile_builder.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\register_context.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\sample_metadata.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\stack_sampler.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\stack_sampler_impl.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\stack_sampling_profiler.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\thread_delegate.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\thread_delegate_win.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\unwinder.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\profiler\win32_stack_frame_unwinder.h">
-      <Filter>base\profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\sampling_heap_profiler\module_cache.h">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\sampling_heap_profiler\poisson_allocation_sampler.h">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\sampling_heap_profiler\sampling_heap_profiler.h">
-      <Filter>base\sampling_heap_profiler</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\partition_alloc_buildflags.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\strings\latin1_string_conversions.h">
-      <Filter>base\strings</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\strings\utf_offset_string_conversions.h">
-      <Filter>base\strings</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\third_party\dmg_fp\dmg_fp.h">
-      <Filter>third_party\dmg_fp</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\timer\lap_timer.h">
-      <Filter>base\timer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\files\file_proxy.h">
-      <Filter>base\files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\abstract_promise.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\all_container_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\all_tuple_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\dependent_list.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\finally_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\helpers.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\no_op_promise_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\post_task_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\promise.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\promise_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\promise_result.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\promise\then_and_catch_executor.h">
-      <Filter>base\task\promise</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\activity_analyzer.h">
-      <Filter>base\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\asan_invalid_access.h">
-      <Filter>base\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\sanitizer_buildflags.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\close_handle_hook_win.h">
-      <Filter>base\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\gdi_debug_util_win.h">
-      <Filter>base\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\debug\invalid_access_win.h">
-      <Filter>base\debug</Filter>
+    <ClInclude Include="..\chromebase\third_party\modp_b64\modp_b64.h">
+      <Filter>third_party</Filter>
     </ClInclude>
     <ClInclude Include="..\chromebase\base\base64url.h">
       <Filter>base</Filter>
     </ClInclude>
-    <ClInclude Include="..\chromebase\base\deferred_sequenced_task_runner.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\enterprise_util.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\one_shot_event.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\parameter_pack.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\scoped_clear_last_error.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\supports_user_data.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\syslog_logging.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\traits_bag.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\value_conversions.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\base_win_buildflags.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\hstring_compare.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\i18n.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\shortcut.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\win_util.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\wmi.h">
-      <Filter>base\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\win\embedded_i18n\language_selector.h">
-      <Filter>base\win\embedded_i18n</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\util\type_safety\id_type.h">
-      <Filter>base\utils\type_safety</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\util\type_safety\pass_key.h">
-      <Filter>base\utils\type_safety</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\util\type_safety\strong_alias.h">
-      <Filter>base\utils\type_safety</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\util\values\values_util.h">
-      <Filter>base\utils\values</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\discardable_memory.h">
+    <ClInclude Include="..\chromebase\base\memory\shared_memory_helper.h">
       <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\discardable_memory_allocator.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\discardable_shared_memory.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\memory_pressure_listener.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\memory_pressure_monitor.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\memory_pressure_monitor_win.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\memory\shared_memory_hooks.h">
-      <Filter>base\memory</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\threading\sequence_bound.h">
-      <Filter>base\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\threading\thread_local_internal.h">
-      <Filter>base\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\threading\watchdog.h">
-      <Filter>base\threading</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\lazy_task_runner.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\single_thread_task_executor.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\task_features.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\task_observer.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\task_traits_extension.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\test_task_traits_extension.h">
-      <Filter>base\task</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\sequence_manager\graceful_queue_shutdown_helper.h">
-      <Filter>base\task\sequence_manager</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\delayed_task_manager.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\environment_config.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\initialization_util.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\job_task_source.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\pooled_parallel_task_runner.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\pooled_sequenced_task_runner.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\pooled_single_thread_task_runner_manager.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\pooled_task_runner_delegate.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\priority_queue.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\sequence.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\sequence_sort_key.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\service_thread.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\task.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\task_source.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\task_tracker.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_group.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_group_impl.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_group_native.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_group_native_win.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_pool.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_pool_clock.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\thread_pool_impl.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\tracked_ref.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\worker_thread.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\worker_thread_observer.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\base\task\thread_pool\worker_thread_stack.h">
-      <Filter>base\task\thread_pool</Filter>
-    </ClInclude>
-    <ClInclude Include="..\chromebase\testing\gmock\include\gmock\gmock.h">
-      <Filter>testing</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\chromebase\base\win\windows_defines.inc">
+      <Filter>base\win</Filter>
+    </None>
     <None Include="..\chromebase\base\win\windows_undefines.inc">
       <Filter>base\win</Filter>
     </None>
