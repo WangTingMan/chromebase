@@ -93,7 +93,7 @@ BASE_EXPORT const void* GetProgramCounter();
 #else
 
 // TODO(http://crbug.com/760702) remove the __FILE__ argument from these calls.
-#define FROM_HERE ::base::Location::CreateFromHere(__FILE__)
+#define FROM_HERE ::base::Location::CreateFromHere( __FUNCTION__, __FILE__, __LINE__ )
 #define FROM_HERE_WITH_EXPLICIT_FUNCTION(function_name) \
   ::base::Location::CreateFromHere(function_name, __FILE__, -1)
 
