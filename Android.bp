@@ -782,6 +782,12 @@ libchromeLinuxGlibcSrc = [
     "base/memory/shared_memory_handle_posix.cc",
 ]
 
+libchromeLinuxBionicSrc = [
+    "base/debug/stack_trace_android.cc",
+    "base/memory/platform_shared_memory_region_posix.cc",
+    "base/memory/shared_memory_handle_posix.cc",
+]
+
 libchromeAndroidSrc = [
     "base/android/android_hardware_buffer_compat.cc",
     "base/android/build_info.cc",
@@ -834,6 +840,12 @@ cc_library {
     target: {
         linux: {
             srcs: libchromeLinuxSrc,
+        },
+        linux_bionic: {
+            srcs: libchromeLinuxBionicSrc,
+            shared_libs: [
+                "liblog",
+            ],
         },
         linux_glibc: {
             srcs: libchromeLinuxGlibcSrc,
