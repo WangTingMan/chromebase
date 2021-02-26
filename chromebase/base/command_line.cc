@@ -213,7 +213,13 @@ bool CommandLine::Init(int argc, const char* const* argv) {
 
   current_process_commandline_ = new CommandLine(NO_PROGRAM);
 #if defined(OS_WIN)
-  current_process_commandline_->ParseFromString(::GetCommandLineW());
+  current_process_commandline_->ParseFromString( ::GetCommandLineW() );
+  StringVector args;
+  for( int i = 0; i < argc; ++i )
+  {
+      args.push_back( UTF8ToUTF16( argv[i] ) );
+  }
+  current_process_commandline_->InitFromArgv( args );
 #elif defined(OS_POSIX) || defined(OS_FUCHSIA)
   current_process_commandline_->InitFromArgv(argc, argv);
 #else
