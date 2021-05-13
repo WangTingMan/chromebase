@@ -6,7 +6,7 @@
 
 import re
 
-# Libchrome wants WANT but mot WANT_EXCLUDE
+# Libchrome wants WANT but not WANT_EXCLUDE
 # aka files matching WANT will be copied from upstream_files
 WANT = [
     re.compile(rb'base/((?!(allocator|third_party)/).*$)'),
