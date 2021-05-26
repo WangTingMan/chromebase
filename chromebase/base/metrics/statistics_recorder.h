@@ -51,6 +51,7 @@ class BASE_EXPORT StatisticsRecorder {
   // histograms from providers when necessary.
   class HistogramProvider {
    public:
+    virtual ~HistogramProvider() {}
     // Merges all histogram information into the global versions.
     virtual void MergeHistogramDeltas() = 0;
   };
@@ -143,7 +144,7 @@ class BASE_EXPORT StatisticsRecorder {
                             HistogramBase::Flags required_flags,
                             HistogramSnapshotManager* snapshot_manager);
 
-  using OnSampleCallback = base::RepeatingCallback<void(HistogramBase::Sample)>;
+  typedef base::Callback<void(HistogramBase::Sample)> OnSampleCallback;
 
   // Sets the callback to notify when a new sample is recorded on the histogram
   // referred to by |histogram_name|. Can be called before or after the
@@ -151,7 +152,7 @@ class BASE_EXPORT StatisticsRecorder {
   //
   // This method is thread safe.
   static bool SetCallback(const std::string& histogram_name,
-                          OnSampleCallback callback);
+                          const OnSampleCallback& callback);
 
   // Clears any callback set on the histogram referred to by |histogram_name|.
   //

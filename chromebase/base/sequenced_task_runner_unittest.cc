@@ -8,10 +8,9 @@
 
 #include "base/bind.h"
 #include "base/gtest_prod_util.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/test/scoped_task_environment.h"
 #include "base/threading/thread.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -47,16 +46,19 @@ class SequencedTaskRunnerTest : public testing::Test {
   SequencedTaskRunnerTest() : foreign_thread_("foreign") {}
 
   void SetUp() override {
+    main_runner_ = message_loop_.task_runner();
+
     foreign_thread_.Start();
     foreign_runner_ = foreign_thread_.task_runner();
   }
 
+  scoped_refptr<SequencedTaskRunner> main_runner_;
   scoped_refptr<SequencedTaskRunner> foreign_runner_;
 
   Thread foreign_thread_;
 
  private:
-  test::ScopedTaskEnvironment scoped_task_environment_;
+  MessageLoop message_loop_;
 
   DISALLOW_COPY_AND_ASSIGN(SequencedTaskRunnerTest);
 };
@@ -67,8 +69,8 @@ using SequenceBoundUniquePtr =
 TEST_F(SequencedTaskRunnerTest, OnTaskRunnerDeleterOnMainThread) {
   bool deleted_on_main_thread = false;
   SequenceBoundUniquePtr ptr(
-      new FlagOnDelete(&deleted_on_main_thread, ThreadTaskRunnerHandle::Get()),
-      OnTaskRunnerDeleter(ThreadTaskRunnerHandle::Get()));
+      new FlagOnDelete(&deleted_on_main_thread, main_runner_),
+      OnTaskRunnerDeleter(main_runner_));
   EXPECT_FALSE(deleted_on_main_thread);
   foreign_runner_->PostTask(
       FROM_HERE, BindOnce([](SequenceBoundUniquePtr) {}, std::move(ptr)));
@@ -84,8 +86,7 @@ TEST_F(SequencedTaskRunnerTest, OnTaskRunnerDeleterOnMainThread) {
 
 TEST_F(SequencedTaskRunnerTest, OnTaskRunnerDeleterTargetStoppedEarly) {
   bool deleted_on_main_thread = false;
-  FlagOnDelete* raw =
-      new FlagOnDelete(&deleted_on_main_thread, ThreadTaskRunnerHandle::Get());
+  FlagOnDelete* raw = new FlagOnDelete(&deleted_on_main_thread, main_runner_);
   SequenceBoundUniquePtr ptr(raw, OnTaskRunnerDeleter(foreign_runner_));
   EXPECT_FALSE(deleted_on_main_thread);
 

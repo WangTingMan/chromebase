@@ -31,15 +31,11 @@ public class TestChildProcessConnection extends ChildProcessConnection {
         public boolean isBound() {
             return mBound;
         }
-
-        @Override
-        public void updateGroupImportance(int group, int importanceInGroup) {}
     }
 
     private int mPid;
     private boolean mConnected;
     private ServiceCallback mServiceCallback;
-    private boolean mRebindCalled;
 
     /**
      * Creates a mock binding corresponding to real ManagedChildProcessConnection after the
@@ -47,14 +43,14 @@ public class TestChildProcessConnection extends ChildProcessConnection {
      */
     public TestChildProcessConnection(ComponentName serviceName, boolean bindToCaller,
             boolean bindAsExternalService, Bundle serviceBundle) {
-        super(null /* context */, serviceName, bindToCaller, bindAsExternalService,
-                serviceBundle, new ChildServiceConnectionFactory() {
+        super(null /* context */, serviceName, bindToCaller, bindAsExternalService, serviceBundle,
+                new ChildServiceConnectionFactory() {
                     @Override
                     public ChildServiceConnection createConnection(Intent bindIntent, int bindFlags,
-                            ChildServiceConnectionDelegate delegate, String instanceName) {
+                            ChildServiceConnectionDelegate delegate) {
                         return new MockChildServiceConnection();
                     }
-                }, null /* instanceName */);
+                });
     }
 
     public void setPid(int pid) {
@@ -75,12 +71,6 @@ public class TestChildProcessConnection extends ChildProcessConnection {
     }
 
     @Override
-    public void rebind() {
-        super.rebind();
-        mRebindCalled = true;
-    }
-
-    @Override
     public void stop() {
         super.stop();
         mConnected = false;
@@ -93,11 +83,5 @@ public class TestChildProcessConnection extends ChildProcessConnection {
 
     public ServiceCallback getServiceCallback() {
         return mServiceCallback;
-    }
-
-    public boolean getAndResetRebindCalled() {
-        boolean called = mRebindCalled;
-        mRebindCalled = false;
-        return called;
     }
 }

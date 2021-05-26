@@ -10,7 +10,7 @@
 #include "base/android/scoped_java_ref.h"
 #include "base/files/file_path.h"
 
-#include "base/base_jni_headers/PathUtils_jni.h"
+#include "jni/PathUtils_jni.h"
 
 namespace base {
 namespace android {
@@ -52,7 +52,7 @@ std::vector<FilePath> GetAllPrivateDownloadsDirectories() {
   std::vector<std::string> dirs;
   JNIEnv* env = AttachCurrentThread();
   auto jarray = Java_PathUtils_getAllPrivateDownloadsDirectories(env);
-  base::android::AppendJavaStringArrayToStringVector(env, jarray, &dirs);
+  base::android::AppendJavaStringArrayToStringVector(env, jarray.obj(), &dirs);
 
   std::vector<base::FilePath> file_paths;
   for (const auto& dir : dirs)

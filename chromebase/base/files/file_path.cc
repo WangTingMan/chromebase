@@ -14,7 +14,6 @@
 #include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
-#include "base\strings\old_utf_string_conversions.h"
 #include "build/build_config.h"
 
 #if defined(OS_MACOSX)
@@ -24,7 +23,6 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
-#include "base/win/win_util.h"
 #elif defined(OS_MACOSX)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
@@ -96,8 +94,9 @@ bool IsPathAbsolute(StringPieceType path) {
 }
 
 bool AreAllSeparators(const StringType& input) {
-  for (auto it : input) {
-    if (!FilePath::IsSeparator(it))
+  for (StringType::const_iterator it = input.begin();
+      it != input.end(); ++it) {
+    if (!FilePath::IsSeparator(*it))
       return false;
   }
 
@@ -138,15 +137,15 @@ StringType::size_type ExtensionSeparatorPosition(const StringType& path) {
     return last_dot;
   }
 
-  for (auto* i : kCommonDoubleExtensions) {
+  for (size_t i = 0; i < arraysize(kCommonDoubleExtensions); ++i) {
     StringType extension(path, penultimate_dot + 1);
-    if (LowerCaseEqualsASCII(extension, i))
+    if (LowerCaseEqualsASCII(extension, kCommonDoubleExtensions[i]))
       return penultimate_dot;
   }
 
   StringType extension(path, last_dot + 1);
-  for (auto* i : kCommonDoubleExtensionSuffixes) {
-    if (LowerCaseEqualsASCII(extension, i)) {
+  for (size_t i = 0; i < arraysize(kCommonDoubleExtensionSuffixes); ++i) {
+    if (LowerCaseEqualsASCII(extension, kCommonDoubleExtensionSuffixes[i])) {
       if ((last_dot - penultimate_dot) <= 5U &&
           (last_dot - penultimate_dot) > 1U) {
         return penultimate_dot;
@@ -181,18 +180,6 @@ FilePath::FilePath(StringPieceType path) {
   if (nul_pos != StringType::npos)
     path_.erase(nul_pos, StringType::npos);
 }
-
-#if defined(OS_WIN)
-FilePath::FilePath( std::string const& a_str )
-{
-    std::wstring wstr = base::SysMultiByteToWide( a_str, 0 );
-    StringPieceType path( wstr.c_str() );
-    path.CopyToString( &path_ );
-    StringType::size_type nul_pos = path_.find( kStringTerminator );
-    if( nul_pos != StringType::npos )
-        path_.erase( nul_pos, StringType::npos );
-}
-#endif
 
 FilePath::~FilePath() = default;
 
@@ -459,15 +446,6 @@ FilePath FilePath::AddExtension(StringPieceType extension) const {
   return FilePath(str);
 }
 
-FilePath FilePath::AddExtensionASCII(StringPiece extension) const {
-  DCHECK(IsStringASCII(extension));
-#if defined(OS_WIN)
-  return AddExtension(ASCIIToUTF16(extension));
-#elif defined(OS_POSIX) || defined(OS_FUCHSIA)
-  return AddExtension(extension);
-#endif
-}
-
 FilePath FilePath::ReplaceExtension(StringPieceType extension) const {
   if (IsEmptyOrSpecialCase(BaseName().value()))
     return FilePath();
@@ -621,7 +599,7 @@ std::string FilePath::MaybeAsASCII() const {
 }
 
 std::string FilePath::AsUTF8Unsafe() const {
-  return UTF16ToUTF8(value());
+  return WideToUTF8(value());
 }
 
 string16 FilePath::AsUTF16Unsafe() const {
@@ -630,7 +608,7 @@ string16 FilePath::AsUTF16Unsafe() const {
 
 // static
 FilePath FilePath::FromUTF8Unsafe(StringPiece utf8) {
-  return FilePath(UTF8ToUTF16(utf8));
+  return FilePath(UTF8ToWide(utf8));
 }
 
 // static
@@ -721,11 +699,10 @@ bool FilePath::ReadFromPickle(PickleIterator* iter) {
 
 int FilePath::CompareIgnoreCase(StringPieceType string1,
                                 StringPieceType string2) {
-  // CharUpperW within user32 is used here because it will provide unicode
-  // conversions regardless of locale. The STL alternative, towupper, has a
-  // locale consideration that prevents it from converting all characters by
-  // default.
-  CHECK(win::IsUser32AndGdi32Available());
+  static decltype(::CharUpperW)* const char_upper_api =
+      reinterpret_cast<decltype(::CharUpperW)*>(
+          ::GetProcAddress(::GetModuleHandle(L"user32.dll"), "CharUpperW"));
+  CHECK(char_upper_api);
   // Perform character-wise upper case comparison rather than using the
   // fully Unicode-aware CompareString(). For details see:
   // http://blogs.msdn.com/michkap/archive/2005/10/17/481600.aspx
@@ -735,9 +712,9 @@ int FilePath::CompareIgnoreCase(StringPieceType string1,
   StringPieceType::const_iterator string2end = string2.end();
   for ( ; i1 != string1end && i2 != string2end; ++i1, ++i2) {
     wchar_t c1 =
-        (wchar_t)LOWORD(::CharUpperW((LPWSTR)(DWORD_PTR)MAKELONG(*i1, 0)));
+        (wchar_t)LOWORD(char_upper_api((LPWSTR)(DWORD_PTR)MAKELONG(*i1, 0)));
     wchar_t c2 =
-        (wchar_t)LOWORD(::CharUpperW((LPWSTR)(DWORD_PTR)MAKELONG(*i2, 0)));
+        (wchar_t)LOWORD(char_upper_api((LPWSTR)(DWORD_PTR)MAKELONG(*i2, 0)));
     if (c1 < c2)
       return -1;
     if (c1 > c2)
@@ -1273,6 +1250,7 @@ int FilePath::CompareIgnoreCase(StringPieceType string1,
 
   // GetHFSDecomposedForm() returns an empty string in an error case.
   if (hfs1.empty() || hfs2.empty()) {
+    NOTREACHED();
     ScopedCFTypeRef<CFStringRef> cfstring1(
         CFStringCreateWithBytesNoCopy(
             NULL,
@@ -1289,20 +1267,6 @@ int FilePath::CompareIgnoreCase(StringPieceType string1,
             kCFStringEncodingUTF8,
             false,
             kCFAllocatorNull));
-    // If neither GetHFSDecomposedForm nor CFStringCreateWithBytesNoCopy
-    // succeed, fall back to strcmp. This can occur when the input string is
-    // invalid UTF-8.
-    if (!cfstring1 || !cfstring2) {
-      int comparison =
-          memcmp(string1.as_string().c_str(), string2.as_string().c_str(),
-                 std::min(string1.length(), string2.length()));
-      if (comparison < 0)
-        return -1;
-      if (comparison > 0)
-        return 1;
-      return 0;
-    }
-
     return CFStringCompare(cfstring1,
                            cfstring2,
                            kCFCompareCaseInsensitive);

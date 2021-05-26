@@ -7,9 +7,11 @@
 
 namespace base {
 
-// Prepares Fontconfig with a custom configuration suitable for tests.  FcInit()
-// must still be called.
+// Initializes Fontconfig with a custom configuration suitable for tests.
 void SetUpFontconfig();
+
+// Deinitializes Fontconfig.
+void TearDownFontconfig();
 
 }  // namespace base
 

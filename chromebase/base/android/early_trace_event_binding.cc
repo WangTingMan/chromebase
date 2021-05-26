@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/android/early_trace_event_binding.h"
-
 #include <stdint.h>
 
 #include "base/android/jni_string.h"
-#include "base/base_jni_headers/EarlyTraceEvent_jni.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
+#include "jni/EarlyTraceEvent_jni.h"
 
 namespace base {
 namespace android {
 
-constexpr const char kEarlyJavaCategory[] = "EarlyJava";
+const char kEarlyJavaCategory[] = "EarlyJava";
 
 static void JNI_EarlyTraceEvent_RecordEarlyEvent(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& jname,
     jlong begin_time_ns,
     jlong end_time_ns,
@@ -33,47 +32,35 @@ static void JNI_EarlyTraceEvent_RecordEarlyEvent(
       TimeTicks::FromInternalValue(begin_us),
       TimeTicks::FromInternalValue(end_us),
       ThreadTicks::Now() + TimeDelta::FromMicroseconds(thread_duration_us),
-      TRACE_EVENT_FLAG_JAVA_STRING_LITERALS | TRACE_EVENT_FLAG_COPY);
+      TRACE_EVENT_FLAG_COPY);
 }
 
 static void JNI_EarlyTraceEvent_RecordEarlyStartAsyncEvent(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& jname,
     jlong id,
     jlong timestamp_ns) {
   std::string name = ConvertJavaStringToUTF8(env, jname);
   int64_t timestamp_us = timestamp_ns / 1000;
 
-  TRACE_EVENT_ASYNC_BEGIN_WITH_TIMESTAMP_AND_FLAGS0(
+  TRACE_EVENT_COPY_ASYNC_BEGIN_WITH_TIMESTAMP0(
       kEarlyJavaCategory, name.c_str(), id,
-      base::TimeTicks() + base::TimeDelta::FromMicroseconds(timestamp_us),
-      TRACE_EVENT_FLAG_JAVA_STRING_LITERALS | TRACE_EVENT_FLAG_COPY);
+      base::TimeTicks() + base::TimeDelta::FromMicroseconds(timestamp_us));
 }
 
 static void JNI_EarlyTraceEvent_RecordEarlyFinishAsyncEvent(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& jname,
     jlong id,
     jlong timestamp_ns) {
   std::string name = ConvertJavaStringToUTF8(env, jname);
   int64_t timestamp_us = timestamp_ns / 1000;
 
-  TRACE_EVENT_ASYNC_END_WITH_TIMESTAMP_AND_FLAGS0(
+  TRACE_EVENT_COPY_ASYNC_END_WITH_TIMESTAMP0(
       kEarlyJavaCategory, name.c_str(), id,
-      base::TimeTicks() + base::TimeDelta::FromMicroseconds(timestamp_us),
-      TRACE_EVENT_FLAG_JAVA_STRING_LITERALS | TRACE_EVENT_FLAG_COPY);
-}
-
-bool GetBackgroundStartupTracingFlag() {
-  JNIEnv* env = base::android::AttachCurrentThread();
-  return base::android::Java_EarlyTraceEvent_getBackgroundStartupTracingFlag(
-      env);
-}
-
-void SetBackgroundStartupTracingFlag(bool enabled) {
-  JNIEnv* env = base::android::AttachCurrentThread();
-  base::android::Java_EarlyTraceEvent_setBackgroundStartupTracingFlag(env,
-                                                                      enabled);
+      base::TimeTicks() + base::TimeDelta::FromMicroseconds(timestamp_us));
 }
 
 }  // namespace android

@@ -169,23 +169,23 @@ TEST(SysStrings, SysNativeMBAndWide) {
 #if !defined(SYSTEM_NATIVE_UTF8)
   ScopedLocale locale("en_US.UTF-8");
 #endif
-  for (auto* i : kConvertRoundtripCases) {
-    std::wstring wide = i;
+  for (size_t i = 0; i < arraysize(kConvertRoundtripCases); ++i) {
+    std::wstring wide = kConvertRoundtripCases[i];
     std::wstring trip = SysNativeMBToWide(SysWideToNativeMB(wide));
     EXPECT_EQ(wide.size(), trip.size());
     EXPECT_EQ(wide, trip);
   }
 
   // We assume our test is running in UTF-8, so double check through ICU.
-  for (auto* i : kConvertRoundtripCases) {
-    std::wstring wide = i;
+  for (size_t i = 0; i < arraysize(kConvertRoundtripCases); ++i) {
+    std::wstring wide = kConvertRoundtripCases[i];
     std::wstring trip = SysNativeMBToWide(WideToUTF8(wide));
     EXPECT_EQ(wide.size(), trip.size());
     EXPECT_EQ(wide, trip);
   }
 
-  for (auto* i : kConvertRoundtripCases) {
-    std::wstring wide = i;
+  for (size_t i = 0; i < arraysize(kConvertRoundtripCases); ++i) {
+    std::wstring wide = kConvertRoundtripCases[i];
     std::wstring trip = UTF8ToWide(SysWideToNativeMB(wide));
     EXPECT_EQ(wide.size(), trip.size());
     EXPECT_EQ(wide, trip);

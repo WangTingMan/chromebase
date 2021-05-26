@@ -6,8 +6,8 @@
 
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
-#include "base/base_jni_headers/JavaExceptionReporter_jni.h"
 #include "base/debug/dump_without_crashing.h"
+#include "jni/JavaExceptionReporter_jni.h"
 
 using base::android::JavaParamRef;
 
@@ -38,12 +38,16 @@ void SetJavaExceptionCallback(void (*callback)(const char*)) {
 }
 
 void SetJavaException(const char* exception) {
-  DCHECK(g_java_exception_callback);
-  g_java_exception_callback(exception);
+  // No need to print exception because they are already logged via
+  // env->ExceptionDescribe() within jni_android.cc.
+  if (g_java_exception_callback) {
+    g_java_exception_callback(exception);
+  }
 }
 
 void JNI_JavaExceptionReporter_ReportJavaException(
     JNIEnv* env,
+    const JavaParamRef<jclass>& jcaller,
     jboolean crash_after_report,
     const JavaParamRef<jthrowable>& e) {
   std::string exception_info = base::android::GetJavaExceptionInfo(env, e);
@@ -58,6 +62,7 @@ void JNI_JavaExceptionReporter_ReportJavaException(
 
 void JNI_JavaExceptionReporter_ReportJavaStackTrace(
     JNIEnv* env,
+    const JavaParamRef<jclass>& jcaller,
     const JavaParamRef<jstring>& stackTrace) {
   SetJavaException(ConvertJavaStringToUTF8(stackTrace).c_str());
   base::debug::DumpWithoutCrashing();

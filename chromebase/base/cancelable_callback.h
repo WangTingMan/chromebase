@@ -33,8 +33,7 @@
 //   run_loop.QuitWhenIdle();
 // }
 //
-// CancelableOnceClosure timeout(
-//     base::BindOnce(&TimeoutCallback, "Test timed out."));
+// CancelableClosure timeout(base::Bind(&TimeoutCallback, "Test timed out."));
 // ThreadTaskRunnerHandle::Get()->PostDelayedTask(FROM_HERE, timeout.callback(),
 //                                                TimeDelta::FromSeconds(4));
 // RunIntensiveTest();
@@ -62,11 +61,11 @@ namespace internal {
 template <typename CallbackType>
 class CancelableCallbackImpl {
  public:
-  CancelableCallbackImpl() {}
+  CancelableCallbackImpl() : weak_ptr_factory_(this) {}
 
   // |callback| must not be null.
   explicit CancelableCallbackImpl(CallbackType callback)
-      : callback_(std::move(callback)) {
+      : callback_(std::move(callback)), weak_ptr_factory_(this) {
     DCHECK(callback_);
   }
 
@@ -129,7 +128,7 @@ class CancelableCallbackImpl {
 
   // The stored closure that may be cancelled.
   CallbackType callback_;
-  mutable base::WeakPtrFactory<CancelableCallbackImpl> weak_ptr_factory_{this};
+  mutable base::WeakPtrFactory<CancelableCallbackImpl> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(CancelableCallbackImpl);
 };
@@ -146,7 +145,7 @@ using CancelableOnceClosure = CancelableOnceCallback<void()>;
 template <typename Signature>
 using CancelableRepeatingCallback =
     internal::CancelableCallbackImpl<RepeatingCallback<Signature>>;
-using CancelableRepeatingClosure = CancelableRepeatingCallback<void()>;
+using CancelableRepeatingClosure = CancelableOnceCallback<void()>;
 
 template <typename Signature>
 using CancelableCallback = CancelableRepeatingCallback<Signature>;

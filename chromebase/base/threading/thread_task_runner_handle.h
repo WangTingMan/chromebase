@@ -9,9 +9,8 @@
 #include "base/callback_helpers.h"
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_refptr.h"
+#include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
-#include "base/threading/sequenced_task_runner_handle.h"
 
 namespace base {
 
@@ -23,11 +22,11 @@ namespace base {
 class BASE_EXPORT ThreadTaskRunnerHandle {
  public:
   // Gets the SingleThreadTaskRunner for the current thread.
-  static const scoped_refptr<SingleThreadTaskRunner>& Get() WARN_UNUSED_RESULT;
+  static scoped_refptr<SingleThreadTaskRunner> Get();
 
   // Returns true if the SingleThreadTaskRunner is already created for
   // the current thread.
-  static bool IsSet() WARN_UNUSED_RESULT;
+  static bool IsSet();
 
   // Overrides ThreadTaskRunnerHandle::Get()'s |task_runner_| to point at
   // |overriding_task_runner| until the returned ScopedClosureRunner goes out of
@@ -49,10 +48,6 @@ class BASE_EXPORT ThreadTaskRunnerHandle {
 
  private:
   scoped_refptr<SingleThreadTaskRunner> task_runner_;
-
-  // Registers |task_runner_|'s SequencedTaskRunner interface as the
-  // SequencedTaskRunnerHandle on this thread.
-  SequencedTaskRunnerHandle sequenced_task_runner_handle_;
 
   DISALLOW_COPY_AND_ASSIGN(ThreadTaskRunnerHandle);
 };

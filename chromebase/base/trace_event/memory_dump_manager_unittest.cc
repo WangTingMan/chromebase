@@ -12,14 +12,15 @@
 
 #include "base/allocator/buildflags.h"
 #include "base/base_switches.h"
-#include "base/bind.h"
 #include "base/callback.h"
 #include "base/command_line.h"
+#include "base/debug/thread_heap_usage_tracker.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/task/post_task.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/test/scoped_task_environment.h"
 #include "base/test/test_io_thread.h"
 #include "base/threading/platform_thread.h"
@@ -155,9 +156,14 @@ class TestSequencedTaskRunner : public SequencedTaskRunner {
   ~TestSequencedTaskRunner() override = default;
 
   const scoped_refptr<SequencedTaskRunner> task_runner_ =
-      CreateSequencedTaskRunner({ThreadPool()});
+      CreateSequencedTaskRunnerWithTraits({});
   bool enabled_ = true;
   unsigned num_of_post_tasks_ = 0;
+};
+
+class TestingThreadHeapUsageTracker : public debug::ThreadHeapUsageTracker {
+ public:
+  using ThreadHeapUsageTracker::DisableHeapTrackingForTesting;
 };
 
 }  // namespace
@@ -206,21 +212,20 @@ class MemoryDumpManagerTest : public testing::Test {
     //     bool success,
     //     std::unique_ptr<ProcessMemoryDump> pmd)
     // The extra arguments prepended to the |callback| below (the ones with the
-    // "curried_" prefix) are just passed from the BindOnce(). This is just to
-    // get around the limitation of BindOnce() in supporting only capture-less
-    // lambdas.
-    ProcessMemoryDumpCallback callback = BindOnce(
-        [](bool* curried_success, OnceClosure curried_quit_closure,
+    // "curried_" prefix) are just passed from the Bind(). This is just to get
+    // around the limitation of Bind() in supporting only capture-less lambdas.
+    ProcessMemoryDumpCallback callback = Bind(
+        [](bool* curried_success, Closure curried_quit_closure,
            uint64_t curried_expected_guid, bool success, uint64_t dump_guid,
            std::unique_ptr<ProcessMemoryDump> pmd) {
           *curried_success = success;
           EXPECT_EQ(curried_expected_guid, dump_guid);
-          ThreadTaskRunnerHandle::Get()->PostTask(
-              FROM_HERE, std::move(curried_quit_closure));
+          ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE,
+                                                  curried_quit_closure);
         },
         Unretained(&success), run_loop.QuitClosure(), test_guid);
 
-    mdm_->CreateProcessDump(request_args, std::move(callback));
+    mdm_->CreateProcessDump(request_args, callback);
     run_loop.Run();
     return success;
   }
@@ -420,11 +425,11 @@ TEST_F(MemoryDumpManagerTest, RespectTaskRunnerAffinity) {
   // we will pop out one thread/MemoryDumpProvider, each MDP is supposed to be
   // invoked a number of times equal to its index.
   for (uint32_t i = kNumInitialThreads; i > 0; --i) {
-    threads.push_back(std::make_unique<Thread>("test thread"));
+    threads.push_back(WrapUnique(new Thread("test thread")));
     auto* thread = threads.back().get();
     thread->Start();
     scoped_refptr<SingleThreadTaskRunner> task_runner = thread->task_runner();
-    mdps.push_back(std::make_unique<MockMemoryDumpProvider>());
+    mdps.push_back(WrapUnique(new MockMemoryDumpProvider()));
     auto* mdp = mdps.back().get();
     RegisterDumpProvider(mdp, task_runner, kDefaultOptions);
     EXPECT_CALL(*mdp, OnMemoryDump(_, _))
@@ -446,11 +451,11 @@ TEST_F(MemoryDumpManagerTest, RespectTaskRunnerAffinity) {
     // thread the MDP belongs to.
     {
       RunLoop run_loop;
-      OnceClosure unregistration =
-          BindOnce(&MemoryDumpManager::UnregisterDumpProvider,
-                   Unretained(mdm_.get()), Unretained(mdps.back().get()));
-      threads.back()->task_runner()->PostTaskAndReply(
-          FROM_HERE, std::move(unregistration), run_loop.QuitClosure());
+      Closure unregistration =
+          Bind(&MemoryDumpManager::UnregisterDumpProvider,
+               Unretained(mdm_.get()), Unretained(mdps.back().get()));
+      threads.back()->task_runner()->PostTaskAndReply(FROM_HERE, unregistration,
+                                                      run_loop.QuitClosure());
       run_loop.Run();
     }
     mdps.pop_back();
@@ -597,8 +602,9 @@ TEST_F(MemoryDumpManagerTest, UnregisterDumperFromThreadWhileDumping) {
   std::vector<std::unique_ptr<MockMemoryDumpProvider>> mdps;
 
   for (int i = 0; i < 2; i++) {
-    threads.push_back(std::make_unique<TestIOThread>(TestIOThread::kAutoStart));
-    mdps.push_back(std::make_unique<MockMemoryDumpProvider>());
+    threads.push_back(
+        WrapUnique(new TestIOThread(TestIOThread::kAutoStart)));
+    mdps.push_back(WrapUnique(new MockMemoryDumpProvider()));
     RegisterDumpProvider(mdps.back().get(), threads.back()->task_runner(),
                          kDefaultOptions);
   }
@@ -645,8 +651,9 @@ TEST_F(MemoryDumpManagerTest, TearDownThreadWhileDumping) {
   std::vector<std::unique_ptr<MockMemoryDumpProvider>> mdps;
 
   for (int i = 0; i < 2; i++) {
-    threads.push_back(std::make_unique<TestIOThread>(TestIOThread::kAutoStart));
-    mdps.push_back(std::make_unique<MockMemoryDumpProvider>());
+    threads.push_back(
+        WrapUnique(new TestIOThread(TestIOThread::kAutoStart)));
+    mdps.push_back(WrapUnique(new MockMemoryDumpProvider()));
     RegisterDumpProvider(mdps.back().get(), threads.back()->task_runner(),
                          kDefaultOptions);
   }

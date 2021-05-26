@@ -6,7 +6,7 @@
 
 #include "base/bind.h"
 #include "base/process/process_iterator.h"
-#include "base/task/post_task.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/time/time.h"
 
 namespace base {
@@ -40,9 +40,9 @@ void EnsureProcessTerminated(Process process) {
   if (process.WaitForExitWithTimeout(TimeDelta(), nullptr))
     return;
 
-  PostDelayedTask(
+  PostDelayedTaskWithTraits(
       FROM_HERE,
-      {TaskPriority::BEST_EFFORT, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+      {TaskPriority::BACKGROUND, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
       BindOnce(
           [](Process process) {
             if (process.WaitForExitWithTimeout(TimeDelta(), nullptr))

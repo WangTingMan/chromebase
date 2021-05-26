@@ -43,8 +43,6 @@ public final class MultiprocessTestClientLauncher {
     private static final SparseArray<MultiprocessTestClientLauncher> sPidToLauncher =
             new SparseArray<>();
 
-    private static final SparseArray<Boolean> sPidToCleanExit = new SparseArray<>();
-
     private static final SparseArray<Integer> sPidToMainResult = new SparseArray<>();
 
     private static final Object sLauncherHandlerInitLock = new Object();
@@ -107,7 +105,6 @@ public final class MultiprocessTestClientLauncher {
                     assert isRunningOnLauncherThread();
                     assert sPidToLauncher.get(connection.getPid())
                             == MultiprocessTestClientLauncher.this;
-                    sPidToCleanExit.put(connection.getPid(), connection.hasCleanExit());
                     sPidToLauncher.remove(connection.getPid());
                 }
             };
@@ -121,7 +118,7 @@ public final class MultiprocessTestClientLauncher {
     @GuardedBy("mConnectedLock")
     private boolean mConnected;
 
-    private IChildProcessService mService;
+    private IChildProcessService mService = null;
     private int mPid;
     private ITestController mTestController;
 
@@ -157,7 +154,7 @@ public final class MultiprocessTestClientLauncher {
                     return false;
                 }
                 try {
-                    timeoutNs = mConnectedCondition.awaitNanos(timeoutNs);
+                    mConnectedCondition.awaitNanos(timeoutNs);
                 } catch (InterruptedException ie) {
                     Log.e(TAG, "Interrupted while waiting for connection.");
                 }
@@ -322,26 +319,6 @@ public final class MultiprocessTestClientLauncher {
             launcherThread.start();
             sLauncherHandler = new Handler(launcherThread.getLooper());
         }
-    }
-
-    @CalledByNative
-    private static boolean hasCleanExit(final int pid) {
-        return runOnLauncherAndGetResult(new Callable<Boolean>() {
-            @Override
-            public Boolean call() {
-                return hasCleanExitOnLauncherThread(pid);
-            }
-        });
-    }
-
-    private static boolean hasCleanExitOnLauncherThread(int pid) {
-        assert isRunningOnLauncherThread();
-
-        MultiprocessTestClientLauncher launcher = sPidToLauncher.get(pid);
-        if (launcher == null) {
-            return sPidToCleanExit.get(pid, false);
-        }
-        return launcher.mLauncher.getConnection().hasCleanExit();
     }
 
     /** Does not take ownership of of fds. */

@@ -50,14 +50,11 @@ NOINLINE void CorruptMemoryBlock(bool induce_crash) {
 
 }  // namespace
 
-#if defined(ADDRESS_SANITIZER) || BUILDFLAG(IS_HWASAN)
+#if defined(ADDRESS_SANITIZER)
 // NOTE(sebmarchand): We intentionally perform some invalid heap access here in
 //     order to trigger an AddressSanitizer (ASan) error report.
 
-// This variable is used to size an array of ints. It needs to be a multiple of
-// 4 so that off-by-one overflows are detected by HWASan, which has a shadow
-// granularity of 16 bytes.
-static const size_t kArraySize = 4;
+static const size_t kArraySize = 5;
 
 void AsanHeapOverflow() {
   // Declares the array as volatile to make sure it doesn't get optimized away.

@@ -10,6 +10,7 @@
 #include "base/json/json_parser.h"
 #include "base/logging.h"
 #include "base/optional.h"
+#include "base/values.h"
 
 namespace base {
 
@@ -40,70 +41,43 @@ const char JSONReader::kUnquotedDictionaryKey[] =
 const char JSONReader::kInputTooLarge[] =
     "Input string is too large (>2GB).";
 
-JSONReader::ValueWithError::ValueWithError() = default;
-
-JSONReader::ValueWithError::ValueWithError(ValueWithError&& other) = default;
-
-JSONReader::ValueWithError::~ValueWithError() = default;
-
-JSONReader::ValueWithError& JSONReader::ValueWithError::operator=(
-    ValueWithError&& other) = default;
-
 JSONReader::JSONReader(int options, int max_depth)
     : parser_(new internal::JSONParser(options, max_depth)) {}
 
 JSONReader::~JSONReader() = default;
 
 // static
-Optional<Value> JSONReader::Read(StringPiece json, int options, int max_depth) {
+std::unique_ptr<Value> JSONReader::Read(StringPiece json,
+                                        int options,
+                                        int max_depth) {
   internal::JSONParser parser(options, max_depth);
-  return parser.Parse(json);
+  Optional<Value> root = parser.Parse(json);
+  return root ? std::make_unique<Value>(std::move(*root)) : nullptr;
 }
 
-std::unique_ptr<Value> JSONReader::ReadDeprecated(StringPiece json,
-                                                  int options,
-                                                  int max_depth) {
-  Optional<Value> value = Read(json, options, max_depth);
-  return value ? Value::ToUniquePtrValue(std::move(*value)) : nullptr;
-}
 
 // static
-JSONReader::ValueWithError JSONReader::ReadAndReturnValueWithError(
-    StringPiece json,
-    int options) {
-  ValueWithError ret;
-  internal::JSONParser parser(options);
-  ret.value = parser.Parse(json);
-  if (!ret.value) {
-    ret.error_message = parser.GetErrorMessage();
-    ret.error_code = parser.error_code();
-    ret.error_line = parser.error_line();
-    ret.error_column = parser.error_column();
-  }
-  return ret;
-}
-
-// static
-std::unique_ptr<Value> JSONReader::ReadAndReturnErrorDeprecated(
+std::unique_ptr<Value> JSONReader::ReadAndReturnError(
     StringPiece json,
     int options,
     int* error_code_out,
     std::string* error_msg_out,
     int* error_line_out,
     int* error_column_out) {
-  ValueWithError ret = ReadAndReturnValueWithError(json, options);
-  if (ret.value)
-    return Value::ToUniquePtrValue(std::move(*ret.value));
+  internal::JSONParser parser(options);
+  Optional<Value> root = parser.Parse(json);
+  if (!root) {
+    if (error_code_out)
+      *error_code_out = parser.error_code();
+    if (error_msg_out)
+      *error_msg_out = parser.GetErrorMessage();
+    if (error_line_out)
+      *error_line_out = parser.error_line();
+    if (error_column_out)
+      *error_column_out = parser.error_column();
+  }
 
-  if (error_code_out)
-    *error_code_out = ret.error_code;
-  if (error_msg_out)
-    *error_msg_out = ret.error_message;
-  if (error_line_out)
-    *error_line_out = ret.error_line;
-  if (error_column_out)
-    *error_column_out = ret.error_column;
-  return nullptr;
+  return root ? std::make_unique<Value>(std::move(*root)) : nullptr;
 }
 
 // static
@@ -136,11 +110,7 @@ std::string JSONReader::ErrorCodeToString(JsonParseError error_code) {
   return std::string();
 }
 
-Optional<Value> JSONReader::ReadToValue(StringPiece json) {
-  return parser_->Parse(json);
-}
-
-std::unique_ptr<Value> JSONReader::ReadToValueDeprecated(StringPiece json) {
+std::unique_ptr<Value> JSONReader::ReadToValue(StringPiece json) {
   Optional<Value> value = parser_->Parse(json);
   return value ? std::make_unique<Value>(std::move(*value)) : nullptr;
 }

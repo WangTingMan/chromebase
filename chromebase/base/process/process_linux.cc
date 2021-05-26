@@ -9,14 +9,17 @@
 
 #include "base/files/file_util.h"
 #include "base/logging.h"
-#include "base/posix/can_lower_nice_to.h"
-#include "base/process/internal_linux.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
+
+// Not defined on AIX by default.
+#if defined(OS_AIX)
+#define RLIMIT_NICE 20
+#endif
 
 namespace base {
 
@@ -71,22 +74,15 @@ struct CGroups {
 const int kBackgroundPriority = 5;
 #endif  // defined(OS_CHROMEOS)
 
-}  // namespace
-
-Time Process::CreationTime() const {
-  int64_t start_ticks = is_current()
-                            ? internal::ReadProcSelfStatsAndGetFieldAsInt64(
-                                  internal::VM_STARTTIME)
-                            : internal::ReadProcStatsAndGetFieldAsInt64(
-                                  Pid(), internal::VM_STARTTIME);
-  if (!start_ticks)
-    return Time();
-  TimeDelta start_offset = internal::ClockTicksToTimeDelta(start_ticks);
-  Time boot_time = internal::GetBootTime();
-  if (boot_time.is_null())
-    return Time();
-  return Time(boot_time + start_offset);
+bool CanReraisePriority() {
+  // We won't be able to raise the priority if we don't have the right rlimit.
+  // The limit may be adjusted in /etc/security/limits.conf for PAM systems.
+  struct rlimit rlim;
+  return (getrlimit(RLIMIT_NICE, &rlim) == 0) &&
+         (20 - kForegroundPriority) <= static_cast<int>(rlim.rlim_cur);
 }
+
+}  // namespace
 
 // static
 bool Process::CanBackgroundProcesses() {
@@ -95,8 +91,7 @@ bool Process::CanBackgroundProcesses() {
     return true;
 #endif  // defined(OS_CHROMEOS)
 
-  static const bool can_reraise_priority =
-      internal::CanLowerNiceTo(kForegroundPriority);
+  static const bool can_reraise_priority = CanReraisePriority();
   return can_reraise_priority;
 }
 
@@ -124,7 +119,7 @@ bool Process::SetProcessBackgrounded(bool background) {
 
 #if defined(OS_CHROMEOS)
   if (CGroups::Get().enabled) {
-    std::string pid = NumberToString(process_);
+    std::string pid = IntToString(process_);
     const base::FilePath file = background ? CGroups::Get().background_file
                                            : CGroups::Get().foreground_file;
     return base::WriteFile(file, pid.c_str(), pid.size()) > 0;
@@ -173,7 +168,7 @@ ProcessId Process::GetPidInNamespace() const {
     // Synchronously reading files in /proc does not hit the disk.
     ThreadRestrictions::ScopedAllowIO allow_io;
     FilePath status_file =
-        FilePath("/proc").Append(NumberToString(process_)).Append("status");
+        FilePath("/proc").Append(IntToString(process_)).Append("status");
     if (!ReadFileToString(status_file, &status)) {
       return kNullProcessId;
     }

@@ -9,7 +9,6 @@
 
 #include "base/android/jni_android.h"
 #include "base/android/jni_string.h"
-#include "base/base_jni_headers/RecordHistogram_jni.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/metrics/histogram.h"
@@ -18,6 +17,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/time/time.h"
+#include "jni/RecordHistogram_jni.h"
 
 namespace base {
 namespace android {
@@ -210,6 +210,7 @@ LazyInstance<HistogramCache>::Leaky g_histograms;
 
 jlong JNI_RecordHistogram_RecordBooleanHistogram(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jboolean j_sample) {
@@ -223,6 +224,7 @@ jlong JNI_RecordHistogram_RecordBooleanHistogram(
 
 jlong JNI_RecordHistogram_RecordEnumeratedHistogram(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jint j_sample,
@@ -238,6 +240,7 @@ jlong JNI_RecordHistogram_RecordEnumeratedHistogram(
 
 jlong JNI_RecordHistogram_RecordCustomCountHistogram(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jint j_sample,
@@ -255,6 +258,7 @@ jlong JNI_RecordHistogram_RecordCustomCountHistogram(
 
 jlong JNI_RecordHistogram_RecordLinearCountHistogram(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jint j_sample,
@@ -272,6 +276,7 @@ jlong JNI_RecordHistogram_RecordLinearCountHistogram(
 
 jlong JNI_RecordHistogram_RecordSparseHistogram(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jint j_sample) {
@@ -285,6 +290,7 @@ jlong JNI_RecordHistogram_RecordSparseHistogram(
 
 jlong JNI_RecordHistogram_RecordCustomTimesHistogramMilliseconds(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_histogram_name,
     jlong j_histogram_key,
     jint j_duration,
@@ -305,6 +311,7 @@ jlong JNI_RecordHistogram_RecordCustomTimesHistogramMilliseconds(
 // targets - see http://crbug.com/415945.
 jint JNI_RecordHistogram_GetHistogramValueCountForTesting(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& histogram_name,
     jint sample) {
   HistogramBase* histogram = StatisticsRecorder::FindHistogram(
@@ -320,6 +327,7 @@ jint JNI_RecordHistogram_GetHistogramValueCountForTesting(
 
 jint JNI_RecordHistogram_GetHistogramTotalCountForTesting(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& histogram_name) {
   HistogramBase* histogram = StatisticsRecorder::FindHistogram(
       android::ConvertJavaStringToUTF8(env, histogram_name));

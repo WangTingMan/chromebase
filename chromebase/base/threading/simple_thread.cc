@@ -11,11 +11,12 @@
 
 namespace base {
 
-SimpleThread::SimpleThread(const std::string& name)
-    : SimpleThread(name, Options()) {}
+SimpleThread::SimpleThread(const std::string& name_prefix)
+    : SimpleThread(name_prefix, Options()) {}
 
-SimpleThread::SimpleThread(const std::string& name, const Options& options)
-    : name_(name),
+SimpleThread::SimpleThread(const std::string& name_prefix,
+                           const Options& options)
+    : name_prefix_(name_prefix),
       options_(options),
       event_(WaitableEvent::ResetPolicy::MANUAL,
              WaitableEvent::InitialState::NOT_SIGNALED) {}
@@ -28,7 +29,7 @@ SimpleThread::~SimpleThread() {
 
 void SimpleThread::Start() {
   StartAsync();
-  ScopedAllowBaseSyncPrimitives allow_wait;
+  ThreadRestrictions::ScopedAllowWait allow_wait;
   event_.Wait();  // Wait for the thread to complete initialization.
 }
 
@@ -61,12 +62,17 @@ PlatformThreadId SimpleThread::tid() {
 }
 
 bool SimpleThread::HasBeenStarted() {
+  ThreadRestrictions::ScopedAllowWait allow_wait;
   return event_.IsSignaled();
 }
 
 void SimpleThread::ThreadMain() {
   tid_ = PlatformThread::CurrentId();
-  PlatformThread::SetName(name_);
+  // Construct our full name of the form "name_prefix_/TID".
+  std::string name(name_prefix_);
+  name.push_back('/');
+  name.append(IntToString(tid_));
+  PlatformThread::SetName(name);
 
   // We've initialized our new thread, signal that we're done to Start().
   event_.Signal();
@@ -76,13 +82,14 @@ void SimpleThread::ThreadMain() {
 }
 
 DelegateSimpleThread::DelegateSimpleThread(Delegate* delegate,
-                                           const std::string& name)
-    : DelegateSimpleThread(delegate, name, Options()) {}
+                                           const std::string& name_prefix)
+    : DelegateSimpleThread(delegate, name_prefix, Options()) {}
 
 DelegateSimpleThread::DelegateSimpleThread(Delegate* delegate,
-                                           const std::string& name,
+                                           const std::string& name_prefix,
                                            const Options& options)
-    : SimpleThread(name, options), delegate_(delegate) {
+    : SimpleThread(name_prefix, options),
+      delegate_(delegate) {
   DCHECK(delegate_);
 }
 
@@ -115,10 +122,7 @@ DelegateSimpleThreadPool::~DelegateSimpleThreadPool() {
 void DelegateSimpleThreadPool::Start() {
   DCHECK(threads_.empty()) << "Start() called with outstanding threads.";
   for (int i = 0; i < num_threads_; ++i) {
-    std::string name(name_prefix_);
-    name.push_back('/');
-    name.append(NumberToString(i));
-    DelegateSimpleThread* thread = new DelegateSimpleThread(this, name);
+    DelegateSimpleThread* thread = new DelegateSimpleThread(this, name_prefix_);
     thread->Start();
     threads_.push_back(thread);
   }

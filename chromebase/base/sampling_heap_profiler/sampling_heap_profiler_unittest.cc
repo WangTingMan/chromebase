@@ -9,57 +9,32 @@
 
 #include "base/allocator/allocator_shim.h"
 #include "base/debug/alias.h"
-#include "base/rand_util.h"
-#include "base/synchronization/waitable_event.h"
 #include "base/threading/simple_thread.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
+namespace {
 
 class SamplingHeapProfilerTest : public ::testing::Test {
- public:
-  void SetUp() override {
 #if defined(OS_MACOSX)
-    allocator::InitializeAllocatorShim();
+  void SetUp() override { allocator::InitializeAllocatorShim(); }
 #endif
-    SamplingHeapProfiler::Init();
-  }
-
-  size_t GetNextSample(size_t mean_interval) {
-    return PoissonAllocationSampler::GetNextSampleInterval(mean_interval);
-  }
-
-  static int GetRunningSessionsCount() {
-    return SamplingHeapProfiler::Get()->running_sessions_;
-  }
-
-  static void RunStartStopLoop(SamplingHeapProfiler* profiler) {
-    for (int i = 0; i < 100000; ++i) {
-      profiler->Start();
-      EXPECT_LE(1, GetRunningSessionsCount());
-      profiler->Stop();
-    }
-  }
 };
 
-class SamplesCollector : public PoissonAllocationSampler::SamplesObserver {
+class SamplesCollector : public SamplingHeapProfiler::SamplesObserver {
  public:
   explicit SamplesCollector(size_t watch_size) : watch_size_(watch_size) {}
 
-  void SampleAdded(void* address,
-                   size_t size,
-                   size_t,
-                   PoissonAllocationSampler::AllocatorType,
-                   const char*) override {
+  void SampleAdded(uint32_t id, size_t size, size_t) override {
     if (sample_added || size != watch_size_)
       return;
-    sample_address_ = address;
+    sample_id_ = id;
     sample_added = true;
   }
 
-  void SampleRemoved(void* address) override {
-    if (address == sample_address_)
+  void SampleRemoved(uint32_t id) override {
+    if (id == sample_id_)
       sample_removed = true;
   }
 
@@ -68,52 +43,23 @@ class SamplesCollector : public PoissonAllocationSampler::SamplesObserver {
 
  private:
   size_t watch_size_;
-  void* sample_address_ = nullptr;
+  uint32_t sample_id_ = 0;
 };
 
-TEST_F(SamplingHeapProfilerTest, SampleObserver) {
+TEST_F(SamplingHeapProfilerTest, CollectSamples) {
+  SamplingHeapProfiler::InitTLSSlot();
   SamplesCollector collector(10000);
-  auto* sampler = PoissonAllocationSampler::Get();
-  sampler->SuppressRandomnessForTest(true);
-  sampler->SetSamplingInterval(1024);
-  sampler->AddSamplesObserver(&collector);
+  SamplingHeapProfiler* profiler = SamplingHeapProfiler::GetInstance();
+  profiler->SuppressRandomnessForTest(true);
+  profiler->SetSamplingInterval(1024);
+  profiler->Start();
+  profiler->AddSamplesObserver(&collector);
   void* volatile p = malloc(10000);
   free(p);
-  sampler->RemoveSamplesObserver(&collector);
-  EXPECT_TRUE(collector.sample_added);
-  EXPECT_TRUE(collector.sample_removed);
-}
-
-TEST_F(SamplingHeapProfilerTest, SampleObserverMuted) {
-  SamplesCollector collector(10000);
-  auto* sampler = PoissonAllocationSampler::Get();
-  sampler->SuppressRandomnessForTest(true);
-  sampler->SetSamplingInterval(1024);
-  sampler->AddSamplesObserver(&collector);
-  {
-    PoissonAllocationSampler::ScopedMuteThreadSamples muted_scope;
-    void* volatile p = malloc(10000);
-    free(p);
-  }
-  sampler->RemoveSamplesObserver(&collector);
-  EXPECT_FALSE(collector.sample_added);
-  EXPECT_FALSE(collector.sample_removed);
-}
-
-TEST_F(SamplingHeapProfilerTest, IntervalRandomizationSanity) {
-  PoissonAllocationSampler::Get()->SuppressRandomnessForTest(false);
-  constexpr int iterations = 50;
-  constexpr size_t target = 10000000;
-  int sum = 0;
-  for (int i = 0; i < iterations; ++i) {
-    int samples = 0;
-    for (size_t value = 0; value < target; value += GetNextSample(10000))
-      ++samples;
-    // There are should be ~ target/10000 = 1000 samples.
-    sum += samples;
-  }
-  int mean_samples = sum / iterations;
-  EXPECT_NEAR(1000, mean_samples, 100);  // 10% tolerance.
+  profiler->Stop();
+  profiler->RemoveSamplesObserver(&collector);
+  CHECK(collector.sample_added);
+  CHECK(collector.sample_removed);
 }
 
 const int kNumberOfAllocations = 10000;
@@ -152,8 +98,9 @@ class MyThread2 : public SimpleThread {
 };
 
 void CheckAllocationPattern(void (*allocate_callback)()) {
-  auto* profiler = SamplingHeapProfiler::Get();
-  PoissonAllocationSampler::Get()->SuppressRandomnessForTest(false);
+  SamplingHeapProfiler::InitTLSSlot();
+  SamplingHeapProfiler* profiler = SamplingHeapProfiler::GetInstance();
+  profiler->SuppressRandomnessForTest(false);
   profiler->SetSamplingInterval(10240);
   base::TimeTicks t0 = base::TimeTicks::Now();
   std::map<size_t, size_t> sums;
@@ -193,14 +140,14 @@ void CheckAllocationPattern(void (*allocate_callback)()) {
 
 TEST_F(SamplingHeapProfilerTest, DISABLED_ParallelLargeSmallStats) {
   CheckAllocationPattern([]() {
-    MyThread1 t1;
-    MyThread1 t2;
-    t1.Start();
-    t2.Start();
+    SimpleThread* t1 = new MyThread1();
+    SimpleThread* t2 = new MyThread2();
+    t1->Start();
+    t2->Start();
     for (int i = 0; i < kNumberOfAllocations; ++i)
       Allocate3();
-    t1.Join();
-    t2.Join();
+    t1->Join();
+    t2->Join();
   });
 }
 
@@ -214,75 +161,5 @@ TEST_F(SamplingHeapProfilerTest, DISABLED_SequentialLargeSmallStats) {
   });
 }
 
-// Platform TLS: alloc+free[ns]: 22.184  alloc[ns]: 8.910  free[ns]: 13.274
-// thread_local: alloc+free[ns]: 18.353  alloc[ns]: 5.021  free[ns]: 13.331
-TEST_F(SamplingHeapProfilerTest, MANUAL_SamplerMicroBenchmark) {
-  // With the sampling interval of 100KB it happens to record ~ every 450th
-  // allocation in the browser process. We model this pattern here.
-  constexpr size_t sampling_interval = 100000;
-  constexpr size_t allocation_size = sampling_interval / 450;
-  SamplesCollector collector(0);
-  auto* sampler = PoissonAllocationSampler::Get();
-  sampler->SetSamplingInterval(sampling_interval);
-  sampler->AddSamplesObserver(&collector);
-  int kNumAllocations = 50000000;
-
-  base::TimeTicks t0 = base::TimeTicks::Now();
-  for (int i = 1; i <= kNumAllocations; ++i) {
-    sampler->RecordAlloc(
-        reinterpret_cast<void*>(static_cast<intptr_t>(i)), allocation_size,
-        PoissonAllocationSampler::AllocatorType::kMalloc, nullptr);
-  }
-  base::TimeTicks t1 = base::TimeTicks::Now();
-  for (int i = 1; i <= kNumAllocations; ++i)
-    sampler->RecordFree(reinterpret_cast<void*>(static_cast<intptr_t>(i)));
-  base::TimeTicks t2 = base::TimeTicks::Now();
-
-  printf(
-      "alloc+free[ns]: %.3f   alloc[ns]: %.3f   free[ns]: %.3f   "
-      "alloc+free[mln/s]: %.1f   total[ms]: %.1f\n",
-      (t2 - t0).InNanoseconds() * 1. / kNumAllocations,
-      (t1 - t0).InNanoseconds() * 1. / kNumAllocations,
-      (t2 - t1).InNanoseconds() * 1. / kNumAllocations,
-      kNumAllocations / (t2 - t0).InMicrosecondsF(),
-      (t2 - t0).InMillisecondsF());
-
-  sampler->RemoveSamplesObserver(&collector);
-}
-
-class StartStopThread : public SimpleThread {
- public:
-  StartStopThread(WaitableEvent* event)
-      : SimpleThread("MyThread2"), event_(event) {}
-  void Run() override {
-    auto* profiler = SamplingHeapProfiler::Get();
-    event_->Signal();
-    SamplingHeapProfilerTest::RunStartStopLoop(profiler);
-  }
-
- private:
-  WaitableEvent* event_;
-};
-
-TEST_F(SamplingHeapProfilerTest, StartStop) {
-  auto* profiler = SamplingHeapProfiler::Get();
-  EXPECT_EQ(0, GetRunningSessionsCount());
-  profiler->Start();
-  EXPECT_EQ(1, GetRunningSessionsCount());
-  profiler->Start();
-  EXPECT_EQ(2, GetRunningSessionsCount());
-  profiler->Stop();
-  EXPECT_EQ(1, GetRunningSessionsCount());
-  profiler->Stop();
-  EXPECT_EQ(0, GetRunningSessionsCount());
-
-  WaitableEvent event;
-  StartStopThread thread(&event);
-  thread.Start();
-  event.Wait();
-  RunStartStopLoop(profiler);
-  thread.Join();
-  EXPECT_EQ(0, GetRunningSessionsCount());
-}
-
+}  // namespace
 }  // namespace base

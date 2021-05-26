@@ -12,7 +12,6 @@
 #include "base/base_export.h"
 #include "base/memory/singleton.h"
 #include "base/metrics/field_trial.h"
-#include "base/metrics/field_trial_params.h"
 #include "base/synchronization/lock.h"
 
 namespace base {
@@ -23,6 +22,9 @@ class BASE_EXPORT FieldTrialParamAssociator {
  public:
   FieldTrialParamAssociator();
   ~FieldTrialParamAssociator();
+
+  // Key-value mapping type for field trial parameters.
+  typedef std::map<std::string, std::string> FieldTrialParams;
 
   // Retrieve the singleton.
   static FieldTrialParamAssociator* GetInstance();

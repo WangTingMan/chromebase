@@ -14,9 +14,8 @@
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
-// Guard against conflict with Win32 API StrCat macro:
-// check StrCat wasn't and will not be redefined.
-#define StrCat StrCat
+// To resolve a conflict with Win32 API StrCat macro.
+#include "base/win/windows_types.h"
 #endif
 
 namespace base {

@@ -4,7 +4,7 @@
 
 #include "base/task/sequence_manager/real_time_domain.h"
 
-#include "base/task/sequence_manager/sequence_manager_impl.h"
+#include "base/task/sequence_manager/sequence_manager.h"
 
 namespace base {
 namespace sequence_manager {
@@ -14,18 +14,12 @@ RealTimeDomain::RealTimeDomain() {}
 
 RealTimeDomain::~RealTimeDomain() = default;
 
-void RealTimeDomain::OnRegisterWithSequenceManager(
-    SequenceManagerImpl* sequence_manager) {
-  TimeDomain::OnRegisterWithSequenceManager(sequence_manager);
-  tick_clock_ = sequence_manager->GetTickClock();
-}
-
 LazyNow RealTimeDomain::CreateLazyNow() const {
-  return LazyNow(tick_clock_);
+  return LazyNow(sequence_manager()->GetTickClock());
 }
 
 TimeTicks RealTimeDomain::Now() const {
-  return tick_clock_->NowTicks();
+  return sequence_manager()->NowTicks();
 }
 
 Optional<TimeDelta> RealTimeDomain::DelayTillNextTask(LazyNow* lazy_now) {
@@ -43,10 +37,6 @@ Optional<TimeDelta> RealTimeDomain::DelayTillNextTask(LazyNow* lazy_now) {
   TRACE_EVENT1("sequence_manager", "RealTimeDomain::DelayTillNextTask",
                "delay_ms", delay.InMillisecondsF());
   return delay;
-}
-
-bool RealTimeDomain::MaybeFastForwardToNextTask(bool quit_when_idle_requested) {
-  return false;
 }
 
 const char* RealTimeDomain::GetName() const {

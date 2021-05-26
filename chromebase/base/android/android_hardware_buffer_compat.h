@@ -5,32 +5,9 @@
 #ifndef BASE_ANDROID_ANDROID_HARDWARE_BUFFER_COMPAT_H_
 #define BASE_ANDROID_ANDROID_HARDWARE_BUFFER_COMPAT_H_
 
-#include <android/hardware_buffer.h>
-#include <android/sensor.h>
-
+#include "base/android/android_hardware_buffer_abi.h"
 #include "base/base_export.h"
-#include "base/macros.h"
-#include "base/no_destructor.h"
-
-extern "C" {
-using PFAHardwareBuffer_allocate = void (*)(const AHardwareBuffer_Desc* desc,
-                                            AHardwareBuffer** outBuffer);
-using PFAHardwareBuffer_acquire = void (*)(AHardwareBuffer* buffer);
-using PFAHardwareBuffer_describe = void (*)(const AHardwareBuffer* buffer,
-                                            AHardwareBuffer_Desc* outDesc);
-using PFAHardwareBuffer_lock = int (*)(AHardwareBuffer* buffer,
-                                       uint64_t usage,
-                                       int32_t fence,
-                                       const ARect* rect,
-                                       void** outVirtualAddress);
-using PFAHardwareBuffer_recvHandleFromUnixSocket =
-    int (*)(int socketFd, AHardwareBuffer** outBuffer);
-using PFAHardwareBuffer_release = void (*)(AHardwareBuffer* buffer);
-using PFAHardwareBuffer_sendHandleToUnixSocket =
-    int (*)(const AHardwareBuffer* buffer, int socketFd);
-using PFAHardwareBuffer_unlock = int (*)(AHardwareBuffer* buffer,
-                                         int32_t* fence);
-}
+#include "base/lazy_instance.h"
 
 namespace base {
 
@@ -40,7 +17,7 @@ namespace base {
 class BASE_EXPORT AndroidHardwareBufferCompat {
  public:
   static bool IsSupportAvailable();
-  static AndroidHardwareBufferCompat& GetInstance();
+  static AndroidHardwareBufferCompat GetInstance();
 
   void Allocate(const AHardwareBuffer_Desc* desc, AHardwareBuffer** outBuffer);
   void Acquire(AHardwareBuffer* buffer);
@@ -56,7 +33,7 @@ class BASE_EXPORT AndroidHardwareBufferCompat {
   int Unlock(AHardwareBuffer* buffer, int32_t* fence);
 
  private:
-  friend class NoDestructor<AndroidHardwareBufferCompat>;
+  friend struct base::LazyInstanceTraitsBase<AndroidHardwareBufferCompat>;
   AndroidHardwareBufferCompat();
 
   PFAHardwareBuffer_allocate allocate_;
@@ -67,8 +44,6 @@ class BASE_EXPORT AndroidHardwareBufferCompat {
   PFAHardwareBuffer_release release_;
   PFAHardwareBuffer_sendHandleToUnixSocket send_handle_;
   PFAHardwareBuffer_unlock unlock_;
-
-  DISALLOW_COPY_AND_ASSIGN(AndroidHardwareBufferCompat);
 };
 
 }  // namespace base

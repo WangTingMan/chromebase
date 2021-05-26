@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/base_jni_headers/PowerMonitor_jni.h"
 #include "base/power_monitor/power_monitor.h"
 #include "base/power_monitor/power_monitor_device_source.h"
 #include "base/power_monitor/power_monitor_source.h"
+#include "jni/PowerMonitor_jni.h"
 
 namespace base {
 
@@ -19,7 +19,9 @@ namespace android {
 // Native implementation of PowerMonitor.java. Note: This will be invoked by
 // PowerMonitor.java shortly after startup to set the correct initial value for
 // "is on battery power."
-void JNI_PowerMonitor_OnBatteryChargingChanged(JNIEnv* env) {
+void JNI_PowerMonitor_OnBatteryChargingChanged(
+    JNIEnv* env,
+    const JavaParamRef<jclass>& clazz) {
   ProcessPowerEventHelper(PowerMonitorSource::POWER_STATE_EVENT);
 }
 

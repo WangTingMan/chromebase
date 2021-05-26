@@ -129,14 +129,14 @@ class BASE_EXPORT JSONParser {
 
   // Returns the next |count| bytes of the input stream, or nullopt if fewer
   // than |count| bytes remain.
-  Optional<StringPiece> PeekChars(size_t count);
+  Optional<StringPiece> PeekChars(int count);
 
   // Calls PeekChars() with a |count| of 1.
   Optional<char> PeekChar();
 
   // Returns the next |count| bytes of the input stream, or nullopt if fewer
   // than |count| bytes remain, and advances the parser position by |count|.
-  Optional<StringPiece> ConsumeChars(size_t count);
+  Optional<StringPiece> ConsumeChars(int count);
 
   // Calls ConsumeChars() with a |count| of 1.
   Optional<char> ConsumeChar();

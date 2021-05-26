@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "base/base_export.h"
-#include "base/template_util.h"
 #include "base/threading/sequence_local_storage_map.h"
 
 namespace base {
@@ -23,18 +22,17 @@ BASE_EXPORT int GetNextSequenceLocalStorageSlotNumber();
 //
 // Example usage:
 //
-// int& GetSequenceLocalStorage()
-//     static base::NoDestructor<SequenceLocalStorageSlot<int>> sls_value;
-//     return sls_value->GetOrCreateValue();
+// namespace {
+// base::LazyInstance<SequenceLocalStorageSlot<int>> sls_value;
 // }
 //
 // void Read() {
-//   int value = GetSequenceLocalStorage();
+//   int value = sls_value.Get().Get();
 //   ...
 // }
 //
 // void Write() {
-//   GetSequenceLocalStorage() = 42;
+//   sls_value.Get().Set(42);
 // }
 //
 // void PostTasks() {
@@ -48,7 +46,7 @@ BASE_EXPORT int GetNextSequenceLocalStorageSlotNumber();
 //
 // SequenceLocalStorageSlot must be used within the scope of a
 // ScopedSetSequenceLocalStorageMapForCurrentThread object.
-// Note: this is true on all ThreadPool workers and on threads bound to a
+// Note: this is true on all TaskScheduler workers and on threads bound to a
 // MessageLoop.
 template <typename T, typename Deleter = std::default_delete<T>>
 class SequenceLocalStorageSlot {
@@ -57,48 +55,27 @@ class SequenceLocalStorageSlot {
       : slot_id_(internal::GetNextSequenceLocalStorageSlotNumber()) {}
   ~SequenceLocalStorageSlot() = default;
 
-  operator bool() const { return GetValuePointer() != nullptr; }
-
-  // Default-constructs the value for the current sequence if not
-  // already constructed. Then, returns the value.
-  T& GetOrCreateValue() {
-    T* ptr = GetValuePointer();
-    if (!ptr)
-      ptr = emplace();
-    return *ptr;
-  }
-
-  // Returns a pointer to the value for the current sequence. May be
-  // nullptr if the value was not constructed on the current sequence.
-  T* GetValuePointer() {
-    void* ptr =
+  // Get the sequence-local value stored in this slot. Returns a
+  // default-constructed value if no value was previously set.
+  T& Get() {
+    void* value =
         internal::SequenceLocalStorageMap::GetForCurrentThread().Get(slot_id_);
-    return static_cast<T*>(ptr);
-  }
-  const T* GetValuePointer() const {
-    return const_cast<SequenceLocalStorageSlot*>(this)->GetValuePointer();
-  }
 
-  T* operator->() { return GetValuePointer(); }
-  const T* operator->() const { return GetValuePointer(); }
-
-  T& operator*() { return *GetValuePointer(); }
-  const T& operator*() const { return *GetValuePointer(); }
-
-  void reset() { Adopt(nullptr); }
-
-  // Constructs this slot's sequence-local value with |args...| and returns a
-  // pointer to the created object.
-  template <class... Args>
-  T* emplace(Args&&... args) {
-    T* value_ptr = new T(std::forward<Args>(args)...);
-    Adopt(value_ptr);
-    return value_ptr;
+    // Sets and returns a default-constructed value if no value was previously
+    // set.
+    if (!value) {
+      Set(T());
+      return Get();
+    }
+    return *(static_cast<T*>(value));
   }
 
- private:
-  // Takes ownership of |value_ptr|.
-  void Adopt(T* value_ptr) {
+  // Set this slot's sequence-local value to |value|.
+  // Note that if T is expensive to copy, it may be more appropriate to instead
+  // store a std::unique_ptr<T>. This is enforced by the
+  // DISALLOW_COPY_AND_ASSIGN style rather than directly by this class however.
+  void Set(T value) {
+    // Allocates the |value| with new rather than std::make_unique.
     // Since SequenceLocalStorageMap needs to store values of various types
     // within the same map, the type of value_destructor_pair.value is void*
     // (std::unique_ptr<void> is invalid). Memory is freed by calling
@@ -106,6 +83,8 @@ class SequenceLocalStorageSlot {
     // ValueDestructorPair which is invoked when the value is overwritten by
     // another call to SequenceLocalStorageMap::Set or when the
     // SequenceLocalStorageMap is deleted.
+    T* value_ptr = new T(std::move(value));
+
     internal::SequenceLocalStorageMap::ValueDestructorPair::DestructorFunc*
         destructor = [](void* ptr) { Deleter()(static_cast<T*>(ptr)); };
 
@@ -116,6 +95,7 @@ class SequenceLocalStorageSlot {
         slot_id_, std::move(value_destructor_pair));
   }
 
+ private:
   // |slot_id_| is used as a key in SequenceLocalStorageMap
   const int slot_id_;
   DISALLOW_COPY_AND_ASSIGN(SequenceLocalStorageSlot);

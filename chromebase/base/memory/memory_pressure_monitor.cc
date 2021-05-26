@@ -40,9 +40,6 @@ MemoryPressureLevelUMA MemoryPressureLevelToUmaEnumValue(
 
 }  // namespace
 
-const base::TimeDelta MemoryPressureMonitor::kUMAMemoryPressureLevelPeriod =
-    base::TimeDelta::FromSeconds(5);
-
 MemoryPressureMonitor::MemoryPressureMonitor() {
   DCHECK(!g_monitor);
   g_monitor = this;

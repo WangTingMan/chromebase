@@ -15,26 +15,22 @@ namespace base {
 
 namespace {
 
-template <typename Char>
-bool IsLowerHexDigit(Char c) {
+bool IsLowerHexDigit(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
 }
 
-template <typename StringPieceType>
-bool IsValidGUIDInternal(StringPieceType guid, bool strict) {
-  using CharType = typename StringPieceType::value_type;
-
+bool IsValidGUIDInternal(const base::StringPiece& guid, bool strict) {
   const size_t kGUIDLength = 36U;
   if (guid.length() != kGUIDLength)
     return false;
 
   for (size_t i = 0; i < guid.length(); ++i) {
-    CharType current = guid[i];
+    char current = guid[i];
     if (i == 8 || i == 13 || i == 18 || i == 23) {
       if (current != '-')
         return false;
     } else {
-      if (strict ? !IsLowerHexDigit(current) : !IsHexDigit(current))
+      if ((strict && !IsLowerHexDigit(current)) || !IsHexDigit(current))
         return false;
     }
   }
@@ -66,15 +62,11 @@ std::string GenerateGUID() {
   return RandomDataToGUIDString(sixteen_bytes);
 }
 
-bool IsValidGUID(base::StringPiece guid) {
+bool IsValidGUID(const base::StringPiece& guid) {
   return IsValidGUIDInternal(guid, false /* strict */);
 }
 
-bool IsValidGUID(base::StringPiece16 guid) {
-  return IsValidGUIDInternal(guid, false /* strict */);
-}
-
-bool IsValidGUIDOutputString(base::StringPiece guid) {
+bool IsValidGUIDOutputString(const base::StringPiece& guid) {
   return IsValidGUIDInternal(guid, true /* strict */);
 }
 

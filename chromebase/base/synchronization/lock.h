@@ -9,7 +9,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/synchronization/lock_impl.h"
-#include "base/thread_annotations.h"
 #include "base/threading/platform_thread.h"
 #include "build/build_config.h"
 
@@ -18,16 +17,12 @@ namespace base {
 // A convenient wrapper for an OS specific critical section.  The only real
 // intelligence in this class is in debug mode for the support for the
 // AssertAcquired() method.
-class LOCKABLE BASE_EXPORT Lock {
+class BASE_EXPORT Lock {
  public:
 #if !DCHECK_IS_ON()
-  // Optimized wrapper implementation
+   // Optimized wrapper implementation
   Lock() : lock_() {}
   ~Lock() {}
-
-  // TODO(lukasza): https://crbug.com/831825: Add EXCLUSIVE_LOCK_FUNCTION
-  // annotation to Acquire method and similar annotations to Release, Try and
-  // AssertAcquired methods (here and in the #else branch).
   void Acquire() { lock_.Lock(); }
   void Release() { lock_.Unlock(); }
 
@@ -110,23 +105,46 @@ class LOCKABLE BASE_EXPORT Lock {
 };
 
 // A helper class that acquires the given Lock while the AutoLock is in scope.
-using AutoLock = internal::BasicAutoLock<Lock>;
+class AutoLock {
+ public:
+  struct AlreadyAcquired {};
+
+  explicit AutoLock(Lock& lock) : lock_(lock) {
+    lock_.Acquire();
+  }
+
+  AutoLock(Lock& lock, const AlreadyAcquired&) : lock_(lock) {
+    lock_.AssertAcquired();
+  }
+
+  ~AutoLock() {
+    lock_.AssertAcquired();
+    lock_.Release();
+  }
+
+ private:
+  Lock& lock_;
+  DISALLOW_COPY_AND_ASSIGN(AutoLock);
+};
 
 // AutoUnlock is a helper that will Release() the |lock| argument in the
 // constructor, and re-Acquire() it in the destructor.
-using AutoUnlock = internal::BasicAutoUnlock<Lock>;
+class AutoUnlock {
+ public:
+  explicit AutoUnlock(Lock& lock) : lock_(lock) {
+    // We require our caller to have the lock.
+    lock_.AssertAcquired();
+    lock_.Release();
+  }
 
-// Like AutoLock but is a no-op when the provided Lock* is null. Inspired from
-// absl::MutexLockMaybe. Use this instead of base::Optional<base::AutoLock> to
-// get around -Wthread-safety-analysis warnings for conditional locking.
-using AutoLockMaybe = internal::BasicAutoLockMaybe<Lock>;
+  ~AutoUnlock() {
+    lock_.Acquire();
+  }
 
-// Like AutoLock but permits Release() of its mutex before destruction.
-// Release() may be called at most once. Inspired from
-// absl::ReleasableMutexLock. Use this instead of base::Optional<base::AutoLock>
-// to get around -Wthread-safety-analysis warnings for AutoLocks that are
-// explicitly released early (prefer proper scoping to this).
-using ReleasableAutoLock = internal::BasicReleasableAutoLock<Lock>;
+ private:
+  Lock& lock_;
+  DISALLOW_COPY_AND_ASSIGN(AutoUnlock);
+};
 
 }  // namespace base
 

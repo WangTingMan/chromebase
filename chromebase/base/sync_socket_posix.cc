@@ -20,7 +20,7 @@
 
 #include "base/files/file_util.h"
 #include "base/logging.h"
-#include "base/threading/scoped_blocking_call.h"
+#include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -120,12 +120,12 @@ bool SyncSocket::Close() {
 }
 
 size_t SyncSocket::Send(const void* buffer, size_t length) {
-  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
+  AssertBlockingAllowed();
   return SendHelper(handle_, buffer, length);
 }
 
 size_t SyncSocket::Receive(void* buffer, size_t length) {
-  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
+  AssertBlockingAllowed();
   DCHECK_GT(length, 0u);
   DCHECK_LE(length, kMaxMessageLength);
   DCHECK_NE(handle_, kInvalidHandle);
@@ -138,7 +138,7 @@ size_t SyncSocket::Receive(void* buffer, size_t length) {
 size_t SyncSocket::ReceiveWithTimeout(void* buffer,
                                       size_t length,
                                       TimeDelta timeout) {
-  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
+  AssertBlockingAllowed();
   DCHECK_GT(length, 0u);
   DCHECK_LE(length, kMaxMessageLength);
   DCHECK_NE(handle_, kInvalidHandle);

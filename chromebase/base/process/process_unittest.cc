@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "base/at_exit.h"
-#include "base/debug/invalid_access_win.h"
 #include "base/process/kill.h"
 #include "base/test/multiprocess_test.h"
 #include "base/test/test_timeouts.h"
@@ -20,12 +19,10 @@
 namespace {
 
 #if defined(OS_WIN)
-constexpr int kExpectedStillRunningExitCode = 0x102;
+const int kExpectedStillRunningExitCode = 0x102;
 #else
-constexpr int kExpectedStillRunningExitCode = 0;
+const int kExpectedStillRunningExitCode = 0;
 #endif
-
-constexpr int kDummyExitCode = 42;
 
 #if defined(OS_MACOSX)
 // Fake port provider that returns the calling process's
@@ -131,53 +128,11 @@ MULTIPROCESS_TEST_MAIN(SleepyChildProcess) {
   return 0;
 }
 
-// TODO(https://crbug.com/726484): Enable these tests on Fuchsia when
-// CreationTime() is implemented.
-//
-// Disabled on Android because Process::CreationTime() is not supported.
-// https://issuetracker.google.com/issues/37140047
-#if !defined(OS_FUCHSIA) && !defined(OS_ANDROID)
-TEST_F(ProcessTest, CreationTimeCurrentProcess) {
-  // The current process creation time should be less than or equal to the
-  // current time.
-  EXPECT_LE(Process::Current().CreationTime(), Time::Now());
-}
-
-TEST_F(ProcessTest, CreationTimeOtherProcess) {
-  // The creation time of a process should be between a time recorded before it
-  // was spawned and a time recorded after it was spawned. However, since the
-  // base::Time and process creation clocks don't match, tolerate some error.
-  constexpr base::TimeDelta kTolerance =
-#if defined(OS_LINUX)
-      // On Linux, process creation time is relative to boot time which has a
-      // 1-second resolution. Tolerate 1 second for the imprecise boot time and
-      // 100 ms for the imprecise clock.
-      TimeDelta::FromMilliseconds(1100);
-#elif defined(OS_WIN)
-      // On Windows, process creation time is based on the system clock while
-      // Time::Now() is a combination of system clock and
-      // QueryPerformanceCounter(). Tolerate 100 ms for the clock mismatch.
-      TimeDelta::FromMilliseconds(100);
-#elif defined(OS_MACOSX)
-      // On Mac, process creation time should be very precise.
-      TimeDelta::FromMilliseconds(0);
-#else
-#error Unsupported platform
-#endif
-  const Time before_creation = Time::Now();
-  Process process(SpawnChild("SleepyChildProcess"));
-  const Time after_creation = Time::Now();
-  const Time creation = process.CreationTime();
-  EXPECT_LE(before_creation - kTolerance, creation);
-  EXPECT_LE(creation, after_creation + kTolerance);
-  EXPECT_TRUE(process.Terminate(kDummyExitCode, true));
-}
-#endif  // !defined(OS_FUCHSIA)
-
 TEST_F(ProcessTest, Terminate) {
   Process process(SpawnChild("SleepyChildProcess"));
   ASSERT_TRUE(process.IsValid());
 
+  const int kDummyExitCode = 42;
   int exit_code = kDummyExitCode;
   EXPECT_EQ(TERMINATION_STATUS_STILL_RUNNING,
             GetTerminationStatus(process.Handle(), &exit_code));
@@ -271,18 +226,17 @@ TEST_F(ProcessTest, WaitForExitWithTimeout) {
 // backgrounding and restoring.
 // Note: a platform may not be willing or able to lower the priority of
 // a process. The calls to SetProcessBackground should be noops then.
-// Flaky on Windows: https://crbug.com/931721.
-#if defined(OS_WIN)
-#define MAYBE_SetProcessBackgrounded DISABLED_SetProcessBackgrounded
-#else
-#define MAYBE_SetProcessBackgrounded SetProcessBackgrounded
-#endif
-TEST_F(ProcessTest, MAYBE_SetProcessBackgrounded) {
+TEST_F(ProcessTest, SetProcessBackgrounded) {
   if (!Process::CanBackgroundProcesses())
     return;
   Process process(SpawnChild("SimpleChildProcess"));
   int old_priority = process.GetPriority();
-#if defined(OS_MACOSX)
+#if defined(OS_WIN)
+  EXPECT_TRUE(process.SetProcessBackgrounded(true));
+  EXPECT_TRUE(process.IsProcessBackgrounded());
+  EXPECT_TRUE(process.SetProcessBackgrounded(false));
+  EXPECT_FALSE(process.IsProcessBackgrounded());
+#elif defined(OS_MACOSX)
   // On the Mac, backgrounding a process requires a port to that process.
   // In the browser it's available through the MachBroker class, which is not
   // part of base. Additionally, there is an indefinite amount of time between
@@ -296,24 +250,16 @@ TEST_F(ProcessTest, MAYBE_SetProcessBackgrounded) {
   EXPECT_FALSE(process.IsProcessBackgrounded(&provider));
 
 #else
-  EXPECT_TRUE(process.SetProcessBackgrounded(true));
-  EXPECT_TRUE(process.IsProcessBackgrounded());
-  EXPECT_TRUE(process.SetProcessBackgrounded(false));
-  EXPECT_FALSE(process.IsProcessBackgrounded());
+  process.SetProcessBackgrounded(true);
+  process.SetProcessBackgrounded(false);
 #endif
   int new_priority = process.GetPriority();
   EXPECT_EQ(old_priority, new_priority);
 }
 
-// Flaky on Windows: https://crbug.com/931721.
-#if defined(OS_WIN)
-#define MAYBE_SetProcessBackgroundedSelf DISABLED_SetProcessBackgroundedSelf
-#else
-#define MAYBE_SetProcessBackgroundedSelf SetProcessBackgroundedSelf
-#endif
 // Same as SetProcessBackgrounded but to this very process. It uses
 // a different code path at least for Windows.
-TEST_F(ProcessTest, MAYBE_SetProcessBackgroundedSelf) {
+TEST_F(ProcessTest, SetProcessBackgroundedSelf) {
   if (!Process::CanBackgroundProcesses())
     return;
   Process process = Process::Current();
@@ -353,13 +299,6 @@ TEST_F(ProcessTest, PredefinedProcessIsRunning) {
   // Process 1 is the /sbin/launchd, it should be always running.
   EXPECT_FALSE(Process::Open(1).WaitForExitWithTimeout(
       base::TimeDelta(), nullptr));
-}
-#endif
-
-#if defined(OS_WIN)
-TEST_F(ProcessTest, HeapCorruption) {
-  EXPECT_EXIT(base::debug::win::TerminateWithHeapCorruption(),
-              ::testing::ExitedWithCode(STATUS_HEAP_CORRUPTION), "");
 }
 #endif
 

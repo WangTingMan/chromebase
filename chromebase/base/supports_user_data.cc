@@ -6,10 +6,6 @@
 
 namespace base {
 
-std::unique_ptr<SupportsUserData::Data> SupportsUserData::Data::Clone() {
-  return nullptr;
-}
-
 SupportsUserData::SupportsUserData() {
   // Harmless to construct on a different execution sequence to subsequent
   // usage.
@@ -20,7 +16,7 @@ SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   // Avoid null keys; they are too vulnerable to collision.
   DCHECK(key);
-  auto found = user_data_.find(key);
+  DataMap::const_iterator found = user_data_.find(key);
   if (found != user_data_.end())
     return found->second.get();
   return nullptr;
@@ -31,10 +27,7 @@ void SupportsUserData::SetUserData(const void* key,
   DCHECK(sequence_checker_.CalledOnValidSequence());
   // Avoid null keys; they are too vulnerable to collision.
   DCHECK(key);
-  if (data.get())
-    user_data_[key] = std::move(data);
-  else
-    RemoveUserData(key);
+  user_data_[key] = std::move(data);
 }
 
 void SupportsUserData::RemoveUserData(const void* key) {
@@ -44,14 +37,6 @@ void SupportsUserData::RemoveUserData(const void* key) {
 
 void SupportsUserData::DetachFromSequence() {
   sequence_checker_.DetachFromSequence();
-}
-
-void SupportsUserData::CloneDataFrom(const SupportsUserData& other) {
-  for (const auto& data_pair : other.user_data_) {
-    auto cloned_data = data_pair.second->Clone();
-    if (cloned_data)
-      SetUserData(data_pair.first, std::move(cloned_data));
-  }
 }
 
 SupportsUserData::~SupportsUserData() {

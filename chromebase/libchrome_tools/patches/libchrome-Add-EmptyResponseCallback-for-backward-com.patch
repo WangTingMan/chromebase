@@ -1,0 +1,42 @@
+From f34f528c1fc4512910b2acc586e678ddb53eaf9e Mon Sep 17 00:00:00 2001
+From: Hidehiko Abe <hidehiko@chromium.org>
+Date: Wed, 2 Oct 2019 09:53:00 +0900
+Subject: [PATCH] libchrome: Add EmptyResponseCallback for backward
+ compatiblity.
+
+BUG=chromium:909719
+TEST=Build locally.
+
+Change-Id: I4d6c75f267fd6c170b966647c30c91bb02b3ee14
+---
+ dbus/object_proxy.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/dbus/object_proxy.h b/dbus/object_proxy.h
+index 22e44f1..7d62eb9 100644
+--- a/dbus/object_proxy.h
++++ b/dbus/object_proxy.h
+@@ -13,6 +13,7 @@
+ #include <string>
+ #include <vector>
+ 
++#include "base/bind.h"
+ #include "base/callback.h"
+ #include "base/macros.h"
+ #include "base/memory/ref_counted.h"
+@@ -105,6 +106,12 @@ class CHROME_DBUS_EXPORT ObjectProxy
+   using OnConnectedCallback =
+       base::OnceCallback<void(const std::string&, const std::string&, bool)>;
+ 
++  // TOOD(crbug.com/909719): This is just for backward compatibility.
++  // Remove this callback after clients are migrated.
++  static ResponseCallback EmptyResponseCallback() {
++    return base::BindOnce([](Response*){});
++  }
++
+   // Calls the method of the remote object and blocks until the response
+   // is returned. Returns NULL on error with the error details specified
+   // in the |error| object.
+-- 
+2.23.0.581.g78d2f28ef7-goog
+

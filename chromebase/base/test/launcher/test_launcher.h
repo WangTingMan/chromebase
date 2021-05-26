@@ -40,9 +40,6 @@ extern const char kGTestRunDisabledTestsFlag[];
 extern const char kGTestOutputFlag[];
 extern const char kGTestShuffleFlag[];
 extern const char kGTestRandomSeedFlag[];
-extern const char kIsolatedScriptRunDisabledTestsFlag[];
-extern const char kIsolatedScriptTestFilterFlag[];
-extern const char kIsolatedScriptTestRepeatFlag[];
 
 // Interface for use with LaunchTests that abstracts away exact details
 // which tests and how are run.
@@ -52,18 +49,17 @@ class TestLauncherDelegate {
   // must put the result in |output| and return true on success.
   virtual bool GetTests(std::vector<TestIdentifier>* output) = 0;
 
-  // Called before a test is considered for running. This method must return
-  // true if either the delegate or the TestLauncher will run the test.
-  virtual bool WillRunTest(const std::string& test_case_name,
-                           const std::string& test_name) = 0;
+  // Called before a test is considered for running. If it returns false,
+  // the test is not run. If it returns true, the test will be run provided
+  // it is part of the current shard.
+  virtual bool ShouldRunTest(const std::string& test_case_name,
+                             const std::string& test_name) = 0;
 
   // Called to make the delegate run the specified tests. The delegate must
   // return the number of actual tests it's going to run (can be smaller,
   // equal to, or larger than size of |test_names|). It must also call
   // |test_launcher|'s OnTestFinished method once per every run test,
   // regardless of its success.
-  // If test_names contains PRE_ chained tests, they must be properly ordered
-  // and consecutive.
   virtual size_t RunTests(TestLauncher* test_launcher,
                           const std::vector<std::string>& test_names) = 0;
 
@@ -75,6 +71,7 @@ class TestLauncherDelegate {
   virtual size_t RetryTests(TestLauncher* test_launcher,
                             const std::vector<std::string>& test_names) = 0;
 
+ protected:
   virtual ~TestLauncherDelegate();
 };
 
@@ -83,6 +80,12 @@ class TestLauncherDelegate {
 class ProcessLifetimeObserver {
  public:
   virtual ~ProcessLifetimeObserver() = default;
+
+  // Invoked once the child process is started. |handle| is a handle to the
+  // child process and |id| is its pid. NOTE: this method is invoked on the
+  // thread the process is launched on immediately after it is launched. The
+  // caller owns the ProcessHandle.
+  virtual void OnLaunched(ProcessHandle handle, ProcessId id) {}
 
   // Invoked when a test process exceeds its runtime, immediately before it is
   // terminated. |command_line| is the command line used to launch the process.
@@ -121,9 +124,6 @@ class TestLauncher {
     ALLOW_BREAKAWAY_FROM_JOB = (1 << 1),
   };
 
-  // Enum for subprocess stdio redirect.
-  enum StdioRedirect { AUTO, ALWAYS, NEVER };
-
   struct LaunchOptions {
     LaunchOptions();
     LaunchOptions(const LaunchOptions& other);
@@ -143,21 +143,17 @@ class TestLauncher {
   // Constructor. |parallel_jobs| is the limit of simultaneous parallel test
   // jobs.
   TestLauncher(TestLauncherDelegate* launcher_delegate, size_t parallel_jobs);
-  // virtual to mock in testing.
-  virtual ~TestLauncher();
+  ~TestLauncher();
 
   // Runs the launcher. Must be called at most once.
-  // command_line is null by default.
-  // if null, uses command line for current process.
-  bool Run(CommandLine* command_line = nullptr) WARN_UNUSED_RESULT;
+  bool Run() WARN_UNUSED_RESULT;
 
   // Launches a child process (assumed to be gtest-based binary) using
   // |command_line|. If |wrapper| is not empty, it is prepended to the final
   // command line. |observer|, if not null, is used to convey process lifetime
   // events to the caller. |observer| is destroyed after its OnCompleted
   // method is invoked.
-  // virtual to mock in testing.
-  virtual void LaunchChildGTestProcess(
+  void LaunchChildGTestProcess(
       const CommandLine& command_line,
       const std::string& wrapper,
       TimeDelta timeout,
@@ -168,39 +164,15 @@ class TestLauncher {
   void OnTestFinished(const TestResult& result);
 
  private:
-  bool Init(CommandLine* command_line) WARN_UNUSED_RESULT;
-
-  // Gets tests from the delegate, and converts to TestInfo objects.
-  // Returns false if delegate fails to return tests.
-  bool InitTests();
-
-  // Some of the TestLauncherDelegate implementations don't call into gtest
-  // until they've already split into test-specific processes. This results
-  // in gtest's native shuffle implementation attempting to shuffle one test.
-  // Shuffling the list of tests in the test launcher (before the delegate
-  // gets involved) ensures that the entire shard is shuffled.
-  bool ShuffleTests(CommandLine* command_line);
-
-  // Move all PRE_ tests prior to the final test in order.
-  // Validate tests names. This includes no name conflict between tests
-  // without DISABLED_ prefix, and orphaned PRE_ tests.
-  // Add all tests and disabled tests names to result tracker.
-  // Filter Disabled tests if not flagged to run.
-  // Returns false if any violation is found.
-  bool ProcessAndValidateTests();
+  bool Init() WARN_UNUSED_RESULT;
 
   // Runs all tests in current iteration.
   void RunTests();
 
-  // Retry to run tests that failed during RunTests.
-  // Returns false if retry still fails or unable to start.
-  bool RunRetryTests();
-
   void CombinePositiveTestFilters(std::vector<std::string> filter_a,
                                   std::vector<std::string> filter_b);
 
-  // Rest counters, retry tests list, and test result tracker.
-  void OnTestIterationStart();
+  void RunTestIteration();
 
 #if defined(OS_POSIX)
   void OnShutdownPipeReadable();
@@ -214,11 +186,6 @@ class TestLauncher {
 
   // Called by the delay timer when no output was made for a while.
   void OnOutputTimeout();
-
-  // Creates and starts a ThreadPoolInstance with |num_parallel_jobs| dedicated
-  // to foreground blocking tasks (corresponds to the traits used to launch and
-  // wait for child processes). virtual to mock in testing.
-  virtual void CreateAndStartThreadPool(int num_parallel_jobs);
 
   // Make sure we don't accidentally call the wrong methods e.g. on the worker
   // pool thread.  Should be the first member so that it's destroyed last: when
@@ -239,14 +206,11 @@ class TestLauncher {
   std::vector<std::string> positive_test_filter_;
   std::vector<std::string> negative_test_filter_;
 
-  // Class to encapsulate gtest information.
-  class TestInfo;
-
   // Tests to use (cached result of TestLauncherDelegate::GetTests).
-  std::vector<TestInfo> tests_;
+  std::vector<TestIdentifier> tests_;
 
-  // Threshold for number of broken tests.
-  size_t broken_threshold_;
+  // Number of tests found in this binary.
+  size_t test_found_count_;
 
   // Number of tests started in this iteration.
   size_t test_started_count_;
@@ -261,6 +225,9 @@ class TestLauncher {
   // likely indicating a more systemic problem if widespread.
   size_t test_broken_count_;
 
+  // Number of retries in this iteration.
+  size_t retry_count_;
+
   // Maximum number of retries per iteration.
   size_t retry_limit_;
 
@@ -269,7 +236,14 @@ class TestLauncher {
   bool force_run_broken_tests_;
 
   // Tests to retry in this iteration.
-  std::unordered_set<std::string> tests_to_retry_;
+  std::set<std::string> tests_to_retry_;
+
+  // Result to be returned from Run.
+  bool run_result_;
+
+  // Support for test shuffling, just like gtest does.
+  bool shuffle_;
+  uint32_t shuffle_seed_;
 
   TestResultsTracker results_tracker_;
 
@@ -278,24 +252,6 @@ class TestLauncher {
 
   // Number of jobs to run in parallel.
   size_t parallel_jobs_;
-
-  // Switch to control tests stdio :{auto, always, never}
-  StdioRedirect print_test_stdio_;
-
-  // Skip disabled tests unless explicitly requested.
-  bool skip_diabled_tests_;
-
-  // Stop test iterations due to failure.
-  bool stop_on_failure_;
-
-  // Path to JSON summary result file.
-  FilePath summary_path_;
-
-  // Path to trace file.
-  FilePath trace_path_;
-
-  // redirect stdio of subprocess
-  bool redirect_stdio_;
 
   DISALLOW_COPY_AND_ASSIGN(TestLauncher);
 };

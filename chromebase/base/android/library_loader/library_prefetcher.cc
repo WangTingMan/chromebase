@@ -19,14 +19,12 @@
 #include "base/android/library_loader/anchor_functions.h"
 #include "base/android/orderfile/orderfile_buildflags.h"
 #include "base/bits.h"
-#include "base/debug/proc_maps_linux.h"
 #include "base/files/file.h"
 #include "base/format_macros.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/posix/eintr_wrapper.h"
-#include "base/process/process_metrics.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "build/build_config.h"
@@ -157,7 +155,6 @@ bool CollectResidency(size_t start,
 void DumpResidency(size_t start,
                    size_t end,
                    std::unique_ptr<std::vector<TimestampAndResidency>> data) {
-  LOG(WARNING) << "Dumping native library residency";
   auto path = base::FilePath(
       base::StringPrintf("/data/local/tmp/chrome/residency-%d.txt", getpid()));
   auto file =
@@ -169,9 +166,9 @@ void DumpResidency(size_t start,
   }
 
   // First line: start-end of text range.
-  CHECK(AreAnchorsSane());
-  CHECK_LE(start, kStartOfText);
-  CHECK_LE(kEndOfText, end);
+  CHECK(IsOrderingSane());
+  CHECK_LT(start, kStartOfText);
+  CHECK_LT(kEndOfText, end);
   auto start_end = base::StringPrintf("%" PRIuS " %" PRIuS "\n",
                                       kStartOfText - start, kEndOfText - start);
   file.WriteAtCurrentPos(start_end.c_str(), start_end.size());
@@ -299,7 +296,7 @@ int NativeLibraryPrefetcher::PercentageOfResidentCode(size_t start,
 
 // static
 int NativeLibraryPrefetcher::PercentageOfResidentNativeLibraryCode() {
-  if (!AreAnchorsSane()) {
+  if (!IsOrderingSane()) {
     LOG(WARNING) << "Incorrect code ordering";
     return -1;
   }
@@ -311,87 +308,24 @@ int NativeLibraryPrefetcher::PercentageOfResidentNativeLibraryCode() {
 void NativeLibraryPrefetcher::PeriodicallyCollectResidency() {
   CHECK_EQ(static_cast<long>(kPageSize), sysconf(_SC_PAGESIZE));
 
-  LOG(WARNING) << "Spawning thread to periodically collect residency";
   const auto& range = GetTextRange();
   auto data = std::make_unique<std::vector<TimestampAndResidency>>();
-  // Collect residency for about minute (the actual time spent collecting
-  // residency can vary, so this is only approximate).
-  for (int i = 0; i < 120; ++i) {
+  for (int i = 0; i < 60; ++i) {
     if (!CollectResidency(range.first, range.second, data.get()))
       return;
-    usleep(5e5);
+    usleep(2e5);
   }
   DumpResidency(range.first, range.second, std::move(data));
 }
 
 // static
 void NativeLibraryPrefetcher::MadviseForOrderfile() {
-  if (!IsOrderingSane()) {
-    LOG(WARNING) << "Code not ordered, madvise optimization skipped";
-    return;
-  }
+  CHECK(IsOrderingSane());
+  LOG(WARNING) << "Performing experimental madvise from orderfile information";
   // First MADV_RANDOM on all of text, then turn the ordered text range back to
   // normal. The ordered range may be placed anywhere within .text.
   MadviseOnRange(GetTextRange(), MADV_RANDOM);
   MadviseOnRange(GetOrderedTextRange(), MADV_NORMAL);
-}
-
-// static
-void NativeLibraryPrefetcher::MadviseForResidencyCollection() {
-  if (!AreAnchorsSane()) {
-    LOG(WARNING) << "Code not ordered, cannot madvise";
-    return;
-  }
-  LOG(WARNING) << "Performing madvise for residency collection";
-  MadviseOnRange(GetTextRange(), MADV_RANDOM);
-}
-
-// static
-bool NativeLibraryPrefetcher::GetOrderedCodeInfo(std::string* filename,
-                                                 size_t* start_offset,
-                                                 size_t* size) {
-  // Need all the anchors to identify the range.
-  if (!IsOrderingSane()) {
-    LOG(WARNING) << "Incorrect code ordering";
-    return false;
-  }
-
-  std::vector<base::debug::MappedMemoryRegion> regions;
-  {
-    std::string proc_maps;
-    bool ok = base::debug::ReadProcMaps(&proc_maps);
-    if (!ok)
-      return false;
-    ok = base::debug::ParseProcMaps(proc_maps, &regions);
-    if (!ok)
-      return false;
-  }
-
-  for (const auto& region : regions) {
-    if (region.start <= kStartOfOrderedText &&
-        region.end >= kEndOfOrderedText) {
-      size_t page_size = GetPageSize();
-      size_t page_mask = ~(page_size - 1);
-
-      DCHECK_EQ(0u, region.start % page_size);
-      DCHECK_EQ(0u, region.offset % page_size);  // mmap() enforces this.
-
-      size_t start_offset_in_range =
-          (kStartOfOrderedText & page_mask) - region.start;
-      DCHECK_EQ(0u, start_offset_in_range % page_size);
-      size_t start_offset_in_file = start_offset_in_range + region.offset;
-      DCHECK_EQ(0u, start_offset_in_file % page_size);
-
-      *filename = region.path;
-      *start_offset = start_offset_in_file;
-      *size =
-          base::bits::Align(kEndOfOrderedText - kStartOfOrderedText, page_size);
-      return true;
-    }
-  }
-
-  LOG(WARNING) << "Didn't find the ordered code, yet code is ordered.";
-  return false;
 }
 
 }  // namespace android

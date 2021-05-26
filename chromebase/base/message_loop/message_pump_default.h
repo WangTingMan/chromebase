@@ -35,6 +35,9 @@ class BASE_EXPORT MessagePumpDefault : public MessagePump {
   // Used to sleep until there is more work to do.
   WaitableEvent event_;
 
+  // The time at which we should call DoDelayedWork.
+  TimeTicks delayed_work_time_;
+
   DISALLOW_COPY_AND_ASSIGN(MessagePumpDefault);
 };
 

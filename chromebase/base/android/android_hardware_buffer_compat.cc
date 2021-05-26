@@ -4,12 +4,20 @@
 
 #include "base/android/android_hardware_buffer_compat.h"
 
-#include <dlfcn.h>
-
 #include "base/android/build_info.h"
+#include "base/lazy_instance.h"
 #include "base/logging.h"
 
+#include <dlfcn.h>
+
 namespace base {
+
+namespace {
+
+static base::LazyInstance<AndroidHardwareBufferCompat>::Leaky g_compat =
+    LAZY_INSTANCE_INITIALIZER;
+
+}  // namespace
 
 AndroidHardwareBufferCompat::AndroidHardwareBufferCompat() {
   DCHECK(IsSupportAvailable());
@@ -63,9 +71,8 @@ bool AndroidHardwareBufferCompat::IsSupportAvailable() {
 }
 
 // static
-AndroidHardwareBufferCompat& AndroidHardwareBufferCompat::GetInstance() {
-  static base::NoDestructor<AndroidHardwareBufferCompat> compat;
-  return *compat;
+AndroidHardwareBufferCompat AndroidHardwareBufferCompat::GetInstance() {
+  return g_compat.Get();
 }
 
 void AndroidHardwareBufferCompat::Allocate(const AHardwareBuffer_Desc* desc,

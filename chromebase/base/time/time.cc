@@ -119,6 +119,14 @@ int64_t TimeDelta::InMillisecondsRoundedUp() const {
   return result;
 }
 
+int64_t TimeDelta::InMicroseconds() const {
+  if (is_max()) {
+    // Preserve max to prevent overflow.
+    return std::numeric_limits<int64_t>::max();
+  }
+  return delta_;
+}
+
 double TimeDelta::InMicrosecondsF() const {
   if (is_max()) {
     // Preserve max to prevent overflow.
@@ -137,56 +145,26 @@ int64_t TimeDelta::InNanoseconds() const {
 
 namespace time_internal {
 
-int64_t SaturatedAdd(int64_t value, TimeDelta delta) {
-  // Treat Min/Max() as +/- infinity (additions involving two infinities are
-  // only valid if signs match).
-  if (delta.is_max()) {
-    CHECK_GT(value, std::numeric_limits<int64_t>::min());
-    return std::numeric_limits<int64_t>::max();
-  } else if (delta.is_min()) {
-    CHECK_LT(value, std::numeric_limits<int64_t>::max());
-    return std::numeric_limits<int64_t>::min();
-  }
-
-  CheckedNumeric<int64_t> rv(value);
-  rv += delta.delta_;
+int64_t SaturatedAdd(TimeDelta delta, int64_t value) {
+  CheckedNumeric<int64_t> rv(delta.delta_);
+  rv += value;
   if (rv.IsValid())
     return rv.ValueOrDie();
   // Positive RHS overflows. Negative RHS underflows.
-  if (delta.delta_ < 0)
+  if (value < 0)
     return std::numeric_limits<int64_t>::min();
   return std::numeric_limits<int64_t>::max();
 }
 
-int64_t SaturatedSub(int64_t value, TimeDelta delta) {
-  // Treat Min/Max() as +/- infinity (subtractions involving two infinities are
-  // only valid if signs are opposite).
-  if (delta.is_max()) {
-    CHECK_LT(value, std::numeric_limits<int64_t>::max());
-    return std::numeric_limits<int64_t>::min();
-  } else if (delta.is_min()) {
-    CHECK_GT(value, std::numeric_limits<int64_t>::min());
-    return std::numeric_limits<int64_t>::max();
-  }
-
-  CheckedNumeric<int64_t> rv(value);
-  rv -= delta.delta_;
+int64_t SaturatedSub(TimeDelta delta, int64_t value) {
+  CheckedNumeric<int64_t> rv(delta.delta_);
+  rv -= value;
   if (rv.IsValid())
     return rv.ValueOrDie();
   // Negative RHS overflows. Positive RHS underflows.
-  if (delta.delta_ < 0)
+  if (value < 0)
     return std::numeric_limits<int64_t>::max();
   return std::numeric_limits<int64_t>::min();
-}
-
-int64_t SaturatedAdd( TimeDelta delta, int64_t value )
-{
-    return SaturatedAdd( value, delta );
-}
-
-int64_t SaturatedSub( TimeDelta delta, int64_t value )
-{
-    return SaturatedSub( value, delta );
 }
 
 }  // namespace time_internal
@@ -314,15 +292,15 @@ Time Time::UnixEpoch() {
   return time;
 }
 
-Time Time::Midnight(bool is_local) const {
+Time Time::LocalMidnight() const {
   Exploded exploded;
-  Explode(is_local, &exploded);
+  LocalExplode(&exploded);
   exploded.hour = 0;
   exploded.minute = 0;
   exploded.second = 0;
   exploded.millisecond = 0;
   Time out_time;
-  if (FromExploded(is_local, exploded, &out_time))
+  if (FromLocalExploded(exploded, &out_time))
     return out_time;
   // This function must not fail.
   NOTREACHED();

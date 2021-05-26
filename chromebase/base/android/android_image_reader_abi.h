@@ -41,7 +41,7 @@ typedef struct AImage AImage;
 
 enum AIMAGE_FORMATS {
   AIMAGE_FORMAT_YUV_420_888 = 0x23,
-  AIMAGE_FORMAT_PRIVATE = 0x22
+  IMAGE_FORMAT_PRIVATE = 0x22
 };
 
 using pAImage_delete = void (*)(AImage* image);
@@ -68,12 +68,11 @@ typedef struct AImageReader_ImageListener {
   AImageReader_ImageCallback onImageAvailable;
 } AImageReader_ImageListener;
 
-using pAImageReader_newWithUsage = media_status_t (*)(int32_t width,
-                                                      int32_t height,
-                                                      int32_t format,
-                                                      uint64_t usage,
-                                                      int32_t maxImages,
-                                                      AImageReader** reader);
+using pAImageReader_new = media_status_t (*)(int32_t width,
+                                             int32_t height,
+                                             int32_t format,
+                                             int32_t maxImages,
+                                             AImageReader** reader);
 
 using pAImageReader_setImageListener =
     media_status_t (*)(AImageReader* reader,
@@ -84,15 +83,7 @@ using pAImageReader_delete = void (*)(AImageReader* reader);
 using pAImageReader_getWindow = media_status_t (*)(AImageReader* reader,
                                                    ANativeWindow** window);
 
-using pAImageReader_getFormat = media_status_t (*)(const AImageReader* reader,
-                                                   int32_t* format);
-
 using pAImageReader_acquireLatestImageAsync =
-    media_status_t (*)(AImageReader* reader,
-                       AImage** image,
-                       int* acquireFenceFd);
-
-using pAImageReader_acquireNextImageAsync =
     media_status_t (*)(AImageReader* reader,
                        AImage** image,
                        int* acquireFenceFd);

@@ -148,7 +148,7 @@ bool LockedGetFromCache(int key, const PathData* path_data, FilePath* result) {
   if (path_data->cache_disabled)
     return false;
   // check for a cached version
-  auto it = path_data->cache.find(key);
+  PathMap::const_iterator it = path_data->cache.find(key);
   if (it != path_data->cache.end()) {
     *result = it->second;
     return true;

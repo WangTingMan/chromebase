@@ -38,9 +38,10 @@ int GlobalDescriptors::Get(Key key) const {
 }
 
 int GlobalDescriptors::MaybeGet(Key key) const {
-  for (const auto& i : descriptors_) {
-    if (i.key == key)
-      return i.fd;
+  for (Mapping::const_iterator
+       i = descriptors_.begin(); i != descriptors_.end(); ++i) {
+    if (i->key == key)
+      return i->fd;
   }
 
   return -1;
@@ -50,7 +51,8 @@ base::ScopedFD GlobalDescriptors::TakeFD(
     Key key,
     base::MemoryMappedFile::Region* region) {
   base::ScopedFD fd;
-  for (auto i = descriptors_.begin(); i != descriptors_.end(); ++i) {
+  for (Mapping::iterator i = descriptors_.begin(); i != descriptors_.end();
+       ++i) {
     if (i->key == key) {
       *region = i->region;
       fd.reset(i->fd);

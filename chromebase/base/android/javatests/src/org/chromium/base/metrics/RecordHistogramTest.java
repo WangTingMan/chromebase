@@ -16,6 +16,8 @@ import org.chromium.base.library_loader.LibraryProcessType;
 import org.chromium.base.test.BaseJUnit4ClassRunner;
 import org.chromium.base.test.util.MetricsUtils.HistogramDelta;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Tests for the Java API for recording UMA histograms.
  */
@@ -140,22 +142,24 @@ public class RecordHistogramTest {
         Assert.assertEquals(0, oneCount.getDelta());
         Assert.assertEquals(0, twoCount.getDelta());
 
-        RecordHistogram.recordCustomTimesHistogram(histogram, 0, 1, 100, 3);
+        TimeUnit milli = TimeUnit.MILLISECONDS;
+
+        RecordHistogram.recordCustomTimesHistogram(histogram, 0, 1, 100, milli, 3);
         Assert.assertEquals(1, zeroCount.getDelta());
         Assert.assertEquals(0, oneCount.getDelta());
         Assert.assertEquals(0, twoCount.getDelta());
 
-        RecordHistogram.recordCustomTimesHistogram(histogram, 0, 1, 100, 3);
+        RecordHistogram.recordCustomTimesHistogram(histogram, 0, 1, 100, milli, 3);
         Assert.assertEquals(2, zeroCount.getDelta());
         Assert.assertEquals(0, oneCount.getDelta());
         Assert.assertEquals(0, twoCount.getDelta());
 
-        RecordHistogram.recordCustomTimesHistogram(histogram, 95, 1, 100, 3);
+        RecordHistogram.recordCustomTimesHistogram(histogram, 95, 1, 100, milli, 3);
         Assert.assertEquals(2, zeroCount.getDelta());
         Assert.assertEquals(1, oneCount.getDelta());
         Assert.assertEquals(0, twoCount.getDelta());
 
-        RecordHistogram.recordCustomTimesHistogram(histogram, 200, 1, 100, 3);
+        RecordHistogram.recordCustomTimesHistogram(histogram, 200, 1, 100, milli, 3);
         Assert.assertEquals(2, zeroCount.getDelta());
         Assert.assertEquals(1, oneCount.getDelta());
         Assert.assertEquals(1, twoCount.getDelta());

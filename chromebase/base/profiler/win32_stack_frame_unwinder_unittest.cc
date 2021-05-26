@@ -17,25 +17,6 @@ namespace base {
 
 namespace {
 
-// The image base returned by LookupFunctionEntry starts at this value and is
-// incremented by the same value with each call.
-const uintptr_t kImageBaseIncrement = 1 << 20;
-
-// Stub module for testing.
-class TestModule : public ModuleCache::Module {
- public:
-  TestModule(uintptr_t base_address) : base_address_(base_address) {}
-
-  uintptr_t GetBaseAddress() const override { return base_address_; }
-  std::string GetId() const override { return ""; }
-  FilePath GetDebugBasename() const override { return FilePath(); }
-  size_t GetSize() const override { return 0; }
-  bool IsNative() const override { return true; }
-
- private:
-  const uintptr_t base_address_;
-};
-
 class TestUnwindFunctions : public Win32StackFrameUnwinder::UnwindFunctions {
  public:
   TestUnwindFunctions();
@@ -46,14 +27,22 @@ class TestUnwindFunctions : public Win32StackFrameUnwinder::UnwindFunctions {
                      DWORD64 program_counter,
                      PRUNTIME_FUNCTION runtime_function,
                      CONTEXT* context) override;
+  ScopedModuleHandle GetModuleForProgramCounter(
+      DWORD64 program_counter) override;
+
+  // Instructs GetModuleForProgramCounter to return null on the next call.
+  void SetUnloadedModule();
 
   // These functions set whether the next frame will have a RUNTIME_FUNCTION.
   void SetHasRuntimeFunction(CONTEXT* context);
   void SetNoRuntimeFunction(CONTEXT* context);
 
  private:
+  enum { kImageBaseIncrement = 1 << 20 };
+
   static RUNTIME_FUNCTION* const kInvalidRuntimeFunction;
 
+  bool module_is_loaded_;
   DWORD64 expected_program_counter_;
   DWORD64 next_image_base_;
   DWORD64 expected_image_base_;
@@ -67,10 +56,12 @@ RUNTIME_FUNCTION* const TestUnwindFunctions::kInvalidRuntimeFunction =
     reinterpret_cast<RUNTIME_FUNCTION*>(static_cast<uintptr_t>(-1));
 
 TestUnwindFunctions::TestUnwindFunctions()
-    : expected_program_counter_(0),
+    : module_is_loaded_(true),
+      expected_program_counter_(0),
       next_image_base_(kImageBaseIncrement),
       expected_image_base_(0),
-      next_runtime_function_(kInvalidRuntimeFunction) {}
+      next_runtime_function_(kInvalidRuntimeFunction) {
+}
 
 PRUNTIME_FUNCTION TestUnwindFunctions::LookupFunctionEntry(
     DWORD64 program_counter,
@@ -99,33 +90,32 @@ void TestUnwindFunctions::VirtualUnwind(DWORD64 image_base,
   EXPECT_EQ(&runtime_functions_.back(), runtime_function);
 }
 
-static void SetContextPc(CONTEXT* context, DWORD64 val) {
-#if defined(ARCH_CPU_ARM64)
-  context->Pc = val;
-#else
-  context->Rip = val;
-#endif
+ScopedModuleHandle TestUnwindFunctions::GetModuleForProgramCounter(
+    DWORD64 program_counter) {
+  bool return_non_null_value = module_is_loaded_;
+  module_is_loaded_ = true;
+  return ScopedModuleHandle(return_non_null_value ?
+                            ModuleHandleTraits::kNonNullModuleForTesting :
+                            nullptr);
+}
+
+void TestUnwindFunctions::SetUnloadedModule() {
+  module_is_loaded_ = false;
 }
 
 void TestUnwindFunctions::SetHasRuntimeFunction(CONTEXT* context) {
   RUNTIME_FUNCTION runtime_function = {};
   runtime_function.BeginAddress = 16;
-#if defined(ARCH_CPU_ARM64)
-  runtime_function.FunctionLength = 256;
-#else
   runtime_function.EndAddress = runtime_function.BeginAddress + 256;
-#endif
-
   runtime_functions_.push_back(runtime_function);
   next_runtime_function_ = &runtime_functions_.back();
-  expected_program_counter_ =
+
+  expected_program_counter_ = context->Rip =
       next_image_base_ + runtime_function.BeginAddress + 8;
-  SetContextPc(context, expected_program_counter_);
 }
 
 void TestUnwindFunctions::SetNoRuntimeFunction(CONTEXT* context) {
-  expected_program_counter_ = 100;
-  SetContextPc(context, expected_program_counter_);
+  expected_program_counter_ = context->Rip = 100;
   next_runtime_function_ = nullptr;
 }
 
@@ -159,18 +149,31 @@ Win32StackFrameUnwinderTest::CreateUnwinder() {
 TEST_F(Win32StackFrameUnwinderTest, FramesWithUnwindInfo) {
   std::unique_ptr<Win32StackFrameUnwinder> unwinder = CreateUnwinder();
   CONTEXT context = {0};
+  ScopedModuleHandle module;
 
-  TestModule stub_module1(kImageBaseIncrement);
   unwind_functions_->SetHasRuntimeFunction(&context);
-  EXPECT_TRUE(unwinder->TryUnwind(true, &context, &stub_module1));
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+  EXPECT_TRUE(module.IsValid());
 
-  TestModule stub_module2(kImageBaseIncrement * 2);
   unwind_functions_->SetHasRuntimeFunction(&context);
-  EXPECT_TRUE(unwinder->TryUnwind(false, &context, &stub_module2));
+  module.Set(nullptr);
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+  EXPECT_TRUE(module.IsValid());
 
-  TestModule stub_module3(kImageBaseIncrement * 3);
   unwind_functions_->SetHasRuntimeFunction(&context);
-  EXPECT_TRUE(unwinder->TryUnwind(false, &context, &stub_module3));
+  module.Set(nullptr);
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+  EXPECT_TRUE(module.IsValid());
+}
+
+// Checks that an instruction pointer in an unloaded module fails to unwind.
+TEST_F(Win32StackFrameUnwinderTest, UnloadedModule) {
+  std::unique_ptr<Win32StackFrameUnwinder> unwinder = CreateUnwinder();
+  CONTEXT context = {0};
+  ScopedModuleHandle module;
+
+  unwind_functions_->SetUnloadedModule();
+  EXPECT_FALSE(unwinder->TryUnwind(&context, &module));
 }
 
 // Checks that the CONTEXT's stack pointer gets popped when the top frame has no
@@ -178,25 +181,26 @@ TEST_F(Win32StackFrameUnwinderTest, FramesWithUnwindInfo) {
 TEST_F(Win32StackFrameUnwinderTest, FrameAtTopWithoutUnwindInfo) {
   std::unique_ptr<Win32StackFrameUnwinder> unwinder = CreateUnwinder();
   CONTEXT context = {0};
+  ScopedModuleHandle module;
   DWORD64 next_ip = 0x0123456789abcdef;
   DWORD64 original_rsp = reinterpret_cast<DWORD64>(&next_ip);
-#if defined(ARCH_CPU_ARM64)
-  context.Sp = original_rsp;
-  context.Lr = next_ip;
-  context.ContextFlags |= CONTEXT_UNWOUND_TO_CALL;
-#else
   context.Rsp = original_rsp;
-#endif
 
-  TestModule stub_module(kImageBaseIncrement);
   unwind_functions_->SetNoRuntimeFunction(&context);
-  EXPECT_TRUE(unwinder->TryUnwind(true, &context, &stub_module));
-#if defined(ARCH_CPU_ARM64)
-  EXPECT_EQ(next_ip, context.Pc);
-#else
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
   EXPECT_EQ(next_ip, context.Rip);
   EXPECT_EQ(original_rsp + 8, context.Rsp);
-#endif
+  EXPECT_TRUE(module.IsValid());
+
+  unwind_functions_->SetHasRuntimeFunction(&context);
+  module.Set(nullptr);
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+  EXPECT_TRUE(module.IsValid());
+
+  unwind_functions_->SetHasRuntimeFunction(&context);
+  module.Set(nullptr);
+  EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+  EXPECT_TRUE(module.IsValid());
 }
 
 // Checks that a frame below the top of the stack with missing unwind info
@@ -206,10 +210,13 @@ TEST_F(Win32StackFrameUnwinderTest, FrameBelowTopWithoutUnwindInfo) {
     // First stack, with a bad function below the top of the stack.
     std::unique_ptr<Win32StackFrameUnwinder> unwinder = CreateUnwinder();
     CONTEXT context = {0};
+    ScopedModuleHandle module;
+    unwind_functions_->SetHasRuntimeFunction(&context);
+    EXPECT_TRUE(unwinder->TryUnwind(&context, &module));
+    EXPECT_TRUE(module.IsValid());
 
-    TestModule stub_module(kImageBaseIncrement);
     unwind_functions_->SetNoRuntimeFunction(&context);
-    EXPECT_FALSE(unwinder->TryUnwind(false, &context, &stub_module));
+    EXPECT_FALSE(unwinder->TryUnwind(&context, &module));
   }
 }
 

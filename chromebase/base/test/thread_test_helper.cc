@@ -24,7 +24,7 @@ bool ThreadTestHelper::Run() {
           FROM_HERE, base::BindOnce(&ThreadTestHelper::RunOnSequence, this))) {
     return false;
   }
-  base::ScopedAllowBaseSyncPrimitivesForTesting allow_wait;
+  base::ThreadRestrictions::ScopedAllowWait allow_wait;
   done_event_.Wait();
   return test_result_;
 }

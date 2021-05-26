@@ -7,10 +7,10 @@
 #include <memory>
 
 #include "base/android/build_info.h"
-#include "base/base_jni_headers/SysUtils_jni.h"
 #include "base/process/process_metrics.h"
-#include "base/system/sys_info.h"
+#include "base/sys_info.h"
 #include "base/trace_event/trace_event.h"
+#include "jni/SysUtils_jni.h"
 
 namespace base {
 namespace android {
@@ -27,7 +27,9 @@ bool SysUtils::IsCurrentlyLowMemory() {
 
 // Logs the number of minor / major page faults to tracing (and also the time to
 // collect) the metrics. Does nothing if tracing is not enabled.
-static void JNI_SysUtils_LogPageFaultCountToTracing(JNIEnv* env) {
+static void JNI_SysUtils_LogPageFaultCountToTracing(
+    JNIEnv* env,
+    const base::android::JavaParamRef<jclass>& jcaller) {
   // This is racy, but we are OK losing data, and collecting it is potentially
   // expensive (reading and parsing a file).
   bool enabled;

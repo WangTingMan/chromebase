@@ -5,10 +5,10 @@
 #include <string>
 
 #include "base/android/jni_string.h"
-#include "base/base_jni_headers/StatisticsRecorderAndroid_jni.h"
 #include "base/metrics/histogram_base.h"
 #include "base/metrics/statistics_recorder.h"
-#include "base/system/sys_info.h"
+#include "base/sys_info.h"
+#include "jni/StatisticsRecorderAndroid_jni.h"
 
 using base::android::JavaParamRef;
 using base::android::ConvertUTF8ToJavaString;
@@ -18,6 +18,7 @@ namespace android {
 
 static ScopedJavaLocalRef<jstring> JNI_StatisticsRecorderAndroid_ToJson(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     jint verbosityLevel) {
   return ConvertUTF8ToJavaString(
       env, base::StatisticsRecorder::ToJSON(

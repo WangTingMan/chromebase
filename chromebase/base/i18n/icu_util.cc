@@ -44,6 +44,13 @@
 namespace base {
 namespace i18n {
 
+#if ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_SHARED
+#define ICU_UTIL_DATA_SYMBOL "icudt" U_ICU_VERSION_SHORT "_dat"
+#if defined(OS_WIN)
+#define ICU_UTIL_DATA_SHARED_MODULE_NAME "icudt.dll"
+#endif
+#endif
+
 namespace {
 #if !defined(OS_NACL)
 #if DCHECK_IS_ON()
@@ -85,8 +92,8 @@ void LazyInitIcuDataFile() {
     return;
   }
 #if defined(OS_ANDROID)
-  int fd =
-      android::OpenApkAsset(kAndroidAssetsIcuDataFileName, &g_icudtl_region);
+  int fd = base::android::OpenApkAsset(kAndroidAssetsIcuDataFileName,
+                                       &g_icudtl_region);
   g_icudtl_pf = fd;
   if (fd != -1) {
     return;
@@ -102,7 +109,7 @@ void LazyInitIcuDataFile() {
 #if defined(OS_WIN)
   // TODO(brucedawson): http://crbug.com/445616
   wchar_t tmp_buffer[_MAX_PATH] = {0};
-  wcscpy_s(tmp_buffer, as_wcstr(data_path.value()));
+  wcscpy_s(tmp_buffer, data_path.value().c_str());
   debug::Alias(tmp_buffer);
 #endif
   data_path = data_path.AppendASCII(kIcuDataFileName);
@@ -110,7 +117,7 @@ void LazyInitIcuDataFile() {
 #if defined(OS_WIN)
   // TODO(brucedawson): http://crbug.com/445616
   wchar_t tmp_buffer2[_MAX_PATH] = {0};
-  wcscpy_s(tmp_buffer2, as_wcstr(data_path.value()));
+  wcscpy_s(tmp_buffer2, data_path.value().c_str());
   debug::Alias(tmp_buffer2);
 #endif
 
@@ -120,7 +127,7 @@ void LazyInitIcuDataFile() {
       SysUTF8ToCFStringRef(kIcuDataFileName));
   FilePath data_path = mac::PathForFrameworkBundleResource(data_file_name);
 #if defined(OS_IOS)
-  FilePath override_data_path = ios::FilePathOfEmbeddedICU();
+  FilePath override_data_path = base::ios::FilePathOfEmbeddedICU();
   if (!override_data_path.empty()) {
     data_path = override_data_path;
   }
@@ -147,7 +154,7 @@ void LazyInitIcuDataFile() {
     // TODO(brucedawson): http://crbug.com/445616.
     g_debug_icu_pf_last_error = ::GetLastError();
     g_debug_icu_pf_error_details = file.error_details();
-    wcscpy_s(g_debug_icu_pf_filename, as_wcstr(data_path.value()));
+    wcscpy_s(g_debug_icu_pf_filename, data_path.value().c_str());
   }
 #endif  // OS_WIN
 }
@@ -188,7 +195,7 @@ bool InitializeICUWithFileDescriptorInternal(
     // timezone and set the ICU default timezone accordingly in advance of
     // actual use. See crbug.com/722821 and
     // https://ssl.icu-project.org/trac/ticket/13208 .
-    string16 timezone_id = android::GetDefaultTimeZoneId();
+    base::string16 timezone_id = base::android::GetDefaultTimeZoneId();
     icu::TimeZone::adoptDefault(icu::TimeZone::createTimeZone(
         icu::UnicodeString(FALSE, timezone_id.data(), timezone_id.length())));
   }
@@ -253,7 +260,30 @@ bool InitializeICU() {
 #endif
 
   bool result;
-#if (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_STATIC)
+#if (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_SHARED)
+  FilePath data_path;
+  PathService::Get(DIR_ASSETS, &data_path);
+  data_path = data_path.AppendASCII(ICU_UTIL_DATA_SHARED_MODULE_NAME);
+
+  HMODULE module = LoadLibrary(data_path.value().c_str());
+  if (!module) {
+    LOG(ERROR) << "Failed to load " << ICU_UTIL_DATA_SHARED_MODULE_NAME;
+    return false;
+  }
+
+  FARPROC addr = GetProcAddress(module, ICU_UTIL_DATA_SYMBOL);
+  if (!addr) {
+    LOG(ERROR) << ICU_UTIL_DATA_SYMBOL << ": not found in "
+               << ICU_UTIL_DATA_SHARED_MODULE_NAME;
+    return false;
+  }
+
+  UErrorCode err = U_ZERO_ERROR;
+  udata_setCommonData(reinterpret_cast<void*>(addr), &err);
+  // Never try to load ICU data from files.
+  udata_setFileAccess(UDATA_ONLY_PACKAGES, &err);
+  result = (err == U_ZERO_ERROR);
+#elif (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_STATIC)
   // The ICU data is statically linked.
   result = true;
 #elif (ICU_UTIL_DATA_IMPL == ICU_UTIL_DATA_FILE)
