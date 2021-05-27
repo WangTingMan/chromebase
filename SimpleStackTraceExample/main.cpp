@@ -5,6 +5,10 @@
 #include <chrono>
 #include <thread>
 
+#include <base\time\time.h>
+#include <base\timer\timer.h>
+#include <base\message_loop\message_loop.h>
+
 void TestFoo()
 {
     base::debug::StackTrace trace;
@@ -18,10 +22,40 @@ void InvokeFoo( std::string parameter )
     TestFoo();
 }
 
+class TestTimer
+{
+
+public:
+
+    void StartDoingStuff()
+    {
+        timer_.Start( FROM_HERE, base::TimeDelta::FromSeconds( 2 ),
+            this, &TestTimer::DoStuff );
+    }
+
+    void StopDoingStuff()
+    {
+        timer_.Stop();
+    }
+
+private:
+
+    void DoStuff()
+    {
+        std::cout << "timer event handled\n";
+    }
+    base::RepeatingTimer timer_;
+};
+
 int main()
 {
     InvokeFoo( "aa" );
 
-    std::cout << "Hello World!\n";
-    std::this_thread::sleep_for( std::chrono::seconds( 30 ) );
+    base::MessageLoop msgLoop;
+    base::RunLoop loop;
+
+    TestTimer my;
+    my.StartDoingStuff();
+
+    loop.Run();
 }
