@@ -76,6 +76,12 @@
     <Filter Include="base\json">
       <UniqueIdentifier>{09fd4496-4485-4b1e-bb68-0a50e6359500}</UniqueIdentifier>
     </Filter>
+    <Filter Include="base\profiler">
+      <UniqueIdentifier>{4c343c96-f0c8-4252-b798-65059e2f3b62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base\system_monitor">
+      <UniqueIdentifier>{a66db717-77e2-48d7-a09b-98c3b4c8f7f6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\chromebase\base\debug\activity_tracker.cc">
@@ -713,6 +719,90 @@
     </ClCompile>
     <ClCompile Include="..\chromebase\base\sync_socket_win.cc">
       <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\debug\thread_heap_usage_tracker.cc">
+      <Filter>base\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\memory\memory_coordinator_client.cc">
+      <Filter>base\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\memory\memory_coordinator_client_registry.cc">
+      <Filter>base\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\memory\memory_coordinator_proxy.cc">
+      <Filter>base\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\profiler\native_stack_sampler.cc">
+      <Filter>base\profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\profiler\stack_sampling_profiler.cc">
+      <Filter>base\profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\profiler\test_support_library.cc">
+      <Filter>base\profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\profiler\win32_stack_frame_unwinder.cc">
+      <Filter>base\profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\profiler\native_stack_sampler_win.cc">
+      <Filter>base\profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\strings\utf_string_conversions_regression_fuzzer.cc">
+      <Filter>base\strings</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\system_monitor\system_monitor.cc">
+      <Filter>base\system_monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\delayed_task_manager.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\environment_config.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\initialization_util.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\lazy_task_runner.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\post_task.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_worker_pool_params.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\task_scheduler.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\task_scheduler_impl.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\priority_queue.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_single_thread_task_runner_manager.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_worker.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_worker_pool.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_worker_pool_impl.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\scheduler_worker_stack.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\service_thread.cc">
+      <Filter>base\task_scheduler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\metrics\field_trial_params.cc">
+      <Filter>base\metrics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\task_scheduler\task_tracker.cc">
+      <Filter>base\task_scheduler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1606,6 +1696,84 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\memory\shared_memory_helper.h">
       <Filter>base\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\memory\memory_coordinator_client.h">
+      <Filter>base\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\memory\memory_coordinator_client_registry.h">
+      <Filter>base\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\memory\memory_coordinator_proxy.h">
+      <Filter>base\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\process\process_info.h">
+      <Filter>base\process</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\profiler\native_stack_sampler.h">
+      <Filter>base\profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\profiler\stack_sampling_profiler.h">
+      <Filter>base\profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\profiler\win32_stack_frame_unwinder.h">
+      <Filter>base\profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\system_monitor\system_monitor.h">
+      <Filter>base\system_monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\delayed_task_manager.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\environment_config.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\initialization_util.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\lazy_task_runner.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\post_task.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_pool_params.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_scheduler.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_scheduler_impl.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\priority_queue.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_single_thread_task_runner_manager.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_params.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_pool.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_pool_impl.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\scheduler_worker_stack.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\service_thread.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\task_scheduler\task_tracker.h">
+      <Filter>base\task_scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\metrics\field_trial_params.h">
+      <Filter>base\metrics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
