@@ -396,6 +396,11 @@ BASE_EXPORT logging::LogSeverity LOG_DCHECK = LOG_INFO;
 // operator.
 std::ostream* g_swallow_stream;
 
+std::ostream* GetSwallowStream()
+{
+    return g_swallow_stream;
+}
+
 LoggingSettings::LoggingSettings()
     : logging_dest(LOG_DEFAULT),
       log_file(nullptr),

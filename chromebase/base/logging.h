@@ -472,7 +472,7 @@ const LogSeverity LOG_0 = LOG_ERROR;
 #define PLOG_IF(severity, condition) \
   LAZY_STREAM(PLOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 
-BASE_EXPORT extern std::ostream* g_swallow_stream;
+BASE_EXPORT std::ostream* GetSwallowStream();
 
 // Note that g_swallow_stream is used instead of an arbitrary LOG() stream to
 // avoid the creation of an object with a non-trivial destructor (LogMessage).
@@ -488,7 +488,7 @@ BASE_EXPORT extern std::ostream* g_swallow_stream;
 // behavior.
 #define EAT_STREAM_PARAMETERS \
   true ? (void)0              \
-       : ::logging::LogMessageVoidify() & (*::logging::g_swallow_stream)
+       : ::logging::LogMessageVoidify() & (*::logging::GetSwallowStream())
 
 // Captures the result of a CHECK_EQ (for example) and facilitates testing as a
 // boolean.
@@ -923,9 +923,9 @@ const LogSeverity LOG_DCHECK = LOG_FATAL;
 // expansion, this is OK, since the expression is never actually evaluated.
 #define DCHECK_OP(name, op, val1, val2)                             \
   EAT_STREAM_PARAMETERS << (::logging::MakeCheckOpValueString(      \
-                                ::logging::g_swallow_stream, val1), \
+                                ::logging::GetSwallowStream(), val1), \
                             ::logging::MakeCheckOpValueString(      \
-                                ::logging::g_swallow_stream, val2), \
+                                ::logging::GetSwallowStream(), val2), \
                             (val1)op(val2))
 
 #endif  // DCHECK_IS_ON()
