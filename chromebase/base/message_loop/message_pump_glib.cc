@@ -11,7 +11,6 @@
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/numerics/safe_conversions.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/platform_thread.h"
@@ -20,19 +19,20 @@ namespace base {
 
 namespace {
 
-// Return a timeout suitable for the glib loop according to |next_task_time|, -1
-// to block forever, 0 to return right away, or a timeout in milliseconds from
-// now.
-int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
-  if (next_task_time.is_null())
-    return 0;
-  else if (next_task_time.is_max())
+// Return a timeout suitable for the glib loop, -1 to block forever,
+// 0 to return right away, or a timeout in milliseconds from now.
+int GetTimeIntervalMilliseconds(const TimeTicks& from) {
+  if (from.is_null())
     return -1;
 
-  auto timeout_ms =
-      (next_task_time - TimeTicks::Now()).InMillisecondsRoundedUp();
+  // Be careful here.  TimeDelta has a precision of microseconds, but we want a
+  // value in milliseconds.  If there are 5.5ms left, should the delay be 5 or
+  // 6?  It should be 6 to avoid executing delayed work too early.
+  int delay = static_cast<int>(
+      ceil((from - TimeTicks::Now()).InMillisecondsF()));
 
-  return timeout_ms < 0 ? 0 : saturated_cast<int>(timeout_ms);
+  // If this value is negative, then we need to run delayed work soon.
+  return delay < 0 ? 0 : delay;
 }
 
 // A brief refresher on GLib:
@@ -68,8 +68,8 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
 // - Return true if any of prepare() or check() returned true.
 //
 // gtk_main_iteration just calls g_main_context_iteration, which does the whole
-// thing, respecting the timeout for the poll (and block, although it is to if
-// gtk_events_pending returned true), and call dispatch.
+// thing, respecting the timeout for the poll (and block, although it is
+// expected not to if gtk_events_pending returned true), and call dispatch.
 //
 // Thus it is important to only return true from prepare or check if we
 // actually have events or work to do. We also need to make sure we keep
@@ -79,9 +79,10 @@ int GetTimeIntervalMilliseconds(TimeTicks next_task_time) {
 //
 // For the GLib pump we try to follow the Windows UI pump model:
 // - Whenever we receive a wakeup event or the timer for delayed work expires,
-// we run DoSomeWork. That part will also run in the other event pumps.
-// - We also run DoSomeWork, and possibly DoIdleWork, in the main loop,
-// around event handling.
+// we run DoWork and/or DoDelayedWork. That part will also run in the other
+// event pumps.
+// - We also run DoWork, DoDelayedWork, and possibly DoIdleWork in the main
+// loop, around event handling.
 
 struct WorkSource : public GSource {
   MessagePumpGlib* pump;
@@ -168,10 +169,10 @@ struct MessagePumpGlib::RunState {
   // Used to count how many Run() invocations are on the stack.
   int run_depth;
 
-  // The information of the next task available at this run-level. Stored in
-  // RunState because different set of tasks can be accessible at various
-  // run-levels (e.g. non-nestable tasks).
-  Delegate::NextWorkInfo next_work_info;
+  // This keeps the state of whether the pump got signaled that there was new
+  // work to be done. Since we eat the message on the wake up pipe as soon as
+  // we get it, we keep that state here to stay consistent.
+  bool has_work;
 };
 
 MessagePumpGlib::MessagePumpGlib()
@@ -211,11 +212,15 @@ MessagePumpGlib::~MessagePumpGlib() {
 
 // Return the timeout we want passed to poll.
 int MessagePumpGlib::HandlePrepare() {
-  // |state_| may be null during tests.
-  if (!state_)
+  // We know we have work, but we haven't called HandleDispatch yet. Don't let
+  // the pump block so that we can do some processing.
+  if (state_ &&  // state_ may be null during tests.
+      state_->has_work)
     return 0;
 
-  return GetTimeIntervalMilliseconds(state_->next_work_info.delayed_run_time);
+  // We don't think we have work to do, but make sure not to block
+  // longer than the next time we need to run delayed work.
+  return GetTimeIntervalMilliseconds(delayed_work_time_);
 }
 
 bool MessagePumpGlib::HandleCheck() {
@@ -235,17 +240,18 @@ bool MessagePumpGlib::HandleCheck() {
     }
     DCHECK((num_bytes == 1 && msg[0] == '!') ||
            (num_bytes == 2 && msg[0] == '!' && msg[1] == '!'));
-    // Since we ate the message, we need to record that we have immediate work,
+    // Since we ate the message, we need to record that we have more work,
     // because HandleCheck() may be called without HandleDispatch being called
     // afterwards.
-    state_->next_work_info = {TimeTicks()};
-    return true;
+    state_->has_work = true;
   }
 
-  // As described in the summary at the top : Check is a second-chance to
-  // Prepare, verify whether we have work ready again.
-  if (GetTimeIntervalMilliseconds(state_->next_work_info.delayed_run_time) ==
-      0) {
+  if (state_->has_work)
+    return true;
+
+  if (GetTimeIntervalMilliseconds(delayed_work_time_) == 0) {
+    // The timer has expired. That condition will stay true until we process
+    // that delayed work, so we don't need to record this differently.
     return true;
   }
 
@@ -253,7 +259,19 @@ bool MessagePumpGlib::HandleCheck() {
 }
 
 void MessagePumpGlib::HandleDispatch() {
-  state_->next_work_info = state_->delegate->DoSomeWork();
+  state_->has_work = false;
+  if (state_->delegate->DoWork()) {
+    // NOTE: on Windows at this point we would call ScheduleWork (see
+    // MessagePumpGlib::HandleWorkMessage in message_pump_win.cc). But here,
+    // instead of posting a message on the wakeup pipe, we can avoid the
+    // syscalls and just signal that we have more work.
+    state_->has_work = true;
+  }
+
+  if (state_->should_quit)
+    return;
+
+  state_->delegate->DoDelayedWork(&delayed_work_time_);
 }
 
 void MessagePumpGlib::Run(Delegate* delegate) {
@@ -265,6 +283,7 @@ void MessagePumpGlib::Run(Delegate* delegate) {
   state.delegate = delegate;
   state.should_quit = false;
   state.run_depth = state_ ? state_->run_depth + 1 : 1;
+  state.has_work = false;
 
   RunState* previous_state = state_;
   state_ = &state;
@@ -287,8 +306,12 @@ void MessagePumpGlib::Run(Delegate* delegate) {
     if (state_->should_quit)
       break;
 
-    state_->next_work_info = state_->delegate->DoSomeWork();
-    more_work_is_plausible |= state_->next_work_info.is_immediate();
+    more_work_is_plausible |= state_->delegate->DoWork();
+    if (state_->should_quit)
+      break;
+
+    more_work_is_plausible |=
+        state_->delegate->DoDelayedWork(&delayed_work_time_);
     if (state_->should_quit)
       break;
 
@@ -324,6 +347,7 @@ void MessagePumpGlib::ScheduleWork() {
 void MessagePumpGlib::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
   // We need to wake up the loop in case the poll timeout needs to be
   // adjusted.  This will cause us to try to do work, but that's OK.
+  delayed_work_time_ = delayed_work_time;
   ScheduleWork();
 }
 

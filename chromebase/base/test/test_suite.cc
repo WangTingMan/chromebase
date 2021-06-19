@@ -23,11 +23,9 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/no_destructor.h"
 #include "base/path_service.h"
 #include "base/process/launch.h"
 #include "base/process/memory.h"
-#include "base/task/thread_pool/thread_pool.h"
 #include "base/test/gtest_xml_unittest_result_printer.h"
 #include "base/test/gtest_xml_util.h"
 #include "base/test/icu_test_util.h"
@@ -68,38 +66,25 @@
 #include "base/test/fontconfig_util_linux.h"
 #endif
 
-#if defined(OS_FUCHSIA)
-#include "base/base_paths_fuchsia.h"
-#endif
-
-#if defined(OS_WIN) && defined(_DEBUG)
-#include <crtdbg.h>
-#endif
-
 namespace base {
 
 namespace {
 
-// Returns true if the test is marked as "MAYBE_".
-// When using different prefixes depending on platform, we use MAYBE_ and
-// preprocessor directives to replace MAYBE_ with the target prefix.
-bool IsMarkedMaybe(const testing::TestInfo& test) {
-  return strncmp(test.name(), "MAYBE_", 6) == 0;
-}
-
-class DisableMaybeTests : public testing::EmptyTestEventListener {
+class MaybeTestDisabler : public testing::EmptyTestEventListener {
  public:
   void OnTestStart(const testing::TestInfo& test_info) override {
-    ASSERT_FALSE(IsMarkedMaybe(test_info))
+    ASSERT_FALSE(TestSuite::IsMarkedMaybe(test_info))
         << "Probably the OS #ifdefs don't include all of the necessary "
            "platforms.\nPlease ensure that no tests have the MAYBE_ prefix "
            "after the code is preprocessed.";
   }
 };
 
-class ResetCommandLineBetweenTests : public testing::EmptyTestEventListener {
+class TestClientInitializer : public testing::EmptyTestEventListener {
  public:
-  ResetCommandLineBetweenTests() : old_command_line_(CommandLine::NO_PROGRAM) {}
+  TestClientInitializer()
+      : old_command_line_(CommandLine::NO_PROGRAM) {
+  }
 
   void OnTestStart(const testing::TestInfo& test_info) override {
     old_command_line_ = *CommandLine::ForCurrentProcess();
@@ -112,72 +97,33 @@ class ResetCommandLineBetweenTests : public testing::EmptyTestEventListener {
  private:
   CommandLine old_command_line_;
 
-  DISALLOW_COPY_AND_ASSIGN(ResetCommandLineBetweenTests);
+  DISALLOW_COPY_AND_ASSIGN(TestClientInitializer);
 };
 
-class CheckForLeakedGlobals : public testing::EmptyTestEventListener {
- public:
-  CheckForLeakedGlobals() = default;
-
-  // Check for leaks in individual tests.
-  void OnTestStart(const testing::TestInfo& test) override {
-    thread_pool_set_before_test_ = ThreadPoolInstance::Get();
-  }
-  void OnTestEnd(const testing::TestInfo& test) override {
-    DCHECK_EQ(thread_pool_set_before_test_, ThreadPoolInstance::Get())
-        << " in test " << test.test_case_name() << "." << test.name();
-  }
-
-  // Check for leaks in test cases (consisting of one or more tests).
-  void OnTestCaseStart(const testing::TestCase& test_case) override {
-    thread_pool_set_before_case_ = ThreadPoolInstance::Get();
-  }
-  void OnTestCaseEnd(const testing::TestCase& test_case) override {
-    DCHECK_EQ(thread_pool_set_before_case_, ThreadPoolInstance::Get())
-        << " in case " << test_case.name();
-  }
-
- private:
-  ThreadPoolInstance* thread_pool_set_before_test_ = nullptr;
-  ThreadPoolInstance* thread_pool_set_before_case_ = nullptr;
-
-  DISALLOW_COPY_AND_ASSIGN(CheckForLeakedGlobals);
-};
-
-const std::string& GetProfileName() {
-  static const NoDestructor<std::string> profile_name([]() {
-    const CommandLine& command_line = *CommandLine::ForCurrentProcess();
+std::string GetProfileName() {
+  static const char kDefaultProfileName[] = "test-profile-{pid}";
+  CR_DEFINE_STATIC_LOCAL(std::string, profile_name, ());
+  if (profile_name.empty()) {
+    const base::CommandLine& command_line =
+        *base::CommandLine::ForCurrentProcess();
     if (command_line.HasSwitch(switches::kProfilingFile))
-      return command_line.GetSwitchValueASCII(switches::kProfilingFile);
+      profile_name = command_line.GetSwitchValueASCII(switches::kProfilingFile);
     else
-      return std::string("test-profile-{pid}");
-  }());
-  return *profile_name;
+      profile_name = std::string(kDefaultProfileName);
+  }
+  return profile_name;
 }
 
 void InitializeLogging() {
 #if defined(OS_ANDROID)
   InitAndroidTestLogging();
 #else
-
-  FilePath log_filename;
   FilePath exe;
   PathService::Get(FILE_EXE, &exe);
-
-#if defined(OS_FUCHSIA)
-  // Write logfiles to /data, because the default log location alongside the
-  // executable (/pkg) is read-only.
-  FilePath data_dir;
-  PathService::Get(DIR_APP_DATA, &data_dir);
-  log_filename = data_dir.Append(exe.BaseName())
-                     .ReplaceExtension(FILE_PATH_LITERAL("log"));
-#else
-  log_filename = exe.ReplaceExtension(FILE_PATH_LITERAL("log"));
-#endif  // defined(OS_FUCHSIA)
-
+  FilePath log_filename = exe.ReplaceExtension(FILE_PATH_LITERAL("log"));
   logging::LoggingSettings settings;
-  settings.log_file = log_filename.value().c_str();
   settings.logging_dest = logging::LOG_TO_ALL;
+  settings.log_file = log_filename.value().c_str();
   settings.delete_old = logging::DELETE_OLD_LOG_FILE;
   logging::InitLogging(settings);
   // We want process and thread IDs because we may have multiple processes.
@@ -191,10 +137,10 @@ void InitializeLogging() {
 int RunUnitTestsUsingBaseTestSuite(int argc, char **argv) {
   TestSuite test_suite(argc, argv);
   return LaunchUnitTests(argc, argv,
-                         BindOnce(&TestSuite::Run, Unretained(&test_suite)));
+                         Bind(&TestSuite::Run, Unretained(&test_suite)));
 }
 
-TestSuite::TestSuite(int argc, char** argv) {
+TestSuite::TestSuite(int argc, char** argv) : initialized_command_line_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
   // Logging must be initialized before any thread has a chance to call logging
@@ -203,7 +149,8 @@ TestSuite::TestSuite(int argc, char** argv) {
 }
 
 #if defined(OS_WIN)
-TestSuite::TestSuite(int argc, wchar_t** argv) {
+TestSuite::TestSuite(int argc, wchar_t** argv)
+    : initialized_command_line_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
   // Logging must be initialized before any thread has a chance to call logging
@@ -237,8 +184,6 @@ void TestSuite::InitializeFromCommandLine(int argc, wchar_t** argv) {
 #endif  // defined(OS_WIN)
 
 void TestSuite::PreInitialize() {
-  DCHECK(!is_initialized_);
-
 #if defined(OS_WIN)
   testing::GTEST_FLAG(catch_exceptions) = false;
 #endif
@@ -248,8 +193,6 @@ void TestSuite::PreInitialize() {
   // have the locale set. In the absence of such a call the "C" locale is the
   // default. In the gtk code (below) gtk_init() implicitly sets a locale.
   setlocale(LC_ALL, "");
-  // We still need number to string conversions to be locale insensitive.
-  setlocale(LC_NUMERIC, "C");
 #endif  // defined(OS_LINUX) && defined(USE_AURA)
 
   // On Android, AtExitManager is created in
@@ -260,6 +203,24 @@ void TestSuite::PreInitialize() {
 
   // Don't add additional code to this function.  Instead add it to
   // Initialize().  See bug 6436.
+}
+
+
+// static
+bool TestSuite::IsMarkedMaybe(const testing::TestInfo& test) {
+  return strncmp(test.name(), "MAYBE_", 6) == 0;
+}
+
+void TestSuite::CatchMaybeTests() {
+  testing::TestEventListeners& listeners =
+      testing::UnitTest::GetInstance()->listeners();
+  listeners.Append(new MaybeTestDisabler);
+}
+
+void TestSuite::ResetCommandLine() {
+  testing::TestEventListeners& listeners =
+      testing::UnitTest::GetInstance()->listeners();
+  listeners.Append(new TestClientInitializer);
 }
 
 void TestSuite::AddTestLauncherResultPrinter() {
@@ -327,15 +288,10 @@ int TestSuite::Run() {
   return result;
 }
 
-void TestSuite::DisableCheckForLeakedGlobals() {
-  DCHECK(!is_initialized_);
-  check_for_leaked_globals_ = false;
-}
-
 void TestSuite::UnitTestAssertHandler(const char* file,
                                       int line,
-                                      const StringPiece summary,
-                                      const StringPiece stack_trace) {
+                                      const base::StringPiece summary,
+                                      const base::StringPiece stack_trace) {
 #if defined(OS_ANDROID)
   // Correlating test stdio with logcat can be difficult, so we emit this
   // helpful little hint about what was running.  Only do this for Android
@@ -368,12 +324,11 @@ void TestSuite::UnitTestAssertHandler(const char* file,
 #if defined(OS_WIN)
 namespace {
 
+// Disable optimizations to prevent function folding or other transformations
+// that will make the call stacks on failures more confusing.
+#pragma optimize("", off)
 // Handlers for invalid parameter, pure call, and abort. They generate a
 // breakpoint to ensure that we get a call stack on these failures.
-// These functions should be written to be unique in order to avoid confusing
-// call stacks from /OPT:ICF function folding. Printing a unique message or
-// returning a unique value will do this. Note that for best results they need
-// to be unique from *all* functions in Chrome.
 void InvalidParameter(const wchar_t* expression,
                       const wchar_t* function,
                       const wchar_t* file,
@@ -395,6 +350,7 @@ void AbortHandler(int signal) {
   fprintf(stderr, "\n");
   __debugbreak();
 }
+#pragma optimize("", on)
 
 }  // namespace
 #endif
@@ -428,8 +384,6 @@ void TestSuite::SuppressErrorDialogs() {
 }
 
 void TestSuite::Initialize() {
-  DCHECK(!is_initialized_);
-
   const CommandLine* command_line = CommandLine::ForCurrentProcess();
 #if !defined(OS_IOS)
   if (command_line->HasSwitch(switches::kWaitForDebugger)) {
@@ -486,10 +440,10 @@ void TestSuite::Initialize() {
     SuppressErrorDialogs();
     debug::SetSuppressDebugUI(true);
     assert_handler_ = std::make_unique<logging::ScopedLogAssertHandler>(
-        BindRepeating(&TestSuite::UnitTestAssertHandler, Unretained(this)));
+        base::Bind(&TestSuite::UnitTestAssertHandler, base::Unretained(this)));
   }
 
-  test::InitializeICUForTesting();
+  base::test::InitializeICUForTesting();
 
   // On the Mac OS X command line, the default locale is *_POSIX. In Chromium,
   // the locale is set via an OS X locale API and is never *_POSIX.
@@ -509,33 +463,24 @@ void TestSuite::Initialize() {
 #endif
 
 #if defined(OS_LINUX)
+  // TODO(thomasanderson): Call TearDownFontconfig() in Shutdown().  It would
+  // currently crash because of leaked FcFontSet's in font_fallback_linux.cc.
   SetUpFontconfig();
 #endif
 
-  // Add TestEventListeners to enforce certain properties across tests.
-  testing::TestEventListeners& listeners =
-      testing::UnitTest::GetInstance()->listeners();
-  listeners.Append(new DisableMaybeTests);
-  listeners.Append(new ResetCommandLineBetweenTests);
-  if (check_for_leaked_globals_)
-    listeners.Append(new CheckForLeakedGlobals);
-
+  CatchMaybeTests();
+  ResetCommandLine();
   AddTestLauncherResultPrinter();
 
   TestTimeouts::Initialize();
 
   trace_to_file_.BeginTracingFromCommandLineOptions();
 
-  debug::StartProfiling(GetProfileName());
-
-  debug::VerifyDebugger();
-
-  is_initialized_ = true;
+  base::debug::StartProfiling(GetProfileName());
 }
 
 void TestSuite::Shutdown() {
-  DCHECK(is_initialized_);
-  debug::StopProfiling();
+  base::debug::StopProfiling();
 }
 
 }  // namespace base

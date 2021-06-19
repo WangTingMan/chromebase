@@ -13,7 +13,6 @@
 
 #include "base/base_export.h"
 #include "base/debug/activity_tracker.h"
-#include "base/memory/shared_memory_mapping.h"
 
 namespace base {
 namespace debug {
@@ -151,7 +150,13 @@ class BASE_EXPORT GlobalActivityAnalyzer {
 
   // Like above but accesses an allocator in a mapped shared-memory segment.
   static std::unique_ptr<GlobalActivityAnalyzer> CreateWithSharedMemory(
-      base::ReadOnlySharedMemoryMapping mapping);
+      std::unique_ptr<SharedMemory> shm);
+
+  // Like above but takes a handle to an existing shared memory segment and
+  // maps it before creating the tracker.
+  static std::unique_ptr<GlobalActivityAnalyzer> CreateWithSharedMemoryHandle(
+      const SharedMemoryHandle& handle,
+      size_t size);
 
   // Iterates over all known valid processes and returns their PIDs or zero
   // if there are no more. Calls to GetFirstProcess() will perform a global

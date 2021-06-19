@@ -29,10 +29,8 @@
 // you want to refer to is not in scope, you may use a member pointer
 // (e.g. &MyClass::mutex_) to refer to a mutex in some (unknown) object.
 
-#ifndef BASE_THREAD_ANNOTATIONS_H_
-#define BASE_THREAD_ANNOTATIONS_H_
-
-#include "build/build_config.h"
+#ifndef THREAD_ANNOTATIONS_H_
+#define THREAD_ANNOTATIONS_H_
 
 #if defined(__clang__)
 #define THREAD_ANNOTATION_ATTRIBUTE__(x) __attribute__((x))
@@ -237,4 +235,4 @@ inline T& ts_unchecked_read(T& v) NO_THREAD_SAFETY_ANALYSIS {
 
 }  // namespace thread_safety_analysis
 
-#endif  // BASE_THREAD_ANNOTATIONS_H_
+#endif  // _BASE_THREAD_ANNOTATIONS_H_

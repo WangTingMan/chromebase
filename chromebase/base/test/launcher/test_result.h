@@ -12,13 +12,12 @@
 
 namespace base {
 
-// Structure contains result of a single EXPECT/ASSERT/SUCCESS/SKIP.
+// Structure contains result of a single EXPECT/ASSERT/SUCCESS.
 struct TestResultPart {
   enum Type {
     kSuccess,          // SUCCESS
     kNonFatalFailure,  // EXPECT
     kFatalFailure,     // ASSERT
-    kSkip,             // SKIP
   };
   Type type;
 
@@ -56,7 +55,6 @@ struct TestResult {
     TEST_CRASH,             // Test crashed (includes CHECK/DCHECK failures).
     TEST_SKIPPED,           // Test skipped (not run at all).
     TEST_EXCESSIVE_OUTPUT,  // Test exceeded output limit.
-    TEST_NOT_RUN,           // Test has not yet been run.
   };
 
   TestResult();

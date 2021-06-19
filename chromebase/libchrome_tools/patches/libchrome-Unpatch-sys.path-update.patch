@@ -1,0 +1,41 @@
+From 702acfbe733e5b047759a3bfee71c8b63e5814fe Mon Sep 17 00:00:00 2001
+From: Hidehiko Abe <hidehiko@chromium.org>
+Date: Thu, 13 Jun 2019 23:02:42 +0900
+Subject: [PATCH] libchrome: Unpatch sys.path update.
+
+Unlike soong build, original sys.path change works.
+
+BUG=chromium:909719
+TEST=Built locally.
+
+Change-Id: I6c8ac8d4a1d156ddd77ec75485d42a810a9e61fe
+---
+ build/android/gyp/util/build_utils.py | 12 ++----------
+ 1 file changed, 2 insertions(+), 10 deletions(-)
+
+diff --git a/build/android/gyp/util/build_utils.py b/build/android/gyp/util/build_utils.py
+index 426de03..f1764b9 100644
+--- a/build/android/gyp/util/build_utils.py
++++ b/build/android/gyp/util/build_utils.py
+@@ -25,16 +25,8 @@ import zipfile
+ # Some clients do not add //build/android/gyp to PYTHONPATH.
+ import md5_check  # pylint: disable=relative-import
+ 
+-# pylib conflicts with mojo/public/tools/bindings/pylib. Prioritize
+-# build/android/pylib.
+-# PYTHONPATH wouldn't help in this case, because soong put source files under
+-# temp directory for each build, so the abspath is unknown until the
+-# execution.
+-#sys.path.append(os.path.join(os.path.dirname(__file__),
+-#                             os.pardir, os.pardir, os.pardir))
+-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+-                                os.pardir, os.pardir))
+-
++sys.path.append(os.path.join(os.path.dirname(__file__),
++                             os.pardir, os.pardir, os.pardir))
+ import gn_helpers
+ 
+ # Definition copied from pylib/constants/__init__.py to avoid adding
+-- 
+2.22.0.rc2.383.gf4fbbf30c2-goog
+

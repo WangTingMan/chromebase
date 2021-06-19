@@ -12,7 +12,7 @@
 #include "base/files/memory_mapped_file.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/metrics/histogram_functions.h"
+#include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
@@ -35,8 +35,8 @@ enum AnalyzerCreationError {
 };
 
 void LogAnalyzerCreationError(AnalyzerCreationError error) {
-  UmaHistogramEnumeration("ActivityTracker.Collect.AnalyzerCreationError",
-                          error, kAnalyzerCreationErrorMax);
+  UMA_HISTOGRAM_ENUMERATION("ActivityTracker.Collect.AnalyzerCreationError",
+                            error, kAnalyzerCreationErrorMax);
 }
 
 }  // namespace
@@ -108,7 +108,7 @@ GlobalActivityAnalyzer::CreateWithAllocator(
     return nullptr;
   }
 
-  return std::make_unique<GlobalActivityAnalyzer>(std::move(allocator));
+  return WrapUnique(new GlobalActivityAnalyzer(std::move(allocator)));
 }
 
 #if !defined(OS_NACL)
@@ -118,7 +118,8 @@ std::unique_ptr<GlobalActivityAnalyzer> GlobalActivityAnalyzer::CreateWithFile(
   // Map the file read-write so it can guarantee consistency between
   // the analyzer and any trackers that my still be active.
   std::unique_ptr<MemoryMappedFile> mmfile(new MemoryMappedFile());
-  if (!mmfile->Initialize(file_path, MemoryMappedFile::READ_WRITE)) {
+  mmfile->Initialize(file_path, MemoryMappedFile::READ_WRITE);
+  if (!mmfile->IsValid()) {
     LogAnalyzerCreationError(kInvalidMemoryMappedFile);
     return nullptr;
   }
@@ -136,15 +137,25 @@ std::unique_ptr<GlobalActivityAnalyzer> GlobalActivityAnalyzer::CreateWithFile(
 // static
 std::unique_ptr<GlobalActivityAnalyzer>
 GlobalActivityAnalyzer::CreateWithSharedMemory(
-    base::ReadOnlySharedMemoryMapping mapping) {
-  if (!mapping.IsValid() ||
-      !ReadOnlySharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(
-          mapping)) {
+    std::unique_ptr<SharedMemory> shm) {
+  if (shm->mapped_size() == 0 ||
+      !SharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(*shm)) {
     return nullptr;
   }
-  return CreateWithAllocator(
-      std::make_unique<ReadOnlySharedPersistentMemoryAllocator>(
-          std::move(mapping), 0, StringPiece()));
+  return CreateWithAllocator(std::make_unique<SharedPersistentMemoryAllocator>(
+      std::move(shm), 0, StringPiece(), /*readonly=*/true));
+}
+
+// static
+std::unique_ptr<GlobalActivityAnalyzer>
+GlobalActivityAnalyzer::CreateWithSharedMemoryHandle(
+    const SharedMemoryHandle& handle,
+    size_t size) {
+  std::unique_ptr<SharedMemory> shm(
+      new SharedMemory(handle, /*readonly=*/true));
+  if (!shm->Map(size))
+    return nullptr;
+  return CreateWithSharedMemory(std::move(shm));
 }
 
 int64_t GlobalActivityAnalyzer::GetFirstProcess() {
@@ -355,7 +366,7 @@ void GlobalActivityAnalyzer::PrepareAllAnalyzers() {
         // Add this analyzer to the map of known ones, indexed by a unique
         // thread
         // identifier.
-        DCHECK(!base::Contains(analyzers_, analyzer->GetThreadKey()));
+        DCHECK(!base::ContainsKey(analyzers_, analyzer->GetThreadKey()));
         analyzer->allocator_reference_ = ref;
         analyzers_[analyzer->GetThreadKey()] = std::move(analyzer);
       } break;
@@ -365,7 +376,7 @@ void GlobalActivityAnalyzer::PrepareAllAnalyzers() {
         int64_t process_id;
         int64_t create_stamp;
         ActivityUserData::GetOwningProcessId(base, &process_id, &create_stamp);
-        DCHECK(!base::Contains(process_data_, process_id));
+        DCHECK(!base::ContainsKey(process_data_, process_id));
 
         // Create a snapshot of the data. This can fail if the data is somehow
         // corrupted or the process shutdown and the memory being released.

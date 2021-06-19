@@ -9,8 +9,8 @@
 #include "base/android/jni_array.h"
 #include "base/android/jni_string.h"
 #include "base/android/scoped_java_ref.h"
-#include "base/base_jni_headers/ApkAssets_jni.h"
 #include "base/file_descriptor_store.h"
+#include "jni/ApkAssets_jni.h"
 
 namespace base {
 namespace android {
@@ -23,7 +23,7 @@ int OpenApkAsset(const std::string& file_path,
   ScopedJavaLocalRef<jlongArray> jarr = Java_ApkAssets_open(
       env, base::android::ConvertUTF8ToJavaString(env, file_path));
   std::vector<jlong> results;
-  base::android::JavaLongArrayToLongVector(env, jarr, &results);
+  base::android::JavaLongArrayToLongVector(env, jarr.obj(), &results);
   CHECK_EQ(3U, results.size());
   int fd = static_cast<int>(results[0]);
   region->offset = results[1];

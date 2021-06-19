@@ -27,11 +27,11 @@ class URandomFd {
   // AIX has no 64-bit support for open falgs such as -
   //  O_CLOEXEC, O_NOFOLLOW and O_TTY_INIT
   URandomFd() : fd_(HANDLE_EINTR(open("/dev/urandom", O_RDONLY))) {
-    DPCHECK(fd_ >= 0) << "Cannot open /dev/urandom";
+    DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
   }
 #else
   URandomFd() : fd_(HANDLE_EINTR(open("/dev/urandom", O_RDONLY | O_CLOEXEC))) {
-    DPCHECK(fd_ >= 0) << "Cannot open /dev/urandom";
+    DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
   }
 #endif
 

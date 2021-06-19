@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "base/android/jni_string.h"
-#include "base/base_jni_headers/RecordUserAction_jni.h"
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/metrics/user_metrics.h"
+#include "jni/RecordUserAction_jni.h"
 
 namespace {
 
@@ -21,6 +21,7 @@ namespace android {
 
 static void JNI_RecordUserAction_RecordUserAction(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jstring>& j_action) {
   RecordComputedAction(ConvertJavaStringToUTF8(env, j_action));
 }
@@ -34,10 +35,11 @@ static void OnActionRecorded(const JavaRef<jobject>& callback,
 
 static jlong JNI_RecordUserAction_AddActionCallbackForTesting(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     const JavaParamRef<jobject>& callback) {
   // Create a wrapper for the ActionCallback, so it can life on the heap until
   // RemoveActionCallbackForTesting() is called.
-  auto* wrapper = new ActionCallbackWrapper{base::BindRepeating(
+  auto* wrapper = new ActionCallbackWrapper{base::Bind(
       &OnActionRecorded, ScopedJavaGlobalRef<jobject>(env, callback))};
   base::AddActionCallback(wrapper->action_callback);
   return reinterpret_cast<intptr_t>(wrapper);
@@ -45,6 +47,7 @@ static jlong JNI_RecordUserAction_AddActionCallbackForTesting(
 
 static void JNI_RecordUserAction_RemoveActionCallbackForTesting(
     JNIEnv* env,
+    const JavaParamRef<jclass>& clazz,
     jlong callback_id) {
   DCHECK(callback_id);
   auto* wrapper = reinterpret_cast<ActionCallbackWrapper*>(callback_id);

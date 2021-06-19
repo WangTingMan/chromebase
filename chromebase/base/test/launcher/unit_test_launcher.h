@@ -12,7 +12,6 @@
 
 #include "base/callback.h"
 #include "base/files/file_path.h"
-#include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
 #include "base/test/launcher/test_launcher.h"
 #include "build/build_config.h"
@@ -78,37 +77,13 @@ class UnitTestPlatformDelegate {
   // no wrapper.
   virtual std::string GetWrapperForChildGTestProcess() = 0;
 
+  // Relaunch tests, e.g. after a crash.
+  virtual void RelaunchTests(TestLauncher* test_launcher,
+                             const std::vector<std::string>& test_names,
+                             int launch_flags) = 0;
+
  protected:
   ~UnitTestPlatformDelegate() = default;
-};
-
-// This default implementation uses gtest_util to get all
-// compiled gtests into the binary.
-// The delegate will relaunch test in parallel,
-// but only use single test per launch.
-class DefaultUnitTestPlatformDelegate : public UnitTestPlatformDelegate {
- public:
-  DefaultUnitTestPlatformDelegate();
-
- private:
-  // UnitTestPlatformDelegate:
-
-  bool GetTests(std::vector<TestIdentifier>* output) override;
-
-  bool CreateResultsFile(base::FilePath* path) override;
-
-  bool CreateTemporaryFile(base::FilePath* path) override;
-
-  CommandLine GetCommandLineForChildGTestProcess(
-      const std::vector<std::string>& test_names,
-      const base::FilePath& output_file,
-      const base::FilePath& flag_file) override;
-
-  std::string GetWrapperForChildGTestProcess() override;
-
-  ScopedTempDir temp_dir_;
-
-  DISALLOW_COPY_AND_ASSIGN(DefaultUnitTestPlatformDelegate);
 };
 
 // Runs tests serially, each in its own process.
@@ -134,8 +109,8 @@ class UnitTestLauncherDelegate : public TestLauncherDelegate {
  private:
   // TestLauncherDelegate:
   bool GetTests(std::vector<TestIdentifier>* output) override;
-  bool WillRunTest(const std::string& test_case_name,
-                   const std::string& test_name) override;
+  bool ShouldRunTest(const std::string& test_case_name,
+                     const std::string& test_name) override;
   size_t RunTests(TestLauncher* test_launcher,
                   const std::vector<std::string>& test_names) override;
   size_t RetryTests(TestLauncher* test_launcher,

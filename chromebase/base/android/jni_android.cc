@@ -58,7 +58,7 @@ JNIEnv* AttachCurrentThread() {
     }
 
     ret = g_jvm->AttachCurrentThread(&env, &args);
-    CHECK_EQ(JNI_OK, ret);
+    DCHECK_EQ(JNI_OK, ret);
   }
   return env;
 }
@@ -71,7 +71,7 @@ JNIEnv* AttachCurrentThreadWithName(const std::string& thread_name) {
   args.group = NULL;
   JNIEnv* env = NULL;
   jint ret = g_jvm->AttachCurrentThread(&env, &args);
-  CHECK_EQ(JNI_OK, ret);
+  DCHECK_EQ(JNI_OK, ret);
   return env;
 }
 
@@ -143,20 +143,25 @@ ScopedJavaLocalRef<jclass> GetClass(JNIEnv* env, const char* class_name) {
 jclass LazyGetClass(
     JNIEnv* env,
     const char* class_name,
-    std::atomic<jclass>* atomic_class_id) {
-  const jclass value = std::atomic_load(atomic_class_id);
+    base::subtle::AtomicWord* atomic_class_id) {
+  static_assert(sizeof(subtle::AtomicWord) >= sizeof(jclass),
+                "AtomicWord can't be smaller than jclass");
+  subtle::AtomicWord value = base::subtle::Acquire_Load(atomic_class_id);
   if (value)
-    return value;
+    return reinterpret_cast<jclass>(value);
   ScopedJavaGlobalRef<jclass> clazz;
   clazz.Reset(GetClass(env, class_name));
-  jclass cas_result = nullptr;
-  if (std::atomic_compare_exchange_strong(atomic_class_id, &cas_result,
-                                          clazz.obj())) {
+  subtle::AtomicWord null_aw = reinterpret_cast<subtle::AtomicWord>(NULL);
+  subtle::AtomicWord cas_result = base::subtle::Release_CompareAndSwap(
+      atomic_class_id,
+      null_aw,
+      reinterpret_cast<subtle::AtomicWord>(clazz.obj()));
+  if (cas_result == null_aw) {
     // We intentionally leak the global ref since we now storing it as a raw
     // pointer in |atomic_class_id|.
     return clazz.Release();
   } else {
-    return cas_result;
+    return reinterpret_cast<jclass>(cas_result);
   }
 }
 
@@ -165,10 +170,9 @@ jmethodID MethodID::Get(JNIEnv* env,
                         jclass clazz,
                         const char* method_name,
                         const char* jni_signature) {
-  auto get_method_ptr = type == MethodID::TYPE_STATIC ?
-      &JNIEnv::GetStaticMethodID :
-      &JNIEnv::GetMethodID;
-  jmethodID id = (env->*get_method_ptr)(clazz, method_name, jni_signature);
+  jmethodID id = type == TYPE_STATIC ?
+      env->GetStaticMethodID(clazz, method_name, jni_signature) :
+      env->GetMethodID(clazz, method_name, jni_signature);
   if (base::android::ClearException(env) || !id) {
     LOG(FATAL) << "Failed to find " <<
         (type == TYPE_STATIC ? "static " : "") <<
@@ -185,12 +189,15 @@ jmethodID MethodID::LazyGet(JNIEnv* env,
                             jclass clazz,
                             const char* method_name,
                             const char* jni_signature,
-                            std::atomic<jmethodID>* atomic_method_id) {
-  const jmethodID value = std::atomic_load(atomic_method_id);
+                            base::subtle::AtomicWord* atomic_method_id) {
+  static_assert(sizeof(subtle::AtomicWord) >= sizeof(jmethodID),
+                "AtomicWord can't be smaller than jMethodID");
+  subtle::AtomicWord value = base::subtle::Acquire_Load(atomic_method_id);
   if (value)
-    return value;
+    return reinterpret_cast<jmethodID>(value);
   jmethodID id = MethodID::Get<type>(env, clazz, method_name, jni_signature);
-  std::atomic_store(atomic_method_id, id);
+  base::subtle::Release_Store(
+      atomic_method_id, reinterpret_cast<subtle::AtomicWord>(id));
   return id;
 }
 
@@ -205,11 +212,11 @@ template jmethodID MethodID::Get<MethodID::TYPE_INSTANCE>(
 
 template jmethodID MethodID::LazyGet<MethodID::TYPE_STATIC>(
     JNIEnv* env, jclass clazz, const char* method_name,
-    const char* jni_signature, std::atomic<jmethodID>* atomic_method_id);
+    const char* jni_signature, base::subtle::AtomicWord* atomic_method_id);
 
 template jmethodID MethodID::LazyGet<MethodID::TYPE_INSTANCE>(
     JNIEnv* env, jclass clazz, const char* method_name,
-    const char* jni_signature, std::atomic<jmethodID>* atomic_method_id);
+    const char* jni_signature, base::subtle::AtomicWord* atomic_method_id);
 
 bool HasException(JNIEnv* env) {
   return env->ExceptionCheck() != JNI_FALSE;
@@ -246,34 +253,61 @@ void CheckException(JNIEnv* env) {
   }
 
   // Now, feel good about it and die.
-  LOG(FATAL) << "Please include Java exception stack in crash report";
+  // TODO(lhchavez): Remove this hack. See b/28814913 for details.
+  if (java_throwable)
+    LOG(FATAL) << GetJavaExceptionInfo(env, java_throwable);
+  else
+    LOG(FATAL) << "Unhandled exception";
 }
 
 std::string GetJavaExceptionInfo(JNIEnv* env, jthrowable java_throwable) {
-  ScopedJavaLocalRef<jclass> log_clazz = GetClass(env, "android/util/Log");
-  jmethodID log_getstacktracestring = MethodID::Get<MethodID::TYPE_STATIC>(
-      env, log_clazz.obj(), "getStackTraceString",
-      "(Ljava/lang/Throwable;)Ljava/lang/String;");
+  ScopedJavaLocalRef<jclass> throwable_clazz =
+      GetClass(env, "java/lang/Throwable");
+  jmethodID throwable_printstacktrace =
+      MethodID::Get<MethodID::TYPE_INSTANCE>(
+          env, throwable_clazz.obj(), "printStackTrace",
+          "(Ljava/io/PrintStream;)V");
 
-  // Call Log.getStackTraceString()
+  // Create an instance of ByteArrayOutputStream.
+  ScopedJavaLocalRef<jclass> bytearray_output_stream_clazz =
+      GetClass(env, "java/io/ByteArrayOutputStream");
+  jmethodID bytearray_output_stream_constructor =
+      MethodID::Get<MethodID::TYPE_INSTANCE>(
+          env, bytearray_output_stream_clazz.obj(), "<init>", "()V");
+  jmethodID bytearray_output_stream_tostring =
+      MethodID::Get<MethodID::TYPE_INSTANCE>(
+          env, bytearray_output_stream_clazz.obj(), "toString",
+          "()Ljava/lang/String;");
+  ScopedJavaLocalRef<jobject> bytearray_output_stream(env,
+      env->NewObject(bytearray_output_stream_clazz.obj(),
+                     bytearray_output_stream_constructor));
+  CheckException(env);
+
+  // Create an instance of PrintStream.
+  ScopedJavaLocalRef<jclass> printstream_clazz =
+      GetClass(env, "java/io/PrintStream");
+  jmethodID printstream_constructor =
+      MethodID::Get<MethodID::TYPE_INSTANCE>(
+          env, printstream_clazz.obj(), "<init>",
+          "(Ljava/io/OutputStream;)V");
+  ScopedJavaLocalRef<jobject> printstream(env,
+      env->NewObject(printstream_clazz.obj(), printstream_constructor,
+                     bytearray_output_stream.obj()));
+  CheckException(env);
+
+  // Call Throwable.printStackTrace(PrintStream)
+  env->CallVoidMethod(java_throwable, throwable_printstacktrace,
+      printstream.obj());
+  CheckException(env);
+
+  // Call ByteArrayOutputStream.toString()
   ScopedJavaLocalRef<jstring> exception_string(
-      env, static_cast<jstring>(env->CallStaticObjectMethod(
-               log_clazz.obj(), log_getstacktracestring, java_throwable)));
+      env, static_cast<jstring>(
+          env->CallObjectMethod(bytearray_output_stream.obj(),
+                                bytearray_output_stream_tostring)));
   CheckException(env);
 
-  ScopedJavaLocalRef<jclass> piielider_clazz =
-      GetClass(env, "org/chromium/base/PiiElider");
-  jmethodID piielider_sanitize_stacktrace =
-      MethodID::Get<MethodID::TYPE_STATIC>(
-          env, piielider_clazz.obj(), "sanitizeStacktrace",
-          "(Ljava/lang/String;)Ljava/lang/String;");
-  ScopedJavaLocalRef<jstring> sanitized_exception_string(
-      env, static_cast<jstring>(env->CallStaticObjectMethod(
-               piielider_clazz.obj(), piielider_sanitize_stacktrace,
-               exception_string.obj())));
-  CheckException(env);
-
-  return ConvertJavaStringToUTF8(sanitized_exception_string);
+  return ConvertJavaStringToUTF8(exception_string);
 }
 
 #if BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)

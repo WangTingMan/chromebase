@@ -13,7 +13,7 @@
 
 namespace base {
 
-#if !defined(OS_ANDROID)
+#if !defined(OS_ANDROID) && !defined(__ANDROID_HOST__)
 Process SpawnMultiProcessTestChild(const std::string& procname,
                                    const CommandLine& base_command_line,
                                    const LaunchOptions& options) {
@@ -39,7 +39,7 @@ bool TerminateMultiProcessTestChild(const Process& process,
   return process.Terminate(exit_code, wait);
 }
 
-#endif  // !defined(OS_ANDROID)
+#endif  // !OS_ANDROID && !__ANDROID_HOST__
 
 CommandLine GetMultiProcessTestChildBaseCommandLine() {
   base::ScopedAllowBlockingForTesting allow_blocking;
@@ -52,6 +52,8 @@ CommandLine GetMultiProcessTestChildBaseCommandLine() {
 
 MultiProcessTest::MultiProcessTest() = default;
 
+// Don't compile on ARC.
+#if 0
 Process MultiProcessTest::SpawnChild(const std::string& procname) {
   LaunchOptions options;
 #if defined(OS_WIN)
@@ -64,6 +66,7 @@ Process MultiProcessTest::SpawnChildWithOptions(const std::string& procname,
                                                 const LaunchOptions& options) {
   return SpawnMultiProcessTestChild(procname, MakeCmdLine(procname), options);
 }
+#endif
 
 CommandLine MultiProcessTest::MakeCmdLine(const std::string& procname) {
   CommandLine command_line = GetMultiProcessTestChildBaseCommandLine();

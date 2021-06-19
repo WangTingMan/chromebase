@@ -27,14 +27,15 @@ import org.chromium.base.annotations.MainDex;
 import org.chromium.base.memory.MemoryPressureMonitor;
 
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * This is the base class for child services.
- * Pre-Q, and for privileged services, the embedding application should contain ProcessService0,
- * 1, etc subclasses that provide the concrete service entry points, so it can connect to more than
- * one distinct process (i.e. one process per service number, up to limit of N).
+ * This is the base class for child services; the embedding application should contain
+ * ProcessService0, 1.. etc subclasses that provide the concrete service entry points, so it can
+ * connect to more than one distinct process (i.e. one process per service number, up to limit of
+ * N).
  * The embedding application must declare these service instances in the application section
  * of its AndroidManifest.xml, first with some meta-data describing the services:
  *     <meta-data android:name="org.chromium.test_app.SERVICES_NAME"
@@ -42,9 +43,6 @@ import javax.annotation.concurrent.GuardedBy;
  * and then N entries of the form:
  *     <service android:name="org.chromium.test_app.ProcessServiceX"
  *              android:process=":processX" />
- *
- * Q added bindIsolatedService which supports creating multiple instances from a single manifest
- * declaration for isolated services. In this case, only need to declare instance 0 in the manifest.
  *
  * Subclasses must also provide a delegate in this class constructor. That delegate is responsible
  * for loading native libraries and running the main entry point of the service.
@@ -87,8 +85,7 @@ public abstract class ChildProcessService extends Service {
     // Only set once in bind(), does not require synchronization.
     private boolean mServiceBound;
 
-    // Interface to send notifications to the parent process.
-    private IParentProcess mParentProcess;
+    private final Semaphore mActivitySemaphore = new Semaphore(1);
 
     public ChildProcessService(ChildProcessServiceDelegate delegate) {
         mDelegate = delegate;
@@ -115,19 +112,18 @@ public abstract class ChildProcessService extends Service {
         }
 
         @Override
-        public void setupConnection(Bundle args, IParentProcess parentProcess,
-                List<IBinder> callbacks) throws RemoteException {
+        public void setupConnection(Bundle args, ICallbackInt pidCallback, List<IBinder> callbacks)
+                throws RemoteException {
             assert mServiceBound;
             synchronized (mBinderLock) {
                 if (mBindToCallerCheck && mBoundCallingPid == 0) {
                     Log.e(TAG, "Service has not been bound with bindToCaller()");
-                    parentProcess.sendPid(-1);
+                    pidCallback.call(-1);
                     return;
                 }
             }
 
-            parentProcess.sendPid(Process.myPid());
-            mParentProcess = parentProcess;
+            pidCallback.call(Process.myPid());
             processConnectionBundle(args, callbacks);
         }
 
@@ -162,19 +158,6 @@ public abstract class ChildProcessService extends Service {
                 }
             });
         }
-
-        @Override
-        public void dumpProcessStack() {
-            assert mServiceBound;
-            synchronized (mLibraryInitializedLock) {
-                if (!mLibraryInitialized) {
-                    Log.e(TAG, "Cannot dump process stack before native is loaded");
-                    return;
-                }
-            }
-            nativeDumpProcessStack();
-        }
-
     };
 
     /**
@@ -256,13 +239,10 @@ public abstract class ChildProcessService extends Service {
                     nativeRegisterFileDescriptors(keys, fileIds, fds, regionOffsets, regionSizes);
 
                     mDelegate.onBeforeMain();
-                    mDelegate.runMain();
-                    try {
-                        mParentProcess.reportCleanExit();
-                    } catch (RemoteException e) {
-                        Log.e(TAG, "Failed to call clean exit callback.", e);
+                    if (mActivitySemaphore.tryAcquire()) {
+                        mDelegate.runMain();
+                        nativeExitChildProcess();
                     }
-                    nativeExitChildProcess();
                 } catch (InterruptedException e) {
                     Log.w(TAG, "%s startup failed: %s", MAIN_THREAD_NAME, e);
                 }
@@ -275,7 +255,26 @@ public abstract class ChildProcessService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.i(TAG, "Destroying ChildProcessService pid=%d", Process.myPid());
-        System.exit(0);
+        if (mActivitySemaphore.tryAcquire()) {
+            // TODO(crbug.com/457406): This is a bit hacky, but there is no known better solution
+            // as this service will get reused (at least if not sandboxed).
+            // In fact, we might really want to always exit() from onDestroy(), not just from
+            // the early return here.
+            System.exit(0);
+            return;
+        }
+        synchronized (mLibraryInitializedLock) {
+            try {
+                while (!mLibraryInitialized) {
+                    // Avoid a potential race in calling through to native code before the library
+                    // has loaded.
+                    mLibraryInitializedLock.wait();
+                }
+            } catch (InterruptedException e) {
+                // Ignore
+            }
+        }
+        mDelegate.onDestroy();
     }
 
     /*
@@ -288,7 +287,7 @@ public abstract class ChildProcessService extends Service {
      */
     @Override
     public IBinder onBind(Intent intent) {
-        if (mServiceBound) return mBinder;
+        assert !mServiceBound;
 
         // We call stopSelf() to request that this service be stopped as soon as the client unbinds.
         // Otherwise the system may keep it around and available for a reconnect. The child
@@ -344,9 +343,4 @@ public abstract class ChildProcessService extends Service {
      * Force the child process to exit.
      */
     private static native void nativeExitChildProcess();
-
-    /**
-     * Dumps the child process stack without crashing it.
-     */
-    private static native void nativeDumpProcessStack();
 }

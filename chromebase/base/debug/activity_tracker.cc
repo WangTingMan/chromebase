@@ -9,7 +9,6 @@
 #include <utility>
 
 #include "base/atomic_sequence_num.h"
-#include "base/bits.h"
 #include "base/debug/stack_trace.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
@@ -56,8 +55,8 @@ AtomicSequenceNumber g_next_id;
 // Gets the next non-zero identifier. It is only unique within a process.
 uint32_t GetNextDataId() {
   uint32_t id;
-  while ((id = g_next_id.GetNext()) == 0) {
-  }
+  while ((id = g_next_id.GetNext()) == 0)
+    ;
   return id;
 }
 
@@ -92,12 +91,12 @@ PersistentMemoryAllocator::Reference AllocateFrom(
 
 // Determines the previous aligned index.
 size_t RoundDownToAlignment(size_t index, size_t alignment) {
-  return bits::AlignDown(index, alignment);
+  return index & (0 - alignment);
 }
 
 // Determines the next aligned index.
 size_t RoundUpToAlignment(size_t index, size_t alignment) {
-  return bits::Align(index, alignment);
+  return (index + (alignment - 1)) & (0 - alignment);
 }
 
 // Converts "tick" timing into wall time.
@@ -693,6 +692,7 @@ ThreadActivityTracker::ThreadActivityTracker(void* base, size_t size)
 #endif
       stack_slots_(
           static_cast<uint32_t>((size - sizeof(Header)) / sizeof(Activity))) {
+
   // Verify the parameters but fail gracefully if they're not valid so that
   // production code based on external inputs will not crash.  IsValid() will
   // return false in this case.
@@ -1305,19 +1305,32 @@ bool GlobalActivityTracker::CreateWithLocalMemory(size_t size,
 
 // static
 bool GlobalActivityTracker::CreateWithSharedMemory(
-    base::WritableSharedMemoryMapping mapping,
+    std::unique_ptr<SharedMemory> shm,
     uint64_t id,
     StringPiece name,
     int stack_depth) {
-  if (!mapping.IsValid() ||
-      !WritableSharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(
-          mapping)) {
+  if (shm->mapped_size() == 0 ||
+      !SharedPersistentMemoryAllocator::IsSharedMemoryAcceptable(*shm)) {
     return false;
   }
-  CreateWithAllocator(std::make_unique<WritableSharedPersistentMemoryAllocator>(
-                          std::move(mapping), id, name),
+  CreateWithAllocator(std::make_unique<SharedPersistentMemoryAllocator>(
+                          std::move(shm), id, name, false),
                       stack_depth, 0);
   return true;
+}
+
+// static
+bool GlobalActivityTracker::CreateWithSharedMemoryHandle(
+    const SharedMemoryHandle& handle,
+    size_t size,
+    uint64_t id,
+    StringPiece name,
+    int stack_depth) {
+  std::unique_ptr<SharedMemory> shm(
+      new SharedMemory(handle, /*readonly=*/false));
+  if (!shm->Map(size))
+    return false;
+  return CreateWithSharedMemory(std::move(shm), id, name, stack_depth);
 }
 
 // static
@@ -1345,10 +1358,6 @@ GlobalActivityTracker::ReleaseForTesting() {
 }
 
 ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
-  // It is not safe to use TLS once TLS has been destroyed.
-  if (base::ThreadLocalStorage::HasBeenDestroyed())
-    return nullptr;
-
   DCHECK(!this_thread_tracker_.Get());
 
   PersistentMemoryAllocator::Reference mem_reference;
@@ -1363,14 +1372,23 @@ ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
     // because the underlying allocator wasn't given enough memory to satisfy
     // to all possible requests.
     NOTREACHED();
-
+    // Report the thread-count at which the allocator was full so that the
+    // failure can be seen and underlying memory resized appropriately.
+    UMA_HISTOGRAM_COUNTS_1000(
+        "ActivityTracker.ThreadTrackers.MemLimitTrackerCount",
+        thread_tracker_count_.load(std::memory_order_relaxed));
     // Return null, just as if tracking wasn't enabled.
     return nullptr;
   }
 
   // Convert the memory block found above into an actual memory address.
   // Doing the conversion as a Header object enacts the 32/64-bit size
-  // consistency checks which would not otherwise be done.
+  // consistency checks which would not otherwise be done. Unfortunately,
+  // some older compilers and MSVC don't have standard-conforming definitions
+  // of std::atomic which cause it not to be plain-old-data. Don't check on
+  // those platforms assuming that the checks on other platforms will be
+  // sufficient.
+  // TODO(bcwhite): Review this after major compiler releases.
   DCHECK(mem_reference);
   void* mem_base;
   mem_base =
@@ -1381,18 +1399,24 @@ ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
 
   // Create a tracker with the acquired memory and set it as the tracker
   // for this particular thread in thread-local-storage.
-  auto tracker = std::make_unique<ManagedActivityTracker>(
-      mem_reference, mem_base, stack_memory_size_);
+  ManagedActivityTracker* tracker =
+      new ManagedActivityTracker(mem_reference, mem_base, stack_memory_size_);
   DCHECK(tracker->IsValid());
-  auto* tracker_raw = tracker.get();
-  this_thread_tracker_.Set(std::move(tracker));
-  thread_tracker_count_.fetch_add(1, std::memory_order_relaxed);
-  return tracker_raw;
+  this_thread_tracker_.Set(tracker);
+  int old_count = thread_tracker_count_.fetch_add(1, std::memory_order_relaxed);
+
+  UMA_HISTOGRAM_EXACT_LINEAR("ActivityTracker.ThreadTrackers.Count",
+                             old_count + 1, static_cast<int>(kMaxThreadCount));
+  return tracker;
 }
 
 void GlobalActivityTracker::ReleaseTrackerForCurrentThreadForTesting() {
-  if (this_thread_tracker_.Get())
+  ThreadActivityTracker* tracker =
+      reinterpret_cast<ThreadActivityTracker*>(this_thread_tracker_.Get());
+  if (tracker) {
     this_thread_tracker_.Set(nullptr);
+    delete tracker;
+  }
 }
 
 void GlobalActivityTracker::SetBackgroundTaskRunner(
@@ -1415,7 +1439,7 @@ void GlobalActivityTracker::RecordProcessLaunch(
   DCHECK_NE(0, pid);
 
   base::AutoLock lock(global_tracker_lock_);
-  if (base::Contains(known_processes_, pid)) {
+  if (base::ContainsKey(known_processes_, pid)) {
     // TODO(bcwhite): Measure this in UMA.
     NOTREACHED() << "Process #" << process_id
                  << " was previously recorded as \"launched\""
@@ -1630,6 +1654,7 @@ GlobalActivityTracker::GlobalActivityTracker(
     : allocator_(std::move(allocator)),
       stack_memory_size_(ThreadActivityTracker::SizeForStackDepth(stack_depth)),
       process_id_(process_id == 0 ? GetCurrentProcId() : process_id),
+      this_thread_tracker_(&OnTLSDestroy),
       thread_tracker_count_(0),
       thread_tracker_allocator_(allocator_.get(),
                                 kTypeIdActivityTracker,
@@ -1709,6 +1734,11 @@ void GlobalActivityTracker::RecordExceptionImpl(const void* pc,
 
   tracker->RecordExceptionActivity(pc, origin, Activity::ACT_EXCEPTION,
                                    ActivityData::ForException(code));
+}
+
+// static
+void GlobalActivityTracker::OnTLSDestroy(void* value) {
+  delete reinterpret_cast<ManagedActivityTracker*>(value);
 }
 
 ScopedActivity::ScopedActivity(const void* program_counter,

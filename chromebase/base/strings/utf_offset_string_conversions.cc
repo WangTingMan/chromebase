@@ -28,8 +28,9 @@ void OffsetAdjuster::AdjustOffsets(const Adjustments& adjustments,
                                    std::vector<size_t>* offsets_for_adjustment,
                                    size_t limit) {
   DCHECK(offsets_for_adjustment);
-  for (auto& i : *offsets_for_adjustment)
-    AdjustOffset(adjustments, &i, limit);
+  for (std::vector<size_t>::iterator i(offsets_for_adjustment->begin());
+       i != offsets_for_adjustment->end(); ++i)
+    AdjustOffset(adjustments, &(*i), limit);
 }
 
 // static
@@ -40,14 +41,15 @@ void OffsetAdjuster::AdjustOffset(const Adjustments& adjustments,
   if (*offset == string16::npos)
     return;
   int adjustment = 0;
-  for (const auto& i : adjustments) {
-    if (*offset <= i.original_offset)
+  for (Adjustments::const_iterator i = adjustments.begin();
+       i != adjustments.end(); ++i) {
+    if (*offset <= i->original_offset)
       break;
-    if (*offset < (i.original_offset + i.original_length)) {
+    if (*offset < (i->original_offset + i->original_length)) {
       *offset = string16::npos;
       return;
     }
-    adjustment += static_cast<int>(i.original_length - i.output_length);
+    adjustment += static_cast<int>(i->original_length - i->output_length);
   }
   *offset -= adjustment;
 
@@ -61,8 +63,9 @@ void OffsetAdjuster::UnadjustOffsets(
     std::vector<size_t>* offsets_for_unadjustment) {
   if (!offsets_for_unadjustment || adjustments.empty())
     return;
-  for (auto& i : *offsets_for_unadjustment)
-    UnadjustOffset(adjustments, &i);
+  for (std::vector<size_t>::iterator i(offsets_for_unadjustment->begin());
+       i != offsets_for_unadjustment->end(); ++i)
+    UnadjustOffset(adjustments, &(*i));
 }
 
 // static
@@ -71,11 +74,13 @@ void OffsetAdjuster::UnadjustOffset(const Adjustments& adjustments,
   if (*offset == string16::npos)
     return;
   int adjustment = 0;
-  for (const auto& i : adjustments) {
-    if (*offset + adjustment <= i.original_offset)
+  for (Adjustments::const_iterator i = adjustments.begin();
+       i != adjustments.end(); ++i) {
+    if (*offset + adjustment <= i->original_offset)
       break;
-    adjustment += static_cast<int>(i.original_length - i.output_length);
-    if ((*offset + adjustment) < (i.original_offset + i.original_length)) {
+    adjustment += static_cast<int>(i->original_length - i->output_length);
+    if ((*offset + adjustment) <
+        (i->original_offset + i->original_length)) {
       *offset = string16::npos;
       return;
     }
@@ -87,8 +92,8 @@ void OffsetAdjuster::UnadjustOffset(const Adjustments& adjustments,
 void OffsetAdjuster::MergeSequentialAdjustments(
     const Adjustments& first_adjustments,
     Adjustments* adjustments_on_adjusted_string) {
-  auto adjusted_iter = adjustments_on_adjusted_string->begin();
-  auto first_iter = first_adjustments.begin();
+  Adjustments::iterator adjusted_iter = adjustments_on_adjusted_string->begin();
+  Adjustments::const_iterator first_iter = first_adjustments.begin();
   // Simultaneously iterate over all |adjustments_on_adjusted_string| and
   // |first_adjustments|, adding adjustments to or correcting the adjustments
   // in |adjustments_on_adjusted_string| as we go.  |shift| keeps track of the

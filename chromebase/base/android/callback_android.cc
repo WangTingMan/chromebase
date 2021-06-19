@@ -7,7 +7,7 @@
 #include "base/android/jni_array.h"
 #include "base/android/jni_string.h"
 #include "base/android/scoped_java_ref.h"
-#include "base/base_jni_headers/Callback_jni.h"
+#include "jni/Callback_jni.h"
 
 namespace base {
 namespace android {
@@ -38,10 +38,6 @@ void RunByteArrayCallbackAndroid(const JavaRef<jobject>& callback,
   JNIEnv* env = AttachCurrentThread();
   ScopedJavaLocalRef<jbyteArray> j_bytes = ToJavaByteArray(env, arg);
   Java_Helper_onObjectResultFromNative(env, callback, j_bytes);
-}
-
-void RunRunnableAndroid(const JavaRef<jobject>& runnable) {
-  Java_Helper_runRunnable(AttachCurrentThread(), runnable);
 }
 
 }  // namespace android

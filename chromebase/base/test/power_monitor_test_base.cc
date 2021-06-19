@@ -20,6 +20,8 @@ PowerMonitorTestSource::PowerMonitorTestSource()
 
 PowerMonitorTestSource::~PowerMonitorTestSource() = default;
 
+void PowerMonitorTestSource::Shutdown() {}
+
 void PowerMonitorTestSource::GeneratePowerStateEvent(bool on_battery_power) {
   test_on_battery_power_ = on_battery_power;
   ProcessPowerEvent(POWER_STATE_EVENT);
@@ -38,7 +40,7 @@ void PowerMonitorTestSource::GenerateResumeEvent() {
 
 bool PowerMonitorTestSource::IsOnBatteryPowerImpl() {
   return test_on_battery_power_;
-}
+};
 
 PowerMonitorTestObserver::PowerMonitorTestObserver()
     : last_power_state_(false),

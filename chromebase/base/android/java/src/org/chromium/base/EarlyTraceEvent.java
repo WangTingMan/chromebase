@@ -10,7 +10,6 @@ import android.os.Process;
 import android.os.StrictMode;
 import android.os.SystemClock;
 
-import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
 
@@ -20,10 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.concurrent.GuardedBy;
-
-/**
- * Support for early tracing, before the native library is loaded.
+/** Support for early tracing, before the native library is loaded.
  *
  * This is limited, as:
  * - Arguments are not supported
@@ -38,9 +34,6 @@ import javax.annotation.concurrent.GuardedBy;
  *          as some are pending, then early tracing is permanently disabled after dumping the
  *          events.  This means that if any early event is still pending when tracing is disabled,
  *          all early events are dropped.
- *
- * Like the TraceEvent, the event name of the trace events must be a string literal or a |static
- * final String| class member. Otherwise NoDynamicStringsInTraceEventCheck error will be thrown.
  */
 @JNINamespace("base::android")
 @MainDex
@@ -107,32 +100,21 @@ public class EarlyTraceEvent {
     @VisibleForTesting static final int STATE_FINISHING = 2;
     @VisibleForTesting static final int STATE_FINISHED = 3;
 
-    private static final String BACKGROUND_STARTUP_TRACING_ENABLED_KEY = "bg_startup_tracing";
-    private static boolean sCachedBackgroundStartupTracingFlag;
-
     // Locks the fields below.
     private static final Object sLock = new Object();
 
     @VisibleForTesting static volatile int sState = STATE_DISABLED;
     // Not final as these object are not likely to be used at all.
-    @GuardedBy("sLock")
-    @VisibleForTesting
-    static List<Event> sCompletedEvents;
-    @GuardedBy("sLock")
+    @VisibleForTesting static List<Event> sCompletedEvents;
     @VisibleForTesting
     static Map<String, Event> sPendingEventByKey;
-    @GuardedBy("sLock")
-    @VisibleForTesting
-    static List<AsyncEvent> sAsyncEvents;
-    @GuardedBy("sLock")
-    @VisibleForTesting
-    static List<String> sPendingAsyncEvents;
+    @VisibleForTesting static List<AsyncEvent> sAsyncEvents;
+    @VisibleForTesting static List<String> sPendingAsyncEvents;
 
     /** @see TraceEvent#MaybeEnableEarlyTracing().
      */
     static void maybeEnable() {
         ThreadUtils.assertOnUiThread();
-        if (sState != STATE_DISABLED) return;
         boolean shouldEnable = false;
         // Checking for the trace config filename touches the disk.
         StrictMode.ThreadPolicy oldPolicy = StrictMode.allowThreadDiskReads();
@@ -144,18 +126,6 @@ public class EarlyTraceEvent {
                     shouldEnable = (new File(TRACE_CONFIG_FILENAME)).exists();
                 } catch (SecurityException e) {
                     // Access denied, not enabled.
-                }
-            }
-            if (ContextUtils.getAppSharedPreferences().getBoolean(
-                        BACKGROUND_STARTUP_TRACING_ENABLED_KEY, false)) {
-                if (shouldEnable) {
-                    // If user has enabled tracing, then force disable background tracing for this
-                    // session.
-                    setBackgroundStartupTracingFlag(false);
-                    sCachedBackgroundStartupTracingFlag = false;
-                } else {
-                    sCachedBackgroundStartupTracingFlag = true;
-                    shouldEnable = true;
                 }
             }
         } finally {
@@ -205,28 +175,6 @@ public class EarlyTraceEvent {
         return sState == STATE_ENABLED;
     }
 
-    /**
-     * Sets the background startup tracing enabled in app preferences for next startup.
-     */
-    @CalledByNative
-    static void setBackgroundStartupTracingFlag(boolean enabled) {
-        ContextUtils.getAppSharedPreferences()
-                .edit()
-                .putBoolean(BACKGROUND_STARTUP_TRACING_ENABLED_KEY, enabled)
-                .apply();
-    }
-
-    /**
-     * Returns true if the background startup tracing flag is set.
-     *
-     * This does not return the correct value if called before maybeEnable() was called. But that is
-     * called really early in startup.
-     */
-    @CalledByNative
-    public static boolean getBackgroundStartupTracingFlag() {
-        return sCachedBackgroundStartupTracingFlag;
-    }
-
     /** @see {@link TraceEvent#begin()}. */
     public static void begin(String name) {
         // begin() and end() are going to be called once per TraceEvent, this avoids entering a
@@ -240,7 +188,7 @@ public class EarlyTraceEvent {
         }
         if (conflictingEvent != null) {
             throw new IllegalArgumentException(
-                    "Multiple pending trace events can't have the same name: " + name);
+                    "Multiple pending trace events can't have the same name");
         }
     }
 
@@ -282,16 +230,13 @@ public class EarlyTraceEvent {
 
     @VisibleForTesting
     static void resetForTesting() {
-        synchronized (sLock) {
-            sState = EarlyTraceEvent.STATE_DISABLED;
-            sCompletedEvents = null;
-            sPendingEventByKey = null;
-            sAsyncEvents = null;
-            sPendingAsyncEvents = null;
-        }
+        sState = EarlyTraceEvent.STATE_DISABLED;
+        sCompletedEvents = null;
+        sPendingEventByKey = null;
+        sAsyncEvents = null;
+        sPendingAsyncEvents = null;
     }
 
-    @GuardedBy("sLock")
     private static void maybeFinishLocked() {
         if (!sCompletedEvents.isEmpty()) {
             dumpEvents(sCompletedEvents);

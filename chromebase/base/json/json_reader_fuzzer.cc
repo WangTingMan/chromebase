@@ -19,7 +19,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   const int options = data[size - 1];
 
-  base::JSONReader::ReadAndReturnValueWithError(input_string, options);
+  int error_code, error_line, error_column;
+  std::string error_message;
+  base::JSONReader::ReadAndReturnError(input_string, options, &error_code,
+                                       &error_message, &error_line,
+                                       &error_column);
 
   return 0;
 }

@@ -15,7 +15,7 @@ namespace base {
 
 namespace {
 
-// Call FieldTrialList::FactoryGetFieldTrial().
+// Call FieldTrialList::FactoryGetFieldTrial() with a future expiry date.
 scoped_refptr<FieldTrial> CreateFieldTrial(
     const std::string& trial_name,
     int total_probability,
@@ -23,7 +23,8 @@ scoped_refptr<FieldTrial> CreateFieldTrial(
     int* default_group_number) {
   return FieldTrialList::FactoryGetFieldTrial(
       trial_name, total_probability, default_group_name,
-      FieldTrial::SESSION_RANDOMIZED, default_group_number);
+      FieldTrialList::kNoExpirationYear, 1, 1, FieldTrial::SESSION_RANDOMIZED,
+      default_group_number);
 }
 
 }  // namespace

@@ -12,8 +12,8 @@ namespace base {
 
 UserActionTester::UserActionTester()
     : task_runner_(new base::TestSimpleTaskRunner),
-      action_callback_(base::BindRepeating(&UserActionTester::OnUserAction,
-                                           base::Unretained(this))) {
+      action_callback_(
+          base::Bind(&UserActionTester::OnUserAction, base::Unretained(this))) {
   base::SetRecordActionTaskRunner(task_runner_);
   base::AddActionCallback(action_callback_);
 }
@@ -23,7 +23,7 @@ UserActionTester::~UserActionTester() {
 }
 
 int UserActionTester::GetActionCount(const std::string& user_action) const {
-  auto iter = count_map_.find(user_action);
+  UserActionCountMap::const_iterator iter = count_map_.find(user_action);
   return iter == count_map_.end() ? 0 : iter->second;
 }
 

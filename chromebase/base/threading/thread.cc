@@ -9,14 +9,12 @@
 #include "base/lazy_instance.h"
 #include "base/location.h"
 #include "base/logging.h"
-#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_restrictions.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
 
 #if defined(OS_POSIX) && !defined(OS_NACL)
@@ -45,7 +43,7 @@ Thread::Options::Options() = default;
 Thread::Options::Options(MessageLoop::Type type, size_t size)
     : message_loop_type(type), stack_size(size) {}
 
-Thread::Options::Options(Options&& other) = default;
+Thread::Options::Options(const Options& other) = default;
 
 Thread::Options::~Options() = default;
 
@@ -79,7 +77,7 @@ bool Thread::Start() {
 
 bool Thread::StartWithOptions(const Options& options) {
   DCHECK(owning_sequence_checker_.CalledOnValidSequence());
-  DCHECK(!task_environment_);
+  DCHECK(!message_loop_);
   DCHECK(!IsRunning());
   DCHECK(!stopping_) << "Starting a non-joinable thread a second time? That's "
                      << "not allowed!";
@@ -94,19 +92,14 @@ bool Thread::StartWithOptions(const Options& options) {
 
   SetThreadWasQuitProperly(false);
 
-  timer_slack_ = options.timer_slack;
+  MessageLoop::Type type = options.message_loop_type;
+  if (!options.message_pump_factory.is_null())
+    type = MessageLoop::TYPE_CUSTOM;
 
-  if (options.task_environment) {
-    DCHECK(!options.message_pump_factory);
-    task_environment_ = WrapUnique(options.task_environment);
-  } else if (options.message_pump_factory) {
-    task_environment_ = std::make_unique<internal::MessageLoopTaskEnvironment>(
-        MessageLoop::CreateUnbound(options.message_pump_factory.Run()));
-  } else {
-    task_environment_ = std::make_unique<internal::MessageLoopTaskEnvironment>(
-        MessageLoop::CreateUnbound(options.message_loop_type));
-  }
-
+  message_loop_timer_slack_ = options.timer_slack;
+  std::unique_ptr<MessageLoop> message_loop_owned =
+      MessageLoop::CreateUnbound(type, options.message_pump_factory);
+  message_loop_ = message_loop_owned.get();
   start_event_.Reset();
 
   // Hold |thread_lock_| while starting the new thread to synchronize with
@@ -122,12 +115,18 @@ bool Thread::StartWithOptions(const Options& options) {
                   options.stack_size, this, options.priority);
     if (!success) {
       DLOG(ERROR) << "failed to create thread";
+      message_loop_ = nullptr;
       return false;
     }
   }
 
   joinable_ = options.joinable;
 
+  // The ownership of |message_loop_| is managed by the newly created thread
+  // within the ThreadMain.
+  ignore_result(message_loop_owned.release());
+
+  DCHECK(message_loop_);
   return true;
 }
 
@@ -142,17 +141,16 @@ bool Thread::StartAndWaitForTesting() {
 
 bool Thread::WaitUntilThreadStarted() const {
   DCHECK(owning_sequence_checker_.CalledOnValidSequence());
-  if (!task_environment_)
+  if (!message_loop_)
     return false;
-  // https://crbug.com/918039
-  base::ScopedAllowBaseSyncPrimitivesOutsideBlockingScope allow_wait;
+  base::ThreadRestrictions::ScopedAllowWait allow_wait;
   start_event_.Wait();
   return true;
 }
 
 void Thread::FlushForTesting() {
   DCHECK(owning_sequence_checker_.CalledOnValidSequence());
-  if (!task_environment_)
+  if (!message_loop_)
     return;
 
   WaitableEvent done(WaitableEvent::ResetPolicy::AUTOMATIC,
@@ -179,14 +177,15 @@ void Thread::Stop() {
 
   // Wait for the thread to exit.
   //
-  // TODO(darin): Unfortunately, we need to keep |task_environment_| around
-  // until the thread exits. Some consumers are abusing the API. Make them stop.
+  // TODO(darin): Unfortunately, we need to keep |message_loop_| around until
+  // the thread exits.  Some consumers are abusing the API.  Make them stop.
+  //
   PlatformThread::Join(thread_);
   thread_ = base::PlatformThreadHandle();
 
-  // The thread should release |task_environment_| on exit (note: Join() adds
-  // an implicit memory barrier and no lock is thus required for this check).
-  DCHECK(!task_environment_);
+  // The thread should nullify |message_loop_| on exit (note: Join() adds an
+  // implicit memory barrier and no lock is thus required for this check).
+  DCHECK(!message_loop_);
 
   stopping_ = false;
 }
@@ -196,10 +195,19 @@ void Thread::StopSoon() {
   // enable this check.
   // DCHECK(owning_sequence_checker_.CalledOnValidSequence());
 
-  if (stopping_ || !task_environment_)
+  if (stopping_ || !message_loop_)
     return;
 
   stopping_ = true;
+
+  if (using_external_message_loop_) {
+    // Setting |stopping_| to true above should have been sufficient for this
+    // thread to be considered "stopped" per it having never set its |running_|
+    // bit by lack of its own ThreadMain.
+    DCHECK(!IsRunning());
+    message_loop_ = nullptr;
+    return;
+  }
 
   task_runner()->PostTask(
       FROM_HERE, base::BindOnce(&Thread::ThreadQuitHelper, Unretained(this)));
@@ -212,9 +220,14 @@ void Thread::DetachFromSequence() {
 
 PlatformThreadId Thread::GetThreadId() const {
   // If the thread is created but not started yet, wait for |id_| being ready.
-  base::ScopedAllowBaseSyncPrimitivesOutsideBlockingScope allow_wait;
+  base::ThreadRestrictions::ScopedAllowWait allow_wait;
   id_event_.Wait();
   return id_;
+}
+
+PlatformThreadHandle Thread::GetThreadHandle() const {
+  AutoLock lock(thread_lock_);
+  return thread_;
 }
 
 bool Thread::IsRunning() const {
@@ -222,11 +235,11 @@ bool Thread::IsRunning() const {
   // enable this check.
   // DCHECK(owning_sequence_checker_.CalledOnValidSequence());
 
-  // If the thread's already started (i.e. |task_environment_| is non-null) and
-  // not yet requested to stop (i.e. |stopping_| is false) we can just return
-  // true. (Note that |stopping_| is touched only on the same sequence that
-  // starts / started the new thread so we need no locking here.)
-  if (task_environment_ && !stopping_)
+  // If the thread's already started (i.e. |message_loop_| is non-null) and not
+  // yet requested to stop (i.e. |stopping_| is false) we can just return true.
+  // (Note that |stopping_| is touched only on the same sequence that starts /
+  // started the new thread so we need no locking here.)
+  if (message_loop_ && !stopping_)
     return true;
   // Otherwise check the |running_| flag, which is set to true by the new thread
   // only while it is inside Run().
@@ -250,10 +263,23 @@ void Thread::SetThreadWasQuitProperly(bool flag) {
 // static
 bool Thread::GetThreadWasQuitProperly() {
   bool quit_properly = true;
-#if DCHECK_IS_ON()
+#ifndef NDEBUG
   quit_properly = lazy_tls_bool.Pointer()->Get();
 #endif
   return quit_properly;
+}
+
+void Thread::SetMessageLoop(MessageLoop* message_loop) {
+  DCHECK(owning_sequence_checker_.CalledOnValidSequence());
+  DCHECK(message_loop);
+
+  // Setting |message_loop_| should suffice for this thread to be considered
+  // as "running", until Stop() is invoked.
+  DCHECK(!IsRunning());
+  message_loop_ = message_loop;
+  DCHECK(IsRunning());
+
+  using_external_message_loop_ = true;
 }
 
 void Thread::ThreadMain() {
@@ -273,18 +299,17 @@ void Thread::ThreadMain() {
   ANNOTATE_THREAD_NAME(name_.c_str());  // Tell the name to race detector.
 
   // Lazily initialize the |message_loop| so that it can run on this thread.
-  DCHECK(task_environment_);
-  // This binds MessageLoopCurrent and ThreadTaskRunnerHandle.
-  task_environment_->BindToCurrentThread(timer_slack_);
-  DCHECK(MessageLoopCurrent::Get());
-  DCHECK(ThreadTaskRunnerHandle::IsSet());
+  DCHECK(message_loop_);
+  std::unique_ptr<MessageLoop> message_loop(message_loop_);
+  message_loop_->BindToCurrentThread();
+  message_loop_->SetTimerSlack(message_loop_timer_slack_);
 
 #if defined(OS_POSIX) && !defined(OS_NACL)
   // Allow threads running a MessageLoopForIO to use FileDescriptorWatcher API.
   std::unique_ptr<FileDescriptorWatcher> file_descriptor_watcher;
-  if (MessageLoopCurrentForIO::IsSet()) {
-    file_descriptor_watcher.reset(
-        new FileDescriptorWatcher(task_environment_->GetDefaultTaskRunner()));
+  if (MessageLoopForIO::IsCurrent()) {
+    file_descriptor_watcher.reset(new FileDescriptorWatcher(
+        static_cast<MessageLoopForIO*>(message_loop_)));
   }
 #endif
 
@@ -323,11 +348,16 @@ void Thread::ThreadMain() {
   com_initializer.reset();
 #endif
 
-  DCHECK(GetThreadWasQuitProperly());
+  if (message_loop->type() != MessageLoop::TYPE_CUSTOM) {
+    // Assert that RunLoop::QuitWhenIdle was called by ThreadQuitHelper. Don't
+    // check for custom message pumps, because their shutdown might not allow
+    // this.
+    DCHECK(GetThreadWasQuitProperly());
+  }
 
   // We can't receive messages anymore.
   // (The message loop is destructed at the end of this block)
-  task_environment_.reset();
+  message_loop_ = nullptr;
   run_loop_ = nullptr;
 }
 
@@ -336,25 +366,5 @@ void Thread::ThreadQuitHelper() {
   run_loop_->QuitWhenIdle();
   SetThreadWasQuitProperly(true);
 }
-
-namespace internal {
-
-MessageLoopTaskEnvironment::MessageLoopTaskEnvironment(
-    std::unique_ptr<MessageLoop> message_loop)
-    : message_loop_(std::move(message_loop)) {}
-
-MessageLoopTaskEnvironment::~MessageLoopTaskEnvironment() {}
-
-scoped_refptr<SingleThreadTaskRunner>
-MessageLoopTaskEnvironment::GetDefaultTaskRunner() {
-  return message_loop_->task_runner();
-}
-
-void MessageLoopTaskEnvironment::BindToCurrentThread(TimerSlack timer_slack) {
-  message_loop_->BindToCurrentThread();
-  message_loop_->SetTimerSlack(timer_slack);
-}
-
-}  // namespace internal
 
 }  // namespace base

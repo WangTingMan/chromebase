@@ -44,6 +44,7 @@ class TraceConfigMemoryTestUtil {
         "\"record_mode\":\"record-until-full\""
         "}",
         MemoryDumpManager::kTraceCategory, light_period, heavy_period);
+    ;
   }
 
   static std::string GetTraceConfig_PeriodicTriggers(int light_period,

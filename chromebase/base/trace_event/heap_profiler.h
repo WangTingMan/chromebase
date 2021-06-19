@@ -5,6 +5,22 @@
 #ifndef BASE_TRACE_EVENT_HEAP_PROFILER_H
 #define BASE_TRACE_EVENT_HEAP_PROFILER_H
 
+// Replace with stub implementation.
+#if 1
+#define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
+  trace_event_internal::HeapProfilerScopedTaskExecutionTracker
+
+namespace trace_event_internal {
+
+class HeapProfilerScopedTaskExecutionTracker {
+ public:
+  explicit HeapProfilerScopedTaskExecutionTracker(const char*) {}
+};
+
+}  // namespace trace_event_internal
+
+#else
+
 #include "base/compiler_specific.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 
@@ -29,15 +45,6 @@
 // in the heap profiler.
 #define TRACE_HEAP_PROFILER_API_SCOPED_WITH_PROGRAM_COUNTER \
   trace_event_internal::HeapProfilerScopedStackFrame
-
-// Returns the current task context (c-string) tracked by heap profiler. This is
-// useful along with TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION if a async
-// system needs to track client's allocation context across post tasks. Use this
-// macro to get the current context and use
-// TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION in the posted task which
-// allocates memory for a client.
-#define TRACE_HEAP_PROFILER_API_GET_CURRENT_TASK_CONTEXT \
-  trace_event_internal::HeapProfilerCurrentTaskContext
 
 // A scoped ignore event used to tell heap profiler to ignore all the
 // allocations in the scope. It is useful to exclude allocations made for
@@ -101,12 +108,6 @@ class HeapProfilerScopedStackFrame {
   const void* const program_counter_;
 };
 
-inline const char* HeapProfilerCurrentTaskContext() {
-  return base::trace_event::AllocationContextTracker::
-      GetInstanceForCurrentThread()
-          ->TaskContext();
-}
-
 class BASE_EXPORT HeapProfilerScopedIgnore {
  public:
   inline HeapProfilerScopedIgnore() {
@@ -131,4 +132,5 @@ class BASE_EXPORT HeapProfilerScopedIgnore {
 
 }  // namespace trace_event_internal
 
+#endif
 #endif  // BASE_TRACE_EVENT_HEAP_PROFILER_H

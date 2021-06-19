@@ -126,7 +126,7 @@ class StatisticsRecorderTest : public testing::TestWithParam<bool> {
 };
 
 // Run all HistogramTest cases with both heap and persistent memory.
-INSTANTIATE_TEST_SUITE_P(Allocator, StatisticsRecorderTest, testing::Bool());
+INSTANTIATE_TEST_CASE_P(Allocator, StatisticsRecorderTest, testing::Bool());
 
 TEST_P(StatisticsRecorderTest, NotInitialized) {
   UninitializeStatisticsRecorder();
@@ -359,46 +359,48 @@ TEST_P(StatisticsRecorderTest, ToJSON) {
   std::string json(StatisticsRecorder::ToJSON(JSON_VERBOSITY_LEVEL_FULL));
 
   // Check for valid JSON.
-  Optional<Value> root = JSONReader::Read(json);
-  ASSERT_TRUE(root);
-  ASSERT_TRUE(root->is_dict());
+  std::unique_ptr<Value> root = JSONReader::Read(json);
+  ASSERT_TRUE(root.get());
+
+  DictionaryValue* root_dict = nullptr;
+  ASSERT_TRUE(root->GetAsDictionary(&root_dict));
 
   // No query should be set.
-  ASSERT_FALSE(root->FindKey("query"));
+  ASSERT_FALSE(root_dict->HasKey("query"));
 
-  const Value* histogram_list = root->FindListKey("histograms");
-
-  ASSERT_TRUE(histogram_list);
-  ASSERT_EQ(2u, histogram_list->GetList().size());
+  ListValue* histogram_list = nullptr;
+  ASSERT_TRUE(root_dict->GetList("histograms", &histogram_list));
+  ASSERT_EQ(2u, histogram_list->GetSize());
 
   // Examine the first histogram.
-  const Value& histogram_dict = histogram_list->GetList()[0];
-  ASSERT_TRUE(histogram_dict.is_dict());
+  DictionaryValue* histogram_dict = nullptr;
+  ASSERT_TRUE(histogram_list->GetDictionary(0, &histogram_dict));
 
-  auto sample_count = histogram_dict.FindIntKey("count");
-  ASSERT_TRUE(sample_count);
-  EXPECT_EQ(2, *sample_count);
+  int sample_count;
+  ASSERT_TRUE(histogram_dict->GetInteger("count", &sample_count));
+  EXPECT_EQ(2, sample_count);
 
-  const Value* buckets_list = histogram_dict.FindListKey("buckets");
-  ASSERT_TRUE(buckets_list);
+  ListValue* buckets_list = nullptr;
+  ASSERT_TRUE(histogram_dict->GetList("buckets", &buckets_list));
   EXPECT_EQ(2u, buckets_list->GetList().size());
 
   // Check the serialized JSON with a different verbosity level.
   json = StatisticsRecorder::ToJSON(JSON_VERBOSITY_LEVEL_OMIT_BUCKETS);
   root = JSONReader::Read(json);
-  ASSERT_TRUE(root);
-  ASSERT_TRUE(root->is_dict());
-  histogram_list = root->FindListKey("histograms");
-  ASSERT_TRUE(histogram_list);
-  ASSERT_EQ(2u, histogram_list->GetList().size());
-  const Value& histogram_dict2 = histogram_list->GetList()[0];
-  ASSERT_TRUE(histogram_dict2.is_dict());
-  sample_count = histogram_dict2.FindIntKey("count");
-  ASSERT_TRUE(sample_count);
-  EXPECT_EQ(2, *sample_count);
-  buckets_list = histogram_dict2.FindListKey("buckets");
+  ASSERT_TRUE(root.get());
+  root_dict = nullptr;
+  ASSERT_TRUE(root->GetAsDictionary(&root_dict));
+  histogram_list = nullptr;
+  ASSERT_TRUE(root_dict->GetList("histograms", &histogram_list));
+  ASSERT_EQ(2u, histogram_list->GetSize());
+  histogram_dict = nullptr;
+  ASSERT_TRUE(histogram_list->GetDictionary(0, &histogram_dict));
+  sample_count = 0;
+  ASSERT_TRUE(histogram_dict->GetInteger("count", &sample_count));
+  EXPECT_EQ(2, sample_count);
+  buckets_list = nullptr;
   // Bucket information should be omitted.
-  ASSERT_FALSE(buckets_list);
+  ASSERT_FALSE(histogram_dict->GetList("buckets", &buckets_list));
 }
 
 TEST_P(StatisticsRecorderTest, IterationTest) {
@@ -453,15 +455,13 @@ TEST_P(StatisticsRecorderTest, SetCallbackFailsWithoutHistogramTest) {
   CallbackCheckWrapper callback_wrapper;
 
   bool result = base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
   EXPECT_TRUE(result);
 
   result = base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
   EXPECT_FALSE(result);
 }
 
@@ -474,17 +474,15 @@ TEST_P(StatisticsRecorderTest, SetCallbackFailsWithHistogramTest) {
   CallbackCheckWrapper callback_wrapper;
 
   bool result = base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
   EXPECT_TRUE(result);
   EXPECT_EQ(histogram->flags() & base::HistogramBase::kCallbackExists,
             base::HistogramBase::kCallbackExists);
 
   result = base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
   EXPECT_FALSE(result);
   EXPECT_EQ(histogram->flags() & base::HistogramBase::kCallbackExists,
             base::HistogramBase::kCallbackExists);
@@ -503,9 +501,8 @@ TEST_P(StatisticsRecorderTest, ClearCallbackSuceedsWithHistogramTest) {
   CallbackCheckWrapper callback_wrapper;
 
   bool result = base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
   EXPECT_TRUE(result);
   EXPECT_EQ(histogram->flags() & base::HistogramBase::kCallbackExists,
             base::HistogramBase::kCallbackExists);
@@ -528,9 +525,8 @@ TEST_P(StatisticsRecorderTest, CallbackUsedTest) {
     CallbackCheckWrapper callback_wrapper;
 
     base::StatisticsRecorder::SetCallback(
-        "TestHistogram",
-        base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                            base::Unretained(&callback_wrapper)));
+        "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                    base::Unretained(&callback_wrapper)));
 
     histogram->Add(1);
 
@@ -546,8 +542,8 @@ TEST_P(StatisticsRecorderTest, CallbackUsedTest) {
 
     base::StatisticsRecorder::SetCallback(
         "TestLinearHistogram",
-        base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                            base::Unretained(&callback_wrapper)));
+        base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                   base::Unretained(&callback_wrapper)));
 
     linear_histogram->Add(1);
 
@@ -566,8 +562,8 @@ TEST_P(StatisticsRecorderTest, CallbackUsedTest) {
 
     base::StatisticsRecorder::SetCallback(
         "TestCustomHistogram",
-        base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                            base::Unretained(&callback_wrapper)));
+        base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                   base::Unretained(&callback_wrapper)));
 
     custom_histogram->Add(1);
 
@@ -583,8 +579,8 @@ TEST_P(StatisticsRecorderTest, CallbackUsedTest) {
 
     base::StatisticsRecorder::SetCallback(
         "TestSparseHistogram",
-        base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                            base::Unretained(&callback_wrapper)));
+        base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                   base::Unretained(&callback_wrapper)));
 
     custom_histogram->Add(1);
 
@@ -598,9 +594,8 @@ TEST_P(StatisticsRecorderTest, CallbackUsedBeforeHistogramCreatedTest) {
   CallbackCheckWrapper callback_wrapper;
 
   base::StatisticsRecorder::SetCallback(
-      "TestHistogram",
-      base::BindRepeating(&CallbackCheckWrapper::OnHistogramChanged,
-                          base::Unretained(&callback_wrapper)));
+      "TestHistogram", base::Bind(&CallbackCheckWrapper::OnHistogramChanged,
+                                  base::Unretained(&callback_wrapper)));
 
   HistogramBase* histogram = Histogram::FactoryGet("TestHistogram", 1, 1000, 10,
                                                    HistogramBase::kNoFlags);
@@ -643,9 +638,8 @@ TEST_P(StatisticsRecorderTest, LogOnShutdownInitialized) {
 
 class TestHistogramProvider : public StatisticsRecorder::HistogramProvider {
  public:
-  explicit TestHistogramProvider(
-      std::unique_ptr<PersistentHistogramAllocator> allocator)
-      : allocator_(std::move(allocator)) {
+  TestHistogramProvider(std::unique_ptr<PersistentHistogramAllocator> allocator)
+      : allocator_(std::move(allocator)), weak_factory_(this) {
     StatisticsRecorder::RegisterHistogramProvider(weak_factory_.GetWeakPtr());
   }
 
@@ -661,7 +655,7 @@ class TestHistogramProvider : public StatisticsRecorder::HistogramProvider {
 
  private:
   std::unique_ptr<PersistentHistogramAllocator> allocator_;
-  WeakPtrFactory<TestHistogramProvider> weak_factory_{this};
+  WeakPtrFactory<TestHistogramProvider> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(TestHistogramProvider);
 };

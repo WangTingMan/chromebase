@@ -20,7 +20,6 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/run_loop.h"
-#include "build/build_config.h"
 
 // Android stripped sys/timerfd.h out of their platform headers, so we have to
 // use syscall to make use of timerfd. Once the min API level is 20, we can
@@ -53,15 +52,7 @@ int timerfd_settime(int ufc,
   return syscall(__NR_timerfd_settime, ufc, flags, utmr, otmr);
 }
 
-// https://crbug.com/873588. The stack may not be aligned when the ALooper calls
-// into our code due to the inconsistent ABI on older Android OS versions.
-#if defined(ARCH_CPU_X86)
-#define STACK_ALIGN __attribute__((force_align_arg_pointer))
-#else
-#define STACK_ALIGN
-#endif
-
-STACK_ALIGN int NonDelayedLooperCallback(int fd, int events, void* data) {
+int NonDelayedLooperCallback(int fd, int events, void* data) {
   if (events & ALOOPER_EVENT_HANGUP)
     return 0;
 
@@ -71,7 +62,7 @@ STACK_ALIGN int NonDelayedLooperCallback(int fd, int events, void* data) {
   return 1;  // continue listening for events
 }
 
-STACK_ALIGN int DelayedLooperCallback(int fd, int events, void* data) {
+int DelayedLooperCallback(int fd, int events, void* data) {
   if (events & ALOOPER_EVENT_HANGUP)
     return 0;
 
@@ -121,123 +112,81 @@ MessagePumpForUI::~MessagePumpForUI() {
 }
 
 void MessagePumpForUI::OnDelayedLooperCallback() {
-  // ALooper_pollOnce may call this after Quit() if OnNonDelayedLooperCallback()
-  // resulted in Quit() in the same round.
   if (ShouldQuit())
     return;
 
   // Clear the fd.
   uint64_t value;
   int ret = read(delayed_fd_, &value, sizeof(value));
+  DCHECK_GE(ret, 0);
+  delayed_scheduled_time_ = base::TimeTicks();
 
-  // TODO(mthiesse): Figure out how it's possible to hit EAGAIN here.
-  // According to http://man7.org/linux/man-pages/man2/timerfd_create.2.html
-  // EAGAIN only happens if no timer has expired. Also according to the man page
-  // poll only returns readable when a timer has expired. So this function will
-  // only be called when a timer has expired, but reading reveals no timer has
-  // expired...
-  // Quit() and ScheduleDelayedWork() are the only other functions that touch
-  // the timerfd, and they both run on the same thread as this callback, so
-  // there are no obvious timing or multi-threading related issues.
-  DPCHECK(ret >= 0 || errno == EAGAIN);
-
-  delayed_scheduled_time_.reset();
-
-  Delegate::NextWorkInfo next_work_info = delegate_->DoSomeWork();
-
+  base::TimeTicks next_delayed_work_time;
+  delegate_->DoDelayedWork(&next_delayed_work_time);
+  if (!next_delayed_work_time.is_null()) {
+    ScheduleDelayedWork(next_delayed_work_time);
+  }
   if (ShouldQuit())
     return;
-
-  if (next_work_info.is_immediate()) {
-    ScheduleWork();
-    return;
-  }
-
-  DoIdleWork();
-  if (!next_work_info.delayed_run_time.is_max())
-    ScheduleDelayedWork(next_work_info.delayed_run_time);
+  // We may be idle now, so pump the loop to find out.
+  ScheduleWork();
 }
 
 void MessagePumpForUI::OnNonDelayedLooperCallback() {
-  // ALooper_pollOnce may call this after Quit() if OnDelayedLooperCallback()
-  // resulted in Quit() in the same round.
-  if (ShouldQuit())
-    return;
+  base::TimeTicks next_delayed_work_time;
+  bool did_any_work = false;
 
-  // A bit added to the |non_delayed_fd_| to keep it signaled when we yield to
-  // native tasks below.
-  constexpr uint64_t kTryNativeTasksBeforeIdleBit = uint64_t(1) << 32;
-
-  // We're about to process all the work requested by ScheduleWork().
-  // MessagePump users are expected to do their best not to invoke
-  // ScheduleWork() again before DoSomeWork() returns a non-immediate
-  // NextWorkInfo below. Hence, capturing the file descriptor's value now and
-  // resetting its contents to 0 should be okay. The value currently stored
-  // should be greater than 0 since work having been scheduled is the reason
-  // we're here. See http://man7.org/linux/man-pages/man2/eventfd.2.html
-  uint64_t pre_work_value = 0;
-  int ret = read(non_delayed_fd_, &pre_work_value, sizeof(pre_work_value));
-  DPCHECK(ret >= 0);
-  DCHECK_GT(pre_work_value, 0U);
-
-  // Note: We can't skip DoSomeWork() even if
-  // |pre_work_value == kTryNativeTasksBeforeIdleBit| here (i.e. no additional
-  // ScheduleWork() since yielding to native) as delayed tasks might have come
-  // in and we need to re-sample |next_work_info|.
-
-  // Runs all application tasks scheduled to run.
-  Delegate::NextWorkInfo next_work_info;
-  do {
+  // Runs all native tasks scheduled to run, scheduling delayed work if
+  // necessary.
+  while (true) {
+    bool did_work_this_loop = false;
+    if (ShouldQuit())
+      return;
+    did_work_this_loop = delegate_->DoWork();
     if (ShouldQuit())
       return;
 
-    next_work_info = delegate_->DoSomeWork();
-  } while (next_work_info.is_immediate());
+    did_work_this_loop |= delegate_->DoDelayedWork(&next_delayed_work_time);
 
-  // Do not resignal |non_delayed_fd_| if we're quitting (this pump doesn't
-  // allow nesting so needing to resume in an outer loop is not an issue
-  // either).
-  if (ShouldQuit())
-    return;
+    did_any_work |= did_work_this_loop;
 
-  // Before declaring this loop idle, yield to native tasks and arrange to be
-  // called again (unless we're already in that second call).
-  if (pre_work_value != kTryNativeTasksBeforeIdleBit) {
-    // Note: This write() is racing with potential ScheduleWork() calls. This is
-    // fine as write() is adding this bit, not overwriting the existing value,
-    // and as such racing ScheduleWork() calls would merely add 1 to the lower
-    // bits and we would find |pre_work_value != kTryNativeTasksBeforeIdleBit|
-    // in the next cycle again, retrying this.
-    ret = write(non_delayed_fd_, &kTryNativeTasksBeforeIdleBit,
-                sizeof(kTryNativeTasksBeforeIdleBit));
-    DPCHECK(ret >= 0);
-    return;
+    // If we didn't do any work, we're out of native tasks to run, and we should
+    // return control to the looper to run Java tasks.
+    if (!did_work_this_loop)
+      break;
   }
-
-  // We yielded to native tasks already and they didn't generate a
-  // ScheduleWork() request so we can declare idleness. It's possible for a
-  // ScheduleWork() request to come in racily while this method unwinds, this is
-  // fine and will merely result in it being re-invoked shortly after it
-  // returns.
-  // TODO(scheduler-dev): this doesn't account for tasks that don't ever call
-  // SchedulerWork() but still keep the system non-idle (e.g., the Java Handler
-  // API). It would be better to add an API to query the presence of native
-  // tasks instead of relying on yielding once + kTryNativeTasksBeforeIdleBit.
-  DCHECK_EQ(pre_work_value, kTryNativeTasksBeforeIdleBit);
-
+  // If we did any work, return control to the looper to run java tasks before
+  // we call DoIdleWork(). We haven't cleared the fd yet, so we'll get woken up
+  // again soon to check for idle-ness.
+  if (did_any_work)
+    return;
   if (ShouldQuit())
     return;
 
-  // At this point, the java looper might not be idle - it's impossible to know
-  // pre-Android-M, so we may end up doing Idle work while java tasks are still
-  // queued up. Note that this won't cause us to fail to run java tasks using
-  // QuitWhenIdle, as the JavaHandlerThread will finish running all currently
-  // scheduled tasks before it quits. Also note that we can't just add an idle
-  // callback to the java looper, as that will fire even if application tasks
-  // are still queued up.
-  DoIdleWork();
-  if (!next_work_info.delayed_run_time.is_max())
-    ScheduleDelayedWork(next_work_info.delayed_run_time);
+  // Read the file descriptor, resetting its contents to 0 and reading back the
+  // stored value.
+  // See http://man7.org/linux/man-pages/man2/eventfd.2.html
+  uint64_t value = 0;
+  int ret = read(non_delayed_fd_, &value, sizeof(value));
+  DCHECK_GE(ret, 0);
+
+  // If we read a value > 1, it means we lost the race to clear the fd before a
+  // new task was posted. This is okay, we can just re-schedule work.
+  if (value > 1) {
+    ScheduleWork();
+  } else {
+    // At this point, the java looper might not be idle - it's impossible to
+    // know pre-Android-M, so we may end up doing Idle work while java tasks are
+    // still queued up. Note that this won't cause us to fail to run java tasks
+    // using QuitWhenIdle, as the JavaHandlerThread will finish running all
+    // currently scheduled tasks before it quits. Also note that we can't just
+    // add an idle callback to the java looper, as that will fire even if native
+    // tasks are still queued up.
+    DoIdleWork();
+    if (!next_delayed_work_time.is_null()) {
+      ScheduleDelayedWork(next_delayed_work_time);
+    }
+  }
 }
 
 void MessagePumpForUI::DoIdleWork() {
@@ -309,6 +258,9 @@ void MessagePumpForUI::Quit() {
 }
 
 void MessagePumpForUI::ScheduleWork() {
+  if (ShouldQuit())
+    return;
+
   // Write (add) 1 to the eventfd. This tells the Looper to wake up and call our
   // callback, allowing us to run tasks. This also allows us to detect, when we
   // clear the fd, whether additional work was scheduled after we finished
@@ -320,15 +272,17 @@ void MessagePumpForUI::ScheduleWork() {
   // EFD_SEMAPHORE.
   uint64_t value = 1;
   int ret = write(non_delayed_fd_, &value, sizeof(value));
-  DPCHECK(ret >= 0);
+  DCHECK_GE(ret, 0);
 }
 
 void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
   if (ShouldQuit())
     return;
 
-  if (delayed_scheduled_time_ && *delayed_scheduled_time_ == delayed_work_time)
+  if (!delayed_scheduled_time_.is_null() &&
+      delayed_work_time >= delayed_scheduled_time_) {
     return;
+  }
 
   DCHECK(!delayed_work_time.is_null());
   delayed_scheduled_time_ = delayed_work_time;
@@ -340,7 +294,7 @@ void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
   ts.it_value.tv_nsec = nanos % TimeTicks::kNanosecondsPerSecond;
 
   int ret = timerfd_settime(delayed_fd_, TFD_TIMER_ABSTIME, &ts, nullptr);
-  DPCHECK(ret >= 0);
+  DCHECK_GE(ret, 0);
 }
 
 void MessagePumpForUI::QuitWhenIdle(base::OnceClosure callback) {

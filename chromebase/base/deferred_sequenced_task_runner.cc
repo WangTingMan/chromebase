@@ -111,7 +111,10 @@ void DeferredSequencedTaskRunner::StartImpl() {
   DCHECK(!started_);
   started_ = true;
   DCHECK(target_task_runner_);
-  for (auto& task : deferred_tasks_queue_) {
+  for (std::vector<DeferredTask>::iterator i = deferred_tasks_queue_.begin();
+      i != deferred_tasks_queue_.end();
+      ++i) {
+    DeferredTask& task = *i;
     if (task.is_non_nestable) {
       target_task_runner_->PostNonNestableDelayedTask(
           task.posted_from, std::move(task.task), task.delay);

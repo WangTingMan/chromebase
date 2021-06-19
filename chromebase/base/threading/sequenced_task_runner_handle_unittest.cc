@@ -15,7 +15,7 @@
 #include "base/sequence_checker_impl.h"
 #include "base/sequenced_task_runner.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/task/post_task.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/test/scoped_task_environment.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -52,26 +52,27 @@ class SequencedTaskRunnerHandleTest : public ::testing::Test {
   base::test::ScopedTaskEnvironment scoped_task_environment_;
 };
 
-TEST_F(SequencedTaskRunnerHandleTest, FromTaskEnvironment) {
+TEST_F(SequencedTaskRunnerHandleTest, FromMessageLoop) {
   VerifyCurrentSequencedTaskRunner();
   RunLoop().RunUntilIdle();
 }
 
-TEST_F(SequencedTaskRunnerHandleTest, FromThreadPoolSequencedTask) {
-  base::CreateSequencedTaskRunner({ThreadPool()})
-      ->PostTask(FROM_HERE,
-                 base::BindOnce(&SequencedTaskRunnerHandleTest::
-                                    VerifyCurrentSequencedTaskRunner));
+TEST_F(SequencedTaskRunnerHandleTest, FromTaskSchedulerSequencedTask) {
+  base::CreateSequencedTaskRunnerWithTraits({})->PostTask(
+      FROM_HERE,
+      base::BindOnce(
+          &SequencedTaskRunnerHandleTest::VerifyCurrentSequencedTaskRunner));
   scoped_task_environment_.RunUntilIdle();
 }
 
 TEST_F(SequencedTaskRunnerHandleTest, NoHandleFromUnsequencedTask) {
-  base::PostTask(base::BindOnce(
-      []() { EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet()); }));
+  base::PostTask(FROM_HERE, base::BindOnce([]() {
+                   EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
+                 }));
   scoped_task_environment_.RunUntilIdle();
 }
 
-TEST(SequencedTaskRunnerHandleTestWithoutTaskEnvironment, FromHandleInScope) {
+TEST(SequencedTaskRunnerHandleTestWithoutMessageLoop, FromHandleInScope) {
   scoped_refptr<SequencedTaskRunner> test_task_runner(new TestSimpleTaskRunner);
   EXPECT_FALSE(SequencedTaskRunnerHandle::IsSet());
   EXPECT_FALSE(ThreadTaskRunnerHandle::IsSet());

@@ -13,9 +13,7 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/mac/scoped_cftyperef.h"
-#include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
-#include "base/threading/scoped_blocking_call.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 
 namespace base {
@@ -112,7 +110,6 @@ void FilePathWatcherFSEvents::Cancel() {
   set_cancelled();
   callback_.Reset();
 
-  ScopedBlockingCall scoped_blocking_call(FROM_HERE, BlockingType::MAY_BLOCK);
   // Switch to the dispatch queue to tear down the event stream. As the queue is
   // owned by |this|, and this method is called from the destructor, execute the
   // block synchronously.
@@ -163,7 +160,7 @@ void FilePathWatcherFSEvents::FSEventsCallback(
     // task_runner() and calls dispatch_sync, it is guaranteed that |watcher|
     // still exists when UpdateEventStream() runs.
     watcher->task_runner()->PostTask(
-        FROM_HERE, BindOnce(
+        FROM_HERE, Bind(
                        [](WeakPtr<FilePathWatcherFSEvents> weak_watcher,
                           FSEventStreamEventId root_change_at) {
                          if (!weak_watcher)
@@ -184,8 +181,8 @@ void FilePathWatcherFSEvents::OnFilePathsChanged(
   DCHECK(!resolved_target_.empty());
   task_runner()->PostTask(
       FROM_HERE,
-      BindOnce(&FilePathWatcherFSEvents::DispatchEvents,
-               weak_factory_.GetWeakPtr(), paths, target_, resolved_target_));
+      Bind(&FilePathWatcherFSEvents::DispatchEvents, weak_factory_.GetWeakPtr(),
+           paths, target_, resolved_target_));
 }
 
 void FilePathWatcherFSEvents::DispatchEvents(const std::vector<FilePath>& paths,
@@ -222,9 +219,9 @@ void FilePathWatcherFSEvents::UpdateEventStream(
       NULL, resolved_target_.DirName().value().c_str(),
       kCFStringEncodingMacHFS));
   CFStringRef paths_array[] = { cf_path.get(), cf_dir_path.get() };
-  ScopedCFTypeRef<CFArrayRef> watched_paths(
-      CFArrayCreate(NULL, reinterpret_cast<const void**>(paths_array),
-                    base::size(paths_array), &kCFTypeArrayCallBacks));
+  ScopedCFTypeRef<CFArrayRef> watched_paths(CFArrayCreate(
+      NULL, reinterpret_cast<const void**>(paths_array), arraysize(paths_array),
+      &kCFTypeArrayCallBacks));
 
   FSEventStreamContext context;
   context.version = 0;
@@ -242,8 +239,8 @@ void FilePathWatcherFSEvents::UpdateEventStream(
 
   if (!FSEventStreamStart(fsevent_stream_)) {
     task_runner()->PostTask(FROM_HERE,
-                            BindOnce(&FilePathWatcherFSEvents::ReportError,
-                                     weak_factory_.GetWeakPtr(), target_));
+                            Bind(&FilePathWatcherFSEvents::ReportError,
+                                 weak_factory_.GetWeakPtr(), target_));
   }
 }
 
@@ -253,8 +250,8 @@ bool FilePathWatcherFSEvents::ResolveTargetPath() {
   resolved_target_ = resolved;
   if (resolved_target_.empty()) {
     task_runner()->PostTask(FROM_HERE,
-                            BindOnce(&FilePathWatcherFSEvents::ReportError,
-                                     weak_factory_.GetWeakPtr(), target_));
+                            Bind(&FilePathWatcherFSEvents::ReportError,
+                                 weak_factory_.GetWeakPtr(), target_));
   }
   return changed;
 }

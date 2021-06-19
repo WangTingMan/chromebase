@@ -9,6 +9,7 @@
 #include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/threading/thread_local.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
 
@@ -20,17 +21,25 @@ LazyInstance<ThreadLocalPointer<SequencedTaskRunnerHandle>>::Leaky
 }  // namespace
 
 // static
-const scoped_refptr<SequencedTaskRunner>& SequencedTaskRunnerHandle::Get() {
-  const SequencedTaskRunnerHandle* current =
+scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
+  // Return the registered SequencedTaskRunner, if any.
+  const SequencedTaskRunnerHandle* handle =
       sequenced_task_runner_tls.Pointer()->Get();
-  CHECK(current) << "Error: This caller requires a sequenced context (i.e. the "
-                    "current task needs to run from a SequencedTaskRunner).";
-  return current->task_runner_;
+  if (handle)
+    return handle->task_runner_;
+
+  // Note if you hit this: the problem is the lack of a sequenced context. The
+  // ThreadTaskRunnerHandle is just the last attempt at finding such a context.
+  CHECK(ThreadTaskRunnerHandle::IsSet())
+      << "Error: This caller requires a sequenced context (i.e. the "
+         "current task needs to run from a SequencedTaskRunner).";
+  return ThreadTaskRunnerHandle::Get();
 }
 
 // static
 bool SequencedTaskRunnerHandle::IsSet() {
-  return !!sequenced_task_runner_tls.Pointer()->Get();
+  return sequenced_task_runner_tls.Pointer()->Get() ||
+         ThreadTaskRunnerHandle::IsSet();
 }
 
 SequencedTaskRunnerHandle::SequencedTaskRunnerHandle(

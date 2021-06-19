@@ -9,13 +9,12 @@
 
 #include "base/base_export.h"
 #include "base/callback.h"
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
+#include "base/message_loop/message_loop.h"
 #include "base/message_loop/message_pump_for_io.h"
 #include "base/sequence_checker.h"
-#include "base/single_thread_task_runner.h"
 
 namespace base {
 
@@ -48,9 +47,7 @@ class BASE_EXPORT FileDescriptorWatcher {
 
     // Registers |callback| to be invoked when |fd| is readable or writable
     // without blocking (depending on |mode|).
-    Controller(MessagePumpForIO::Mode mode,
-               int fd,
-               const RepeatingClosure& callback);
+    Controller(MessagePumpForIO::Mode mode, int fd, const Closure& callback);
 
     // Starts watching the file descriptor.
     void StartWatching();
@@ -60,14 +57,15 @@ class BASE_EXPORT FileDescriptorWatcher {
 
     // The callback to run when the watched file descriptor is readable or
     // writable without blocking.
-    RepeatingClosure callback_;
+    Closure callback_;
 
     // TaskRunner associated with the MessageLoopForIO that watches the file
     // descriptor.
-    const scoped_refptr<SingleThreadTaskRunner> io_thread_task_runner_;
+    const scoped_refptr<SingleThreadTaskRunner>
+        message_loop_for_io_task_runner_;
 
     // Notified by the MessageLoopForIO associated with
-    // |io_thread_task_runner_| when the watched file descriptor is
+    // |message_loop_for_io_task_runner_| when the watched file descriptor is
     // readable or writable without blocking. Posts a task to run RunCallback()
     // on the sequence on which the Controller was instantiated. When the
     // Controller is deleted, ownership of |watcher_| is transfered to a delete
@@ -79,57 +77,31 @@ class BASE_EXPORT FileDescriptorWatcher {
     // instantiated.
     SequenceChecker sequence_checker_;
 
-    WeakPtrFactory<Controller> weak_factory_{this};
+    WeakPtrFactory<Controller> weak_factory_;
 
     DISALLOW_COPY_AND_ASSIGN(Controller);
   };
 
-  // Registers |io_thread_task_runner| to watch file descriptors for which
+  // Registers |message_loop_for_io| to watch file descriptors for which
   // callbacks are registered from the current thread via WatchReadable() or
-  // WatchWritable(). |io_thread_task_runner| must post tasks to a thread which
-  // runs a MessagePumpForIO. If it is not the current thread, it must be highly
-  // responsive (i.e. not used to run other expensive tasks such as potentially
-  // blocking I/O) since ~Controller waits for a task posted to it.
-  explicit FileDescriptorWatcher(
-      scoped_refptr<SingleThreadTaskRunner> io_thread_task_runner);
+  // WatchWritable(). |message_loop_for_io| may run on another thread. The
+  // constructed FileDescriptorWatcher must not outlive |message_loop_for_io|.
+  FileDescriptorWatcher(MessageLoopForIO* message_loop_for_io);
   ~FileDescriptorWatcher();
 
   // Registers |callback| to be posted on the current sequence when |fd| is
   // readable or writable without blocking. |callback| is unregistered when the
   // returned Controller is deleted (deletion must happen on the current
-  // sequence).
-  // Usage note: To call these methods, a FileDescriptorWatcher must have been
+  // sequence). To call these methods, a FileDescriptorWatcher must have been
   // instantiated on the current thread and SequencedTaskRunnerHandle::IsSet()
-  // must return true (these conditions are met at least on all ThreadPool
-  // threads as well as on threads backed by a MessageLoopForIO). |fd| must
-  // outlive the returned Controller.
-  // Shutdown note: notifications aren't guaranteed to be emitted once the bound
-  // (current) SequencedTaskRunner enters its shutdown phase (i.e.
-  // ThreadPool::Shutdown() or Thread::Stop()) regardless of the
-  // SequencedTaskRunner's TaskShutdownBehavior.
-  static std::unique_ptr<Controller> WatchReadable(
-      int fd,
-      const RepeatingClosure& callback);
-  static std::unique_ptr<Controller> WatchWritable(
-      int fd,
-      const RepeatingClosure& callback);
-
-  // Asserts that usage of this API is allowed on this thread.
-  static void AssertAllowed()
-#if DCHECK_IS_ON()
-      ;
-#else
-  {
-  }
-#endif
+  // must return true (these conditions are met at least on all TaskScheduler
+  // threads as well as on threads backed by a MessageLoopForIO).
+  static std::unique_ptr<Controller> WatchReadable(int fd,
+                                                   const Closure& callback);
+  static std::unique_ptr<Controller> WatchWritable(int fd,
+                                                   const Closure& callback);
 
  private:
-  scoped_refptr<SingleThreadTaskRunner> io_thread_task_runner() const {
-    return io_thread_task_runner_;
-  }
-
-  const scoped_refptr<SingleThreadTaskRunner> io_thread_task_runner_;
-
   DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
 };
 

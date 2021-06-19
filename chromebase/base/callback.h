@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// NOTE: Header files that do not require the full definition of
-// base::{Once,Repeating}Callback or base::{Once,Repeating}Closure should
-// #include "base/callback_forward.h" instead of this file.
+// NOTE: Header files that do not require the full definition of Callback or
+// Closure should #include "base/callback_forward.h" instead of this file.
 
 #ifndef BASE_CALLBACK_H_
 #define BASE_CALLBACK_H_
@@ -43,7 +42,7 @@
 //
 // Callbacks also support cancellation. A common use is binding the receiver
 // object as a WeakPtr<T>. If that weak pointer is invalidated, calling Run()
-// will be a no-op. Note that |IsCancelled()| and |is_null()| are distinct:
+// will be a no-op. Note that |is_cancelled()| and |is_null()| are distinct:
 // simply cancelling a callback will not also make it null.
 //
 // base::Callback is currently a type alias for base::RepeatingCallback. In the
@@ -79,6 +78,8 @@ class OnceCallback<R(Args...)> : public internal::CallbackBase {
     static_cast<internal::CallbackBase&>(*this) = std::move(other);
     return *this;
   }
+
+  bool Equals(const OnceCallback& other) const { return EqualsInternal(other); }
 
   R Run(Args... args) const & {
     static_assert(!sizeof(*this),
@@ -118,12 +119,8 @@ class RepeatingCallback<R(Args...)> : public internal::CallbackBaseCopyable {
   RepeatingCallback(RepeatingCallback&&) noexcept = default;
   RepeatingCallback& operator=(RepeatingCallback&&) noexcept = default;
 
-  bool operator==(const RepeatingCallback& other) const {
+  bool Equals(const RepeatingCallback& other) const {
     return EqualsInternal(other);
-  }
-
-  bool operator!=(const RepeatingCallback& other) const {
-    return !operator==(other);
   }
 
   R Run(Args... args) const & {

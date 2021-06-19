@@ -23,5 +23,4 @@ int GetNextSequenceLocalStorageSlotNumber() {
 }
 
 }  // namespace internal
-
 }  // namespace base

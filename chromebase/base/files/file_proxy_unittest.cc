@@ -13,10 +13,10 @@
 #include "base/files/file.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
+#include "base/macros.h"
 #include "base/memory/weak_ptr.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/stl_util.h"
-#include "base/test/scoped_task_environment.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
@@ -27,11 +27,10 @@ namespace base {
 class FileProxyTest : public testing::Test {
  public:
   FileProxyTest()
-      : scoped_task_environment_(
-            test::ScopedTaskEnvironment::MainThreadType::IO),
-        file_thread_("FileProxyTestFileThread"),
+      : file_thread_("FileProxyTestFileThread"),
         error_(File::FILE_OK),
-        bytes_written_(-1) {}
+        bytes_written_(-1),
+        weak_factory_(this) {}
 
   void SetUp() override {
     ASSERT_TRUE(dir_.CreateUniqueTempDir());
@@ -94,7 +93,7 @@ class FileProxyTest : public testing::Test {
   const FilePath TestPath() const { return dir_.GetPath().AppendASCII("test"); }
 
   ScopedTempDir dir_;
-  test::ScopedTaskEnvironment scoped_task_environment_;
+  MessageLoopForIO message_loop_;
   Thread file_thread_;
 
   File::Error error_;
@@ -102,7 +101,7 @@ class FileProxyTest : public testing::Test {
   File::Info file_info_;
   std::vector<char> buffer_;
   int bytes_written_;
-  WeakPtrFactory<FileProxyTest> weak_factory_{this};
+  WeakPtrFactory<FileProxyTest> weak_factory_;
 };
 
 TEST_F(FileProxyTest, CreateOrOpen_Create) {
@@ -265,7 +264,7 @@ TEST_F(FileProxyTest, GetInfo) {
 TEST_F(FileProxyTest, Read) {
   // Setup.
   const char expected_data[] = "bleh";
-  int expected_bytes = base::size(expected_data);
+  int expected_bytes = arraysize(expected_data);
   ASSERT_EQ(expected_bytes,
             base::WriteFile(TestPath(), expected_data, expected_bytes));
 
@@ -290,7 +289,7 @@ TEST_F(FileProxyTest, WriteAndFlush) {
   CreateProxy(File::FLAG_CREATE | File::FLAG_WRITE, &proxy);
 
   const char data[] = "foo!";
-  int data_bytes = base::size(data);
+  int data_bytes = arraysize(data);
   proxy.Write(0, data, data_bytes,
               BindOnce(&FileProxyTest::DidWrite, weak_factory_.GetWeakPtr()));
   RunLoop().Run();

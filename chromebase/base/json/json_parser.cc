@@ -165,8 +165,8 @@ std::string JSONParser::StringBuilder::DestructiveAsString() {
 
 // JSONParser private //////////////////////////////////////////////////////////
 
-Optional<StringPiece> JSONParser::PeekChars(size_t count) {
-  if (index_ + count > input_.length())
+Optional<StringPiece> JSONParser::PeekChars(int count) {
+  if (static_cast<size_t>(index_) + count > input_.length())
     return nullopt;
   // Using StringPiece::substr() is significantly slower (according to
   // base_perftests) than constructing a substring manually.
@@ -180,7 +180,7 @@ Optional<char> JSONParser::PeekChar() {
   return nullopt;
 }
 
-Optional<StringPiece> JSONParser::ConsumeChars(size_t count) {
+Optional<StringPiece> JSONParser::ConsumeChars(int count) {
   Optional<StringPiece> chars = PeekChars(count);
   if (chars)
     index_ += count;
@@ -471,8 +471,7 @@ bool JSONParser::ConsumeStringRaw(StringBuilder* out) {
       ConsumeChar();
       *out = std::move(string);
       return true;
-    }
-    if (next_char != '\\') {
+    } else if (next_char != '\\') {
       // If this character is not an escape sequence...
       ConsumeChar();
       string.Append(next_char);
@@ -715,14 +714,16 @@ bool JSONParser::ReadInt(bool allow_leading_zeros) {
 }
 
 Optional<Value> JSONParser::ConsumeLiteral() {
-  if (ConsumeIfMatch("true"))
+  if (ConsumeIfMatch("true")) {
     return Value(true);
-  if (ConsumeIfMatch("false"))
+  } else if (ConsumeIfMatch("false")) {
     return Value(false);
-  if (ConsumeIfMatch("null"))
+  } else if (ConsumeIfMatch("null")) {
     return Value(Value::Type::NONE);
-  ReportError(JSONReader::JSON_SYNTAX_ERROR, 1);
-  return nullopt;
+  } else {
+    ReportError(JSONReader::JSON_SYNTAX_ERROR, 1);
+    return nullopt;
+  }
 }
 
 bool JSONParser::ConsumeIfMatch(StringPiece match) {

@@ -11,23 +11,15 @@
 #include "base/allocator/allocator_shim.h"
 #include "base/allocator/buildflags.h"
 #include "base/allocator/partition_allocator/partition_alloc.h"
-#include "base/bind.h"
+#include "base/atomicops.h"
 #include "base/debug/stack_trace.h"
 #include "base/macros.h"
 #include "base/no_destructor.h"
 #include "base/partition_alloc_buildflags.h"
+#include "base/rand_util.h"
 #include "base/sampling_heap_profiler/lock_free_address_hash_set.h"
 #include "base/threading/thread_local_storage.h"
-#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
 #include "build/build_config.h"
-
-#if defined(OS_MACOSX)
-#include <pthread.h>
-#endif
-
-#if defined(OS_LINUX) || defined(OS_ANDROID)
-#include <sys/prctl.h>
-#endif
 
 #if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE) && \
     defined(OFFICIAL_BUILD)
@@ -36,54 +28,141 @@
 
 namespace base {
 
-constexpr uint32_t kMaxStackEntries = 256;
+using base::allocator::AllocatorDispatch;
+using base::subtle::Atomic32;
+using base::subtle::AtomicWord;
 
 namespace {
 
-// If a thread name has been set from ThreadIdNameManager, use that. Otherwise,
-// gets the thread name from kernel if available or returns a string with id.
-// This function intentionally leaks the allocated strings since they are used
-// to tag allocations even after the thread dies.
-const char* GetAndLeakThreadName() {
-  const char* thread_name =
-      base::ThreadIdNameManager::GetInstance()->GetNameForCurrentThread();
-  if (thread_name && *thread_name != '\0')
-    return thread_name;
+// Control how many top frames to skip when recording call stack.
+// These frames correspond to the profiler own frames.
+const uint32_t kSkipBaseAllocatorFrames = 2;
 
-  // prctl requires 16 bytes, snprintf requires 19, pthread_getname_np requires
-  // 64 on macOS, see PlatformThread::SetName in platform_thread_mac.mm.
-  constexpr size_t kBufferLen = 64;
-  char name[kBufferLen];
-#if defined(OS_LINUX) || defined(OS_ANDROID)
-  // If the thread name is not set, try to get it from prctl. Thread name might
-  // not be set in cases where the thread started before heap profiling was
-  // enabled.
-  int err = prctl(PR_GET_NAME, name);
-  if (!err)
-    return strdup(name);
-#elif defined(OS_MACOSX)
-  int err = pthread_getname_np(pthread_self(), name, kBufferLen);
-  if (err == 0 && *name != '\0')
-    return strdup(name);
-#endif  // defined(OS_LINUX) || defined(OS_ANDROID)
+const size_t kDefaultSamplingIntervalBytes = 128 * 1024;
 
-  // Use tid if we don't have a thread name.
-  snprintf(name, sizeof(name), "Thread %lu",
-           static_cast<unsigned long>(base::PlatformThread::CurrentId()));
-#ifdef WIN32
-  return _strdup( name );
-#else
-  return strdup(name);
-#endif
+// Controls if sample intervals should not be randomized. Used for testing.
+bool g_deterministic;
+
+// A positive value if profiling is running, otherwise it's zero.
+Atomic32 g_running;
+
+// Pointer to the current |LockFreeAddressHashSet|.
+AtomicWord g_sampled_addresses_set;
+
+// Sampling interval parameter, the mean value for intervals between samples.
+AtomicWord g_sampling_interval = kDefaultSamplingIntervalBytes;
+
+void (*g_hooks_install_callback)();
+Atomic32 g_hooks_installed;
+
+void* AllocFn(const AllocatorDispatch* self, size_t size, void* context) {
+  void* address = self->next->alloc_function(self->next, size, context);
+  SamplingHeapProfiler::RecordAlloc(address, size, kSkipBaseAllocatorFrames);
+  return address;
 }
 
-const char* UpdateAndGetThreadName(const char* name) {
-  static thread_local const char* thread_name;
-  if (name)
-    thread_name = name;
-  if (!thread_name)
-    thread_name = GetAndLeakThreadName();
-  return thread_name;
+void* AllocZeroInitializedFn(const AllocatorDispatch* self,
+                             size_t n,
+                             size_t size,
+                             void* context) {
+  void* address =
+      self->next->alloc_zero_initialized_function(self->next, n, size, context);
+  SamplingHeapProfiler::RecordAlloc(address, n * size,
+                                    kSkipBaseAllocatorFrames);
+  return address;
+}
+
+void* AllocAlignedFn(const AllocatorDispatch* self,
+                     size_t alignment,
+                     size_t size,
+                     void* context) {
+  void* address =
+      self->next->alloc_aligned_function(self->next, alignment, size, context);
+  SamplingHeapProfiler::RecordAlloc(address, size, kSkipBaseAllocatorFrames);
+  return address;
+}
+
+void* ReallocFn(const AllocatorDispatch* self,
+                void* address,
+                size_t size,
+                void* context) {
+  // Note: size == 0 actually performs free.
+  SamplingHeapProfiler::RecordFree(address);
+  address = self->next->realloc_function(self->next, address, size, context);
+  SamplingHeapProfiler::RecordAlloc(address, size, kSkipBaseAllocatorFrames);
+  return address;
+}
+
+void FreeFn(const AllocatorDispatch* self, void* address, void* context) {
+  SamplingHeapProfiler::RecordFree(address);
+  self->next->free_function(self->next, address, context);
+}
+
+size_t GetSizeEstimateFn(const AllocatorDispatch* self,
+                         void* address,
+                         void* context) {
+  return self->next->get_size_estimate_function(self->next, address, context);
+}
+
+unsigned BatchMallocFn(const AllocatorDispatch* self,
+                       size_t size,
+                       void** results,
+                       unsigned num_requested,
+                       void* context) {
+  unsigned num_allocated = self->next->batch_malloc_function(
+      self->next, size, results, num_requested, context);
+  for (unsigned i = 0; i < num_allocated; ++i) {
+    SamplingHeapProfiler::RecordAlloc(results[i], size,
+                                      kSkipBaseAllocatorFrames);
+  }
+  return num_allocated;
+}
+
+void BatchFreeFn(const AllocatorDispatch* self,
+                 void** to_be_freed,
+                 unsigned num_to_be_freed,
+                 void* context) {
+  for (unsigned i = 0; i < num_to_be_freed; ++i)
+    SamplingHeapProfiler::RecordFree(to_be_freed[i]);
+  self->next->batch_free_function(self->next, to_be_freed, num_to_be_freed,
+                                  context);
+}
+
+void FreeDefiniteSizeFn(const AllocatorDispatch* self,
+                        void* address,
+                        size_t size,
+                        void* context) {
+  SamplingHeapProfiler::RecordFree(address);
+  self->next->free_definite_size_function(self->next, address, size, context);
+}
+
+AllocatorDispatch g_allocator_dispatch = {&AllocFn,
+                                          &AllocZeroInitializedFn,
+                                          &AllocAlignedFn,
+                                          &ReallocFn,
+                                          &FreeFn,
+                                          &GetSizeEstimateFn,
+                                          &BatchMallocFn,
+                                          &BatchFreeFn,
+                                          &FreeDefiniteSizeFn,
+                                          nullptr};
+
+#if BUILDFLAG(USE_PARTITION_ALLOC) && !defined(OS_NACL)
+
+void PartitionAllocHook(void* address, size_t size, const char*) {
+  SamplingHeapProfiler::RecordAlloc(address, size);
+}
+
+void PartitionFreeHook(void* address) {
+  SamplingHeapProfiler::RecordFree(address);
+}
+
+#endif  // BUILDFLAG(USE_PARTITION_ALLOC) && !defined(OS_NACL)
+
+ThreadLocalStorage::Slot& AccumulatedBytesTLS() {
+  static base::NoDestructor<base::ThreadLocalStorage::Slot>
+      accumulated_bytes_tls;
+  return *accumulated_bytes_tls;
 }
 
 }  // namespace
@@ -94,207 +173,309 @@ SamplingHeapProfiler::Sample::Sample(size_t size,
     : size(size), total(total), ordinal(ordinal) {}
 
 SamplingHeapProfiler::Sample::Sample(const Sample&) = default;
+
 SamplingHeapProfiler::Sample::~Sample() = default;
 
-SamplingHeapProfiler::SamplingHeapProfiler() = default;
-SamplingHeapProfiler::~SamplingHeapProfiler() {
-  if (record_thread_names_)
-    base::ThreadIdNameManager::GetInstance()->RemoveObserver(this);
+SamplingHeapProfiler* SamplingHeapProfiler::instance_;
+
+SamplingHeapProfiler::SamplingHeapProfiler() {
+  instance_ = this;
+  auto sampled_addresses = std::make_unique<LockFreeAddressHashSet>(64);
+  base::subtle::NoBarrier_Store(
+      &g_sampled_addresses_set,
+      reinterpret_cast<AtomicWord>(sampled_addresses.get()));
+  sampled_addresses_stack_.push(std::move(sampled_addresses));
+}
+
+// static
+void SamplingHeapProfiler::InitTLSSlot() {
+  // Preallocate the TLS slot early, so it can't cause reentracy issues
+  // when sampling is started.
+  ignore_result(AccumulatedBytesTLS().Get());
+}
+
+// static
+void SamplingHeapProfiler::InstallAllocatorHooksOnce() {
+  static bool hook_installed = InstallAllocatorHooks();
+  ignore_result(hook_installed);
+}
+
+// static
+bool SamplingHeapProfiler::InstallAllocatorHooks() {
+#if BUILDFLAG(USE_ALLOCATOR_SHIM)
+  base::allocator::InsertAllocatorDispatch(&g_allocator_dispatch);
+#else
+  ignore_result(g_allocator_dispatch);
+  DLOG(WARNING)
+      << "base::allocator shims are not available for memory sampling.";
+#endif  // BUILDFLAG(USE_ALLOCATOR_SHIM)
+
+#if BUILDFLAG(USE_PARTITION_ALLOC) && !defined(OS_NACL)
+  base::PartitionAllocHooks::SetAllocationHook(&PartitionAllocHook);
+  base::PartitionAllocHooks::SetFreeHook(&PartitionFreeHook);
+#endif  // BUILDFLAG(USE_PARTITION_ALLOC) && !defined(OS_NACL)
+
+  int32_t hooks_install_callback_has_been_set =
+      base::subtle::Acquire_CompareAndSwap(&g_hooks_installed, 0, 1);
+  if (hooks_install_callback_has_been_set)
+    g_hooks_install_callback();
+
+  return true;
+}
+
+// static
+void SamplingHeapProfiler::SetHooksInstallCallback(
+    void (*hooks_install_callback)()) {
+  CHECK(!g_hooks_install_callback && hooks_install_callback);
+  g_hooks_install_callback = hooks_install_callback;
+
+  int32_t profiler_has_already_been_initialized =
+      base::subtle::Release_CompareAndSwap(&g_hooks_installed, 0, 1);
+  if (profiler_has_already_been_initialized)
+    g_hooks_install_callback();
 }
 
 uint32_t SamplingHeapProfiler::Start() {
 #if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE) && \
     defined(OFFICIAL_BUILD)
-  if (!trace_event::CFIBacktraceAndroid::GetInitializedInstance()
+  if (!base::trace_event::CFIBacktraceAndroid::GetInitializedInstance()
            ->can_unwind_stack_frames()) {
     LOG(WARNING) << "Sampling heap profiler: Stack unwinding is not available.";
     return 0;
   }
 #endif
-
-  AutoLock lock(start_stop_mutex_);
-  if (!running_sessions_++)
-    PoissonAllocationSampler::Get()->AddSamplesObserver(this);
+  InstallAllocatorHooksOnce();
+  base::subtle::Barrier_AtomicIncrement(&g_running, 1);
   return last_sample_ordinal_;
 }
 
 void SamplingHeapProfiler::Stop() {
-  AutoLock lock(start_stop_mutex_);
-  DCHECK_GT(running_sessions_, 0);
-  if (!--running_sessions_)
-    PoissonAllocationSampler::Get()->RemoveSamplesObserver(this);
+  AtomicWord count = base::subtle::Barrier_AtomicIncrement(&g_running, -1);
+  CHECK_GE(count, 0);
 }
 
 void SamplingHeapProfiler::SetSamplingInterval(size_t sampling_interval) {
-  PoissonAllocationSampler::Get()->SetSamplingInterval(sampling_interval);
+  // TODO(alph): Reset the sample being collected if running.
+  base::subtle::Release_Store(&g_sampling_interval,
+                              static_cast<AtomicWord>(sampling_interval));
 }
 
-void SamplingHeapProfiler::SetRecordThreadNames(bool value) {
-  if (record_thread_names_ == value)
+// static
+size_t SamplingHeapProfiler::GetNextSampleInterval(size_t interval) {
+  if (UNLIKELY(g_deterministic))
+    return interval;
+
+  // We sample with a Poisson process, with constant average sampling
+  // interval. This follows the exponential probability distribution with
+  // parameter λ = 1/interval where |interval| is the average number of bytes
+  // between samples.
+  // Let u be a uniformly distributed random number between 0 and 1, then
+  // next_sample = -ln(u) / λ
+  double uniform = base::RandDouble();
+  double value = -log(uniform) * interval;
+  size_t min_value = sizeof(intptr_t);
+  // We limit the upper bound of a sample interval to make sure we don't have
+  // huge gaps in the sampling stream. Probability of the upper bound gets hit
+  // is exp(-20) ~ 2e-9, so it should not skew the distibution.
+  size_t max_value = interval * 20;
+  if (UNLIKELY(value < min_value))
+    return min_value;
+  if (UNLIKELY(value > max_value))
+    return max_value;
+  return static_cast<size_t>(value);
+}
+
+// static
+void SamplingHeapProfiler::RecordAlloc(void* address,
+                                       size_t size,
+                                       uint32_t skip_frames) {
+  if (UNLIKELY(!base::subtle::NoBarrier_Load(&g_running)))
     return;
-  record_thread_names_ = value;
-  if (value) {
-    base::ThreadIdNameManager::GetInstance()->AddObserver(this);
-  } else {
-    base::ThreadIdNameManager::GetInstance()->RemoveObserver(this);
-  }
-}
-
-// static
-const char* SamplingHeapProfiler::CachedThreadName() {
-  return UpdateAndGetThreadName(nullptr);
-}
-
-// static
-void** SamplingHeapProfiler::CaptureStackTrace(void** frames,
-                                               size_t max_entries,
-                                               size_t* count) {
-  // Skip top frames as they correspond to the profiler itself.
-  size_t skip_frames = 3;
-#if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE) && \
-    defined(OFFICIAL_BUILD)
-  size_t frame_count =
-      base::trace_event::CFIBacktraceAndroid::GetInitializedInstance()->Unwind(
-          const_cast<const void**>(frames), max_entries);
-#elif BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
-  size_t frame_count = base::debug::TraceStackFramePointers(
-      const_cast<const void**>(frames), max_entries, skip_frames);
-  skip_frames = 0;
-#else
-  // Fall-back to capturing the stack with base::debug::CollectStackTrace,
-  // which is likely slower, but more reliable.
-  size_t frame_count =
-      base::debug::CollectStackTrace(const_cast<void**>(frames), max_entries);
-#endif
-
-  skip_frames = std::min(skip_frames, frame_count);
-  *count = frame_count - skip_frames;
-  return frames + skip_frames;
-}
-
-void SamplingHeapProfiler::SampleAdded(
-    void* address,
-    size_t size,
-    size_t total,
-    PoissonAllocationSampler::AllocatorType type,
-    const char* context) {
-  // CaptureStack and allocation context tracking may use TLS.
-  // Bail out if it has been destroyed.
   if (UNLIKELY(base::ThreadLocalStorage::HasBeenDestroyed()))
     return;
-  DCHECK(PoissonAllocationSampler::ScopedMuteThreadSamples::IsMuted());
-  AutoLock lock(mutex_);
-  Sample sample(size, total, ++last_sample_ordinal_);
-  sample.allocator = type;
-  using CaptureMode = trace_event::AllocationContextTracker::CaptureMode;
-  CaptureMode capture_mode =
-      trace_event::AllocationContextTracker::capture_mode();
-  if (capture_mode == CaptureMode::PSEUDO_STACK ||
-      capture_mode == CaptureMode::MIXED_STACK) {
-    CaptureMixedStack(context, &sample);
-  } else {
-    CaptureNativeStack(context, &sample);
-  }
-  RecordString(sample.context);
-  samples_.emplace(address, std::move(sample));
-}
 
-void SamplingHeapProfiler::CaptureMixedStack(const char* context,
-                                             Sample* sample) {
-  auto* tracker =
-      trace_event::AllocationContextTracker::GetInstanceForCurrentThread();
-  if (!tracker)
+  // TODO(alph): On MacOS it may call the hook several times for a single
+  // allocation. Handle the case.
+
+  intptr_t accumulated_bytes =
+      reinterpret_cast<intptr_t>(AccumulatedBytesTLS().Get());
+  accumulated_bytes += size;
+  if (LIKELY(accumulated_bytes < 0)) {
+    AccumulatedBytesTLS().Set(reinterpret_cast<void*>(accumulated_bytes));
     return;
+  }
 
-  trace_event::AllocationContext allocation_context;
-  if (!tracker->GetContextSnapshot(&allocation_context))
+  size_t mean_interval = base::subtle::NoBarrier_Load(&g_sampling_interval);
+  size_t samples = accumulated_bytes / mean_interval;
+  accumulated_bytes %= mean_interval;
+
+  do {
+    accumulated_bytes -= GetNextSampleInterval(mean_interval);
+    ++samples;
+  } while (accumulated_bytes >= 0);
+
+  AccumulatedBytesTLS().Set(reinterpret_cast<void*>(accumulated_bytes));
+
+  instance_->DoRecordAlloc(samples * mean_interval, size, address, skip_frames);
+}
+
+void SamplingHeapProfiler::RecordStackTrace(Sample* sample,
+                                            uint32_t skip_frames) {
+#if !defined(OS_NACL)
+  constexpr uint32_t kMaxStackEntries = 256;
+  constexpr uint32_t kSkipProfilerOwnFrames = 2;
+  skip_frames += kSkipProfilerOwnFrames;
+#if defined(OS_ANDROID) && BUILDFLAG(CAN_UNWIND_WITH_CFI_TABLE) && \
+    defined(OFFICIAL_BUILD)
+  const void* frames[kMaxStackEntries];
+  size_t frame_count =
+      base::trace_event::CFIBacktraceAndroid::GetInitializedInstance()->Unwind(
+          frames, kMaxStackEntries);
+#elif BUILDFLAG(CAN_UNWIND_WITH_FRAME_POINTERS)
+  const void* frames[kMaxStackEntries];
+  size_t frame_count = base::debug::TraceStackFramePointers(
+      frames, kMaxStackEntries, skip_frames);
+  skip_frames = 0;
+#else
+  // Fall-back to capturing the stack with base::debug::StackTrace,
+  // which is likely slower, but more reliable.
+  base::debug::StackTrace stack_trace(kMaxStackEntries);
+  size_t frame_count = 0;
+  const void* const* frames = stack_trace.Addresses(&frame_count);
+#endif
+
+  sample->stack.insert(
+      sample->stack.end(), const_cast<void**>(&frames[skip_frames]),
+      const_cast<void**>(&frames[std::max<size_t>(frame_count, skip_frames)]));
+#endif
+}
+
+void SamplingHeapProfiler::DoRecordAlloc(size_t total_allocated,
+                                         size_t size,
+                                         void* address,
+                                         uint32_t skip_frames) {
+  if (entered_.Get())
     return;
-
-  const base::trace_event::Backtrace& backtrace = allocation_context.backtrace;
-  CHECK_LE(backtrace.frame_count, kMaxStackEntries);
-  std::vector<void*> stack;
-  stack.reserve(backtrace.frame_count);
-  for (int i = base::checked_cast<int>(backtrace.frame_count) - 1; i >= 0;
-       --i) {
-    const base::trace_event::StackFrame& frame = backtrace.frames[i];
-    if (frame.type != base::trace_event::StackFrame::Type::PROGRAM_COUNTER)
-      RecordString(static_cast<const char*>(frame.value));
-    stack.push_back(const_cast<void*>(frame.value));
+  entered_.Set(true);
+  {
+    base::AutoLock lock(mutex_);
+    Sample sample(size, total_allocated, ++last_sample_ordinal_);
+    RecordStackTrace(&sample, skip_frames);
+    for (auto* observer : observers_)
+      observer->SampleAdded(sample.ordinal, size, total_allocated);
+    samples_.emplace(address, std::move(sample));
+    // TODO(alph): Sometimes RecordAlloc is called twice in a row without
+    // a RecordFree in between. Investigate it.
+    if (!sampled_addresses_set().Contains(address))
+      sampled_addresses_set().Insert(address);
+    BalanceAddressesHashSet();
   }
-  sample->stack = std::move(stack);
-  if (!context)
-    context = allocation_context.type_name;
-  sample->context = context;
+  entered_.Set(false);
 }
 
-void SamplingHeapProfiler::CaptureNativeStack(const char* context,
-                                              Sample* sample) {
-  void* stack[kMaxStackEntries];
-  size_t frame_count;
-  // One frame is reserved for the thread name.
-  void** first_frame =
-      CaptureStackTrace(stack, kMaxStackEntries - 1, &frame_count);
-  DCHECK_LT(frame_count, kMaxStackEntries);
-  sample->stack.assign(first_frame, first_frame + frame_count);
+// static
+void SamplingHeapProfiler::RecordFree(void* address) {
+  if (UNLIKELY(address == nullptr))
+    return;
+  if (UNLIKELY(sampled_addresses_set().Contains(address)))
+    instance_->DoRecordFree(address);
+}
 
-  if (record_thread_names_)
-    sample->thread_name = CachedThreadName();
-
-  if (!context) {
-    const auto* tracker =
-        trace_event::AllocationContextTracker::GetInstanceForCurrentThread();
-    if (tracker)
-      context = tracker->TaskContext();
+void SamplingHeapProfiler::DoRecordFree(void* address) {
+  if (UNLIKELY(base::ThreadLocalStorage::HasBeenDestroyed()))
+    return;
+  if (entered_.Get())
+    return;
+  entered_.Set(true);
+  {
+    base::AutoLock lock(mutex_);
+    auto it = samples_.find(address);
+    CHECK(it != samples_.end());
+    for (auto* observer : observers_)
+      observer->SampleRemoved(it->second.ordinal);
+    samples_.erase(it);
+    sampled_addresses_set().Remove(address);
   }
-  sample->context = context;
+  entered_.Set(false);
 }
 
-const char* SamplingHeapProfiler::RecordString(const char* string) {
-  return string ? *strings_.insert(string).first : nullptr;
+void SamplingHeapProfiler::BalanceAddressesHashSet() {
+  // Check if the load_factor of the current addresses hash set becomes higher
+  // than 1, allocate a new twice larger one, copy all the data,
+  // and switch to using it.
+  // During the copy process no other writes are made to both sets
+  // as it's behind the lock.
+  // All the readers continue to use the old one until the atomic switch
+  // process takes place.
+  LockFreeAddressHashSet& current_set = sampled_addresses_set();
+  if (current_set.load_factor() < 1)
+    return;
+  auto new_set =
+      std::make_unique<LockFreeAddressHashSet>(current_set.buckets_count() * 2);
+  new_set->Copy(current_set);
+  // Atomically switch all the new readers to the new set.
+  base::subtle::Release_Store(&g_sampled_addresses_set,
+                              reinterpret_cast<AtomicWord>(new_set.get()));
+  // We still have to keep all the old maps alive to resolve the theoretical
+  // race with readers in |RecordFree| that have already obtained the map,
+  // but haven't yet managed to access it.
+  sampled_addresses_stack_.push(std::move(new_set));
 }
 
-void SamplingHeapProfiler::SampleRemoved(void* address) {
-  DCHECK(base::PoissonAllocationSampler::ScopedMuteThreadSamples::IsMuted());
-  base::AutoLock lock(mutex_);
-  samples_.erase(address);
+// static
+LockFreeAddressHashSet& SamplingHeapProfiler::sampled_addresses_set() {
+  return *reinterpret_cast<LockFreeAddressHashSet*>(
+      base::subtle::NoBarrier_Load(&g_sampled_addresses_set));
+}
+
+// static
+SamplingHeapProfiler* SamplingHeapProfiler::GetInstance() {
+  static base::NoDestructor<SamplingHeapProfiler> instance;
+  return instance.get();
+}
+
+// static
+void SamplingHeapProfiler::SuppressRandomnessForTest(bool suppress) {
+  g_deterministic = suppress;
+}
+
+void SamplingHeapProfiler::AddSamplesObserver(SamplesObserver* observer) {
+  CHECK(!entered_.Get());
+  entered_.Set(true);
+  {
+    base::AutoLock lock(mutex_);
+    observers_.push_back(observer);
+  }
+  entered_.Set(false);
+}
+
+void SamplingHeapProfiler::RemoveSamplesObserver(SamplesObserver* observer) {
+  CHECK(!entered_.Get());
+  entered_.Set(true);
+  {
+    base::AutoLock lock(mutex_);
+    auto it = std::find(observers_.begin(), observers_.end(), observer);
+    CHECK(it != observers_.end());
+    observers_.erase(it);
+  }
+  entered_.Set(false);
 }
 
 std::vector<SamplingHeapProfiler::Sample> SamplingHeapProfiler::GetSamples(
     uint32_t profile_id) {
-  // Make sure the sampler does not invoke |SampleAdded| or |SampleRemoved|
-  // on this thread. Otherwise it could have end up with a deadlock.
-  // See crbug.com/882495
-  PoissonAllocationSampler::ScopedMuteThreadSamples no_samples_scope;
-  AutoLock lock(mutex_);
+  CHECK(!entered_.Get());
+  entered_.Set(true);
   std::vector<Sample> samples;
-  samples.reserve(samples_.size());
-  for (auto& it : samples_) {
-    Sample& sample = it.second;
-    if (sample.ordinal > profile_id)
-      samples.push_back(sample);
+  {
+    base::AutoLock lock(mutex_);
+    for (auto& it : samples_) {
+      Sample& sample = it.second;
+      if (sample.ordinal > profile_id)
+        samples.push_back(sample);
+    }
   }
+  entered_.Set(false);
   return samples;
-}
-
-std::vector<const char*> SamplingHeapProfiler::GetStrings() {
-  PoissonAllocationSampler::ScopedMuteThreadSamples no_samples_scope;
-  AutoLock lock(mutex_);
-  return std::vector<const char*>(strings_.begin(), strings_.end());
-}
-
-// static
-void SamplingHeapProfiler::Init() {
-  PoissonAllocationSampler::Init();
-}
-
-// static
-SamplingHeapProfiler* SamplingHeapProfiler::Get() {
-  static NoDestructor<SamplingHeapProfiler> instance;
-  return instance.get();
-}
-
-void SamplingHeapProfiler::OnThreadNameChanged(const char* name) {
-  UpdateAndGetThreadName(name);
 }
 
 }  // namespace base
