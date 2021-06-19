@@ -34,11 +34,6 @@
 #define NO_TCMALLOC
 #endif  // defined(__ANDROID__) || defined(__ANDROID_HOST__)
 
-// Use the Chrome OS version of the code for both Android targets and Chrome OS builds.
-#if !defined(__ANDROID_HOST__)
-//#define OS_CHROMEOS 1
-#endif  // !defined(__ANDROID_HOST__)
-
 #if defined(__ANDROID__)  // Android targets
 
 #define OS_ANDROID 1
@@ -114,7 +109,7 @@
 #if defined(OS_FREEBSD) || defined(OS_NETBSD) || defined(OS_OPENBSD)
 #define OS_BSD 1
 #endif
-#define NO_TCMALLOC
+
 // For access to standard POSIXish features, use OS_POSIX instead of a
 // more specific macro.
 #if defined(OS_AIX) || defined(OS_ANDROID) || defined(OS_ASMJS) ||    \

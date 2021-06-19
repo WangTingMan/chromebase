@@ -91,12 +91,14 @@ class BASE_EXPORT StackTrace {
   // Resolves backtrace to symbols and returns as string.
   std::string ToString() const;
 
-  void OutputToStreamWithPrefix( std::ostream* os,
-      const char* prefix_string ) const;
-
  private:
+
 #if defined(OS_WIN)
   void InitTrace(const _CONTEXT* context_record);
+
+  void OutputToStreamWithPrefix( std::ostream* os,
+      const char* prefix_string )const;
+
 #endif
 
   // From http://msdn.microsoft.com/en-us/library/bb204633.aspx,

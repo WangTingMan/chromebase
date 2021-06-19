@@ -40,9 +40,10 @@ void EnsureProcessTerminated(Process process) {
   if (process.WaitForExitWithTimeout(TimeDelta(), nullptr))
     return;
 
-  LOG( ERROR ) << "WARNING: disabled PostDelayedTaskWithTraits";
+  LOG( INFO ) << "WARNING: disabled PostDelayedTaskWithTraits";
 
 #if 0
+
   PostDelayedTaskWithTraits(
       FROM_HERE,
       {TaskPriority::BACKGROUND, TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},

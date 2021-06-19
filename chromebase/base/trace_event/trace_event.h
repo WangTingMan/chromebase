@@ -39,7 +39,6 @@ class TraceLog {
     static TraceLog instance;
     return &instance;
   }
-
   int process_id() { return 0; }
   void SetCurrentThreadBlocksMessageLoop() {}
 };

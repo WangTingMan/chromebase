@@ -172,3 +172,4 @@ inline std::string& modp_b64_decode( std::string& s )
 #endif /* __cplusplus */
 
 #endif /* MODP_B64 */
+
