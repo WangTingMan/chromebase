@@ -804,6 +804,9 @@
     <ClCompile Include="..\chromebase\base\task_scheduler\task_tracker.cc">
       <Filter>base\task_scheduler</Filter>
     </ClCompile>
+    <ClCompile Include="..\chromebase\base\threading\watchdog.cc">
+      <Filter>base\threading</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\chromebase\base\debug\activity_tracker.h">
@@ -1774,6 +1777,9 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\metrics\field_trial_params.h">
       <Filter>base\metrics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\threading\watchdog.h">
+      <Filter>base\threading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

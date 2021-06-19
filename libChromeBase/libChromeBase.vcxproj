@@ -213,6 +213,7 @@
     <ClCompile Include="..\chromebase\base\threading\thread_local_storage_win.cc" />
     <ClCompile Include="..\chromebase\base\threading\thread_restrictions.cc" />
     <ClCompile Include="..\chromebase\base\threading\thread_task_runner_handle.cc" />
+    <ClCompile Include="..\chromebase\base\threading\watchdog.cc" />
     <ClCompile Include="..\chromebase\base\timer\elapsed_timer.cc" />
     <ClCompile Include="..\chromebase\base\timer\timer.cc" />
     <ClCompile Include="..\chromebase\base\time\clock.cc" />
@@ -513,6 +514,7 @@
     <ClInclude Include="..\chromebase\base\threading\thread_local_storage.h" />
     <ClInclude Include="..\chromebase\base\threading\thread_restrictions.h" />
     <ClInclude Include="..\chromebase\base\threading\thread_task_runner_handle.h" />
+    <ClInclude Include="..\chromebase\base\threading\watchdog.h" />
     <ClInclude Include="..\chromebase\base\thread_annotations.h" />
     <ClInclude Include="..\chromebase\base\timer\elapsed_timer.h" />
     <ClInclude Include="..\chromebase\base\timer\hi_res_timer_manager.h" />
