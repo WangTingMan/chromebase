@@ -64,7 +64,7 @@ void WaitableEvent::Wait() {
    // event_activity.emplace(this);
    // scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   //}
-  DLOG( ERROR ) << "Warning: disabled Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>";
+  DLOG( INFO ) << "Warning: disabled Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>";
 
   DWORD result = WaitForSingleObject(handle_.Get(), INFINITE);
   // It is most unexpected that this should ever fail.  Help consumers learn
