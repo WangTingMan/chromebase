@@ -221,6 +221,13 @@ std::ostream& operator<<(std::ostream& out, const FilePath& file_path) {
   return out << file_path.value();
 }
 
+#if defined(OS_WIN)
+std::string FilePath::StdStringValue()const
+{
+    return SysWideToNativeMB( path_ );
+}
+#endif
+
 // static
 bool FilePath::IsSeparator(CharType character) {
   for (size_t i = 0; i < kSeparatorsLength - 1; ++i) {
@@ -441,6 +448,13 @@ FilePath FilePath::InsertBeforeExtensionASCII(StringPiece suffix)
   return InsertBeforeExtension(suffix);
 #endif
 }
+
+#if defined(OS_WIN)
+FilePath FilePath::AddExtension( std::string const& extension ) const
+{
+    return AddExtension( SysNativeMBToWide( extension ) );
+}
+#endif
 
 FilePath FilePath::AddExtension(StringPieceType extension) const {
   if (IsEmptyOrSpecialCase(BaseName().value()))

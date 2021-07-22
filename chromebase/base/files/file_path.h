@@ -184,6 +184,10 @@ class BASE_EXPORT FilePath {
 
   FilePath( std::string path );
 
+  // Adds |extension| to |file_name|. Returns the current FilePath if
+  // |extension| is empty. Returns "" if BaseName() == "." or "..".
+  FilePath AddExtension( std::string const& extension ) const WARN_UNUSED_RESULT;
+
 #endif
 
   // Constructs FilePath with the contents of |that|, which is left in valid but
@@ -202,7 +206,17 @@ class BASE_EXPORT FilePath {
     return path_ < that.path_;
   }
 
+#if defined(OS_WIN)
+
+  std::string StdStringValue()const;
+
   const StringType& value() const { return path_; }
+
+#else
+
+  const StringType& value() const { return path_; }
+
+#endif
 
   bool empty() const { return path_.empty(); }
 
