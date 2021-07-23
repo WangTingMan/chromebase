@@ -25,6 +25,7 @@
 #include "base/memory/singleton.h"
 #include "base/strings/utf_string_conversion_utils.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/strings/sys_string_conversions.h"
 #include "base/third_party/icu/icu_utf.h"
 #include "build/build_config.h"
 
@@ -603,6 +604,13 @@ bool StartsWith(StringPiece16 str,
   return StartsWithT<string16>(str, search_for, case_sensitivity);
 }
 
+bool StartsWith(StringPiece16 str,
+                StringPiece search_for,
+                CompareCase case_sensitivity )
+{
+    return StartsWith( str, base::SysNativeMBToWide( search_for ), case_sensitivity );
+}
+
 template <typename Str>
 bool EndsWithT(BasicStringPiece<Str> str,
                BasicStringPiece<Str> search_for,
@@ -639,6 +647,13 @@ bool EndsWith(StringPiece16 str,
               StringPiece16 search_for,
               CompareCase case_sensitivity) {
   return EndsWithT<string16>(str, search_for, case_sensitivity);
+}
+
+bool EndsWith(StringPiece16 str,
+              StringPiece search_for,
+              CompareCase case_sensitivity )
+{
+    return EndsWith( str, base::SysNativeMBToWide( search_for ), case_sensitivity );
 }
 
 char HexDigitToInt(wchar_t c) {
