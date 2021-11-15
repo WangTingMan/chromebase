@@ -82,6 +82,12 @@
     <Filter Include="base\system_monitor">
       <UniqueIdentifier>{a66db717-77e2-48d7-a09b-98c3b4c8f7f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="base\allocator">
+      <UniqueIdentifier>{768ed9d8-e66e-417b-b984-7597fcd8f5c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base\allocator\partition_allocator">
+      <UniqueIdentifier>{c4b86180-3029-4528-af2a-e13e49719eea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\chromebase\base\debug\activity_tracker.cc">
@@ -806,6 +812,36 @@
     </ClCompile>
     <ClCompile Include="..\chromebase\base\threading\watchdog.cc">
       <Filter>base\threading</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\oom_callback.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\page_allocator.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_oom.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_page.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\random.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\spin_lock.cc">
+      <Filter>base\allocator\partition_allocator</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1780,6 +1816,63 @@
     </ClInclude>
     <ClInclude Include="..\chromebase\base\threading\watchdog.h">
       <Filter>base\threading</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom_callback.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_constants.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internal.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internals_win.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc_check.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc_constants.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_cookie.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_direct_map_extent.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_freelist_entry.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_oom.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_page.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\random.h">
+      <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\spin_lock.h">
+      <Filter>base\allocator\partition_allocator</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

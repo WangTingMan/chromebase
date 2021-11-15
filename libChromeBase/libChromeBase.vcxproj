@@ -19,6 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\oom_callback.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\page_allocator.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_oom.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_page.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\random.cc" />
+    <ClCompile Include="..\chromebase\base\allocator\partition_allocator\spin_lock.cc" />
     <ClCompile Include="..\chromebase\base\at_exit.cc" />
     <ClCompile Include="..\chromebase\base\barrier_closure.cc" />
     <ClCompile Include="..\chromebase\base\base64.cc" />
@@ -262,6 +272,25 @@
     <ClCompile Include="..\chromebase\third_party\modp_b64\modp_b64.cc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\address_space_randomization.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\oom_callback.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_constants.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internal.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\page_allocator_internals_win.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc_check.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_alloc_constants.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_bucket.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_cookie.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_direct_map_extent.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_freelist_entry.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_oom.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_page.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\partition_root_base.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\random.h" />
+    <ClInclude Include="..\chromebase\base\allocator\partition_allocator\spin_lock.h" />
     <ClInclude Include="..\chromebase\base\at_exit.h" />
     <ClInclude Include="..\chromebase\base\barrier_closure.h" />
     <ClInclude Include="..\chromebase\base\base64.h" />
