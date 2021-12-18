@@ -27,8 +27,8 @@ class BindStateBase;
 template <typename Functor, typename... BoundArgs>
 struct BindState;
 
-struct BindStateBaseRefCountTraits {
-  static void Destruct(const BindStateBase*);
+struct BASE_EXPORT BindStateBaseRefCountTraits {
+    static void Destruct(const BindStateBase*);
 };
 
 template <typename T>

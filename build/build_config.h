@@ -16,6 +16,8 @@
 #ifndef BUILD_BUILD_CONFIG_H_
 #define BUILD_BUILD_CONFIG_H_
 
+#define GTEST_DISABLED
+
 // A brief primer on #defines:
 //
 // - __ANDROID__ is automatically defined by the Android toolchain (see
@@ -38,7 +40,10 @@
 
 #elif !defined(__ANDROID_HOST__)  // Chrome OS
 
+#ifndef WIN32
 #define OS_CHROMEOS 1
+#endif
+
 // TODO: Remove these once the GLib MessageLoopForUI isn't being used:
 // https://crbug.com/361635
 #define USE_GLIB 1
@@ -231,5 +236,7 @@
 // equivalent types.
 #define BASE_STRING16_ITERATOR_IS_CHAR16_POINTER
 #endif
+
+#include <fakes\fakes.h>
 
 #endif  // BUILD_BUILD_CONFIG_H_

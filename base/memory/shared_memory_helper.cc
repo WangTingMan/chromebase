@@ -14,7 +14,7 @@
 #include "base/threading/thread_restrictions.h"
 
 namespace base {
-
+#if defined(OS_POSIX)
 struct ScopedPathUnlinkerTraits {
   static const FilePath* InvalidValue() { return nullptr; }
 
@@ -152,6 +152,7 @@ bool PrepareMapFile(ScopedFD fd,
 
   return true;
 }
+#endif
 #endif  // !defined(OS_ANDROID)
 
 }  // namespace base
