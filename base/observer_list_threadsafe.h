@@ -154,23 +154,74 @@ class ObserverListThreadSafe : public internal::ObserverListThreadSafeBase {
 #endif
   }
 
+  static void InvokableDispatcher(std::function<void( ObserverType* )> fun, ObserverType* obj )
+  {
+      fun( obj );
+  }
+
+  static void InvokableDispatcherNoPrams( ObserverType* obj )
+  {
+      (*obj)();
+  }
+
+  template <typename... Params>
+  bool Notify( const Location& from_here, Params&&... params )
+  {
+      Callback<void( ObserverType* )> method;
+
+      constexpr uint32_t params_size = sizeof...( params );
+      constexpr bool is_ob_invokable = std::is_invocable<ObserverType, Params...>::value;
+      if constexpr( params_size > 0 )
+      {
+          method = NotifyExtractOne( from_here, std::forward<Params>( params )... );
+      }
+      else if constexpr( is_ob_invokable )
+      {
+          method = Bind( &InvokableDispatcherNoPrams );
+      }
+
+      if( method.is_null() )
+      {
+          DLOG( WARNING ) << "Cannot notify with that parameters. Please check invoke.";
+          return false;
+      }
+
+      AutoLock lock( lock_ );
+      for( const auto& observer : observers_ )
+      {
+          observer.second->PostTask(
+              from_here,
+              BindOnce( &ObserverListThreadSafe<ObserverType>::NotifyWrapper, this,
+                  observer.first, NotificationData( this, from_here, method ) ) );
+      }
+      return true;
+  }
+
   // Asynchronously invokes a callback on all observers, on their registration
   // sequence. You cannot assume that at the completion of the Notify call that
   // all Observers have been Notified. The notification may still be pending
   // delivery.
   template <typename Method, typename... Params>
-  void Notify(const Location& from_here, Method m, Params&&... params) {
-    Callback<void(ObserverType*)> method =
-        Bind(&Dispatcher<ObserverType, Method>::Run, m,
-             std::forward<Params>(params)...);
+  Callback<void( ObserverType* )> NotifyExtractOne(const Location& from_here, Method m, Params&&... params) {
+      Callback<void( ObserverType* )> method;
+      constexpr bool is_mem_fun = std::is_member_function_pointer<Method>::value;
+      constexpr bool is_ob_invokable = std::is_invocable<ObserverType, Method, Params...>::value;
+      if constexpr( is_mem_fun )
+      {
+          method = Bind( &Dispatcher<ObserverType, Method>::Run, m,
+                  std::forward<Params>( params )... );
+      }
+      else if constexpr( is_ob_invokable )
+      {
+          std::function<void( ObserverType* )> fun;
+          fun = [=]( ObserverType* obj )
+            {
+                ( *obj )( m, std::forward<Params>( params )... );
+            };
+          method = Bind( &InvokableDispatcher, fun );
+      }
 
-    AutoLock lock(lock_);
-    for (const auto& observer : observers_) {
-      observer.second->PostTask(
-          from_here,
-          BindOnce(&ObserverListThreadSafe<ObserverType>::NotifyWrapper, this,
-                   observer.first, NotificationData(this, from_here, method)));
-    }
+      return method;
   }
 
  private:

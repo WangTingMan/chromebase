@@ -13,6 +13,7 @@
 namespace base {
 
 #if !defined(OS_ANDROID)
+#if defined(OS_POSIX)
 // Makes a temporary file, fdopens it, and then unlinks it. |fd| is populated
 // with the opened fd. |readonly_fd| is populated with the opened fd if
 // options.share_read_only is true. |path| is populated with the location of
@@ -30,6 +31,7 @@ bool PrepareMapFile(ScopedFD fd,
                     int* mapped_file,
                     int* readonly_mapped_file);
 #endif  // !defined(OS_ANDROID)
+#endif
 
 }  // namespace base
 

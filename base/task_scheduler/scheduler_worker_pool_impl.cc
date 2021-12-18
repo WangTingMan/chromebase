@@ -395,7 +395,7 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
 
 #if defined(OS_WIN)
   if (outer_->worker_environment_ == WorkerEnvironment::COM_MTA) {
-    if (win::GetVersion() >= win::VERSION_WIN8) {
+    if (win::GetVersion() >= win::Version::WIN8 ) {
       win_thread_environment_ = std::make_unique<win::ScopedWinrtInitializer>();
     } else {
       win_thread_environment_ = std::make_unique<win::ScopedCOMInitializer>(

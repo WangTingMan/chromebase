@@ -200,7 +200,9 @@ class BASE_EXPORT TimeDelta {
   int64_t InNanoseconds() const;
 
   constexpr TimeDelta& operator=(const TimeDelta&) = default;
+#ifndef OS_WIN
   constexpr TimeDelta(const TimeDelta&) = default;
+#endif
 
   // Computations with other deltas. Can easily be made constexpr with C++17 but
   // hard to do until then per limitations around

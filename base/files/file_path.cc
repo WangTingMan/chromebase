@@ -183,6 +183,20 @@ FilePath::FilePath(StringPieceType path) {
 
 FilePath::~FilePath() = default;
 
+#if defined(OS_WIN)
+
+FilePath::FilePath( std::string a_path )
+{
+    std::wstring wstr = base::SysMultiByteToWide( a_path, 0 );
+    StringPieceType path( wstr.c_str() );
+    path.CopyToString( &path_ );
+    StringType::size_type nul_pos = path_.find( kStringTerminator );
+    if( nul_pos != StringType::npos )
+        path_.erase( nul_pos, StringType::npos );
+}
+
+#endif
+
 FilePath& FilePath::operator=(const FilePath& that) = default;
 
 FilePath& FilePath::operator=(FilePath&& that) = default;
@@ -206,6 +220,13 @@ bool FilePath::operator!=(const FilePath& that) const {
 std::ostream& operator<<(std::ostream& out, const FilePath& file_path) {
   return out << file_path.value();
 }
+
+#if defined(OS_WIN)
+std::string FilePath::StdStringValue()const
+{
+    return SysWideToNativeMB( path_ );
+}
+#endif
 
 // static
 bool FilePath::IsSeparator(CharType character) {
@@ -427,6 +448,13 @@ FilePath FilePath::InsertBeforeExtensionASCII(StringPiece suffix)
   return InsertBeforeExtension(suffix);
 #endif
 }
+
+#if defined(OS_WIN)
+FilePath FilePath::AddExtension( std::string const& extension ) const
+{
+    return AddExtension( SysNativeMBToWide( extension ) );
+}
+#endif
 
 FilePath FilePath::AddExtension(StringPieceType extension) const {
   if (IsEmptyOrSpecialCase(BaseName().value()))

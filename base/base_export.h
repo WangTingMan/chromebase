@@ -6,7 +6,7 @@
 #define BASE_BASE_EXPORT_H_
 
 #if defined(COMPONENT_BUILD)
-#if defined(WIN32)
+#if defined(WIN32) || defined(_MSC_VER)
 
 #if defined(BASE_IMPLEMENTATION)
 #define BASE_EXPORT __declspec(dllexport)

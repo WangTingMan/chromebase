@@ -23,6 +23,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
+#include "base/trace_event/trace_event_impl.h"
 #include "base/values.h"
 
 namespace base {
@@ -35,7 +36,7 @@ constexpr char kSequencedExecutionMode[] = "sequenced";
 constexpr char kSingleThreadExecutionMode[] = "single thread";
 
 // An immutable copy of a scheduler task's info required by tracing.
-class TaskTracingInfo : public trace_event::ConvertableToTraceFormat {
+class TaskTracingInfo : public ::base::trace_event::ConvertableToTraceFormat {
  public:
   TaskTracingInfo(const TaskTraits& task_traits,
                   const char* execution_mode,
