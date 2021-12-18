@@ -1,0 +1,191 @@
+--- a/base/trace_event/trace_event.h
++++ b/base/trace_event/trace_event.h
+@@ -5,6 +5,43 @@
+ #ifndef BASE_TRACE_EVENT_TRACE_EVENT_H_
+ #define BASE_TRACE_EVENT_TRACE_EVENT_H_
+ 
++// Replace with stub implementation.
++#if 1
++#include "base/trace_event/common/trace_event_common.h"
++#include "base/trace_event/heap_profiler.h"
++
++// To avoid -Wunused-* errors, eat expression by macro.
++namespace libchrome_internal {
++template <typename... Args> void Ignore(Args&&... args) {}
++}
++#define INTERNAL_IGNORE(...) \
++  (false ? libchrome_internal::Ignore(__VA_ARGS__) : (void) 0)
++
++// Body is effectively empty.
++#define INTERNAL_TRACE_EVENT_ADD_SCOPED(...) INTERNAL_IGNORE(__VA_ARGS__)
++#define INTERNAL_TRACE_TASK_EXECUTION(...)
++#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(...) \
++  INTERNAL_IGNORE(__VA_ARGS__)
++#define TRACE_ID_MANGLE(val) (val)
++
++namespace base {
++namespace trace_event {
++
++class TraceLog {
++ public:
++  static TraceLog* GetInstance() {
++    static TraceLog instance;
++    return &instance;
++  }
++
++  pid_t process_id() { return 0; }
++  void SetCurrentThreadBlocksMessageLoop() {}
++};
++
++}  // namespace trace_event
++}  // namespace base
++#else
++
+ // This header file defines implementation details of how the trace macros in
+ // trace_event_common.h collect and store trace events. Anything not
+ // implementation-specific should go in trace_event_common.h instead of here.
+@@ -1115,4 +1152,5 @@ template<typename IDType> class TraceSco
+ }  // namespace trace_event
+ }  // namespace base
+ 
++#endif
+ #endif  // BASE_TRACE_EVENT_TRACE_EVENT_H_
+--- a/base/trace_event/heap_profiler.h
++++ b/base/trace_event/heap_profiler.h
+@@ -5,6 +5,22 @@
+ #ifndef BASE_TRACE_EVENT_HEAP_PROFILER_H
+ #define BASE_TRACE_EVENT_HEAP_PROFILER_H
+ 
++// Replace with stub implementation.
++#if 1
++#define TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION \
++  trace_event_internal::HeapProfilerScopedTaskExecutionTracker
++
++namespace trace_event_internal {
++
++class HeapProfilerScopedTaskExecutionTracker {
++ public:
++  explicit HeapProfilerScopedTaskExecutionTracker(const char*) {}
++};
++
++}  // namespace trace_event_internal
++
++#else
++
+ #include "base/compiler_specific.h"
+ #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
+ 
+@@ -86,4 +102,5 @@ class BASE_EXPORT HeapProfilerScopedIgno
+ 
+ }  // namespace trace_event_internal
+ 
++#endif
+ #endif  // BASE_TRACE_EVENT_HEAP_PROFILER_H
+--- a/base/test/test_pending_task.h
++++ b/base/test/test_pending_task.h
+@@ -10,7 +10,8 @@
+ #include "base/callback.h"
+ #include "base/location.h"
+ #include "base/time/time.h"
+-#include "base/trace_event/trace_event_argument.h"
++// Unsupported in libchrome.
++// #include "base/trace_event/trace_event_argument.h"
+ 
+ namespace base {
+ 
+@@ -58,10 +59,13 @@ struct TestPendingTask {
+   TimeDelta delay;
+   TestNestability nestability;
+ 
++// Unsupported in libchrome.
++#if 0
+   // Functions for using test pending task with tracing, useful in unit
+   // testing.
+   void AsValueInto(base::trace_event::TracedValue* state) const;
+   std::unique_ptr<base::trace_event::ConvertableToTraceFormat> AsValue() const;
++#endif
+   std::string ToString() const;
+ 
+  private:
+--- a/base/test/test_pending_task.cc
++++ b/base/test/test_pending_task.cc
+@@ -38,6 +38,8 @@ bool TestPendingTask::ShouldRunBefore(co
+ 
+ TestPendingTask::~TestPendingTask() {}
+ 
++// Unsupported in libchrome.
++#if 0
+ void TestPendingTask::AsValueInto(base::trace_event::TracedValue* state) const {
+   state->SetInteger("run_at", GetTimeToRun().ToInternalValue());
+   state->SetString("posting_function", location.ToString());
+@@ -61,10 +63,14 @@ TestPendingTask::AsValue() const {
+   AsValueInto(state.get());
+   return std::move(state);
+ }
++#endif
+ 
+ std::string TestPendingTask::ToString() const {
+   std::string output("TestPendingTask(");
++// Unsupported in libchrome.
++#if 0
+   AsValue()->AppendAsTraceFormat(&output);
++#endif
+   output += ")";
+   return output;
+ }
+---- a/base/threading/thread_id_name_manager.cc
++++ b/base/threading/thread_id_name_manager.cc
+@@ -12,7 +12,8 @@
+ #include "base/no_destructor.h"
+ #include "base/strings/string_util.h"
+ #include "base/threading/thread_local.h"
+-#include "base/trace_event/heap_profiler_allocation_context_tracker.h"
++// Unsupported in libchrome.
++// #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
+ 
+ namespace base {
+ namespace {
+@@ -94,8 +95,9 @@ void ThreadIdNameManager::SetName(const std::string& name) {
+   // call GetName(which holds a lock) during the first allocation because it can
+   // cause a deadlock when the first allocation happens in the
+   // ThreadIdNameManager itself when holding the lock.
+-  trace_event::AllocationContextTracker::SetCurrentThreadName(
+-      leaked_str->c_str());
++  // Unsupported in libchrome.
++  // trace_event::AllocationContextTracker::SetCurrentThreadName(
++  //   leaked_str->c_str());
+ }
+ 
+ const char* ThreadIdNameManager::GetName(PlatformThreadId id) {
+--- a/base/memory/shared_memory_posix.cc
++++ b/base/memory/shared_memory_posix.cc
+@@ -16,7 +16,8 @@
+ #include "base/logging.h"
+ #include "base/macros.h"
+ #include "base/memory/shared_memory_helper.h"
+-#include "base/memory/shared_memory_tracker.h"
++// Unsupported in libchrome.
++// #include "base/memory/shared_memory_tracker.h"
+ #include "base/posix/eintr_wrapper.h"
+ #include "base/posix/safe_strerror.h"
+ #include "base/process/process_metrics.h"
+@@ -302,7 +305,8 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
+     DCHECK_EQ(0U,
+               reinterpret_cast<uintptr_t>(memory_) &
+                   (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
+-    SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
++    // Unsupported in libchrome.
++    // SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
+   } else {
+     memory_ = nullptr;
+   }
+@@ -314,7 +318,8 @@ bool SharedMemory::Unmap() {
+   if (!memory_)
+     return false;
+ 
+-  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
++  // Unsupported in libchrome.
++  // SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
+   munmap(memory_, mapped_size_);
+   memory_ = nullptr;
+   mapped_size_ = 0;

@@ -1,0 +1,10 @@
+# Use system installed gtest library.
+
+--- /dev/null
++++ b/testing/gtest/include/gtest/gtest.h
+@@ -0,0 +1 @@
++#include <gtest/gtest.h>
+--- /dev/null
++++ b/testing/gtest/include/gtest/gtest_prod.h
+@@ -0,0 +1 @@
++#include <gtest/gtest_prod.h>

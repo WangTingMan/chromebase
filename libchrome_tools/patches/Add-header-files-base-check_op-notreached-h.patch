@@ -1,0 +1,48 @@
+From b69366c4a2f08545bd03e1c0aa6a37562510a2e6 Mon Sep 17 00:00:00 2001
+From: hscham <hscham@chromium.org>
+Date: Wed, 3 Jun 2020 17:26:49 +0900
+Subject: [PATCH] Add header files base/{check_op,notreached}.h
+
+Change-Id: I5267ddeba3a63c7977f093b1a25dff760dbe167b
+---
+ base/check_op.h   | 10 ++++++++++
+ base/notreached.h | 10 ++++++++++
+ 2 files changed, 20 insertions(+)
+ create mode 100644 base/check_op.h
+ create mode 100644 base/notreached.h
+
+diff --git a/base/check_op.h b/base/check_op.h
+new file mode 100644
+index 000000000..caa3c3af6
+--- /dev/null
++++ base/check_op.h
+@@ -0,0 +1,10 @@
++// Copyright 2020 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_CHECK_OP_H_
++#define BASE_CHECK_OP_H_
++
++#include "base/logging.h"
++
++#endif  // BASE_CHECK_OP_H_
+diff --git a/base/notreached.h b/base/notreached.h
+new file mode 100644
+index 000000000..1eacc44e4
+--- /dev/null
++++ base/notreached.h
+@@ -0,0 +1,10 @@
++// Copyright 2020 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef BASE_NOTREACHED_H_
++#define BASE_NOTREACHED_H_
++
++#include "base/logging.h"
++
++#endif  // BASE_NOTREACHED_H_
+-- 
+2.27.0.rc2.251.g90737beb825-goog
+

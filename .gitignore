@@ -1,8 +1,1 @@
-#dsd
-
-.vs/
-*.opendb
-*.db
-x64/
-ipch/
-*.vcxproj.user
+*.pyc

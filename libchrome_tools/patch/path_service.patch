@@ -1,0 +1,83 @@
+# Several paths are not supported in PathService by libchrome.
+
+--- a/base/base_paths_posix.cc
++++ b/base/base_paths_posix.cc
+@@ -19,7 +19,8 @@
+ #include "base/files/file_path.h"
+ #include "base/files/file_util.h"
+ #include "base/logging.h"
+-#include "base/nix/xdg_util.h"
++// Unused, and this file is not ported to libchrome.
++// #include "base/nix/xdg_util.h"
+ #include "base/path_service.h"
+ #include "base/process/process_metrics.h"
+ #include "build/build_config.h"
+@@ -77,6 +78,8 @@ bool PathProviderPosix(int key, FilePath
+       return true;
+ #endif
+     }
++// Following paths are not supported in libchrome/libmojo.
++#if 0
+     case DIR_SOURCE_ROOT: {
+       // Allow passing this in the environment, for more flexibility in build
+       // tree configurations (sub-project builds, gyp --output_dir, etc.)
+@@ -112,6 +115,7 @@ bool PathProviderPosix(int key, FilePath
+       *result = cache_dir;
+       return true;
+     }
++#endif
+   }
+   return false;
+ }
+--- a/base/files/file_util_posix.cc
++++ b/base/files/file_util_posix.cc
+@@ -594,6 +594,9 @@ bool GetTempDir(FilePath* path) {
+ 
+ #if defined(OS_ANDROID)
+   return PathService::Get(DIR_CACHE, path);
++#elif defined(__ANDROID__)
++  *path = FilePath("/data/local/tmp");
++  return true;
+ #else
+   *path = FilePath("/tmp");
+   return true;
+--- a/base/json/json_reader_unittest.cc
++++ b/base/json/json_reader_unittest.cc
+@@ -567,7 +567,7 @@ TEST(JSONReaderTest, Reading) {
+   }
+ }
+ 
+-TEST(JSONReaderTest, ReadFromFile) {
++TEST(JSONReaderTest, DISABLED_ReadFromFile) {
+   FilePath path;
+   ASSERT_TRUE(PathService::Get(base::DIR_TEST_DATA, &path));
+   path = path.AppendASCII("json");
+--- a/base/json/json_value_serializer_unittest.cc
++++ b/base/json/json_value_serializer_unittest.cc
+@@ -402,7 +402,7 @@ class JSONFileValueSerializerTest : publ
+   ScopedTempDir temp_dir_;
+ };
+ 
+-TEST_F(JSONFileValueSerializerTest, Roundtrip) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_Roundtrip) {
+   FilePath original_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
+   original_file_path = original_file_path.AppendASCII("serializer_test.json");
+@@ -445,7 +445,7 @@ TEST_F(JSONFileValueSerializerTest, Roun
+   EXPECT_TRUE(DeleteFile(written_file_path, false));
+ }
+ 
+-TEST_F(JSONFileValueSerializerTest, RoundtripNested) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_RoundtripNested) {
+   FilePath original_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &original_file_path));
+   original_file_path =
+@@ -471,7 +471,7 @@ TEST_F(JSONFileValueSerializerTest, Roun
+   EXPECT_TRUE(DeleteFile(written_file_path, false));
+ }
+ 
+-TEST_F(JSONFileValueSerializerTest, NoWhitespace) {
++TEST_F(JSONFileValueSerializerTest, DISABLED_NoWhitespace) {
+   FilePath source_file_path;
+   ASSERT_TRUE(PathService::Get(DIR_TEST_DATA, &source_file_path));
+   source_file_path =
