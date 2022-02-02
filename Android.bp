@@ -861,6 +861,7 @@ cc_library {
             ],
         },
     },
+    min_sdk_version: "30",
 }
 
 // libchrome-crypto shared library for device
