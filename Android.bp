@@ -774,7 +774,13 @@ libchromeLinuxSrc = [
     "base/threading/platform_thread_linux.cc",
 ]
 
-libchromeLinuxGlibcSrc = [
+libchromeMuslSrc = [
+    "base/debug/stack_trace_posix.cc",
+    "base/memory/platform_shared_memory_region_posix.cc",
+    "base/memory/shared_memory_handle_posix.cc",
+]
+
+libchromeGlibcSrc = [
     "base/allocator/allocator_shim.cc",
     "base/allocator/allocator_shim_default_dispatch_to_glibc.cc",
     "base/debug/stack_trace_posix.cc",
@@ -850,8 +856,11 @@ cc_library {
                 "liblog",
             ],
         },
-        linux_glibc: {
-            srcs: libchromeLinuxGlibcSrc,
+        glibc: {
+            srcs: libchromeGlibcSrc,
+        },
+        musl: {
+            srcs: libchromeMuslSrc,
         },
         android: {
             srcs: libchromeAndroidSrc,
