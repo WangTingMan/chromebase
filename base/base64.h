@@ -6,6 +6,7 @@
 #define BASE_BASE64_H_
 
 #include <string>
+#include <vector>
 
 #include "base/base_export.h"
 #include "base/strings/string_piece.h"
@@ -19,6 +20,14 @@ BASE_EXPORT void Base64Encode(const StringPiece& input, std::string* output);
 // otherwise. The output string is only modified if successful. The decoding can
 // be done in-place.
 BASE_EXPORT bool Base64Decode(const StringPiece& input, std::string* output);
+
+// Encodes the input memory in base64. The encoding can be done in-place.
+BASE_EXPORT void Base64Encode( char const* a_buffer, uint16_t a_size, std::string* output );
+
+// Decodes the base64 input string.  Returns true if successful and false
+// otherwise. The output buffer is only modified if successful. The decoding can
+// be done in-place.
+BASE_EXPORT bool Base64Decode( const StringPiece& input, std::vector<char>& output );
 
 }  // namespace base
 
