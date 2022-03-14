@@ -64,8 +64,10 @@ void WaitableEvent::Wait() {
    // event_activity.emplace(this);
    // scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   //}
+#ifdef PRINT_DEBUG_INFO_INDICATION
   DLOG( INFO ) << "Informative: disabled Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>. "
                << "You need pay attention to potential block issue.";
+#endif
 
   DWORD result = WaitForSingleObject(handle_.Get(), INFINITE);
   // It is most unexpected that this should ever fail.  Help consumers learn
@@ -124,8 +126,10 @@ bool WaitableEvent::TimedWait(const TimeDelta& wait_delta) {
   //  event_activity.emplace(this);
   //  scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   //}
+  #ifdef PRINT_DEBUG_INFO_INDICATION
   DLOG( INFO ) << "Informative: disabled Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>. "
                << "You need pay attention to potential block issue.";
+  #endif
 
   TimeTicks now(TimeTicks::Now());
   // TimeTicks takes care of overflow including the cases when wait_delta
@@ -147,8 +151,10 @@ bool WaitableEvent::TimedWaitUntil(const TimeTicks& end_time) {
   //  event_activity.emplace(this);
   //  scoped_blocking_call.emplace(BlockingType::MAY_BLOCK);
   //}
+#ifdef PRINT_DEBUG_INFO_INDICATION
   DLOG( INFO ) << "Informative: disabled Optional<internal::ScopedBlockingCallWithBaseSyncPrimitives>. "
                << "You need pay attention to potential block issue.";
+#endif
 
   TimeTicks now(TimeTicks::Now());
   if (end_time <= now)
