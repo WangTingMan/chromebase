@@ -513,8 +513,6 @@ gensrcs {
 
 cc_defaults {
     name: "libchrome-defaults",
-    // Set clang to "true" to force clang or "false" to force gcc.
-    // clang: true,
 
     cflags: [
         "-Wall",
