@@ -29,6 +29,7 @@ const DWORD kNormalTerminationExitCode = 0;
 const DWORD kDebuggerInactiveExitCode = 0xC0000354;
 const DWORD kKeyboardInterruptExitCode = 0xC000013A;
 const DWORD kDebuggerTerminatedExitCode = 0x40010004;
+const DWORD kStatusInvalidImageHashExitCode = 0xC0000428;
 
 // This exit code is used by the Windows task manager when it kills a
 // process.  It's value is obviously not that unique, and it's
@@ -64,6 +65,10 @@ enum TerminationStatus {
 #endif
   TERMINATION_STATUS_LAUNCH_FAILED,        // child process never launched
   TERMINATION_STATUS_OOM,                  // Process died due to oom
+#if defined(OS_WIN)
+  // On Windows, the OS terminated process due to code integrity failure.
+  TERMINATION_STATUS_INTEGRITY_FAILURE,
+#endif
   TERMINATION_STATUS_MAX_ENUM
 };
 

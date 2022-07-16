@@ -148,6 +148,15 @@ struct BASE_EXPORT LaunchOptions {
   HANDLE stdout_handle = nullptr;
   HANDLE stderr_handle = nullptr;
 
+  // Set/unset environment variables. These are applied on top of the parent
+  // process environment.  Empty (the default) means to inherit the same
+  // environment. See AlterEnvironment().
+  EnvironmentMap environment;
+
+  // Clear the environment for the new process before processing changes from
+  // |environment|.
+  bool clear_environment = false;
+
   // If set to true, ensures that the child process is launched with the
   // CREATE_BREAKAWAY_FROM_JOB flag which allows it to breakout of the parent
   // job if any.

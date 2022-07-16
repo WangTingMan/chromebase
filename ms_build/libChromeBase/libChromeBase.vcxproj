@@ -133,8 +133,11 @@
     <ClCompile Include="..\..\base\path_service.cc" />
     <ClCompile Include="..\..\base\pending_task.cc" />
     <ClCompile Include="..\..\base\pickle.cc" />
+    <ClCompile Include="..\..\base\process\environment_internal.cc" />
     <ClCompile Include="..\..\base\process\kill.cc" />
+    <ClCompile Include="..\..\base\process\kill_win.cc" />
     <ClCompile Include="..\..\base\process\launch.cc" />
+    <ClCompile Include="..\..\base\process\launch_win.cc" />
     <ClCompile Include="..\..\base\process\memory.cc" />
     <ClCompile Include="..\..\base\process\memory_win.cc" />
     <ClCompile Include="..\..\base\process\process_handle.cc" />
@@ -433,6 +436,7 @@
     <ClInclude Include="..\..\base\pending_task.h" />
     <ClInclude Include="..\..\base\pickle.h" />
     <ClInclude Include="..\..\base\post_task_and_reply_with_result_internal.h" />
+    <ClInclude Include="..\..\base\process\environment_internal.h" />
     <ClInclude Include="..\..\base\process\kill.h" />
     <ClInclude Include="..\..\base\process\launch.h" />
     <ClInclude Include="..\..\base\process\memory.h" />

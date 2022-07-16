@@ -29,6 +29,8 @@
 #include "base/win/startup_information.h"
 #include "base/win/windows_version.h"
 
+#include "environment_internal.h"
+
 namespace base {
 
 namespace {
@@ -309,7 +311,6 @@ Process LaunchProcess(const string16& cmdline,
   } else {
     char16* new_environment = nullptr;
     string16 env_storage;
-#if 0
     if (options.clear_environment || !options.environment.empty()) {
       if (options.clear_environment) {
         static const char16 kEmptyEnvironment[] = {0};
@@ -324,8 +325,7 @@ Process LaunchProcess(const string16& cmdline,
         env_storage = internal::AlterEnvironment(as_u16cstr(old_environment),
                                                  options.environment);
         FreeEnvironmentStrings( old_environment );
-  }
-#endif
+      }
       new_environment = data(env_storage);
       flags |= CREATE_UNICODE_ENVIRONMENT;
     }

@@ -843,6 +843,15 @@
     <ClCompile Include="..\..\base\allocator\partition_allocator\spin_lock.cc">
       <Filter>base\allocator\partition_allocator</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\base\process\launch_win.cc">
+      <Filter>base\process</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\process\environment_internal.cc">
+      <Filter>base\process</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\process\kill_win.cc">
+      <Filter>base\process</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\base\debug\activity_tracker.h">
@@ -1873,6 +1882,9 @@
     </ClInclude>
     <ClInclude Include="..\..\base\allocator\partition_allocator\spin_lock.h">
       <Filter>base\allocator\partition_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\process\environment_internal.h">
+      <Filter>base\process</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
