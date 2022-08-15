@@ -519,6 +519,7 @@ cc_defaults {
         "-Werror",
         "-Wno-deprecated-declarations",
         "-Wno-implicit-fallthrough",
+        "-Wno-implicit-int-float-conversion",
         // memory_mapped_file.cc:80, json_parser.cc:264,
         // sys_string_conversions_posix.cc:122, and
         // icu_utf.cc:161,165 have -Wno-implicit-fallthrough.
