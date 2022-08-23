@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma warning(disable:4996)
+
 #include "base/win/windows_version.h"
 
 #include <windows.h>
@@ -78,22 +80,24 @@ OSInfo** OSInfo::GetInstanceStorage() {
   // Note: we don't use the Singleton class because it depends on AtExitManager,
   // and it's convenient for other modules to use this class without it.
   static OSInfo* info = []() {
-    _OSVERSIONINFOEXW version_info;
-    version_info.dwOSVersionInfoSize = sizeof(version_info);
-    LPOSVERSIONINFOEXW a = &version_info;
-    DWORD b = 0;
-    DWORDLONG c = 0;
-    ::VerifyVersionInfo( a, b, c );
+      _OSVERSIONINFOEXW version_info = { sizeof( version_info ) };
 
-    DWORD os_type = 0;
-    if (version_info.dwMajorVersion == 6 || version_info.dwMajorVersion == 10) {
-      // Only present on Vista+.
-      GetProductInfoPtr get_product_info =
-          reinterpret_cast<GetProductInfoPtr>(::GetProcAddress(
-              ::GetModuleHandle(L"kernel32.dll"), "GetProductInfo"));
-      get_product_info(version_info.dwMajorVersion, version_info.dwMinorVersion,
-                       0, 0, &os_type);
-    }
+#pragma clang diagnostic push
+      /* clang diagnostic ignored "-Wdeprecated-declarations" means: #pragma warning(disable:4996) */
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      // GetVersionEx() is deprecated, and the suggested replacement are
+      // the IsWindows*OrGreater() functions in VersionHelpers.h. We can't
+      // use that because:
+      // - For Windows 10, there's IsWindows10OrGreater(), but nothing more
+      //   granular. We need to be able to detect different Windows 10 releases
+      //   since they sometimes change behavior in ways that matter.
+      // - There is no IsWindows11OrGreater() function yet.
+      ::GetVersionEx( reinterpret_cast< _OSVERSIONINFOW* >( &version_info ) );
+#pragma clang diagnostic pop
+
+      DWORD os_type = 0;
+      ::GetProductInfo( version_info.dwMajorVersion, version_info.dwMinorVersion,
+          0, 0, &os_type );
 
     return new OSInfo(version_info, GetSystemInfoStorage(), os_type);
   }();
