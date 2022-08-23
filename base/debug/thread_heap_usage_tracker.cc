@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef _MSC_VER
+#define _SILENCE_CXX20_IS_POD_DEPRECATION_WARNING
+#define _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS
+#endif
+
 #include "base/debug/thread_heap_usage_tracker.h"
 
 #include <stdint.h>
