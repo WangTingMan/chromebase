@@ -70,6 +70,7 @@ class BASE_EXPORT PowerMonitorDeviceSource : public PowerMonitorSource {
     HMODULE instance_;
     // A hidden message-only window.
     HWND message_hwnd_;
+    HPOWERNOTIFY power_notify_handle_;
   };
 #endif  // OS_WIN
 

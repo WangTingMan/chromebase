@@ -133,6 +133,10 @@
     <ClCompile Include="..\..\base\path_service.cc" />
     <ClCompile Include="..\..\base\pending_task.cc" />
     <ClCompile Include="..\..\base\pickle.cc" />
+    <ClCompile Include="..\..\base\power_monitor\power_monitor.cc" />
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_device_source.cc" />
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_device_source_win.cc" />
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_source.cc" />
     <ClCompile Include="..\..\base\process\environment_internal.cc" />
     <ClCompile Include="..\..\base\process\kill.cc" />
     <ClCompile Include="..\..\base\process\kill_win.cc" />
@@ -156,6 +160,8 @@
     <ClCompile Include="..\..\base\rand_util.cc" />
     <ClCompile Include="..\..\base\rand_util_win.cc" />
     <ClCompile Include="..\..\base\run_loop.cc" />
+    <ClCompile Include="..\..\base\sampling_heap_profiler\lock_free_address_hash_set.cc" />
+    <ClCompile Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.cc" />
     <ClCompile Include="..\..\base\scoped_native_library.cc" />
     <ClCompile Include="..\..\base\sequenced_task_runner.cc" />
     <ClCompile Include="..\..\base\sequence_checker_impl.cc" />
@@ -436,6 +442,10 @@
     <ClInclude Include="..\..\base\pending_task.h" />
     <ClInclude Include="..\..\base\pickle.h" />
     <ClInclude Include="..\..\base\post_task_and_reply_with_result_internal.h" />
+    <ClInclude Include="..\..\base\power_monitor\power_monitor.h" />
+    <ClInclude Include="..\..\base\power_monitor\power_monitor_device_source.h" />
+    <ClInclude Include="..\..\base\power_monitor\power_monitor_source.h" />
+    <ClInclude Include="..\..\base\power_monitor\power_observer.h" />
     <ClInclude Include="..\..\base\process\environment_internal.h" />
     <ClInclude Include="..\..\base\process\kill.h" />
     <ClInclude Include="..\..\base\process\launch.h" />
@@ -451,6 +461,8 @@
     <ClInclude Include="..\..\base\profiler\win32_stack_frame_unwinder.h" />
     <ClInclude Include="..\..\base\rand_util.h" />
     <ClInclude Include="..\..\base\run_loop.h" />
+    <ClInclude Include="..\..\base\sampling_heap_profiler\lock_free_address_hash_set.h" />
+    <ClInclude Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.h" />
     <ClInclude Include="..\..\base\scoped_clear_errno.h" />
     <ClInclude Include="..\..\base\scoped_generic.h" />
     <ClInclude Include="..\..\base\scoped_native_library.h" />

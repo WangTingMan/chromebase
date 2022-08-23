@@ -88,6 +88,12 @@
     <Filter Include="base\allocator\partition_allocator">
       <UniqueIdentifier>{c4b86180-3029-4528-af2a-e13e49719eea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="base\power_monitor">
+      <UniqueIdentifier>{6b1f4ef1-7a6b-492f-be84-5b9654926739}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base\sampling_heap_profiler">
+      <UniqueIdentifier>{32d33379-103c-4133-b090-e87c769e307e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\base\debug\activity_tracker.cc">
@@ -851,6 +857,24 @@
     </ClCompile>
     <ClCompile Include="..\..\base\process\kill_win.cc">
       <Filter>base\process</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\power_monitor\power_monitor.cc">
+      <Filter>base\power_monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_device_source.cc">
+      <Filter>base\power_monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_source.cc">
+      <Filter>base\power_monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\power_monitor\power_monitor_device_source_win.cc">
+      <Filter>base\power_monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\sampling_heap_profiler\lock_free_address_hash_set.cc">
+      <Filter>base\sampling_heap_profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.cc">
+      <Filter>base\sampling_heap_profiler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1885,6 +1909,24 @@
     </ClInclude>
     <ClInclude Include="..\..\base\process\environment_internal.h">
       <Filter>base\process</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\power_monitor\power_monitor.h">
+      <Filter>base\power_monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\power_monitor\power_monitor_device_source.h">
+      <Filter>base\power_monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\power_monitor\power_monitor_source.h">
+      <Filter>base\power_monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\power_monitor\power_observer.h">
+      <Filter>base\power_monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\sampling_heap_profiler\lock_free_address_hash_set.h">
+      <Filter>base\sampling_heap_profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.h">
+      <Filter>base\sampling_heap_profiler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
