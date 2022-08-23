@@ -14,6 +14,9 @@ namespace base {
 
 namespace {
 
+LazyInstance<ThreadLocalBoolean>::Leaky
+    g_io_disallowed = LAZY_INSTANCE_INITIALIZER;
+
 LazyInstance<ThreadLocalBoolean>::Leaky g_blocking_disallowed =
     LAZY_INSTANCE_INITIALIZER;
 
@@ -127,9 +130,27 @@ ThreadRestrictions::ScopedAllowIO::~ScopedAllowIO() {
 
 // static
 bool ThreadRestrictions::SetIOAllowed(bool allowed) {
-  bool previous_disallowed = g_blocking_disallowed.Get().Get();
+
+  bool previous_disallowed = g_io_disallowed.Get().Get();
+    g_io_disallowed.Get().Set( !allowed );
+
+  previous_disallowed = g_blocking_disallowed.Get().Get();
   g_blocking_disallowed.Get().Set(!allowed);
+
   return !previous_disallowed;
+}
+
+void ThreadRestrictions::AssertIOAllowed()
+{
+    if( g_io_disallowed.Get().Get() )
+    {
+        LOG( FATAL ) <<
+            "Function marked as IO-only was called from a thread that "
+            "disallows IO!  If this thread really should be allowed to "
+            "make IO calls, adjust the call to "
+            "base::ThreadRestrictions::SetIOAllowed() in this thread's "
+            "startup.";
+    }
 }
 
 // static

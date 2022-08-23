@@ -274,51 +274,73 @@ OSInfo::WOW64Status OSInfo::GetWOW64StatusForProcess(HANDLE process_handle) {
 // the corresponding workstation release.
 // static
 Version OSInfo::MajorMinorBuildToVersion(int major, int minor, int build) {
-  if (major == 10) {
-    if (build >= 18362)
-      return Version::WIN10_19H1;
-    if (build >= 17763)
-      return Version::WIN10_RS5;
-    if (build >= 17134)
-      return Version::WIN10_RS4;
-    if (build >= 16299)
-      return Version::WIN10_RS3;
-    if (build >= 15063)
-      return Version::WIN10_RS2;
-    if (build >= 14393)
-      return Version::WIN10_RS1;
-    if (build >= 10586)
-      return Version::WIN10_TH2;
-    return Version::WIN10;
-  }
+    if( major == 11 )
+        return Version::WIN11;
 
-  if (major > 6) {
-    // Hitting this likely means that it's time for a >10 block above.
-    NOTREACHED() << major << "." << minor << "." << build;
-    return Version::WIN_LAST;
-  }
-
-  if (major == 6) {
-    switch (minor) {
-      case 0:
-        return Version::VISTA;
-      case 1:
-        return Version::WIN7;
-      case 2:
-        return Version::WIN8;
-      default:
-        DCHECK_EQ(minor, 3);
-        return Version::WIN8_1;
+    if( major == 10 )
+    {
+        if( build >= 22000 )
+            return Version::WIN11;
+        if( build >= 20348 )
+            return Version::SERVER_2022;
+        if( build >= 19044 )
+            return Version::WIN10_21H2;
+        if( build >= 19043 )
+            return Version::WIN10_21H1;
+        if( build >= 19042 )
+            return Version::WIN10_20H2;
+        if( build >= 19041 )
+            return Version::WIN10_20H1;
+        if( build >= 18363 )
+            return Version::WIN10_19H2;
+        if( build >= 18362 )
+            return Version::WIN10_19H1;
+        if( build >= 17763 )
+            return Version::WIN10_RS5;
+        if( build >= 17134 )
+            return Version::WIN10_RS4;
+        if( build >= 16299 )
+            return Version::WIN10_RS3;
+        if( build >= 15063 )
+            return Version::WIN10_RS2;
+        if( build >= 14393 )
+            return Version::WIN10_RS1;
+        if( build >= 10586 )
+            return Version::WIN10_TH2;
+        return Version::WIN10;
     }
-  }
 
-  if (major == 5 && minor != 0) {
-    // Treat XP Pro x64, Home Server, and Server 2003 R2 as Server 2003.
-    return minor == 1 ? Version::XP : Version::SERVER_2003;
-  }
+    if( major > 6 )
+    {
+        // Hitting this likely means that it's time for a >11 block above.
+        NOTREACHED() << major << "." << minor << "." << build;
+        return Version::WIN_LAST;
+    }
 
-  // Win 2000 or older.
-  return Version::PRE_XP;
+    if( major == 6 )
+    {
+        switch( minor )
+        {
+        case 0:
+            return Version::VISTA;
+        case 1:
+            return Version::WIN7;
+        case 2:
+            return Version::WIN8;
+        default:
+            DCHECK_EQ( minor, 3u );
+            return Version::WIN8_1;
+        }
+    }
+
+    if( major == 5 && minor != 0 )
+    {
+        // Treat XP Pro x64, Home Server, and Server 2003 R2 as Server 2003.
+        return minor == 1 ? Version::XP : Version::SERVER_2003;
+    }
+
+    // Win 2000 or older.
+    return Version::PRE_XP;
 }
 
 Version GetVersion() {

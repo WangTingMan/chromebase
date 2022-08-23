@@ -427,6 +427,11 @@ class BASE_EXPORT ThreadRestrictions {
   // DEPRECATED. Use ScopedAllowBlocking(ForTesting) or ScopedDisallowBlocking.
   static bool SetIOAllowed(bool allowed);
 
+  // Check whether the current thread is allowed to make IO calls,
+  // and DCHECK if not.  See the block comment above the class for
+  // a discussion of where to add these checks.
+  static void AssertIOAllowed();
+
   // Set whether the current thread can use singletons.  Returns the previous
   // value.
   static bool SetSingletonAllowed(bool allowed);
@@ -447,6 +452,7 @@ class BASE_EXPORT ThreadRestrictions {
   static bool SetSingletonAllowed(bool allowed) { return true; }
   static void AssertSingletonAllowed() {}
   static void DisallowWaiting() {}
+  static void AssertIOAllowed() {}
 #endif
 
  private:
