@@ -215,6 +215,7 @@
     <ClCompile Include="..\..\base\task_scheduler\task_scheduler_impl.cc" />
     <ClCompile Include="..\..\base\task_scheduler\task_tracker.cc" />
     <ClCompile Include="..\..\base\task_scheduler\task_traits.cc" />
+    <ClCompile Include="..\..\base\third_party\dynamic_annotations\dynamic_annotations.c" />
     <ClCompile Include="..\..\base\third_party\icu\icu_utf.cc" />
     <ClCompile Include="..\..\base\third_party\nspr\prtime.cc" />
     <ClCompile Include="..\..\base\threading\platform_thread_win.cc" />
@@ -278,7 +279,23 @@
     <ClCompile Include="..\..\base\win\win_util.cc" />
     <ClCompile Include="..\..\base\win\wmi.cc" />
     <ClCompile Include="..\..\base\win\wrapped_window_proc.cc" />
+    <ClCompile Include="..\..\device\bluetooth\bluetooth_advertisement.cc" />
+    <ClCompile Include="..\..\device\bluetooth\bluetooth_uuid.cc" />
     <ClCompile Include="..\..\third_party\modp_b64\modp_b64.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\insets.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\insets_f.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\point.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\point_conversions.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\point_f.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\rect.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\rect_f.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\size.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\size_conversions.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\size_f.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\vector2d.cc" />
+    <ClCompile Include="..\..\ui\gfx\geometry\vector2d_f.cc" />
+    <ClCompile Include="..\..\ui\gfx\range\range.cc" />
+    <ClCompile Include="..\..\ui\gfx\range\range_f.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\base\allocator\partition_allocator\address_space_randomization.h" />
@@ -480,6 +497,7 @@
     <ClInclude Include="..\..\base\strings\old_utf_string_conversions.h" />
     <ClInclude Include="..\..\base\strings\pattern.h" />
     <ClInclude Include="..\..\base\strings\safe_sprintf.h" />
+    <ClInclude Include="..\..\base\strings\string16.h" />
     <ClInclude Include="..\..\base\strings\stringize_macros.h" />
     <ClInclude Include="..\..\base\strings\stringprintf.h" />
     <ClInclude Include="..\..\base\strings\string_number_conversions.h" />
@@ -540,6 +558,7 @@
     <ClInclude Include="..\..\base\task_scheduler\test_utils.h" />
     <ClInclude Include="..\..\base\task_scheduler\tracked_ref.h" />
     <ClInclude Include="..\..\base\template_util.h" />
+    <ClInclude Include="..\..\base\third_party\dynamic_annotations\dynamic_annotations.h" />
     <ClInclude Include="..\..\base\third_party\icu\icu_utf.h" />
     <ClInclude Include="..\..\base\third_party\nspr\prtime.h" />
     <ClInclude Include="..\..\base\threading\platform_thread.h" />
@@ -630,7 +649,24 @@
     <ClInclude Include="..\..\base\win\winrt_storage_util.h" />
     <ClInclude Include="..\..\base\win\win_client_metrics.h" />
     <ClInclude Include="..\..\base\win\wrapped_window_proc.h" />
+    <ClInclude Include="..\..\device\bluetooth\bluetooth_advertisement.h" />
+    <ClInclude Include="..\..\device\bluetooth\bluetooth_uuid.h" />
     <ClInclude Include="..\..\third_party\modp_b64\modp_b64.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\insets.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\insets_f.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\point.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\point_conversions.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\point_f.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\rect.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\rect_f.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\size.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\size_conversions.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\size_f.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\vector2d.h" />
+    <ClInclude Include="..\..\ui\gfx\geometry\vector2d_f.h" />
+    <ClInclude Include="..\..\ui\gfx\range\gfx_range_export.h" />
+    <ClInclude Include="..\..\ui\gfx\range\range.h" />
+    <ClInclude Include="..\..\ui\gfx\range\range_f.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\base\win\windows_defines.inc" />
@@ -710,7 +746,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;GFX_IMPLEMENTATION;DEVICE_BLUETOOTH_IMPLEMENTATION;GFX_RANGE_IMPLEMENTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -762,7 +798,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_LIB;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;LIBCHROMEBASE_EXPORTS;_WINDOWS;_USRDLL;WIN32_LEAN_AND_MEAN;NOMINMAX;_CRT_SECURE_NO_WARNINGS;COMPONENT_BUILD;BASE_IMPLEMENTATION;WIN32;GFX_IMPLEMENTATION;DEVICE_BLUETOOTH_IMPLEMENTATION;GFX_RANGE_IMPLEMENTATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>

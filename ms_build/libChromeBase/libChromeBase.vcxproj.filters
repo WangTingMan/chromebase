@@ -63,10 +63,6 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
-    <Filter Include="fake sources">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="base\third_party">
       <UniqueIdentifier>{d4709bbd-15cf-4b97-b464-218545d0e615}</UniqueIdentifier>
     </Filter>
@@ -93,6 +89,31 @@
     </Filter>
     <Filter Include="base\sampling_heap_profiler">
       <UniqueIdentifier>{32d33379-103c-4133-b090-e87c769e307e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base\third_party\dynamic_annotations">
+      <UniqueIdentifier>{e35bbe05-8760-4f2c-88ab-83f6cbfe677b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="base\third_party\icu">
+      <UniqueIdentifier>{43517ba7-e5dd-4a6a-8bd1-aedc370ccc33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="device">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="device\bluetooth">
+      <UniqueIdentifier>{da306ac8-57e7-4bc4-a295-eec3a89c8263}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{945ec85e-8ed9-4b82-b296-b142e36ab847}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui\gdx">
+      <UniqueIdentifier>{a0ad0033-6b2f-40d3-9760-80fbe6826c55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui\gdx\geometry">
+      <UniqueIdentifier>{b43ddc44-9dd1-40b6-a4d5-4543d2f1df1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ui\gdx\range">
+      <UniqueIdentifier>{32d5b89c-7d65-42b9-ade5-884000dbe660}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -609,9 +630,6 @@
     <ClCompile Include="..\..\base\win\scoped_handle.cc">
       <Filter>base\win</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\base\third_party\icu\icu_utf.cc">
-      <Filter>third_party</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\base\files\memory_mapped_file_win.cc">
       <Filter>base\files</Filter>
     </ClCompile>
@@ -875,6 +893,60 @@
     </ClCompile>
     <ClCompile Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.cc">
       <Filter>base\sampling_heap_profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\third_party\dynamic_annotations\dynamic_annotations.c">
+      <Filter>base\third_party\dynamic_annotations</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\third_party\icu\icu_utf.cc">
+      <Filter>base\third_party\icu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\device\bluetooth\bluetooth_advertisement.cc">
+      <Filter>device\bluetooth</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\device\bluetooth\bluetooth_uuid.cc">
+      <Filter>device\bluetooth</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\insets.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\insets_f.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\point_conversions.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\point_f.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\rect.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\rect_f.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\size.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\size_conversions.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\size_f.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\vector2d.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\vector2d_f.cc">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\range\range.cc">
+      <Filter>ui\gdx\range</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\range\range_f.cc">
+      <Filter>ui\gdx\range</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ui\gfx\geometry\point.cc">
+      <Filter>ui\gdx\geometry</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1715,9 +1787,6 @@
     <ClInclude Include="..\..\base\win\scoped_handle.h">
       <Filter>base\win</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\base\third_party\icu\icu_utf.h">
-      <Filter>third_party</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\base\third_party\nspr\prtime.h">
       <Filter>base\third_party\nspr</Filter>
     </ClInclude>
@@ -1927,6 +1996,66 @@
     </ClInclude>
     <ClInclude Include="..\..\base\sampling_heap_profiler\sampling_heap_profiler.h">
       <Filter>base\sampling_heap_profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\strings\string16.h">
+      <Filter>base\strings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\third_party\dynamic_annotations\dynamic_annotations.h">
+      <Filter>base\third_party\dynamic_annotations</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\third_party\icu\icu_utf.h">
+      <Filter>base\third_party\icu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\device\bluetooth\bluetooth_advertisement.h">
+      <Filter>device\bluetooth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\device\bluetooth\bluetooth_uuid.h">
+      <Filter>device\bluetooth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\insets.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\insets_f.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\point_conversions.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\point_f.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\rect.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\rect_f.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\size.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\size_conversions.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\size_f.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\vector2d.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\vector2d_f.h">
+      <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\range\gfx_range_export.h">
+      <Filter>ui\gdx\range</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\range\range.h">
+      <Filter>ui\gdx\range</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\range\range_f.h">
+      <Filter>ui\gdx\range</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ui\gfx\geometry\point.h">
+      <Filter>ui\gdx\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
