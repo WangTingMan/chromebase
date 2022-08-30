@@ -519,6 +519,7 @@ cc_defaults {
         "-Werror",
         "-Wno-deprecated-declarations",
         "-Wno-implicit-fallthrough",
+        "-Wno-implicit-int-float-conversion",
         // memory_mapped_file.cc:80, json_parser.cc:264,
         // sys_string_conversions_posix.cc:122, and
         // icu_utf.cc:161,165 have -Wno-implicit-fallthrough.
@@ -890,11 +891,7 @@ cc_library_shared {
     vendor_available: true,
     defaults: ["libchrome-defaults"],
     srcs: [
-        "crypto/openssl_util.cc",
         "crypto/random.cc",
-        "crypto/secure_hash.cc",
-        "crypto/secure_util.cc",
-        "crypto/sha2.cc",
     ],
 
     generated_headers: ["libchrome-crypto-include"],
@@ -902,8 +899,6 @@ cc_library_shared {
 
     shared_libs: [
         "libchrome",
-        "libcrypto",
-        "libssl",
     ],
 }
 
@@ -1091,13 +1086,6 @@ cc_test {
     ],
     target: {
         android: {
-            srcs: [
-                "crypto/secure_hash_unittest.cc",
-                "crypto/sha2_unittest.cc",
-            ],
-            shared_libs: [
-                "libchrome-crypto",
-            ],
             cflags: ["-DDONT_EMBED_BUILD_METADATA"],
         },
     },
