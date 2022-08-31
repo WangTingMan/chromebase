@@ -16,7 +16,7 @@ namespace base {
 
 // Chosen to support 99.9% of documents found in the wild late 2016.
 // http://crbug.com/673263
-const int JSONReader::kStackMaxDepth = 200;
+/*const int JSONReader::kStackMaxDepth = 200;*/
 
 // Values 1000 and above are used by JSONFileValueSerializer::JsonFileError.
 static_assert(JSONReader::JSON_PARSE_ERROR_COUNT < 1000,

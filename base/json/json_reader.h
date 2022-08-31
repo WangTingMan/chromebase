@@ -58,7 +58,7 @@ enum JSONParserOptions {
 
 class BASE_EXPORT JSONReader {
  public:
-  static const int kStackMaxDepth;
+  static constexpr int kStackMaxDepth = 200;
 
   // Error codes during parsing.
   enum JsonParseError {
