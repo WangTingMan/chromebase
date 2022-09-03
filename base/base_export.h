@@ -5,6 +5,10 @@
 #ifndef BASE_BASE_EXPORT_H_
 #define BASE_BASE_EXPORT_H_
 
+#ifndef COMPONENT_BUILD
+#define COMPONENT_BUILD
+#endif
+
 #if defined(COMPONENT_BUILD)
 #if defined(WIN32) || defined(_MSC_VER)
 
