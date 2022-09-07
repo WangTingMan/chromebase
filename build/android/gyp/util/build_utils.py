@@ -23,19 +23,8 @@ import zipfile
 #     //build/config/android/internal_rules.gni
 
 # Some clients do not add //build/android/gyp to PYTHONPATH.
-import md5_check  # pylint: disable=relative-import
-
-# pylib conflicts with mojo/public/tools/bindings/pylib. Prioritize
-# build/android/pylib.
-# PYTHONPATH wouldn't help in this case, because soong put source files under
-# temp directory for each build, so the abspath is unknown until the
-# execution.
-#sys.path.append(os.path.join(os.path.dirname(__file__),
-#                             os.pardir, os.pardir, os.pardir))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                                os.pardir, os.pardir))
-
-import gn_helpers
+import build.android.gyp.util.md5_check as md5_check # pylint: disable=relative-import
+import build.gn_helpers as gn_helpers
 
 # Definition copied from pylib/constants/__init__.py to avoid adding
 # a dependency on pylib.
@@ -44,7 +33,7 @@ DIR_SOURCE_ROOT = os.environ.get('CHECKOUT_SOURCE_ROOT',
                                  os.pardir, os.pardir, os.pardir, os.pardir)))
 
 HERMETIC_TIMESTAMP = (2001, 1, 1, 0, 0, 0)
-_HERMETIC_FILE_ATTR = (0644 << 16L)
+_HERMETIC_FILE_ATTR = (0o644 << 16)
 
 
 @contextlib.contextmanager
@@ -246,7 +235,7 @@ def _IsSymlink(zip_file, name):
 
   # The two high-order bytes of ZipInfo.external_attr represent
   # UNIX permissions and file type bits.
-  return stat.S_ISLNK(zi.external_attr >> 16L)
+  return stat.S_ISLNK(zi.external_attr >> 16)
 
 
 def ExtractAll(zip_path, path=None, no_clobber=True, pattern=None,
@@ -309,12 +298,12 @@ def AddToZipHermetic(zip_file, zip_path, src_path=None, data=None,
 
   if src_path and os.path.islink(src_path):
     zipinfo.filename = zip_path
-    zipinfo.external_attr |= stat.S_IFLNK << 16L # mark as a symlink
+    zipinfo.external_attr |= stat.S_IFLNK << 16 # mark as a symlink
     zip_file.writestr(zipinfo, os.readlink(src_path))
     return
 
   if src_path:
-    with file(src_path) as f:
+    with open(src_path) as f:
       data = f.read()
 
   # zipfile will deflate even when it makes the file bigger. To avoid
@@ -342,7 +331,7 @@ def DoZip(inputs, output, base_dir=None, compress_fn=None):
   """
   input_tuples = []
   for tup in inputs:
-    if isinstance(tup, basestring):
+    if isinstance(tup, str):
       tup = (os.path.relpath(tup, base_dir), tup)
     input_tuples.append(tup)
 
@@ -382,7 +371,7 @@ def MergeZips(output, input_zips, path_transform=None):
   path_transform = path_transform or (lambda p: p)
   added_names = set()
 
-  output_is_already_open = not isinstance(output, basestring)
+  output_is_already_open = not isinstance(output, str)
   if output_is_already_open:
     assert isinstance(output, zipfile.ZipFile)
     out_zip = output
@@ -445,7 +434,7 @@ def _ComputePythonDependencies():
   src/. The paths will be relative to the current directory.
   """
   _ForceLazyModulesToLoad()
-  module_paths = (m.__file__ for m in sys.modules.itervalues()
+  module_paths = (m.__file__ for m in sys.modules.values()
                   if m is not None and hasattr(m, '__file__'))
   abs_module_paths = map(os.path.abspath, module_paths)
 

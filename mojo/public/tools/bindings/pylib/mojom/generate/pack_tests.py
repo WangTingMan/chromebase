@@ -4,9 +4,9 @@
 
 import sys
 
-import module as mojom
-import pack
-import test_support
+import mojom.generate.module as mojom
+import mojom.generate.pack as pack
+import mojom.generate.test_support as test_support
 
 
 EXPECT_EQ = test_support.EXPECT_EQ
@@ -59,7 +59,7 @@ def TestSequence(kinds, fields, offsets):
   ps = pack.PackedStruct(struct)
   num_fields = len(ps.packed_fields)
   errors += EXPECT_EQ(len(kinds), num_fields)
-  for i in xrange(num_fields):
+  for i in range(num_fields):
     EXPECT_EQ("%d" % fields[i], ps.packed_fields[i].field.name)
     EXPECT_EQ(offsets[i], ps.packed_fields[i].offset)
 
@@ -156,7 +156,7 @@ def TestBools():
   errors += EXPECT_EQ(10, len(ps.packed_fields))
 
   # First 8 bits packed together.
-  for i in xrange(8):
+  for i in range(8):
     pf = ps.packed_fields[i]
     errors += EXPECT_EQ(0, pf.offset)
     errors += EXPECT_EQ("bit%d" % i, pf.field.name)

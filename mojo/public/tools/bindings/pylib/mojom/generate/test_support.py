@@ -5,7 +5,7 @@
 import sys
 import traceback
 
-import module as mojom
+import mojom.generate.module as mojom
 
 # Support for writing mojom test cases.
 # RunTest(fn) will execute fn, catching any exceptions. fn should return
