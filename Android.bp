@@ -871,7 +871,7 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
-        "com.android.bluetooth",
+        "com.android.btservices",
     ],
     min_sdk_version: "30",
 }
