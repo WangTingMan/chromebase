@@ -97,7 +97,7 @@ def _StateIsValid(state):
   if not isinstance(c, dict):
     _LOGGER.debug('State must contain a contents dict.')
     return False
-  for (relpath, md5) in c.iteritems():
+  for (relpath, md5) in c.items():
     if not isinstance(relpath, basestring) or len(relpath) == 0:
       _LOGGER.debug('State contents dict contains an invalid path.')
       return False
@@ -115,7 +115,7 @@ def _BuildActualState(stored, revision, output_dir):
   """
   contents = {}
   state = { 'revision': revision, 'contents': contents }
-  for relpath, md5 in stored['contents'].iteritems():
+  for relpath, md5 in stored['contents'].items():
     abspath = os.path.abspath(os.path.join(output_dir, relpath))
     if os.path.isfile(abspath):
       m = _Md5(abspath)
@@ -133,7 +133,7 @@ def _StatesAreConsistent(stored, actual):
     return False
   cont_stored = stored['contents']
   cont_actual = actual['contents']
-  for relpath, md5 in cont_stored.iteritems():
+  for relpath, md5 in cont_stored.items():
     if relpath not in cont_actual:
       _LOGGER.debug('Missing content: %s', relpath)
       return False

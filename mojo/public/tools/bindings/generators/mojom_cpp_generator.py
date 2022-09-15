@@ -266,7 +266,7 @@ class Generator(generator.Generator):
                 for typename in
                 self.module.structs + all_enums + self.module.unions)
     headers = set()
-    for typename, typemap in self.typemap.iteritems():
+    for typename, typemap in self.typemap.items():
       if typename in types:
         headers.update(typemap.get("public_headers", []))
     return sorted(headers)
@@ -788,7 +788,7 @@ class Generator(generator.Generator):
       if param_counts[-1] != version.num_fields:
         param_counts.append(version.num_fields)
 
-    ordinal_fields = sorted(struct.fields, key=lambda field: field.ordinal)
+    ordinal_fields = sorted(struct.fields, key=lambda field: field.ordinal if field.ordinal != None else -1)
     return (StructConstructor(struct.fields, ordinal_fields[:param_count])
             for param_count in param_counts)
 
