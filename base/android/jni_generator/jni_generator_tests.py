@@ -53,7 +53,7 @@ class TestGenerator(unittest.TestCase):
     dict_first = first.__dict__
     dict_second = second.__dict__
     self.assertEquals(dict_first.keys(), dict_second.keys())
-    for key, value in dict_first.iteritems():
+    for key, value in dict_first.items():
       if (type(value) is list and len(value) and
           isinstance(type(value[0]), object)):
         self.assertListEquals(value, second.__getattribute__(key))
@@ -64,7 +64,7 @@ class TestGenerator(unittest.TestCase):
 
   def assertListEquals(self, first, second):
     self.assertEquals(len(first), len(second))
-    for i in xrange(len(first)):
+    for i in range(len(first)):
       if isinstance(first[i], object):
         self.assertObjEquals(first[i], second[i])
       else:

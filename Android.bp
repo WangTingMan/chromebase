@@ -1169,19 +1169,6 @@ filegroup {
     ],
 }
 
-// Python in Chrome repository requires still Python 2.
-python_defaults {
-    name: "libmojo_scripts",
-    version: {
-        py2: {
-            enabled: true,
-        },
-        py3: {
-            enabled: false,
-        },
-    },
-}
-
 python_binary_host {
     name: "jni_generator",
     main: "base/android/jni_generator/jni_generator.py",
@@ -1189,7 +1176,6 @@ python_binary_host {
         "base/android/jni_generator/jni_generator.py",
         "build/**/*.py",
     ],
-    defaults: ["libmojo_scripts"],
 }
 
 python_binary_host {
@@ -1200,7 +1186,6 @@ python_binary_host {
         "base/android/jni_generator/jni_registration_generator.py",
         "build/**/*.py",
     ],
-    defaults: ["libmojo_scripts"],
 }
 
 python_binary_host {
@@ -1218,7 +1203,6 @@ python_binary_host {
         "mojo/public/tools/bindings/generators/java_templates/*.tmpl",
         "mojo/public/tools/bindings/generators/js_templates/*.tmpl",
     ],
-    defaults: ["libmojo_scripts"],
 }
 
 genrule {
@@ -1250,7 +1234,6 @@ python_binary_host {
         "mojo/public/tools/bindings/pylib/mojom/generate/module.py",
         "mojo/public/tools/bindings/pylib/mojom/generate/pack.py",
     ],
-    defaults: ["libmojo_scripts"],
 }
 
 genrule {
@@ -1290,7 +1273,6 @@ python_binary_host {
     srcs: [
         "mojo/public/tools/bindings/mojom_types_downgrader.py",
     ],
-    defaults: ["libmojo_scripts"],
 }
 
 generate_mojom_downgraded_files {

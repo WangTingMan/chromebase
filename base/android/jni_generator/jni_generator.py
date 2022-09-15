@@ -17,14 +17,7 @@ import sys
 import textwrap
 import zipfile
 
-CHROMIUM_SRC = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
-BUILD_ANDROID_GYP = os.path.join(
-    CHROMIUM_SRC, 'build', 'android', 'gyp')
-
-sys.path.append(BUILD_ANDROID_GYP)
-
-from util import build_utils
+from build.android.gyp.util import build_utils
 
 
 # Match single line comments, multiline comments, character literals, and
@@ -53,7 +46,7 @@ _WRAPPERS_BY_INDENT = [
                          replace_whitespace=False,
                          subsequent_indent=' ' * (indent + 4),
                          break_long_words=False)
-    for indent in xrange(50)]  # 50 chosen experimentally.
+    for indent in range(50)]  # 50 chosen experimentally.
 
 
 class ParseError(Exception):
@@ -799,7 +792,7 @@ class JNIFromJavaSource(object):
 
   @staticmethod
   def CreateFromFile(java_file_name, options):
-    contents = file(java_file_name).read()
+    contents = open(java_file_name).read()
     fully_qualified_class = ExtractFullyQualifiedJavaClassName(java_file_name,
                                                                contents)
     return JNIFromJavaSource(contents, fully_qualified_class, options)
@@ -856,7 +849,7 @@ const char kClassPath_${JAVA_CLASS}[] = \
 "${JNI_CLASS_PATH}";
 """)
 
-    for full_clazz in classes.itervalues():
+    for full_clazz in classes.values():
       values = {
           'JAVA_CLASS': GetBinaryClassName(full_clazz),
           'JNI_CLASS_PATH': full_clazz,
@@ -882,7 +875,7 @@ extern base::subtle::AtomicWord g_${JAVA_CLASS}_clazz;
 JNI_REGISTRATION_EXPORT base::subtle::AtomicWord g_${JAVA_CLASS}_clazz = 0;
 """ + class_getter)
 
-    for full_clazz in classes.itervalues():
+    for full_clazz in classes.values():
       values = {
           'JAVA_CLASS': GetBinaryClassName(full_clazz),
       }
@@ -1311,13 +1304,13 @@ def GenerateJNIHeader(input_file, output_file, options):
       jni_from_java_source = JNIFromJavaSource.CreateFromFile(
           input_file, options)
       content = jni_from_java_source.GetContent()
-  except ParseError, e:
-    print e
+  except ParseError as e:
+    print(e)
     sys.exit(1)
   if output_file:
     WriteOutput(output_file, content)
   else:
-    print content
+    print(content)
 
 
 def WriteOutput(output_file, content):
@@ -1393,7 +1386,7 @@ See SampleForTests.java for more details.
     input_file = options.input_file
   else:
     option_parser.print_help()
-    print '\nError: Must specify --jar_file or --input_file.'
+    print('\nError: Must specify --jar_file or --input_file.')
     return 1
   output_file = None
   if options.output_dir:

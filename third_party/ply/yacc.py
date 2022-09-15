@@ -195,8 +195,11 @@ class YaccProduction:
         self.lexer = None
         self.parser= None
     def __getitem__(self,n):
-        if n >= 0: return self.slice[n].value
-        else: return self.stack[n].value
+        if type(n) is slice:
+            return [s.value for s in self.slice[n]]
+        else:
+            if n >= 0: return self.slice[n].value
+            else: return self.stack[n].value
 
     def __setitem__(self,n,v):
         self.slice[n].value = v

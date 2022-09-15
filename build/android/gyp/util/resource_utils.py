@@ -59,7 +59,7 @@ def CreateResourceInfoFile(files_to_zip, zip_path):
   """
   info_file_path = zip_path + '.info'
   with open(info_file_path, 'w') as info_file:
-    for archive_path, source_path in files_to_zip.iteritems():
+    for archive_path, source_path in files_to_zip.items():
       info_file.write('{},{}\n'.format(archive_path, source_path))
 
 
@@ -260,7 +260,7 @@ def CreateRJavaFiles(srcjar_dir, package, main_r_txt_file,
       if entry:
         resources_by_type[entry.resource_type].append(entry)
 
-  for package, resources_by_type in resources_by_package.iteritems():
+  for package, resources_by_type in resources_by_package.items():
     _CreateRJavaSourceFile(srcjar_dir, package, resources_by_type,
                            rjava_build_options)
 
@@ -296,7 +296,7 @@ def _RenderRJavaSource(package, resources_by_type, rjava_build_options):
   """Render an R.java source file. See _CreateRJaveSourceFile for args info."""
   final_resources_by_type = collections.defaultdict(list)
   non_final_resources_by_type = collections.defaultdict(list)
-  for res_type, resources in resources_by_type.iteritems():
+  for res_type, resources in resources_by_type.items():
     for entry in resources:
       # Entries in stylable that are not int[] are not actually resource ids
       # but constants.
