@@ -10,11 +10,12 @@ RegisterNonMainDexNatives(). Together, these will use manual JNI registration
 to register all native methods that exist within an application."""
 
 import argparse
-import jni_generator
 import multiprocessing
 import string
 import sys
-from util import build_utils
+
+import jni_generator
+from build.android.gyp.util import build_utils
 
 
 # All but FULL_CLASS_NAME, which is used only for sorting.
@@ -58,7 +59,7 @@ def GenerateJNIHeader(java_file_paths, output_file, args):
   if output_file:
     jni_generator.WriteOutput(output_file, header_content)
   else:
-    print header_content
+    print(header_content)
 
 
 def _DictForPath(path):
@@ -244,7 +245,7 @@ ${KMETHODS}
     ret = []
     all_classes = self.helper.GetUniqueClasses(self.natives)
     all_classes[self.class_name] = self.fully_qualified_class
-    for clazz, full_clazz in all_classes.iteritems():
+    for clazz, full_clazz in all_classes.items():
       kmethods = self._GetKMethodsString(clazz)
       namespace_str = ''
       if self.namespace:
@@ -321,7 +322,7 @@ def main(argv):
   args.sources_files = build_utils.ParseGnList(args.sources_files)
 
   if not args.sources_files:
-    print '\nError: Must specify --sources_files.'
+    print('\nError: Must specify --sources_files.')
     return 1
 
   java_file_paths = []

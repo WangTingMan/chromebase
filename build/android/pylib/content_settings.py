@@ -29,7 +29,7 @@ class ContentSettings(dict):
       return 's'
     raise ValueError('Unsupported type %s' % type(value))
 
-  def iteritems(self):
+  def items(self):
     # Example row:
     # 'Row: 0 _id=13, name=logging_id2, value=-1fccbaa546705b05'
     for row in self._device.RunShellCommand(

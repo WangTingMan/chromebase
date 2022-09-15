@@ -47,7 +47,7 @@ class PackTest(unittest.TestCase):
     ps = pack.PackedStruct(struct)
     num_fields = len(ps.packed_fields)
     self.assertEquals(len(kinds), num_fields)
-    for i in xrange(num_fields):
+    for i in range(num_fields):
       self.assertEquals('%d' % fields[i], ps.packed_fields[i].field.name)
       self.assertEquals(offsets[i], ps.packed_fields[i].offset)
 

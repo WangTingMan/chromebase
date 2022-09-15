@@ -8,9 +8,9 @@ from functools import partial
 import os.path
 import re
 
-import module as mojom
+import mojom.generate.module as mojom
 import mojom.fileutil as fileutil
-import pack
+import mojom.generate.pack as pack
 
 
 def ExpectedArraySize(kind):
@@ -185,10 +185,10 @@ class Generator(object):
 
   def Write(self, contents, filename):
     if self.output_dir is None:
-      print contents
+      print(contents)
       return
     full_path = os.path.join(self.output_dir, filename)
-    WriteFile(contents, full_path)
+    WriteFile(contents.encode(), full_path)
 
   def GenerateFiles(self, args):
     raise NotImplementedError("Subclasses must override/implement this method")
