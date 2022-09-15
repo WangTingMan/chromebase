@@ -10,7 +10,6 @@
 """
 import operator
 import re
-from collections import Mapping
 from jinja2.runtime import Undefined
 from jinja2._compat import text_type, string_types, integer_types
 import decimal
@@ -79,14 +78,6 @@ def test_string(value):
     return isinstance(value, string_types)
 
 
-def test_mapping(value):
-    """Return true if the object is a mapping (dict etc.).
-
-    .. versionadded:: 2.6
-    """
-    return isinstance(value, Mapping)
-
-
 def test_number(value):
     """Return true if the variable is a number."""
     return isinstance(value, integer_types + (float, complex, decimal.Decimal))
@@ -149,7 +140,6 @@ TESTS = {
     'lower':            test_lower,
     'upper':            test_upper,
     'string':           test_string,
-    'mapping':          test_mapping,
     'number':           test_number,
     'sequence':         test_sequence,
     'iterable':         test_iterable,
