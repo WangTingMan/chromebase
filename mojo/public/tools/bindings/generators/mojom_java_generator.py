@@ -153,7 +153,7 @@ def GetInterfaceResponseName(method):
   return UpperCamelCase(method.name + 'Response')
 
 def ParseStringAttribute(attribute):
-  assert isinstance(attribute, basestring)
+  assert isinstance(attribute, str)
   return attribute
 
 def GetJavaTrueFalse(value):
@@ -333,7 +333,7 @@ def ExpressionToText(context, token, kind_spec=''):
   if kind_spec.startswith('i') or kind_spec.startswith('u'):
     # Add Long suffix to all integer literals.
     number = ast.literal_eval(token.lstrip('+ '))
-    if not isinstance(number, (int, long)):
+    if not isinstance(number, int):
       raise ValueError('got unexpected type %r for int literal %r' % (
           type(number), token))
     # If the literal is too large to fit a signed long, convert it to the

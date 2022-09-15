@@ -13,7 +13,7 @@ already been parsed and converted to ASTs before.
 import os
 import re
 
-import module as mojom
+import mojom.generate.module as mojom
 from mojom.parse import ast
 
 def _DuplicateName(values):
@@ -122,7 +122,7 @@ def _LookupKind(kinds, spec, scope):
   to the location where the type is referenced."""
   if spec.startswith('x:'):
     mojom_name = spec[2:]
-    for i in xrange(len(scope), -1, -1):
+    for i in range(len(scope), -1, -1):
       test_spec = 'x:'
       if i > 0:
         test_spec += '.'.join(scope[:i]) + '.'
@@ -141,7 +141,7 @@ def _LookupValue(values, mojom_name, scope, kind):
   # enum name.
   if isinstance(kind, mojom.Enum) and '.' not in mojom_name:
     mojom_name = '%s.%s' % (kind.spec.split(':', 1)[1], mojom_name)
-  for i in reversed(xrange(len(scope) + 1)):
+  for i in reversed(range(len(scope) + 1)):
     test_spec = '.'.join(scope[:i])
     if test_spec:
       test_spec += '.'
@@ -225,12 +225,12 @@ def _Kind(kinds, spec, scope):
 def _Import(module, import_module):
   # Copy the struct kinds from our imports into the current module.
   importable_kinds = (mojom.Struct, mojom.Union, mojom.Enum, mojom.Interface)
-  for kind in import_module.kinds.itervalues():
+  for kind in import_module.kinds.values():
     if (isinstance(kind, importable_kinds) and
         kind.module.path == import_module.path):
       module.kinds[kind.spec] = kind
   # Ditto for values.
-  for value in import_module.values.itervalues():
+  for value in import_module.values.values():
     if value.module.path == import_module.path:
       module.values[value.GetSpec()] = value
 
@@ -255,12 +255,14 @@ def _Struct(module, parsed_struct):
     struct.constants = []
     struct.fields_data = []
   else:
-    struct.enums = map(
-        lambda enum: _Enum(module, enum, struct),
-        _ElemsOfType(parsed_struct.body, ast.Enum, parsed_struct.mojom_name))
-    struct.constants = map(
-        lambda constant: _Constant(module, constant, struct),
-        _ElemsOfType(parsed_struct.body, ast.Const, parsed_struct.mojom_name))
+    struct.enums = [
+        _Enum(module, enum, struct) for enum in
+        _ElemsOfType(parsed_struct.body, ast.Enum, parsed_struct.mojom_name)
+    ]
+    struct.constants = [
+        _Constant(module, constant, struct) for constant in
+        _ElemsOfType(parsed_struct.body, ast.Const, parsed_struct.mojom_name)
+    ]
     # Stash fields parsed_struct here temporarily.
     struct.fields_data = _ElemsOfType(
         parsed_struct.body, ast.StructField, parsed_struct.mojom_name)
@@ -374,13 +376,15 @@ def _Method(module, parsed_method, interface):
   method = mojom.Method(
       interface, parsed_method.mojom_name,
       ordinal=parsed_method.ordinal.value if parsed_method.ordinal else None)
-  method.parameters = map(
-      lambda parameter: _Parameter(module, parameter, interface),
-      parsed_method.parameter_list)
+  method.parameters = [
+      _Parameter(module, parameter, interface) for parameter in
+      parsed_method.parameter_list
+  ]
   if parsed_method.response_parameter_list is not None:
-    method.response_parameters = map(
-        lambda parameter: _Parameter(module, parameter, interface),
-                          parsed_method.response_parameter_list)
+    method.response_parameters = [
+        _Parameter(module, parameter, interface) for parameter in
+        parsed_method.response_parameter_list
+    ]
   method.attributes = _AttributeListToDict(parsed_method.attribute_list)
 
   # Enforce that only methods with response can have a [Sync] attribute.
@@ -405,12 +409,14 @@ def _Interface(module, parsed_iface):
   interface.mojom_name = parsed_iface.mojom_name
   interface.spec = 'x:' + module.mojom_namespace + '.' + interface.mojom_name
   module.kinds[interface.spec] = interface
-  interface.enums = map(
-      lambda enum: _Enum(module, enum, interface),
-      _ElemsOfType(parsed_iface.body, ast.Enum, parsed_iface.mojom_name))
-  interface.constants = map(
-      lambda constant: _Constant(module, constant, interface),
-      _ElemsOfType(parsed_iface.body, ast.Const, parsed_iface.mojom_name))
+  interface.enums = [
+    _Enum(module, enum, interface) for enum in
+    _ElemsOfType(parsed_iface.body, ast.Enum, parsed_iface.mojom_name)
+  ]
+  interface.constants = [
+      _Constant(module, constant, interface) for constant in
+      _ElemsOfType(parsed_iface.body, ast.Const, parsed_iface.mojom_name)
+  ]
   # Stash methods parsed_iface here temporarily.
   interface.methods_data = _ElemsOfType(
       parsed_iface.body, ast.Method, parsed_iface.mojom_name)
@@ -504,9 +510,10 @@ def _Enum(module, parsed_enum, parent_kind):
   enum.parent_kind = parent_kind
   enum.attributes = _AttributeListToDict(parsed_enum.attribute_list)
   if not enum.native_only:
-    enum.fields = map(
-        lambda field: _EnumField(module, enum, field, parent_kind),
-        parsed_enum.enum_value_list)
+    enum.fields = [
+        _EnumField(module, enum, field, parent_kind) for field in
+        parsed_enum.enum_value_list
+    ]
     enum.min_value, enum.max_value = _ResolveNumericEnumValues(enum.fields)
 
   module.kinds[enum.spec] = enum
@@ -576,35 +583,37 @@ def _Module(tree, path, imports):
 
   filename = os.path.basename(path)
   # First pass collects kinds.
-  module.enums = map(
-      lambda enum: _Enum(module, enum, None),
-      _ElemsOfType(tree.definition_list, ast.Enum, filename))
-  module.structs = map(
-      lambda struct: _Struct(module, struct),
-      _ElemsOfType(tree.definition_list, ast.Struct, filename))
-  module.unions = map(
-      lambda union: _Union(module, union),
-      _ElemsOfType(tree.definition_list, ast.Union, filename))
-  module.interfaces = map(
-      lambda interface: _Interface(module, interface),
-      _ElemsOfType(tree.definition_list, ast.Interface, filename))
-  module.constants = map(
-      lambda constant: _Constant(module, constant, None),
-      _ElemsOfType(tree.definition_list, ast.Const, filename))
+  module.enums = [
+      _Enum(module, enum, None) for enum in
+      _ElemsOfType(tree.definition_list, ast.Enum, filename)
+  ]
+  module.structs = [
+      _Struct(module, struct) for struct in
+      _ElemsOfType(tree.definition_list, ast.Struct, filename)
+  ]
+  module.unions = [
+      _Union(module, union) for union in
+      _ElemsOfType(tree.definition_list, ast.Union, filename)
+  ]
+  module.interfaces = [
+      _Interface(module, interface) for interface in
+      _ElemsOfType(tree.definition_list, ast.Interface, filename)
+  ]
+  module.constants = [
+      _Constant(module, constant, None) for constant in
+      _ElemsOfType(tree.definition_list, ast.Const, filename)
+  ]
 
   # Second pass expands fields and methods. This allows fields and parameters
   # to refer to kinds defined anywhere in the mojom.
   for struct in module.structs:
-    struct.fields = map(lambda field:
-        _StructField(module, field, struct), struct.fields_data)
+    struct.fields = [_StructField(module, field, struct) for field in struct.fields_data]
     del struct.fields_data
   for union in module.unions:
-    union.fields = map(lambda field:
-        _UnionField(module, field, union), union.fields_data)
+    union.fields = [_UnionField(module, field, union) for field in union.fields_data]
     del union.fields_data
   for interface in module.interfaces:
-    interface.methods = map(lambda method:
-        _Method(module, method, interface), interface.methods_data)
+    interface.methods = [_Method(module, method, interface) for method in interface.methods_data]
     del interface.methods_data
 
   return module
