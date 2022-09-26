@@ -17,6 +17,7 @@
 #include "base/threading/thread_restrictions.h"
 #include "base/win/scoped_handle.h"
 #include "base/win/windows_version.h"
+#include "base/strings/sys_string_conversions.h"
 #include "build/build_config.h"
 
 #include <windows.h>
@@ -43,6 +44,8 @@ typedef struct tagTHREADNAME_INFO {
 // The SetThreadDescription API was brought in version 1607 of Windows 10.
 typedef HRESULT(WINAPI* SetThreadDescription)(HANDLE hThread,
                                               PCWSTR lpThreadDescription);
+typedef HRESULT( WINAPI* GetThreadDescription )( HANDLE hThread,
+    PWSTR * lpThreadDescription );
 
 // This function has try handling, so it is separated out of its caller.
 void SetNameInternal(PlatformThreadId thread_id, const char* name) {
@@ -227,8 +230,10 @@ void PlatformThread::SetName(const std::string& name) {
       reinterpret_cast<SetThreadDescription>(::GetProcAddress(
           ::GetModuleHandle(L"Kernel32.dll"), "SetThreadDescription"));
   if (set_thread_description_func) {
+    std::wstring thread_name = SysNativeMBToWide( name );
     set_thread_description_func(::GetCurrentThread(),
-                                base::UTF8ToWide(name).c_str());
+                                thread_name.c_str());
+    return;
   }
 
   // The debugger needs to be around to catch the name in the exception.  If
@@ -242,6 +247,25 @@ void PlatformThread::SetName(const std::string& name) {
 // static
 const char* PlatformThread::GetName() {
   return ThreadIdNameManager::GetInstance()->GetName(CurrentId());
+}
+
+std::string PlatformThread::GetName( PlatformThreadHandle hdl )
+{
+    static auto get_thread_description_func =
+        reinterpret_cast< GetThreadDescription >( ::GetProcAddress(
+            ::GetModuleHandle( L"Kernel32.dll" ), "GetThreadDescription" ) );
+    if( get_thread_description_func )
+    {
+        PWSTR p_thread_name = nullptr;
+        HRESULT ret = get_thread_description_func( hdl.platform_handle(), &p_thread_name );
+        if( SUCCEEDED( ret ) )
+        {
+            std::string thread_name = SysWideToNativeMB( p_thread_name );
+            return thread_name;
+        }
+    }
+
+    return "";
 }
 
 // static

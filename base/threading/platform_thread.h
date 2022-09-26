@@ -155,6 +155,8 @@ class BASE_EXPORT PlatformThread {
   // Gets the thread name, if previously set by SetName.
   static const char* GetName();
 
+  static std::string GetName( PlatformThreadHandle hdl );
+
   // Creates a new thread.  The |stack_size| parameter can be 0 to indicate
   // that the default stack size should be used.  Upon success,
   // |*thread_handle| will be assigned a handle to the newly created thread,
