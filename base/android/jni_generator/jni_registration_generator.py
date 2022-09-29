@@ -14,7 +14,7 @@ import multiprocessing
 import string
 import sys
 
-import jni_generator
+import base.android.jni_generator.jni_generator as jni_generator
 from build.android.gyp.util import build_utils
 
 
