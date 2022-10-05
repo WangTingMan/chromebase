@@ -65,7 +65,7 @@ def LoadGenerators(generators_string):
       print("Unknown generator name %s" % generator_name)
       sys.exit(1)
     generator_module = importlib.import_module(
-        "generators.%s" % _BUILTIN_GENERATORS[language])
+        "mojo.public.tools.bindings.generators.%s" % _BUILTIN_GENERATORS[language])
     generators[language] = generator_module
   return generators
 
