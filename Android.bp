@@ -1171,6 +1171,7 @@ filegroup {
 
 python_binary_host {
     name: "jni_generator",
+    defaults: ["modern_python_path_defaults"],
     main: "base/android/jni_generator/jni_generator.py",
     srcs: [
         "base/android/jni_generator/jni_generator.py",
@@ -1180,6 +1181,7 @@ python_binary_host {
 
 python_binary_host {
     name: "jni_registration_generator",
+    defaults: ["modern_python_path_defaults"],
     main: "base/android/jni_generator/jni_registration_generator.py",
     srcs: [
         "base/android/jni_generator/jni_generator.py",
@@ -1190,6 +1192,7 @@ python_binary_host {
 
 python_binary_host {
     name: "mojom_bindings_generator",
+    defaults: ["modern_python_path_defaults"],
     main: "mojo/public/tools/bindings/mojom_bindings_generator.py",
     srcs: [
         "build/**/*.py",
@@ -1224,6 +1227,7 @@ genrule {
 
 python_binary_host {
     name: "mojom_generate_type_mappings",
+    defaults: ["modern_python_path_defaults"],
     main: "libchrome_tools/mojom_generate_type_mappings.py",
     srcs: [
         "build/gn_helpers.py",
@@ -1269,6 +1273,7 @@ genrule {
 
 python_binary_host {
     name: "mojom_types_downgrader",
+    defaults: ["modern_python_path_defaults"],
     main: "mojo/public/tools/bindings/mojom_types_downgrader.py",
     srcs: [
         "mojo/public/tools/bindings/mojom_types_downgrader.py",
