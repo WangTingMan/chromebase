@@ -13,6 +13,7 @@ project( but you must comply with the rule from google ).
 # About the latest chromium version
 Actually I do not have much time to keep updating this repo to the latest chromium, but I will try
 to update it.
+Please star this project if you think it's useful to you. Thanks.
 
 
 # 剪切chromium的基础库，并且在VS2019中编译
@@ -28,3 +29,4 @@ libchrome。该项目是跨平台的：因为chrome浏览器本身就是跨平�
 # 关于更新到chromium最新版
 该库是业余时间剪切的，我没有太多时间来更新到最新版，不过有时间的话，我会尽量更新到最新版。
 如果有任何使用问题可以提出。
+如果对你有帮助的话，帮忙加颗星。谢谢
