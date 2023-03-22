@@ -332,6 +332,9 @@ class BASE_EXPORT FilePath {
   // it is an error to pass an absolute path.
   FilePath Append(StringPieceType component) const WARN_UNUSED_RESULT;
   FilePath Append(const FilePath& component) const WARN_UNUSED_RESULT;
+#if defined(OS_WIN)
+  FilePath Append( const std::string& component ) const WARN_UNUSED_RESULT;
+#endif
 
   // Although Windows StringType is std::wstring, since the encoding it uses for
   // paths is well defined, it can handle ASCII path components as well.

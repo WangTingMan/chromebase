@@ -7,6 +7,8 @@
 
 namespace switches {
 
+#ifndef OS_WIN
+
 // Delays execution of base::TaskPriority::BACKGROUND tasks until shutdown.
 const char kDisableBackgroundTasks[] = "disable-background-tasks";
 
@@ -91,9 +93,11 @@ const char kTraceToFileName[]               = "trace-to-file-name";
 // for tests.
 const char kProfilingFile[] = "profiling-file";
 
+#endif
+
 #if defined(OS_WIN)
 // Disables the USB keyboard detection for blocking the OSK on Win8+.
-const char kDisableUsbKeyboardDetect[]      = "disable-usb-keyboard-detect";
+//const char kDisableUsbKeyboardDetect[]      = "disable-usb-keyboard-detect";
 #endif
 
 #if defined(OS_LINUX) && !defined(OS_CHROMEOS)

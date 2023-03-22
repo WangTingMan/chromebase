@@ -550,6 +550,13 @@ FilePath FilePath::Append(const FilePath& component) const {
   return Append(component.value());
 }
 
+#if defined(OS_WIN)
+FilePath FilePath::Append( const std::string& component ) const
+{
+    return Append( SysNativeMBToWide( component ) );
+}
+#endif
+
 FilePath FilePath::AppendASCII(StringPiece component) const {
   DCHECK(base::IsStringASCII(component));
 #if defined(OS_WIN)
