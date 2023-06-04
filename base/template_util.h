@@ -22,8 +22,9 @@
 // you attempt to mix an earlier version of libstdc++ with >= GCC5. But
 // that's unlikely to work out, especially as GCC5 changed ABI.
 #define CR_GLIBCXX_5_0_0 20150123
-#if (defined(__GNUC__) && __GNUC__ < 5) || \
-    (defined(__GLIBCXX__) && __GLIBCXX__ == CR_GLIBCXX_5_0_0)
+// `!defined(__clang__)` is a local android patch
+#if !defined(__clang__) && ((defined(__GNUC__) && __GNUC__ < 5) || \
+    (defined(__GLIBCXX__) && __GLIBCXX__ == CR_GLIBCXX_5_0_0))
 #define CR_USE_FALLBACKS_FOR_OLD_EXPERIMENTAL_GLIBCXX
 #endif
 
