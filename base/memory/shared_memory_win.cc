@@ -244,6 +244,44 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   return true;
 }
 
+bool SharedMemory::Open( const std::string& name, bool read_only )
+{
+    DCHECK( !shm_.IsValid() );
+    DWORD access = FILE_MAP_READ | SECTION_QUERY;
+    if( !read_only )
+        access |= FILE_MAP_WRITE;
+    name_ = ASCIIToUTF16( name );
+    read_only_ = read_only;
+
+    // This form of sharing shared memory is deprecated. https://crbug.com/345734.
+    // However, we can't get rid of it without a significant refactor because its
+    // used to communicate between two versions of the same service process, very
+    // early in the life cycle.
+    // Technically, we should also pass the GUID from the original shared memory
+    // region. We don't do that - this means that we will overcount this memory,
+    // which thankfully isn't relevant since Chrome only communicates with a
+    // single version of the service process.
+    // We pass the size |0|, which is a dummy size and wrong, but otherwise
+    // harmless.
+    shm_ = SharedMemoryHandle(
+        OpenFileMapping( access, false, name_.empty() ? nullptr : name_.c_str() ),
+        0u, UnguessableToken::Create() );
+    if( !shm_.IsValid() )
+        return false;
+    // If a name specified assume it's an external section.
+    if( !name_.empty() )
+        external_section_ = true;
+    // Note: size_ is not set in this case.
+    return true;
+}
+
+bool SharedMemory::Delete( const std::string& name )
+{
+    // Like on Windows, this is intentionally returning true as ashmem will
+    // automatically releases the resource when all FDs on it are closed.
+    return true;
+}
+
 bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   if (!shm_.IsValid()) {
     DLOG(ERROR) << "Invalid SharedMemoryHandle.";
