@@ -91,6 +91,8 @@
     <ClCompile Include="..\..\base\memory\memory_coordinator_proxy.cc" />
     <ClCompile Include="..\..\base\memory\platform_shared_memory_region.cc" />
     <ClCompile Include="..\..\base\memory\platform_shared_memory_region_win.cc" />
+    <ClCompile Include="..\..\base\memory\protected_memory.cc" />
+    <ClCompile Include="..\..\base\memory\protected_memory_win.cc" />
     <ClCompile Include="..\..\base\memory\read_only_shared_memory_region.cc" />
     <ClCompile Include="..\..\base\memory\ref_counted.cc" />
     <ClCompile Include="..\..\base\memory\ref_counted_memory.cc" />
@@ -400,6 +402,7 @@
     <ClInclude Include="..\..\base\memory\memory_coordinator_proxy.h" />
     <ClInclude Include="..\..\base\memory\memory_dump_provider.h" />
     <ClInclude Include="..\..\base\memory\platform_shared_memory_region.h" />
+    <ClInclude Include="..\..\base\memory\protected_memory.h" />
     <ClInclude Include="..\..\base\memory\protected_memory_buildflags.h" />
     <ClInclude Include="..\..\base\memory\protected_memory_cfi.h" />
     <ClInclude Include="..\..\base\memory\ptr_util.h" />

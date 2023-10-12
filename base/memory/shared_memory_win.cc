@@ -142,6 +142,8 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
 
 SharedMemory::SharedMemory() {}
 
+SharedMemory::SharedMemory( const string16& name ) : name_( name ) {}
+
 SharedMemory::SharedMemory(const SharedMemoryHandle& handle, bool read_only)
     : external_section_(true), shm_(handle), read_only_(read_only) {}
 
@@ -158,6 +160,14 @@ bool SharedMemory::IsHandleValid(const SharedMemoryHandle& handle) {
 // static
 void SharedMemory::CloseHandle(const SharedMemoryHandle& handle) {
   handle.Close();
+}
+
+// static
+size_t SharedMemory::GetHandleLimit()
+{
+    // Rounded down from value reported here:
+    // http://blogs.technet.com/b/markrussinovich/archive/2009/09/29/3283844.aspx
+    return static_cast< size_t >( 1 << 23 );
 }
 
 // static

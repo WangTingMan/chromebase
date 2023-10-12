@@ -948,6 +948,12 @@
     <ClCompile Include="..\..\ui\gfx\geometry\point.cc">
       <Filter>ui\gdx\geometry</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\base\memory\protected_memory.cc">
+      <Filter>base\memory</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\base\memory\protected_memory_win.cc">
+      <Filter>base\memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\base\debug\activity_tracker.h">
@@ -2056,6 +2062,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ui\gfx\geometry\point.h">
       <Filter>ui\gdx\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\memory\protected_memory.h">
+      <Filter>base\memory</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

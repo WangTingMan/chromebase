@@ -109,7 +109,7 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
 
 // static
 PlatformSharedMemoryRegion PlatformSharedMemoryRegion::Take(
-    win::ScopedHandle handle,
+    ScopedPlatformHandle handle,
     Mode mode,
     size_t size,
     const UnguessableToken& guid) {
