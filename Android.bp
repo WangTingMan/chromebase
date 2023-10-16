@@ -876,6 +876,7 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.btservices",
+        "com.android.nfcservices",
     ],
     min_sdk_version: "30",
 }
