@@ -95,6 +95,24 @@ OSInfo** OSInfo::GetInstanceStorage() {
       ::GetVersionEx( reinterpret_cast< _OSVERSIONINFOW* >( &version_info ) );
 #pragma clang diagnostic pop
 
+      HMODULE hModNtdll = NULL;
+      DWORD dwMajorVer, dwMinorVer, dwBuildNumber;
+      if( hModNtdll = LoadLibrary( TEXT( "ntdll.dll" ) ) )
+      {
+          typedef void ( WINAPI* RtlGetNtVersionNumbers )( DWORD*, DWORD*, DWORD* );
+          RtlGetNtVersionNumbers pfRtlGetNtVersionNumbers;
+          pfRtlGetNtVersionNumbers = (RtlGetNtVersionNumbers)GetProcAddress( hModNtdll, "RtlGetNtVersionNumbers" );
+          if( pfRtlGetNtVersionNumbers )
+          {
+              pfRtlGetNtVersionNumbers( &dwMajorVer, &dwMinorVer, &dwBuildNumber );
+              dwBuildNumber &= 0xffff;
+              version_info.dwMajorVersion = dwMajorVer;
+              version_info.dwMinorVersion = dwMinorVer;
+              version_info.dwBuildNumber = dwBuildNumber;
+          }
+          FreeLibrary( hModNtdll );
+      }
+
       DWORD os_type = 0;
       ::GetProductInfo( version_info.dwMajorVersion, version_info.dwMinorVersion,
           0, 0, &os_type );
