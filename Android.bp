@@ -876,11 +876,9 @@ cc_library {
     apex_available: [
         "//apex_available:platform",
         "com.android.btservices",
-        "com.android.nfcservices",
     ],
     min_sdk_version: "30",
     visibility: [
-        "//cts/hostsidetests/securitybulletin/securityPatch:__subpackages__",
         "//device/google/bertha:__subpackages__",
         "//device/google/cheets2/camera/v3",
         "//external/avb",
@@ -897,11 +895,9 @@ cc_library {
         "//hardware/interfaces/security/keymint/aidl/vts/performance",
         "//hardware/nxp/secure_element/snxxx:__subpackages__",
         "//hardware/nxp/uwb",
-        "//packages/apps/Nfc/nci/jni",
         "//packages/modules/Bluetooth:__subpackages__",
         "//system/core/fs_mgr/libfs_avb",
         "//system/core/fs_mgr/libsnapshot",
-        "//system/nfc:__subpackages__",
         "//system/security/keystore",
         "//system/update_engine",
         "//test/sts/tests/hostside/securityPatch:__subpackages__",
