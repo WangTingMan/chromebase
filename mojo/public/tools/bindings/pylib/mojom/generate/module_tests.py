@@ -4,7 +4,7 @@
 
 import sys
 
-import test_support
+import mojom.generate.test_support as test_support
 
 EXPECT_EQ = test_support.EXPECT_EQ
 EXPECT_TRUE = test_support.EXPECT_TRUE
