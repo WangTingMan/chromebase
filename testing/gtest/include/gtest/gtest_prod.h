@@ -4,7 +4,9 @@
 #include <build/build_config.h>
 
 #ifdef GTEST_DISABLED
-#define FRIEND_TEST( A, B ) 
+#ifndef FRIEND_TEST
+#define FRIEND_TEST( A, B )
+#endif
 #else
 #include <gtest/gtest_prod.h>
 #endif
