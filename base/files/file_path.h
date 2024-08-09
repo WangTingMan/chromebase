@@ -182,7 +182,7 @@ class BASE_EXPORT FilePath {
 
 #if defined(OS_WIN)
 
-  FilePath( std::string path );
+  FilePath( std::string const& path );
 
   // Adds |extension| to |file_name|. Returns the current FilePath if
   // |extension| is empty. Returns "" if BaseName() == "." or "..".

@@ -185,7 +185,7 @@ FilePath::~FilePath() = default;
 
 #if defined(OS_WIN)
 
-FilePath::FilePath( std::string a_path )
+FilePath::FilePath( std::string const& a_path )
 {
     std::wstring wstr = base::SysMultiByteToWide( a_path, 0 );
     StringPieceType path( wstr.c_str() );
