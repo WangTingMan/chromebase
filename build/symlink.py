@@ -40,7 +40,7 @@ def Main(argv):
       continue
     try:
       os.symlink(s, t)
-    except OSError, e:
+    except OSError as e:
       if e.errno == errno.EEXIST and options.force:
         if os.path.isdir(t):
           shutil.rmtree(t, ignore_errors=True)

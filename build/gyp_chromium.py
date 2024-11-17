@@ -56,7 +56,7 @@ def GetGypVars(_):
 def main():
   gyp_environment.SetEnvironment()
 
-  print 'Updating projects from gyp files...'
+  print('Updating projects from gyp files...')
   sys.stdout.flush()
   sys.exit(gyp.main(sys.argv[1:] + [
       '--check',

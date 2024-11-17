@@ -30,12 +30,12 @@ def main():
     found_version = \
         subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE).communicate()[0]
     if VERSION in found_version:
-      print "Xcode %s already installed" % VERSION
+      print("Xcode %s already installed" % VERSION)
       sys.exit(0)
 
   # Confirm old dir is there first.
   if not os.path.exists(REMOVE_DIR):
-    print "Failing early since %s isn't there." % REMOVE_DIR
+    print("Failing early since %s isn't there." % REMOVE_DIR)
     sys.exit(1)
 
   # Download Xcode.

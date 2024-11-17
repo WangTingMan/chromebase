@@ -25,7 +25,7 @@ if ret != 0:
     # Windows error codes such as 0xC0000005 and 0xC0000409 are much easier to
     # recognize and differentiate in hex. In order to print them as unsigned
     # hex we need to add 4 Gig to them.
-    print '%s failed with exit code 0x%08X' % (sys.argv[1], ret + (1 << 32))
+    print('%s failed with exit code 0x%08X' % (sys.argv[1], ret + (1 << 32)))
   else:
-    print '%s failed with exit code %d' % (sys.argv[1], ret)
+    print('%s failed with exit code %d' % (sys.argv[1], ret))
 sys.exit(ret)

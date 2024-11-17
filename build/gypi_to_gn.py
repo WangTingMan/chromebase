@@ -100,10 +100,10 @@ def LoadPythonDictionary(path):
   file_string = open(path).read()
   try:
     file_data = eval(file_string, {'__builtins__': None}, None)
-  except SyntaxError, e:
+  except SyntaxError as e:
     e.filename = path
     raise
-  except Exception, e:
+  except Exception as e:
     raise Exception("Unexpected error while reading %s: %s" % (path, str(e)))
 
   assert isinstance(file_data, dict), "%s does not eval to a dictionary" % path
@@ -182,11 +182,11 @@ def main():
       data[key[:-1]] = data[key]
       del data[key]
 
-  print gn_helpers.ToGNString(data)
+  print(gn_helpers.ToGNString(data))
 
 if __name__ == '__main__':
   try:
     main()
-  except Exception, e:
-    print str(e)
+  except Exception as e:
+    print(str(e))
     sys.exit(1)

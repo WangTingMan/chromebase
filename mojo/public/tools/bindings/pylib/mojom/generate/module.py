@@ -12,6 +12,8 @@
 # method = interface.AddMethod('Tat', 0)
 # method.AddParameter('baz', 0, mojom.INT32)
 
+from uuid import UUID
+
 # We use our own version of __repr__ when displaying the AST, as the
 # AST currently doesn't capture which nodes are reference (e.g. to
 # types) and which nodes are definitions. This allows us to e.g. print
@@ -224,6 +226,7 @@ PRIMITIVES = (
 ATTRIBUTE_MIN_VERSION = 'MinVersion'
 ATTRIBUTE_EXTENSIBLE = 'Extensible'
 ATTRIBUTE_SYNC = 'Sync'
+ATTRIBUTE_UUID = 'Uuid'
 
 
 class NamedValue(object):
@@ -641,6 +644,20 @@ class Interface(ReferenceKind):
       enum.Stylize(stylizer)
     for constant in self.constants:
       constant.Stylize(stylizer)
+
+  @property
+  def uuid(self):
+    uuid_str = self.attributes.get(ATTRIBUTE_UUID) if self.attributes else None
+    if uuid_str is None:
+      return None
+
+    try:
+      u = UUID(uuid_str)
+    except:
+      raise ValueError('Invalid format for Uuid attribute on interface {}. '
+                       'Expected standard RFC 4122 string representation of '
+                       'a UUID.'.format(self.mojom_name))
+    return (int(u.hex[:16], 16), int(u.hex[16:], 16))
 
 
 class AssociatedInterface(ReferenceKind):

@@ -106,8 +106,8 @@ def CreateTool(tool_name, device):
   if ctor:
     return ctor(device)
   else:
-    print 'Unknown tool %s, available tools: %s' % (
-        tool_name, ', '.join(sorted(TOOL_REGISTRY.keys())))
+    print('Unknown tool %s, available tools: %s' % (
+        tool_name, ', '.join(sorted(TOOL_REGISTRY.keys()))))
     sys.exit(1)
 
 def PushFilesForTool(tool_name, device):
@@ -124,7 +124,7 @@ def PushFilesForTool(tool_name, device):
   if clazz:
     clazz.CopyFiles(device)
   else:
-    print 'Unknown tool %s, available tools: %s' % (
-        tool_name, ', '.join(sorted(TOOL_REGISTRY.keys())))
+    print('Unknown tool %s, available tools: %s' % (
+        tool_name, ', '.join(sorted(TOOL_REGISTRY.keys()))))
     sys.exit(1)
 

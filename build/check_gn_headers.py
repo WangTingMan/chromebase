@@ -135,7 +135,7 @@ def GetDepsPrefixes(q):
     gclient_out = subprocess.check_output([
         os.path.join(DEPOT_TOOLS_DIR, gclient_exe),
         'recurse', '--no-progress', '-j1',
-        'python', '-c', 'import os;print os.environ["GCLIENT_DEP_PATH"]'],
+        'python', '-c', 'import os;print(os.environ["GCLIENT_DEP_PATH"])'],
         universal_newlines=True)
     for i in gclient_out.split('\n'):
       if i.startswith('src/'):
@@ -152,7 +152,7 @@ def IsBuildClean(out_dir):
     out = subprocess.check_output(cmd)
     return 'no work to do.' in out
   except Exception as e:
-    print e
+    print(e)
     return False
 
 def ParseWhiteList(whitelist):
@@ -211,7 +211,7 @@ def main():
       # Assume running on the bots. Silently skip this step.
       # This is possible because "analyze" step can be wrong due to
       # underspecified header files. See crbug.com/725877
-      print dirty_msg
+      print(dirty_msg)
       DumpJson([])
       return 0
     else:
@@ -250,7 +250,7 @@ def main():
   if deps_err:
     PrintError(deps_err)
   if len(GetNonExistingFiles(d)) > 0:
-    print 'Non-existing files in ninja deps:', GetNonExistingFiles(d)
+    print('Non-existing files in ninja deps:', GetNonExistingFiles(d))
     PrintError('Found non-existing files in ninja deps. You should ' +
                'build all in OUT_DIR.')
   if len(d) == 0:
@@ -272,30 +272,30 @@ def main():
     return 0
 
   if len(missing) > 0:
-    print '\nThe following files should be included in gn files:'
+    print('\nThe following files should be included in gn files:')
     for i in missing:
-      print i
+      print(i)
 
   if len(nonexisting) > 0:
-    print '\nThe following non-existing files should be removed from gn files:'
+    print('\nThe following non-existing files should be removed from gn files:')
     for i in nonexisting:
-      print i
+      print(i)
 
   if args.verbose:
     # Only get detailed obj dependency here since it is slower.
     GetHeadersFromNinja(args.out_dir, False, d_q)
     d, d_err = d_q.get()
-    print '\nDetailed dependency info:'
+    print('\nDetailed dependency info:')
     for f in missing:
-      print f
+      print(f)
       for cc in d[f]:
-        print '  ', cc
+        print('  ', cc)
 
-    print '\nMissing headers sorted by number of affected object files:'
+    print('\nMissing headers sorted by number of affected object files:')
     count = {k: len(v) for (k, v) in d.items()}
     for f in sorted(count, key=count.get, reverse=True):
       if f in missing:
-        print count[f], f
+        print(count[f], f)
 
   return 1
 

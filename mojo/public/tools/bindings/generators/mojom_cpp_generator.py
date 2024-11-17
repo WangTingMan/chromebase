@@ -256,16 +256,19 @@ class Generator(generator.Generator):
     return used_typemaps
 
   def _GetExtraPublicHeaders(self):
+    headers = set()
+
     all_enums = list(self.module.enums)
     for struct in self.module.structs:
       all_enums.extend(struct.enums)
     for interface in self.module.interfaces:
       all_enums.extend(interface.enums)
+      if interface.uuid:
+        headers.add('base/token.h')
 
     types = set(self._GetFullMojomNameForKind(typename)
                 for typename in
                 self.module.structs + all_enums + self.module.unions)
-    headers = set()
     for typename, typemap in self.typemap.items():
       if typename in types:
         headers.update(typemap.get("public_headers", []))

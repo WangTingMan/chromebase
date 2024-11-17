@@ -53,7 +53,7 @@ def add_depot_tools_to_path():
       return i
     previous_dir = root_dir
     root_dir = os.path.dirname(root_dir)
-  print >> sys.stderr, 'Failed to find depot_tools'
+  print('Failed to find depot_tools', file=sys.stderr)
   return None
 
 DEPOT_TOOLS_PATH = add_depot_tools_to_path()
@@ -65,7 +65,7 @@ import breakpad
 def main():
   if DEPOT_TOOLS_PATH is None:
     return 1
-  print DEPOT_TOOLS_PATH
+  print(DEPOT_TOOLS_PATH)
   return 0
 
 
