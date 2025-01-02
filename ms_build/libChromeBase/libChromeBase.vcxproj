@@ -245,6 +245,7 @@
     <ClCompile Include="..\..\base\time\time.cc" />
     <ClCompile Include="..\..\base\time\time_override.cc" />
     <ClCompile Include="..\..\base\time\time_win.cc" />
+    <ClCompile Include="..\..\base\token.cc" />
     <ClCompile Include="..\..\base\unguessable_token.cc" />
     <ClCompile Include="..\..\base\values.cc" />
     <ClCompile Include="..\..\base\value_iterators.cc" />
@@ -592,6 +593,7 @@
     <ClInclude Include="..\..\base\time\tick_clock.h" />
     <ClInclude Include="..\..\base\time\time.h" />
     <ClInclude Include="..\..\base\time\time_override.h" />
+    <ClInclude Include="..\..\base\token.h" />
     <ClInclude Include="..\..\base\tuple.h" />
     <ClInclude Include="..\..\base\unguessable_token.h" />
     <ClInclude Include="..\..\base\updateable_sequenced_task_runner.h" />

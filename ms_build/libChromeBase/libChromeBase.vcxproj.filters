@@ -954,6 +954,9 @@
     <ClCompile Include="..\..\base\memory\protected_memory_win.cc">
       <Filter>base\memory</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\base\token.cc">
+      <Filter>base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\base\debug\activity_tracker.h">
@@ -2065,6 +2068,9 @@
     </ClInclude>
     <ClInclude Include="..\..\base\memory\protected_memory.h">
       <Filter>base\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\base\token.h">
+      <Filter>base</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

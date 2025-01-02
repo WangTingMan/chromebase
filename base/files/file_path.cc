@@ -274,6 +274,17 @@ void FilePath::GetComponents(std::vector<StringType>* components) const {
   *components = std::vector<StringType>(ret_val.rbegin(), ret_val.rend());
 }
 
+void FilePath::GetComponents( std::vector<std::string>* components ) const
+{
+    std::vector<FilePath::StringType> components_string_type;
+    GetComponents( &components_string_type );
+    components->clear();
+    for( auto& ele : components_string_type )
+    {
+        components->emplace_back( SysWideToNativeMB( ele ) );
+    }
+}
+
 bool FilePath::IsParent(const FilePath& child) const {
   return AppendRelativePath(child, nullptr);
 }
@@ -394,6 +405,11 @@ StringType FilePath::Extension() const {
   return base.path_.substr(dot, StringType::npos);
 }
 
+std::string FilePath::StdStringExtension() const
+{
+    return SysWideToNativeMB( Extension() );
+}
+
 StringType FilePath::FinalExtension() const {
   FilePath base(BaseName());
   const StringType::size_type dot = FinalExtensionSeparatorPosition(base.path_);
@@ -401,6 +417,11 @@ StringType FilePath::FinalExtension() const {
     return StringType();
 
   return base.path_.substr(dot, StringType::npos);
+}
+
+std::string FilePath::StdStringFinalExtension() const
+{
+    return SysWideToNativeMB( FinalExtension() );
 }
 
 FilePath FilePath::RemoveExtension() const {

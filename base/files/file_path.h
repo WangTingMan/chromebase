@@ -237,6 +237,8 @@ class BASE_EXPORT FilePath {
   // Windows:  "C:\foo\bar"  ->  [ "C:", "\\", "foo", "bar" ]
   void GetComponents(std::vector<FilePath::StringType>* components) const;
 
+  void GetComponents( std::vector<std::string>* components ) const;
+
   // Returns true if this FilePath is a strict parent of the |child|. Absolute
   // and relative paths are accepted i.e. is /foo parent to /foo/bar and
   // is foo parent to foo/bar. Does not convert paths to absolute, follow
@@ -280,6 +282,8 @@ class BASE_EXPORT FilePath {
   // returned the extension without a leading "." ("jpg" instead of ".jpg")
   StringType Extension() const WARN_UNUSED_RESULT;
 
+  std::string StdStringExtension() const WARN_UNUSED_RESULT;
+
   // Returns the path's file extension, as in Extension(), but will
   // never return a double extension.
   //
@@ -288,6 +292,8 @@ class BASE_EXPORT FilePath {
   // LongExtension(), defaulting to short extensions and leaving the
   // long "extensions" to logic like base::GetUniquePathNumber().
   StringType FinalExtension() const WARN_UNUSED_RESULT;
+
+  std::string StdStringFinalExtension() const WARN_UNUSED_RESULT;
 
   // Returns "C:\pics\jojo" for path "C:\pics\jojo.jpg"
   // NOTE: this is slightly different from the similar file_util implementation
