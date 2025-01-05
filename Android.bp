@@ -884,6 +884,7 @@ cc_library {
         "//device/google/bertha:__subpackages__",
         "//device/google/cheets2/camera/v3",
         "//external/avb",
+        "//external/gsc-utils:__subpackages__",
         "//external/libbrillo",
         "//external/libpalmrejection",
         "//external/puffin",
