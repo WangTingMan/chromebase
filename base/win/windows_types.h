@@ -106,16 +106,10 @@ typedef struct _GUID GUID;
 typedef GUID CLSID;
 
 typedef struct tagLOGFONTW LOGFONTW, *PLOGFONTW, *NPLOGFONTW, *LPLOGFONTW;
-#ifdef WINDOWS32
-#else
 typedef LOGFONTW LOGFONT;
-#endif
 
 typedef struct _FILETIME FILETIME;
-#ifdef WINDOWS32
-#else
 typedef struct tagMENUITEMINFOW MENUITEMINFOW, MENUITEMINFO;
-#endif
 typedef struct tagNMHDR NMHDR;
 
 typedef PVOID PSID;
@@ -240,6 +234,8 @@ WINBASEAPI VOID WINAPI SetLastError(_In_ DWORD dwErrCode);
 // ensures that the same renaming will happen everywhere. Includes of this file
 // can be added wherever needed to ensure this consistent renaming.
 
+#ifdef BASE_IMPLEMENTATION
+
 #define CopyFile CopyFileW
 #define CreateDirectory CreateDirectoryW
 #define CreateEvent CreateEventW
@@ -264,5 +260,7 @@ WINBASEAPI VOID WINAPI SetLastError(_In_ DWORD dwErrCode);
 #define SetCurrentDirectory SetCurrentDirectoryW
 #define StartService StartServiceW
 #define UpdateResource UpdateResourceW
+
+#endif
 
 #endif  // BASE_WIN_WINDOWS_TYPES_H

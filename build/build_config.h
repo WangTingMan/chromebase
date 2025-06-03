@@ -265,6 +265,4 @@
 #define BASE_STRING16_ITERATOR_IS_CHAR16_POINTER
 #endif
 
-#include <fakes\fakes.h>
-
 #endif  // BUILD_BUILD_CONFIG_H_
