@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import imp
 import os.path
 import sys
 
@@ -16,10 +15,6 @@ def _GetDirAbove(dirname):
     if tail == dirname:
       return path
 
-try:
-  imp.find_module("ply")
-except ImportError:
-  sys.path.append(os.path.join(_GetDirAbove("mojo"), "third_party"))
 from ply.lex import TOKEN
 
 from ..error import Error

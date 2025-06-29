@@ -683,6 +683,7 @@ libchromeCommonSrc = [
     "base/strings/nullable_string16.cc",
     "base/strings/pattern.cc",
     "base/strings/safe_sprintf.cc",
+    "base/strings/strcat.cc",
     "base/strings/string16.cc",
     "base/strings/string_number_conversions.cc",
     "base/strings/string_piece.cc",
@@ -877,10 +878,11 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
-        "com.android.btservices",
+        "com.android.bt",
     ],
     min_sdk_version: "30",
     visibility: [
+        "//build/make/tools/otatools_package",
         "//device/google/bertha:__subpackages__",
         "//device/google/cheets2/camera/v3",
         "//external/avb",
