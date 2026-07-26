@@ -56,13 +56,6 @@
     <Filter Include="third_party">
       <UniqueIdentifier>{57ffd1dd-a82f-46b9-b742-f9eb181def33}</UniqueIdentifier>
     </Filter>
-    <Filter Include="testing">
-      <UniqueIdentifier>{7ece73b6-9a00-493a-a00e-3efe4aa69173}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="fake headers">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="base\third_party">
       <UniqueIdentifier>{d4709bbd-15cf-4b97-b464-218545d0e615}</UniqueIdentifier>
     </Filter>
