@@ -896,14 +896,12 @@ cc_library {
         "//frameworks/base/services/core/jni",
         "//frameworks/native/libs/vr/libpdx_default_transport",
         "//frameworks/native/services/inputflinger:__subpackages__",
-        "//hardware/libhardware/modules/camera/3_4",
         "//hardware/interfaces/keymaster/4.0/vts/performance",
         "//hardware/interfaces/security/keymint/aidl/vts/performance",
-        "//hardware/nxp/secure_element/snxxx:__subpackages__",
-        "//hardware/nxp/uwb",
+        "//hardware/libhardware/modules/camera/3_4",
         "//packages/modules/Bluetooth:__subpackages__",
-        "//system/core/fs_mgr/libfs_avb",
-        "//system/core/fs_mgr/libsnapshot",
+        "//system/fs/fs_mgr/libfs_avb",
+        "//system/fs/fs_mgr/libsnapshot",
         "//system/security/keystore",
         "//system/update_engine",
         "//test/sts/tests/hostside/securityPatch:__subpackages__",
@@ -1211,11 +1209,6 @@ python_binary_host {
         "base/android/jni_generator/jni_generator.py",
         "build/**/*.py",
     ],
-    version: {
-        py3: {
-            embedded_launcher: true,
-        },
-    },
 }
 
 python_binary_host {
@@ -1226,11 +1219,6 @@ python_binary_host {
         "base/android/jni_generator/jni_registration_generator.py",
         "build/**/*.py",
     ],
-    version: {
-        py3: {
-            embedded_launcher: true,
-        },
-    },
 }
 
 python_binary_host {
@@ -1248,12 +1236,8 @@ python_binary_host {
         "mojo/public/tools/bindings/generators/java_templates/*.tmpl",
         "mojo/public/tools/bindings/generators/js_templates/*.tmpl",
     ],
-    version: {
-        py3: {
-            // TODO(b/174041232): Enable embedded_launcher
-            embedded_launcher: false,
-        },
-    },
+    // TODO(b/174041232): Enable embedded_launcher
+    embedded_launcher: false,
 }
 
 genrule {
@@ -1285,12 +1269,8 @@ python_binary_host {
         "mojo/public/tools/bindings/pylib/mojom/generate/module.py",
         "mojo/public/tools/bindings/pylib/mojom/generate/pack.py",
     ],
-    version: {
-        py3: {
-            // TODO(b/174041232): Enable embedded_launcher
-            embedded_launcher: false,
-        },
-    },
+    // TODO(b/174041232): Enable embedded_launcher
+    embedded_launcher: false,
 }
 
 genrule {
@@ -1330,11 +1310,6 @@ python_binary_host {
     srcs: [
         "mojo/public/tools/bindings/mojom_types_downgrader.py",
     ],
-    version: {
-        py3: {
-            embedded_launcher: true,
-        },
-    },
 }
 
 generate_mojom_downgraded_files {

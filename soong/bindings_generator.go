@@ -11,6 +11,8 @@ import (
 	"github.com/google/blueprint"
 )
 
+//go:generate go run ../../../build/blueprint/gobtools/codegen
+
 func init() {
 	android.RegisterModuleType("generate_mojom_downgraded_files", mojomDowngradedFilesFactory)
 	android.RegisterModuleType("generate_mojom_pickles", mojomPicklesFactory)
@@ -33,7 +35,8 @@ var (
 		CommandDeps: []string{
 			"${mojomTypesDowngrader}",
 		},
-		Description: "Downgrade mojom files $in => $out",
+		Description:     "Downgrade mojom files $in => $out",
+		SandboxDisabled: true,
 	}, "outDir")
 
 	generateMojomPicklesRule = pctx.StaticRule("generateMojomPicklesRule", blueprint.RuleParams{
@@ -46,8 +49,9 @@ var (
 		CommandDeps: []string{
 			"${mojomBindingsGenerator}",
 		},
-		Description: "Mojo pickles generation $in => $out",
-		Restat:      true,
+		Description:     "Mojo pickles generation $in => $out",
+		Restat:          true,
+		SandboxDisabled: true,
 	}, "package", "flags", "outDir")
 
 	generateMojomSrcsRule = pctx.StaticRule("generateMojomSrcsRule", blueprint.RuleParams{
@@ -64,8 +68,9 @@ var (
 		CommandDeps: []string{
 			"${mojomBindingsGenerator}",
 		},
-		Description: "Mojo sources generation $in => $out",
-		Restat:      true,
+		Description:     "Mojo sources generation $in => $out",
+		Restat:          true,
+		SandboxDisabled: true,
 	}, "mojomGenerator", "package", "flags", "outDir", "templateDir")
 
 	mergeSrcjarsRule = pctx.StaticRule("mergeSrcjarsRule", blueprint.RuleParams{
@@ -73,7 +78,8 @@ var (
 		CommandDeps: []string{
 			"${mergeZips}",
 		},
-		Description: "Merge .srcjars $in => $out",
+		Description:     "Merge .srcjars $in => $out",
+		SandboxDisabled: true,
 	})
 )
 
@@ -105,12 +111,12 @@ func (m *mojomDowngradedFiles) GenerateAndroidBuildActions(ctx android.ModuleCon
 		out := android.PathForModuleGen(ctx, in.Rel())
 		m.generatedSrcs = append(m.generatedSrcs, out)
 
-		ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+		ctx.Build(pctx, android.BuildParams{
 			Rule:   downgradeMojomTypesRule,
 			Input:  in,
 			Output: out,
 			Args: map[string]string{
-				"outDir":  path.Dir(out.String()),
+				"outDir": path.Dir(out.String()),
 			},
 		})
 	}
@@ -153,6 +159,13 @@ type mojomPickles struct {
 	outDir        android.Path
 }
 
+// @auto-generate: gob
+type MojomPicklesInfo struct {
+	OutDir android.Path
+}
+
+var MojomPicklesInfoProvider = blueprint.NewProvider[MojomPicklesInfo]()
+
 var _ genrule.SourceFileGenerator = (*mojomPickles)(nil)
 
 func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
@@ -171,7 +184,7 @@ func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 		out := android.PathForModuleGen(ctx, relStem+".p")
 		m.generatedSrcs = append(m.generatedSrcs, out)
 
-		ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+		ctx.Build(pctx, android.BuildParams{
 			Rule:   generateMojomPicklesRule,
 			Input:  in,
 			Output: out,
@@ -181,6 +194,10 @@ func (m *mojomPickles) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 			},
 		})
 	}
+
+	android.SetProvider(ctx, MojomPicklesInfoProvider, MojomPicklesInfo{
+		OutDir: m.outDir,
+	})
 }
 
 func (m *mojomPickles) GeneratedHeaderDirs() android.Paths {
@@ -251,8 +268,13 @@ func (p *mojomGenerationProperties) flags(ctx android.ModuleContext) string {
 			ctx.PropertyErrorf("pickles", "not a module: %q", m)
 			continue
 		}
-		module := android.GetModuleFromPathDep(ctx, m, "").(*mojomPickles)
-		flags = append(flags, fmt.Sprintf("--gen_dir=%s", module.outDir.String()))
+		module := android.GetModuleProxyFromPathDep(ctx, m, "")
+		info, ok := android.OtherModuleProvider(ctx, module, MojomPicklesInfoProvider)
+		if !ok {
+			panic(fmt.Errorf("dependency %q is not a mojom_pickles module", ctx.OtherModuleName(module)))
+		}
+
+		flags = append(flags, fmt.Sprintf("--gen_dir=%s", info.OutDir.String()))
 	}
 	if p.Flags != "" {
 		flags = append(flags, p.Flags)
@@ -317,7 +339,7 @@ func (p *mojomGenerationProperties) generateBuildActions(
 				outs = append(outs, out)
 				generatedSrcs = append(generatedSrcs, out)
 			}
-			ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+			ctx.Build(pctx, android.BuildParams{
 				Rule:      generateMojomSrcsRule,
 				Input:     in,
 				Implicits: implicitDeps,
@@ -469,7 +491,7 @@ func (m *mojomSrcjar) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	)
 
 	out := android.PathForModuleGen(ctx, m.properties.Srcjar)
-	ctx.ModuleBuild(pctx, android.ModuleBuildParams{
+	ctx.Build(pctx, android.BuildParams{
 		Rule:   mergeSrcjarsRule,
 		Inputs: srcjars,
 		Output: out,

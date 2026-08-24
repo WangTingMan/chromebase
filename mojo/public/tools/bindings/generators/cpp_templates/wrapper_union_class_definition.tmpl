@@ -1,3 +1,15 @@
+{%-  for field in union.fields %}
+// static
+{{union.name}}Ptr
+{{union.name}}::New{{field.name|under_to_camel}}(
+    {{field.kind|cpp_wrapper_param_type_new}} {{field.name}}) {
+  auto result = {{union.name}}Ptr(base::in_place);
+  result->set_{{field.name}}(std::move({{field.name}}));
+  return result;
+}
+
+{%- endfor %}
+
 {%- set default_field = union.fields.0 %}
 {{union.name}}::{{union.name}}() : tag_(Tag::{{default_field.name|upper}}) {
 {%- if default_field.kind|is_object_kind or

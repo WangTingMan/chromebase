@@ -12,12 +12,15 @@ bootstrap_go_package {
     pkgPath: "android/soong/external/libchrome",
     deps: [
         "blueprint",
+        "blueprint-gobtools",
+        "blueprint-proptools",
         "soong",
         "soong-android",
         "soong-genrule",
     ],
     srcs: [
         "bindings_generator.go",
+        "libchrome_enc.go",
     ],
     pluginFor: ["soong_build"],
 }

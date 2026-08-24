@@ -27,21 +27,6 @@ LazyInstance<ThreadLocalPointer<MessageLoopForIO>>::Leaky
 
 }  // namespace
 
-FileDescriptorWatcher::Controller::~Controller() {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-
-  // Delete |watcher_| on the MessageLoopForIO.
-  //
-  // If the MessageLoopForIO is deleted before Watcher::StartWatching() runs,
-  // |watcher_| is leaked. If the MessageLoopForIO is deleted after
-  // Watcher::StartWatching() runs but before the DeleteSoon task runs,
-  // |watcher_| is deleted from Watcher::WillDestroyCurrentMessageLoop().
-  message_loop_for_io_task_runner_->DeleteSoon(FROM_HERE, watcher_.release());
-
-  // Since WeakPtrs are invalidated by the destructor, RunCallback() won't be
-  // invoked after this returns.
-}
-
 class FileDescriptorWatcher::Controller::Watcher
     : public MessagePumpForIO::FdWatcher,
       public MessageLoopCurrent::DestructionObserver {
@@ -168,6 +153,26 @@ FileDescriptorWatcher::Controller::Controller(MessagePumpForIO::Mode mode,
   DCHECK(message_loop_for_io_task_runner_);
   watcher_ = std::make_unique<Watcher>(weak_factory_.GetWeakPtr(), mode, fd);
   StartWatching();
+}
+
+// Note for libchrome: Moved the dtor from above to this position for C++23
+// support. In C++23, usage of unique_ptr requires class definition,
+// while Watcher was defined later.
+// In upstream chromium repository, this move is done as a part of
+// crrev.com/c/695914 (though, not only moving, but also updating of the dtor).
+FileDescriptorWatcher::Controller::~Controller() {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+
+  // Delete |watcher_| on the MessageLoopForIO.
+  //
+  // If the MessageLoopForIO is deleted before Watcher::StartWatching() runs,
+  // |watcher_| is leaked. If the MessageLoopForIO is deleted after
+  // Watcher::StartWatching() runs but before the DeleteSoon task runs,
+  // |watcher_| is deleted from Watcher::WillDestroyCurrentMessageLoop().
+  message_loop_for_io_task_runner_->DeleteSoon(FROM_HERE, watcher_.release());
+
+  // Since WeakPtrs are invalidated by the destructor, RunCallback() won't be
+  // invoked after this returns.
 }
 
 void FileDescriptorWatcher::Controller::StartWatching() {
